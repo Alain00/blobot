@@ -1,0 +1,13 @@
+UPDATE {"sessionUpdate":"agent_thought_chunk","messageId":"msg_04d79799f0010S2o321t9300Y8","content":{"type":"text","text":"The"}}
+UPDATE {"sessionUpdate":"agent_thought_chunk","messageId":"msg_04d79799f0010S2o321t9300Y8","content":{"type":"text","text":" user wants me to call the"}}
+UPDATE {"sessionUpdate":"agent_thought_chunk","messageId":"msg_04d79799f0010S2o321t9300Y8","content":{"type":"text","text":" blobot_ping tool with"}}
+UPDATE {"sessionUpdate":"agent_thought_chunk","messageId":"msg_04d79799f0010S2o321t9300Y8","content":{"type":"text","text":" who=\"alain\" and"}}
+UPDATE {"sessionUpdate":"agent_thought_chunk","messageId":"msg_04d79799f0010S2o321t9300Y8","content":{"type":"text","text":" report what"}}
+UPDATE {"sessionUpdate":"agent_thought_chunk","messageId":"msg_04d79799f0010S2o321t9300Y8","content":{"type":"text","text":" it returns."}}
+UPDATE {"sessionUpdate":"tool_call","toolCallId":"call_a27ed3382cb04dbda608099b","title":"blobot_blobot_ping","kind":"other","status":"pending","locations":[],"rawInput":{}}
+UPDATE {"sessionUpdate":"tool_call_update","toolCallId":"call_a27ed3382cb04dbda608099b","status":"in_progress","kind":"other","title":"blobot_blobot_ping","locations":[],"rawInput":{"who":"alain"}}
+UPDATE {"sessionUpdate":"tool_call_update","toolCallId":"call_a27ed3382cb04dbda608099b","status":"completed","content":[{"type":"content","content":{"type":"text","text":"PONG-FROM-BLOBOT for alain"}}],"rawOutput":{"output":"PONG-FROM-BLOBOT for alain","metadata":{"truncated":false}}}
+UPDATE {"sessionUpdate":"agent_message_chunk","messageId":"msg_04d798483001JWEwv0uayoJ7Yx","content":{"type":"text","text":"It returned:"}}
+UPDATE {"sessionUpdate":"agent_message_chunk","messageId":"msg_04d798483001JWEwv0uayoJ7Yx","content":{"type":"text","text":" `PONG-FROM-B"}}
+UPDATE {"sessionUpdate":"agent_message_chunk","messageId":"msg_04d798483001JWEwv0uayoJ7Yx","content":{"type":"text","text":"LOBOT for alain`"}}
+UPDATE {"sessionUpdate":"usage_update","used":49481,"size":200000,"cost":{"amount":0,"currency":"USD"}}

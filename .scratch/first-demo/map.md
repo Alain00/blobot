@@ -1,0 +1,87 @@
+Label: wayfinder:map
+
+# First demo
+
+## Destination
+
+A locked spec for blobot's first demo, ready to hand to fresh implementation sessions:
+**install → open a repo → the app detects OpenCode and Claude Code → create a team with
+Alice and Bob in isolated git worktrees → ask Alice something → Alice asynchronously
+messages Bob → both blobatars are visibly working at once.**
+
+The map is done when nothing is left to *decide* before someone writes that code.
+
+## Notes
+
+**Domain.** blobot is a local-first Electron desktop app that assembles teams from the
+coding agents a user already has installed. It provides no inference and stores no
+credentials. See `CLAUDE.md` for the permanent architectural rules — they bound every
+ticket here and are not up for renegotiation inside one.
+
+**Settled while charting** (these are premises, not decisions to revisit):
+
+- Destination is a **spec**, not working software. Plan, don't do.
+- Audience: open source, built for the author. Commercial intent is a later, separate call.
+- Appetite: a couple of weeks of evenings.
+- Shell: **Electron** + React + TypeScript. Chosen so the domain layer, the `AgentRuntime`
+  interface and the ACP JSON-RPC client are one language.
+- Demo cast: **OpenCode + Claude Code**. Codex and Gemini are not installed on the dev
+  machine and are not load-bearing for the demo.
+- Agent-to-agent messaging is **asynchronous**. Bob is a peer with a mailbox, not a tool
+  call of Alice's. This is what makes it a team rather than a delegation tree.
+- Orchestrator runs in the **Electron main process**, written as a plain TypeScript module
+  with no Electron imports so it stays extractable.
+- **Team is a real aggregate** — it owns the repository and scopes the message bus.
+- Monorepo is **two packages**: `apps/desktop` and `packages/core`. The boundary exists to
+  make "the UI cannot import a provider" a dependency-graph fact.
+- *Avatar* is the domain term. `blobatar@2.6.0` is a dependency, seeded on agent id, and
+  lives only in the UI layer. Not a design question.
+
+**Skills every session should consult:** `/grilling` and `/domain-modeling` by default.
+`/research` for the research tickets. `/prototype` where the question is "how should it
+look or behave".
+
+## Decisions so far
+
+- [Can an ACP client give an agent a tool?](issues/01-can-an-acp-client-give-an-agent-a-tool.md) — Yes, via `session/new.mcpServers`; ACP has no tool-declaration primitive and MCP is the prescribed path. Session-creation-time only. Verified against OpenCode 1.18.4. Its stdio `type` trap applied to a now-deprecated package — see the correction on the ticket.
+
+- [Detecting installed and authenticated agents](issues/11-detecting-installed-and-authenticated-agents.md) — Presence is detectable only by running the binary (a config dir proves nothing: `~/.codex/` exists here with no codex installed). Auth is asymmetric — a negative is reliable, a positive is not — so the UI says Not installed / Needs sign-in / Ready / Status unknown, never "Authenticated", and detection never gates team creation.
+
+- [Is Claude Code's ACP support real?](issues/02-is-claude-codes-acp-support-real.md) — No native ACP and none coming (issue closed 2026-02-09), but `@agentclientprotocol/claude-agent-acp@0.70.0` over stdio works: token deltas, tool-call lifecycle, cancellation, cross-process resume and custom MCP tools all verified live. Pin the version and pin `CLAUDE_CODE_EXECUTABLE` to the user's own binary.
+
+- [OpenCode's ACP session and event surface](issues/03-opencodes-acp-session-and-event-surface.md) — `opencode acp`, NDJSON-RPC on stdio, six update kinds; turn completion is the RPC reply's `stopReason`, not an event. `cwd` binds per-session not per-process. Errors arrive on two channels. Hard constraints: serialize prompts per session, separate agent/client request-ID spaces, and a cancelled tool still reports `completed`.
+
+- [The normalized AgentEvent vocabulary](issues/04-the-normalized-agentevent-vocabulary.md) — Nine members, our own type (never an ACP passthrough; `packages/core` exports no ACP type). OpenCode's set is a strict subset of Claude's, so no reconciliation problem. `turn_ended`, `agent_message_completed` and `agent_message_sent` are synthesized; tool failure stays in the tool lifecycle; permission requests are a callback, not an event; `available_commands_update` is dropped.
+
+## Not yet specified
+
+- **A live plan/todo view per agent.** The Claude bridge maps `TodoWrite` to a `plan` event
+  and OpenCode has no counterpart, so it was cut from the vocabulary as a provider leak. It is
+  the most obviously useful of the dropped events, and worth revisiting once a second runtime
+  can produce something equivalent.
+
+- **Task and Handoff.** The plan's step 11 makes shared tasks explicit before autonomous
+  delegation. Whether the demo needs any of it — or whether a message *is* the handoff at
+  this size — can't be settled until async messaging has a shape.
+- **Failure propagation across a team.** Single-agent cancellation is now well understood
+  (`stopReason: "cancelled"` on both runtimes). What remains foggy is the team-level case:
+  what happens when Bob's runtime dies mid-turn while Alice is waiting on him, and what a
+  provider/API failure mid-turn even looks like — the one event-surface case the research
+  could not observe.
+- **First-run and onboarding flow.** The "zero setup" experience from step 19. Needs
+  detection to have a shape first.
+- **Packaging and distribution.** Signing, auto-update, what an OSS release even looks
+  like. Real, but nothing about it is answerable yet.
+
+## Out of scope
+
+- **Docker / container isolation** (plan steps 13–14). Ruled out by the two-week appetite;
+  git worktrees give real isolation at a fraction of the cost.
+- **Autonomous coordination** (step 20) — manager agent, task splitting, dependency graphs,
+  review loops. The plan itself calls this v0.2+.
+- **Codex and Gemini adapters** (step 9). Neither is installed; both are post-demo proof
+  that the abstraction generalises, not load-bearing for it.
+- **Credential storage and an approvals system** (steps 15–16). Forbidden and deferred
+  respectively; the underlying CLI owns login, and the demo does nothing destructive.
+- **Session restore across restarts** (step 18). Only *workspace* reconciliation survives
+  the cut — see the worktree ticket.
