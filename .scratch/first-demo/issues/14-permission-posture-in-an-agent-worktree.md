@@ -21,3 +21,19 @@ are accepting.
 
 This is a decision about defaults and honesty, not an approvals feature. Do not let it grow
 into one — that is the out-of-scope line.
+
+## Corrections to this ticket's premise (from ticket 16)
+
+Research since this ticket was written changes two of its assumptions:
+
+- **`edit` gates `write`** — there is no separate `write` permission key.
+- **`external_directory` already defaults to `ask`.** So the uncontrolled default surface is *not*
+  access outside the worktree, as this ticket assumed. It is **bash, and edits inside the
+  worktree**.
+- Scalar `"permission": "ask"` is a trap — it makes `read` ask too, which would make every agent
+  unusable.
+- The mechanism is **`OPENCODE_CONFIG_CONTENT`** (inline JSON in an env var), not a file written
+  into the workspace — so this ticket no longer shares a file write with ticket 16, and blobot
+  writes nothing into the user's repo.
+- `opencode debug agent <name>` prints the resolved permission list, which is the verification tool
+  for whatever this ticket decides.

@@ -114,6 +114,13 @@ const P = o => JSON.stringify(o);
     console.log('PROMPT1:', P(r).slice(0, 600));
   }
 
+  if (SCENARIO === 'twoturns') {
+    await sleep(Number(process.env.GAP || 5000));
+    const r2 = await call('session/prompt', { sessionId, prompt: [{ type: 'text', text: process.env.PROMPT2 || 'Try the same tool again, sending "retry" to Carol. Report exactly what it returned.' }] });
+    rec('note', r2, 'prompt2 result');
+    console.log('PROMPT2:', P(r2).slice(0, 600));
+  }
+
   if (SCENARIO === 'load') {
     // kill this process's agent, then reconnect a fresh agent process and session/load
     child.kill('SIGTERM'); await sleep(1200);

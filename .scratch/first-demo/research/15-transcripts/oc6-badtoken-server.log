@@ -1,0 +1,13 @@
+[     5ms] LISTENING on 127.0.0.1:45631 TOKEN=yes MODE=json
+[  4374ms] REQ POST /mcp {"accept":"application/json, text/event-stream","authorization":"Bearer WRONG-TOKEN","content-type":"application/json","connection":"keep-alive","user-agent":"opencode/1.18.4","host":"127.0.0.1:45631","accept-encoding":"gzip, deflate, br, zstd","content-length":"168"} BODY={"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{"roots":{}},"clientInfo":{"name":"opencode","version":"1.18.4"}},"jsonrpc":"2.0","id":0}
+[  4374ms] AUTH REJECT — got "Bearer WRONG-TOKEN"
+[  4377ms] REQ GET /.well-known/oauth-protected-resource/mcp {"authorization":"Bearer WRONG-TOKEN","mcp-protocol-version":"2025-11-25","connection":"keep-alive","user-agent":"opencode/1.18.4","accept":"*/*","host":"127.0.0.1:45631","accept-encoding":"gzip, deflate, br, zstd"} BODY=
+[  4377ms] AUTH REJECT — got "Bearer WRONG-TOKEN"
+[  4377ms] REQ GET /.well-known/oauth-protected-resource {"authorization":"Bearer WRONG-TOKEN","mcp-protocol-version":"2025-11-25","connection":"keep-alive","user-agent":"opencode/1.18.4","accept":"*/*","host":"127.0.0.1:45631","accept-encoding":"gzip, deflate, br, zstd"} BODY=
+[  4378ms] AUTH REJECT — got "Bearer WRONG-TOKEN"
+[  4378ms] REQ GET /.well-known/oauth-authorization-server {"accept":"application/json","authorization":"Bearer WRONG-TOKEN","mcp-protocol-version":"2025-11-25","connection":"keep-alive","user-agent":"opencode/1.18.4","host":"127.0.0.1:45631","accept-encoding":"gzip, deflate, br, zstd"} BODY=
+[  4378ms] AUTH REJECT — got "Bearer WRONG-TOKEN"
+[  4379ms] REQ GET /.well-known/openid-configuration {"accept":"application/json","authorization":"Bearer WRONG-TOKEN","mcp-protocol-version":"2025-11-25","connection":"keep-alive","user-agent":"opencode/1.18.4","host":"127.0.0.1:45631","accept-encoding":"gzip, deflate, br, zstd"} BODY=
+[  4379ms] AUTH REJECT — got "Bearer WRONG-TOKEN"
+[  4380ms] REQ POST /register {"authorization":"Bearer WRONG-TOKEN","content-type":"application/json","connection":"keep-alive","user-agent":"opencode/1.18.4","accept":"*/*","host":"127.0.0.1:45631","accept-encoding":"gzip, deflate, br, zstd","content-length":"238"} BODY={"redirect_uris":["http://127.0.0.1:19876/mcp/oauth/callback"],"client_name":"OpenCode","client_uri":"https://opencode.ai","grant_types":["authorization_code","refresh_token"],"response_types":["code"],"token_endpoint_auth_method":"none"}
+[  4380ms] AUTH REJECT — got "Bearer WRONG-TOKEN"

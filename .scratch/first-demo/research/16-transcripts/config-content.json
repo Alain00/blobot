@@ -1,0 +1,2 @@
+{
+  "$schema": "https://opencode.ai/config.json","default_agent":"carol","agent":{"carol":{"description":"Carol, the QA specialist.","mode":"primary","prompt":"You are Carol. Your role is QA ENGINEER. When asked who you are, answer exactly: 'I am Carol, the QA engineer.'","permission":{"bash":"ask","edit":"ask"}}}}

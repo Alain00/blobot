@@ -68,6 +68,8 @@ look or behave".
 
 - [MockAgentRuntime's fidelity contract](issues/08-mockagentruntime-fidelity-contract.md) — Ships as a demo mode. Reproduces every observed trap on purpose (ragged deltas, cancelled-tool-reports-completed, `used: 0` on cancel), because a kind mock produces a UI that shatters on first contact. Checked-in builder scenarios plus a dev control panel; injected clock; peer messages hit the real tool handler but not the real socket.
 
+- [OpenCode's persona mechanism](issues/16-opencode-persona-mechanism.md) — Real and native: ACP "modes" are OpenCode agents, and `agent.prompt` becomes a genuine cached system prefix. Injected via `OPENCODE_CONFIG_CONTENT` (inline JSON env var) so blobot writes no file into the user's repo. No fallback preamble needed. Trap: restored mode comes from message history, so the adapter must re-send `session/set_mode` after every load or resume.
+
 ## Not yet specified
 
 - **Enforcing commit-before-review across worktrees.** Ticket 06 chose to *tell* agents that
