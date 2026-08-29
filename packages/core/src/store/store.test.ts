@@ -99,6 +99,30 @@ describe('the schema', () => {
   });
 });
 
+describe('reading teams back', () => {
+  it('lists every team newest first, which is how a launch picks one to start', () => {
+    store.createTeam({
+      id: 'team_2',
+      name: 'storefront',
+      workspacePath: '/other',
+      workspaceKind: 'git',
+      turnBudget: 4,
+      createdAt: 10,
+    });
+    expect(store.listTeams().map((entry) => entry.id)).toEqual(['team_2', 'team_1']);
+  });
+
+  it('finds a team by name, because a name collision is a branch collision', () => {
+    expect(store.teamByName('demo')?.id).toBe('team_1');
+    expect(store.teamByName('nothing')).toBeUndefined();
+  });
+
+  it('finds a team by id and returns the turn budget it was created with', () => {
+    expect(store.teamById('team_1')?.turnBudget).toBe(10);
+    expect(store.teamById('missing')).toBeUndefined();
+  });
+});
+
 describe('the mailbox', () => {
   const message = {
     id: 'm1',
@@ -221,6 +245,16 @@ describe('what a turn leaves behind', () => {
     // Ordered by id, which is time-ordered: Bob's short turn ends before Alice's long one.
     expect(answers.map((row) => row.text).join(' ')).toContain('I have the refresh path');
     expect(thoughts.map((row) => row.text).join(' ')).toContain('second pair of eyes');
+  });
+
+  it('reads the team\'s answers back for a pane rebuilt after a restart', async () => {
+    await runDemoTurn();
+    const answers = store.answersOfTeam(team.id);
+    expect(answers).toHaveLength(3);
+    // Time-ordered, and thinking is left where it is: no pane shows it while a turn is live,
+    // so a restored pane must not start.
+    expect(answers.map((answer) => answer.at)).toEqual([...answers.map((a) => a.at)].sort((l, r) => l - r));
+    expect(answers.every((answer) => !answer.text.includes('second pair of eyes'))).toBe(true);
   });
 
   it('closes each turn with its stop reason', async () => {

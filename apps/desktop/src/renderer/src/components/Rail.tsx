@@ -1,5 +1,5 @@
 import type { AgentStatus } from '@blobot/core/domain';
-import type { UiAgent, UiTeam } from '../../../shared/api.js';
+import type { UiAgent, UiTeam, UiTeamSummary } from '../../../shared/api.js';
 import type { Pane } from '../model.js';
 import { Blob } from './Blob.js';
 import { StatusWord } from './StatusWord.js';
@@ -10,22 +10,35 @@ import { StatusWord } from './StatusWord.js';
  */
 export function Rail({
   team,
+  teams,
   agents,
   statuses,
   pane,
   onSelect,
+  onSelectTeam,
+  onNewTeam,
 }: {
   team: UiTeam;
+  teams: readonly UiTeamSummary[];
   agents: readonly UiAgent[];
   statuses: Record<string, AgentStatus>;
   pane: Pane;
   onSelect: (pane: Pane) => void;
+  /** Absent in demo mode, where there is exactly one team and it is scripted. */
+  onSelectTeam?: (teamId: string) => void;
+  onNewTeam?: () => void;
 }): React.JSX.Element {
   const teamStatus = foldTeamStatus(agents.map((agent) => statuses[agent.id] ?? 'idle'));
   return (
     <div className="rail">
       <div className="railhead">
         <span className="mono muted">TEAM</span>
+        <span style={{ flex: 1 }} />
+        {onNewTeam !== undefined && (
+          <button className="railadd mono" onClick={onNewTeam} title="New team">
+            + new
+          </button>
+        )}
       </div>
       <button
         className={`teamrow${pane.kind === 'team' ? ' sel' : ''}`}
@@ -74,6 +87,26 @@ export function Rail({
           </button>
         );
       })}
+
+      {/* Switching stops this team's agents and starts the other one's: one orchestrator at a
+          time, which is why the other teams are a list down here rather than a second rail. */}
+      {onSelectTeam !== undefined && teams.length > 1 && (
+        <>
+          <div className="raillabel">Other teams</div>
+          {teams
+            .filter((other) => other.id !== team.id)
+            .map((other) => (
+              <button
+                key={other.id}
+                className="teamswitch"
+                onClick={() => onSelectTeam(other.id)}
+              >
+                <span className="nm">{other.name}</span>
+                <span className="n mono muted">{other.agentCount}</span>
+              </button>
+            ))}
+        </>
+      )}
     </div>
   );
 }

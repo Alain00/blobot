@@ -13,6 +13,7 @@ import {
   type OpenedDatabase,
   type Team,
 } from '@blobot/core';
+import type { RunningTeam } from './running-team.js';
 
 /**
  * Demo mode: a real team, a real orchestrator, a real database — and mock runtimes.
@@ -21,19 +22,11 @@ import {
  * seconds without installing Claude Code or authenticating anything. It is deliberately not
  * the first-run default: defaulting to fake agents risks someone not noticing they are fake,
  * which is why the runtime label reads "Mock (demo)" everywhere it appears.
+ *
+ * Its database stays `:memory:` while a real team's is a file. A scripted replay is the one
+ * transcript worth throwing away — persisting it would stack an identical conversation on
+ * every launch, and the demo's whole claim is that you can run it and see the same thing.
  */
-export interface DemoTeam {
-  readonly team: Team;
-  readonly agents: readonly Agent[];
-  readonly orchestrator: Orchestrator;
-  readonly store: SqliteStore;
-  readonly runtimeLabels: Record<string, string>;
-  /** False when the agents are real. The rail says so, so nobody mistakes a mock for a hire. */
-  readonly demoMode: boolean;
-  /** What `--autoplay` sends, so a scripted team and a real one can each get a fair prompt. */
-  readonly autoplayPrompt: string;
-  close(): void;
-}
 
 const team: Team = {
   id: 'team_demo',
@@ -62,7 +55,7 @@ const bob: Agent = {
 export async function createDemoTeam(
   databasePath = ':memory:',
   migrationsFolder?: string,
-): Promise<DemoTeam> {
+): Promise<RunningTeam> {
   const clock = new SystemClock();
   const opened: OpenedDatabase = openDatabase({
     path: databasePath,
@@ -131,6 +124,9 @@ export async function createDemoTeam(
     orchestrator,
     store,
     runtimeLabels: Object.fromEntries(agents.map((agent) => [agent.id, 'Mock (demo)'])),
+    branches: Object.fromEntries(
+      agents.map((agent) => [agent.id, `blobot/${team.name}/${agent.name.toLowerCase()}`]),
+    ),
     demoMode: true,
     autoplayPrompt:
       'The checkout page double-charges on a double click. Fix the UI side and get the API side sorted too.',

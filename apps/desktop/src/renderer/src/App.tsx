@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useReducer, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import { Composer } from './components/Composer.js';
 import { Conversation } from './components/Conversation.js';
 import { Feed } from './components/Feed.js';
+import { NewTeam } from './components/NewTeam.js';
 import { Rail } from './components/Rail.js';
 import { initialState, itemsFor, reduce, type Pane } from './model.js';
 
@@ -13,24 +14,56 @@ export function App(): React.JSX.Element {
   const [pane, setPane] = useState<Pane>(
     initialPane === '' ? { kind: 'team' } : { kind: 'agent', agentId: initialPane },
   );
+  const [creating, setCreating] = useState(false);
+
+  const refresh = useCallback(() => {
+    void window.blobot.snapshot().then((snapshot) => {
+      dispatch({ type: 'snapshot', snapshot });
+      setPane({ kind: 'team' });
+    });
+  }, []);
 
   useEffect(() => {
-    void window.blobot.snapshot().then((snapshot) => dispatch({ type: 'snapshot', snapshot }));
+    refresh();
     const unsubscribe = [
       window.blobot.onEvent((event) => dispatch({ type: 'event', event })),
       window.blobot.onTurns((turnsThisPrompt) => dispatch({ type: 'turns', turnsThisPrompt })),
       window.blobot.onStatus((agentId, status) => dispatch({ type: 'status', agentId, status })),
       window.blobot.onMessage((message) => dispatch({ type: 'message', message })),
       window.blobot.onBudget((used, budget) => dispatch({ type: 'budget', used, budget })),
+      // A team switch replaces everything the panes are showing, so it re-snapshots rather
+      // than patching: the transcript on screen belongs to the team that just went away.
+      window.blobot.onTeamChanged(() => refresh()),
     ];
     return () => {
       for (const stop of unsubscribe) stop();
     };
-  }, []);
+  }, [refresh]);
 
   const items = useMemo(() => itemsFor(state.items, pane), [state.items, pane]);
   const snapshot = state.snapshot;
   if (snapshot === undefined) return <div className="app" />;
+
+  // The genuine empty state: a first launch, before any team exists.
+  if (snapshot.team === undefined || creating) {
+    return (
+      <div className="app">
+        <div className="topbar">
+          <span className="wordmark">blobot</span>
+          <span className="crumb">
+            {snapshot.teams.length === 0 ? 'no teams yet' : `${snapshot.teams.length} teams`}
+          </span>
+        </div>
+        <NewTeam
+          {...(snapshot.team === undefined ? {} : { onCancel: () => setCreating(false) })}
+          onCreated={() => {
+            setCreating(false);
+            refresh();
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="app">
@@ -62,10 +95,17 @@ export function App(): React.JSX.Element {
       <div className="vA">
         <Rail
           team={snapshot.team}
+          teams={snapshot.teams}
           agents={snapshot.agents}
           statuses={state.statuses}
           pane={pane}
           onSelect={setPane}
+          {...(snapshot.demoMode
+            ? {}
+            : {
+                onSelectTeam: (teamId: string) => void window.blobot.selectTeam(teamId),
+                onNewTeam: () => setCreating(true),
+              })}
         />
         <div className="conv">
           <Conversation

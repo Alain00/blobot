@@ -24,6 +24,38 @@ const peerMessage: Message = {
   at: 10,
 };
 
+describe('a snapshot', () => {
+  const snapshot = {
+    team: { id: 'team', name: 'checkout', workspacePath: '/repo', turnBudget: 6 },
+    teams: [],
+    agents: [],
+    statuses: {},
+    messages: [peerMessage],
+    answers: [{ id: 'a1', agentId: 'bob', text: 'on it', at: 20 }],
+    turnsThisPrompt: 0,
+    demoMode: false,
+  };
+
+  it('seeds the pane with the persisted transcript, so a restart is not an empty window', () => {
+    const state = reduce(initialState, { type: 'snapshot', snapshot });
+    // Both speakers, in time order: peer traffic without the replies is half a conversation.
+    expect(state.items).toMatchObject([
+      { kind: 'peer', fromId: 'alice', toId: 'bob' },
+      { kind: 'agent', agentId: 'bob', text: 'on it', live: false },
+    ]);
+  });
+
+  it('replaces what was on screen, because a team switch is a different transcript', () => {
+    const before = apply([{ ...peerMessage, id: 'other', body: 'from the last team' }]);
+    const after = reduce(before, {
+      type: 'snapshot',
+      snapshot: { ...snapshot, messages: [], answers: [] },
+    });
+    expect(after.items).toEqual([]);
+    expect(after.feed).toEqual([]);
+  });
+});
+
 describe('the conversation model', () => {
   it('grows one message from ragged deltas and settles on the completed text', () => {
     const state = apply([

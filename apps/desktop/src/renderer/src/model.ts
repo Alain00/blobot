@@ -72,11 +72,31 @@ const OWN_TOOL = /(^|_)message_agent$/;
 export function reduce(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'snapshot':
+      // A snapshot replaces the pane rather than adding to it: it arrives at launch and on
+      // every team switch, and a persisted transcript is only visible if it is seeded here.
+      // Messages and answers are merged by time: a restored pane that showed the peer traffic
+      // and not the replies would read as a conversation with half the speakers missing.
+      // Tool lines are not restored — they are what the agent is doing *now*.
       return {
         ...state,
         snapshot: action.snapshot,
         statuses: { ...action.snapshot.statuses },
         turnsThisPrompt: action.snapshot.turnsThisPrompt,
+        items: [
+          ...action.snapshot.messages.map(toItem),
+          ...action.snapshot.answers.map(
+            (answer): Item => ({
+              kind: 'agent',
+              id: answer.id,
+              at: answer.at,
+              agentId: answer.agentId,
+              text: answer.text,
+              live: false,
+            }),
+          ),
+        ].sort((left, right) => left.at - right.at),
+        feed: [],
+        budget: undefined,
       };
     case 'turns':
       return { ...state, turnsThisPrompt: action.turnsThisPrompt };
@@ -93,8 +113,12 @@ export function reduce(state: AppState, action: Action): AppState {
 
 function applyMessage(state: AppState, message: Message): AppState {
   if (state.items.some((item) => item.id === message.id)) return state;
-  const item: Item =
-    message.fromAgentId === null
+  return { ...state, items: [...state.items, toItem(message)] };
+}
+
+/** One committed Message as the pane draws it: the user's voice, or a peer's. */
+function toItem(message: Message): Item {
+  return message.fromAgentId === null
       ? {
           kind: 'user',
           id: message.id,
@@ -111,7 +135,6 @@ function applyMessage(state: AppState, message: Message): AppState {
           text: message.body,
           ...(message.context === undefined ? {} : { context: message.context }),
         };
-  return { ...state, items: [...state.items, item] };
 }
 
 function applyEvent(state: AppState, event: AgentEvent): AppState {

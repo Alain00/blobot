@@ -1,8 +1,8 @@
-import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import type { Agent, Message, Team } from '../orchestrator/domain.js';
 import type { MessageStore } from '../orchestrator/message-store.js';
 import type { BlobotDatabase } from './database.js';
-import { agents, messages, sessions, teams } from './schema.js';
+import { agentMessages, agents, messages, sessions, teams } from './schema.js';
 
 /**
  * Runtime config, as ticket 13 stores it: typed columns and nothing else. There is no JSON
@@ -51,6 +51,35 @@ export class SqliteStore implements MessageStore {
       createdAt: team.createdAt,
     }).run();
     return team;
+  }
+
+  /**
+   * Every team, newest first. The app reopens the same database on every launch, so this is
+   * what turns "a team is a TypeScript file" into "a team is a row the user created".
+   */
+  listTeams(): (Team & { createdAt: number })[] {
+    return this.#db
+      .select()
+      .from(teams)
+      .orderBy(desc(teams.createdAt))
+      .all()
+      .map((row) => ({
+        id: row.id,
+        name: row.name,
+        workspacePath: row.workspacePath,
+        workspaceKind: row.workspaceKind,
+        turnBudget: row.turnBudget,
+        createdAt: row.createdAt,
+      }));
+  }
+
+  teamById(teamId: string): Team | undefined {
+    return this.listTeams().find((team) => team.id === teamId);
+  }
+
+  /** The name is unique in the schema because it is half of a branch name. */
+  teamByName(name: string): Team | undefined {
+    return this.listTeams().find((team) => team.name === name);
   }
 
   createAgent(agent: AgentRecord): AgentRecord {
@@ -171,6 +200,25 @@ export class SqliteStore implements MessageStore {
       .orderBy(asc(messages.id))
       .all()
       .map(toMessage);
+  }
+
+  /**
+   * What the team actually *said*, for a pane that is being rebuilt after a restart.
+   *
+   * Answers only. Thinking is persisted beside it and deliberately not returned: ticket 12
+   * gives thinking no place in the conversation, and a restart is the wrong moment for the
+   * UI to start showing something a live turn does not.
+   */
+  answersOfTeam(teamId: string): { id: string; agentId: string; text: string; at: number }[] {
+    const ids = this.agentsOfTeam(teamId, { includeDeleted: true }).map((agent) => agent.id);
+    if (ids.length === 0) return [];
+    return this.#db
+      .select()
+      .from(agentMessages)
+      .where(and(inArray(agentMessages.agentId, ids), eq(agentMessages.kind, 'answer')))
+      .orderBy(asc(agentMessages.at))
+      .all()
+      .map((row) => ({ id: row.id, agentId: row.agentId, text: row.text, at: row.at }));
   }
 
   /** A row count per table, for the demo's closing line and for eyeballing a transcript. */

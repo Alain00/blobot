@@ -153,3 +153,39 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .sysline{display:flex;align-items:center;gap:10px;color:var(--muted);font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
 .sysline::before,.sysline::after{content:"";height:1px;background:var(--line);flex:1}
 
+
+/* ---------- creating a team ----------
+ * The same monochrome vocabulary as the rest of the app: mono labels, hairline rules, and no
+ * colour anywhere — there are no blobatars on this screen, so nothing on it is saturated.
+ */
+.newteam{flex:1;overflow:auto;display:flex;justify-content:center;padding:40px 20px}
+.sheet{width:100%;max-width:620px;display:flex;flex-direction:column;gap:26px}
+.sheethead{display:flex;align-items:baseline;gap:12px}
+.sheethead .hand{line-height:1}
+.sheethead .mono{letter-spacing:.1em}
+.sheethead .send{margin-left:auto}
+.sheet section{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.sheet section > .textfield,.sheet section > .note,.sheet section > .refusal,.sheet section > .agentdraft{align-self:stretch}
+.fieldlabel{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sheet .row{display:flex;align-items:center;gap:10px}
+.pathline{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.textfield{background:transparent;border:none;border-bottom:1px solid var(--line);color:var(--ink);font:inherit;padding:5px 0;outline:none;min-width:0}
+.textfield:focus{border-bottom-color:var(--ink)}
+.textfield::placeholder{color:var(--muted)}
+.textfield.narrow{width:64px}
+/* A native select paints itself light on this platform, which would put the brightest thing
+   on the page on a dropdown. Appearance is reset and the chevron is drawn as a background. */
+select.textfield{appearance:none;border:1px solid var(--line);border-bottom:1px solid var(--line);padding:5px 22px 5px 8px;background-color:var(--raised);color:var(--ink);background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 12px) 52%,calc(100% - 7px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+select.textfield option{background:var(--raised);color:var(--ink)}
+.note{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.agentdraft{display:grid;grid-template-columns:1fr 1fr minmax(150px,auto) auto;gap:10px;align-items:center}
+.runtimenote{grid-column:1 / -1;margin-top:-2px}
+.budgetrow{flex-direction:row!important;align-items:center;gap:12px}
+/* A refusal, not an error dialog: it says what is wrong where the user can act on it. */
+.refusal{border-left:2px solid var(--ink);padding:8px 0 8px 12px;font-size:13px}
+.sheetfoot{display:flex;justify-content:flex-end;padding-bottom:40px}
+.railadd{color:var(--muted)}
+.railadd:hover{color:var(--ink)}
+.teamswitch{display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;padding:6px 14px}
+.teamswitch:hover{background:var(--raised)}
+.teamswitch .n{margin-left:auto}

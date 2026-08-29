@@ -106,6 +106,16 @@ export type {
   PeerMessageServerOptions,
 } from './mcp/peer-message-server.js';
 
+// Ticket 11: detecting what the user already has. Spawns processes, so not in `/domain`.
+export { detectRuntimes, parseOpencodeAuthList, parseVersion, stripAnsi } from './detect/runtimes.js';
+export type {
+  CommandResult,
+  CommandRunner,
+  DetectOptions,
+  RuntimeDetection,
+  RuntimeReadiness,
+} from './detect/runtimes.js';
+
 export { openDatabase } from './store/database.js';
 export type { BlobotDatabase, OpenDatabaseOptions, OpenedDatabase } from './store/database.js';
 export { SqliteStore } from './store/sqlite-store.js';

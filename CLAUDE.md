@@ -112,10 +112,14 @@ up. Read it before starting work.
   outside the user's repository, with the launch reconcile (repair a missing directory, report
   a missing branch) and the `-d`-versus-`-D` rule on deleting an agent.
 
-Next: **the desktop app as a real product** — teams and agents the user creates, persistence
-that survives a restart, and ticket 14's disclosure and permission block. OpenCode (03 + 16) is
-deferred by the author, 2026-08-29; the cost of proving `AgentRuntime` against one provider only
-is recorded in `build.md`.
+- **Persistence and team creation** (11 + 13): one SQLite file under Electron's `userData`, a
+  creation flow that picks a Workspace, names agents and roles and chooses runtimes, and
+  ticket 11's detection behind the picker — four honest states, never the word *authenticated*,
+  gating nothing. With no flags the app is the product; `--demo` is the scripted team.
+
+Next: **ticket 14's disclosure and permission block**, then one orchestrator per team and
+editing a team. OpenCode (03 + 16) is deferred by the author, 2026-08-29; the cost of proving
+`AgentRuntime` against one provider only is recorded in `build.md`.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that
 reproduces every observed trap on purpose — ragged deltas, a cancelled tool reporting

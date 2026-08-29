@@ -27,16 +27,24 @@ The Electron app, including a way to review it without a human at the screen:
 ```sh
 pnpm --filter @blobot/desktop exec electron-vite build
 apps/desktop/node_modules/.bin/electron apps/desktop --no-sandbox \
-  --screenshot=/tmp/ui.png [--pane=bob] [--screenshot-at=2200]
+  [--demo] --screenshot=/tmp/ui.png [--pane=bob] [--screenshot-at=2200] [--no-autoplay]
 ```
 
-`--screenshot` implies `--autoplay`, which sends one user prompt and lets the scripted demo
-scenarios run. A window opens on the display for a few seconds and quits itself.
+**With no flags the app is the product**: it opens `~/.config/blobot/blobot.db` (Electron's
+`userData`), starts the most recent team, and shows the creation flow when there is none.
+`--demo` is the scripted team on mock runtimes, which is *not* the first-run default — ticket
+08's point is that nobody should meet fake agents without being told.
 
-`--live-claude=<dir>` swaps the mock runtimes for **two real Claude Code agents** working in
-`<dir>` — the same orchestrator, store, recorder and UI, with `demoMode: false`, plus the
-loopback MCP server so they can message each other. Verified end to end: Alice asks Bob a
-question through `message_agent`, the orchestrator wakes Bob, Bob reads the repo and answers.
+`--screenshot` implies `--autoplay`, which sends one user prompt. `--no-autoplay` opts back
+out, which is what a screenshot of a *restored* transcript needs — otherwise the picture is of
+a new turn rather than of what the last session left behind.
+
+`--live-claude=<dir>` runs **two real Claude Code agents** in `<dir>`. It now goes *through*
+the product path rather than beside it: it creates a real team (or reuses the one named after
+the directory) and starts it exactly as the creation flow does. Verified end to end, twice —
+Alice asks Bob a question through `message_agent`, the orchestrator wakes Bob, Bob reads the
+repo and answers; then the app is relaunched with no flags and the whole exchange is still
+there.
 
 Each agent gets its own AgentWorkspace — a git worktree on `blobot/<team>/<agent>` under
 `~/.local/share/blobot/worktrees/`, branched from `HEAD`, with the user's repository untouched.
@@ -55,6 +63,8 @@ It therefore needs a git repo with at least one commit, and warns on a dirty tre
 | Claude Code adapter over the ACP bridge | `packages/core/src/adapters/claude/` | 02, 07, 14 |
 | Loopback MCP server: `message_agent` | `packages/core/src/mcp/` | 15, 05 |
 | AgentWorkspaces: git worktrees, reconcile | `packages/core/src/workspace/` | 10 |
+| Runtime detection: four honest states | `packages/core/src/detect/` | 11 |
+| Team creation + persistence, the running team | `apps/desktop/src/main/` | 11, 13 |
 
 `@blobot/core` is the full entry point (pulls in `better-sqlite3` + Drizzle).
 `@blobot/core/domain` is the pure one — vocabulary, aggregates, status fold, roster lookup — for
@@ -150,6 +160,38 @@ These were forced by writing the code. None contradicts a ticket; if one looks w
   a strict subset of the bridge's eleven — is recorded here because it is what makes the
   *second* adapter cheap.
 
+## The desktop app as a product: what landed
+
+The first two items of the previous handoff, and they went in together because the first is
+meaningless alone.
+
+- **Persistence.** One database file under `userData`, opened once in the main process.
+  `SqliteStore` gained `listTeams` / `teamById` / `teamByName`, and `answersOfTeam` for
+  rebuilding a pane. The renderer's `snapshot` action now **replaces** the pane's items from
+  the snapshot rather than only patching it as events arrive — a persisted transcript is
+  invisible unless something seeds it, and a team switch has to drop the previous team's.
+  Messages and answers are merged by time: peer traffic without the replies reads as a
+  conversation with half the speakers missing. Thinking is not restored (no pane shows it
+  live), and neither are tool lines (they are what an agent is doing *now*).
+- **Team creation.** `apps/desktop/src/main/team-store.ts` — `createTeam` refuses a
+  non-repository (the flow offers `git init`, never silently) and a repository with no commits,
+  warns on a dirty tree, refuses a duplicate team name and two agent names that slug to one
+  branch, then provisions a worktree per agent and writes the rows. `start-team.ts` brings a
+  persisted team back: reconcile, spawn, MCP endpoint per agent, orchestrator.
+- **Ticket 11's detection** (`packages/core/src/detect/runtimes.ts`): the three-layer cascade
+  (`PATH`, known install dirs, then `$SHELL -ilc` for aliases), `claude auth status`'s 0/1
+  contract, `opencode auth list` parsed through the escapes `NO_COLOR` does not remove. Four
+  states, never the word *authenticated*, and it **gates nothing** — the picker offers a
+  runtime that reports "needs sign-in" and the store takes whatever was chosen.
+- **`RuntimeDetection.supported`** is a separate field from readiness, because it is a fact
+  about *us*, not about the user's machine: OpenCode is detected honestly and offered as "no
+  adapter yet" rather than hidden, which would misreport what they have installed.
+- **Switching teams stops the previous team's runtimes.** Nothing called `runtime.stop()`
+  before, because nothing had a second team to switch to; leaving them would leak a bridge
+  process per switch.
+- **`live-team.ts` is gone.** Its roster shortcut survives inside `--live-claude`; its
+  duplication of the orchestrator wiring does not.
+
 ## Known gaps
 
 - **`used: 0` on cancel is forwarded, not suppressed.** Ticket 04 makes suppression a
@@ -159,11 +201,16 @@ These were forced by writing the code. None contradicts a ticket; if one looks w
 - **Only `session/new`.** No `session/load`, so nothing resumes across a restart yet. Ticket
   14's trap applies when it lands: re-send `session/set_mode` after every load or resume —
   `#applyPermissionMode()` is the call site.
-- **Nothing survives a restart.** Both team factories open the database at `:memory:`, so the
-  transcript ticket 13 persists is thrown away when the window closes.
-- **A team is a TypeScript file.** `demo-team.ts` and `live-team.ts` hardcode the roster; there
-  is no team creation, so ticket 11's detection and ticket 14's disclosure have nowhere to
-  appear, and the UI's team rail lists exactly one team forever.
+- **A restart restores the transcript, not the agents' memory of it.** Every launch is a fresh
+  `session/new` against the same rows, so the pane shows a conversation the agent cannot
+  remember having. `session/load` is the fix and is still not implemented.
+- **One orchestrator at a time.** Switching teams stops one and starts the other, which costs a
+  fresh session for every agent. Holding several is wiring rather than surgery — `Orchestrator`
+  is per-team already — and is the previous handoff's item 4.
+- **A team cannot be edited or deleted.** No add-an-agent-later, no rename, no removal — and
+  `WorkspaceProvider.remove` (with ticket 10's `-d` versus `-D` rule) therefore has no caller.
+- **A team switch is a hard cut with no confirmation**, even mid-turn: the running agents are
+  stopped where they stand.
 
 - **The renderer hides blobot's own `message_agent` tool by matching its name**
   (`apps/desktop/src/renderer/src/model.ts`). This is the leak ticket 04 warned about in a
@@ -180,30 +227,39 @@ These were forced by writing the code. None contradicts a ticket; if one looks w
   package, because the map settled two packages. If a CLI is ever built, that is the moment to
   reopen it.
 
-## Next session: the desktop app as a real product
+## Next session
 
-The author's call, 2026-08-29: teams and agents the user creates, before a second adapter. The
-order below is argued rather than assumed — the first item is a hazard, the rest is surface.
+Items 1 and 2 of the previous handoff are done. What is left of it, in the same order:
 
-1. **Persistence.** `openDatabase({path: ':memory:'})` in both team factories, and the
-   dev-time relative path to migrations in `apps/desktop/src/main/index.ts`. Two lines, and
-   nothing else on this list means anything without them.
-2. **Team creation.** Pick a Workspace, name agents and roles, choose runtimes. `inspect()`
-   already returns what the flow needs to refuse (not a repo, no commits), to offer `git init`,
-   and to warn on a dirty tree. Ticket 11 (detecting what is installed and authenticated) feeds
-   the runtime picker; `initialize` returning `authMethods: []` is the probe.
-3. **Ticket 14's disclosure**, which that flow is *specified* to carry: once, before the first
-   agent is spawned, stated rather than consented to. Its text is written out in the ticket.
-   Plus the posture indicator in the conversation header.
-4. **Multiple teams.** The rail already has the shape; it needs a list, a switch, and one
-   orchestrator per team. `Orchestrator` is per-team already, so this is wiring, not surgery.
-5. **Ticket 14's permission block.** Unreachable in demo mode, reachable on day one of real
+1. **Ticket 14's disclosure**, which the creation flow is *specified* to carry: once, before
+   the first agent is spawned, stated rather than consented to. Its text is written out in the
+   ticket. `NewTeam.tsx` is the screen and says so in a comment. Plus the posture indicator in
+   the conversation header.
+2. **Ticket 14's permission block.** Unreachable in demo mode, reachable on day one of real
    repos: an agent that asks about `rm` or `git push` currently stalls, because
    `setPermissionHandler` is never called by the app. Inline in the transcript, exactly **Allow
    once** and **Reject**.
+3. **One orchestrator per team**, so switching stops being a restart.
+4. **Editing a team**: add or remove an agent, and the `remove` path that finally exercises
+   ticket 10's `-d`-versus-`-D` rule.
 
-Two live-mode shortcuts to undo along the way, both marked in `live-team.ts`: the roster is
-hardcoded, and `--live-claude` is a flag rather than a product path.
+### Open question raised by the author, 2026-08-29: are Agents owned by Teams?
+
+What is built matches `CONTEXT.md`: *"an Agent is a named member of a Team"*, `agents.team_id`
+is `NOT NULL`, and an AgentWorkspace is a worktree of *that Team's* Workspace on
+`blobot/<team>/<agent>`. Creating a team creates its agents; there is no agent outside one.
+
+The author's model is that Agents exist independently and *join* teams — a marketing
+specialist on two teams at once. **The two are not as far apart as they look**, because what a
+second team could reuse is not the running agent: its workspace is cut from a specific
+repository, its Session is bound to that workspace, its Status is derived from that Session,
+and its mailbox is scoped by the Team. An agent in two teams is two workspaces, two sessions
+and two statuses either way.
+
+What is genuinely reusable is the *definition* — name, role, persona, runtime choice — which
+argues for a new aggregate (an AgentProfile, say) instantiated per team, rather than for
+loosening `agents.team_id`. That is a real decision with a ticket's worth of consequences for
+`CONTEXT.md`, the schema, and the creation flow. **Not settled here.**
 
 ## OpenCode is deferred, by the author, 2026-08-29
 
