@@ -66,6 +66,8 @@ look or behave".
 
 - [The Claude Code adapter strategy](issues/07-the-claude-code-adapter-strategy.md) — Claude's own subagents run unobserved (we never subscribe to the subagent transcript). Bob inherits the user's entire Claude Code config — MCP servers, hooks, skills, project `CLAUDE.md` — with the surprise vectors named. Exact-pinned dependency that fails loudly, `CLAUDE_CODE_EXECUTABLE` pinned to the user's binary, one bridge process per agent.
 
+- [MockAgentRuntime's fidelity contract](issues/08-mockagentruntime-fidelity-contract.md) — Ships as a demo mode. Reproduces every observed trap on purpose (ragged deltas, cancelled-tool-reports-completed, `used: 0` on cancel), because a kind mock produces a UI that shatters on first contact. Checked-in builder scenarios plus a dev control panel; injected clock; peer messages hit the real tool handler but not the real socket.
+
 ## Not yet specified
 
 - **Enforcing commit-before-review across worktrees.** Ticket 06 chose to *tell* agents that

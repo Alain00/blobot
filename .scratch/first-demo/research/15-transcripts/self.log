@@ -1,0 +1,9 @@
+[     6ms] LISTENING on 127.0.0.1:40641 TOKEN=yes MODE=json
+[  1478ms] REQ POST /mcp {"host":"127.0.0.1:40641","user-agent":"curl/7.81.0","content-type":"application/json","accept":"application/json, text/event-stream","authorization":"Bearer sekrit","content-length":"146"} BODY={"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"c","version":"1"}}}
+[  1478ms] AUTH OK
+[  1479ms] RES {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{"listChanged":true}},"serverInfo":{"name":"blobot-http","version":"0.0.1"}}}
+[  1484ms] REQ POST /mcp {"host":"127.0.0.1:40641","user-agent":"curl/7.81.0","accept":"*/*","content-type":"application/json","authorization":"Bearer sekrit","content-length":"46"} BODY={"jsonrpc":"2.0","id":2,"method":"tools/list"}
+[  1484ms] AUTH OK
+[  1484ms] RES {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"message_agent","description":"Send an asynchronous message to a teammate agent. Use this whenever you are asked to send, relay, or deliver a message to another agent by name.","inputSchema":{"type":"object","properties":{"agent":{"type":"string","description":"Name of the teammate agent to message"},"message":{"type":"string","description":"The m
+[  1488ms] REQ POST /mcp {"host":"127.0.0.1:40641","user-agent":"curl/7.81.0","accept":"*/*","content-type":"application/json","content-length":"46"} BODY={"jsonrpc":"2.0","id":3,"method":"tools/list"}
+[  1488ms] AUTH REJECT — got ""

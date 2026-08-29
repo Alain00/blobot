@@ -1,5 +1,5 @@
 Type: research
-Status: open
+Status: claimed
 
 # Verify loopback HTTP MCP against both runtimes
 

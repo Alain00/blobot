@@ -1,5 +1,5 @@
 Type: research
-Status: open
+Status: claimed
 
 # OpenCode's persona mechanism
 
