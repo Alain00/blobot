@@ -47,3 +47,18 @@ The five canonical triage roles, each label string equal to its name. See `docs/
 ### Domain docs
 
 Single-context — one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+## Current work
+
+This project is being planned before it is built. The plan is a **wayfinder map** at
+`.scratch/first-demo/map.md` — read it before doing anything, along with `CONTEXT.md` for the
+domain glossary.
+
+The map's destination is a locked spec for the first demo. Its decisions are binding: they were
+made deliberately, with reasons recorded on each ticket in `.scratch/first-demo/issues/`, and
+several are backed by research observed against the real CLIs on this machine
+(`.scratch/first-demo/research/`, with raw transcripts).
+
+If you believe a decision is wrong, say so and reopen its ticket. Do not quietly contradict it.
+
+`.scratch/` is tracked in git on purpose — the map is the canonical artifact, not scratch work.

@@ -44,6 +44,22 @@ ticket here and are not up for renegotiation inside one.
 `/research` for the research tickets. `/prototype` where the question is "how should it
 look or behave".
 
+## How to continue this map
+
+Run `/wayfinder .scratch/first-demo/map.md` in a fresh session. It will load this file, take
+the first ticket on the frontier, and resolve exactly one.
+
+The **frontier** is every ticket under `issues/` that is `Status: open`, unclaimed, and whose
+every `Blocked by:` entry is `Status: resolved`. Tracker conventions — claiming, resolving,
+blocking — are in `docs/agents/issue-tracker.md`.
+
+**Read this file and the ticket you are taking. Do not read every ticket.** The Decisions-so-far
+index below exists so you can judge relevance and zoom only into what you need; the point of the
+map is that no session has to hold all of it.
+
+Research findings live in `research/`, with raw transcripts alongside. They are long and
+observed — cite them rather than re-deriving.
+
 ## Decisions so far
 
 - [Can an ACP client give an agent a tool?](issues/01-can-an-acp-client-give-an-agent-a-tool.md) — Yes, via `session/new.mcpServers`; ACP has no tool-declaration primitive and MCP is the prescribed path. Session-creation-time only. Verified against OpenCode 1.18.4. Its stdio `type` trap applied to a now-deprecated package — see the correction on the ticket.
