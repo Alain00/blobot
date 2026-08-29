@@ -57,6 +57,8 @@ look or behave".
 
 - [What Bob actually receives](issues/06-what-bob-receives.md) — Static situation (role, repo, worktree, roster, peer-visibility rule) goes in an adapter-owned persona; the envelope carries only sender, their role, an optional context line they supply, and a trust framing marking it as a peer request rather than an operator instruction. One shared session per agent, fully visible to the user. Queued batches arrive as a numbered list. Alice's uncommitted work is invisible to Bob — stated, not hidden.
 
+- [The agent status state machine](issues/09-agent-status-state-machine.md) — Seven statuses (`done` dropped, `responding` added), precedence `waiting > working > responding > thinking`. Derived in memory from the event stream, never persisted. Only process-level failure is sticky; cancel/refusal/max-tokens return to `idle`. On relaunch everything is `idle` and queued messages are held, not auto-delivered. Runtime availability stays orthogonal.
+
 ## Not yet specified
 
 - **Enforcing commit-before-review across worktrees.** Ticket 06 chose to *tell* agents that
