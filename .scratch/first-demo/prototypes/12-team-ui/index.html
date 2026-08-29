@@ -1,0 +1,612 @@
+<title>blobot — team UI prototype</title>
+<!--
+  PROTOTYPE — throwaway. Ticket 12 of .scratch/first-demo.
+  Three variants of the team view + conversation panel, switchable via ?variant=A|B|C
+  and the floating bottom bar. No provider-specific logic anywhere: an agent knows its
+  runtime's *name* as a label and nothing else.
+  Visual language: blobatar.dev. The blobatars are the only saturated thing on the page.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&family=Caveat:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#0a0a0b; --raised:#131315; --ink:#fafaf8; --muted:#8a8a93; --line:#232327;
+  --sans:"Geist",ui-sans-serif,system-ui,sans-serif;
+  --mono:"Geist Mono",ui-monospace,monospace;
+  --hand:"Caveat","Segoe Print",cursive;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+::selection{background:var(--ink);color:var(--ground)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+.mono{font-family:var(--mono);font-size:11px;letter-spacing:.02em}
+.muted{color:var(--muted)}
+.hand{font-family:var(--hand);font-size:20px;color:var(--muted)}
+hr{border:0;border-top:1px solid var(--line);margin:0}
+
+/* ---------- app chrome (shared by all variants) ---------- */
+.app{height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:14px;padding:0 16px;height:44px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.wordmark{font-weight:600;letter-spacing:-.02em}
+.crumb{color:var(--muted);font-family:var(--mono);font-size:11px}
+.crumb b{color:var(--ink);font-weight:500}
+.topbar .spacer{flex:1}
+.budget{display:flex;align-items:center;gap:6px}
+.budget .pips{display:flex;gap:2px}
+.pip{width:4px;height:12px;background:var(--line)}
+.pip.on{background:var(--muted)}
+
+/* ---------- blobatar + status ---------- */
+.blob{display:block;flex:0 0 auto;transform-origin:50% 62%}
+.blob svg{display:block;width:100%;height:100%}
+.b-still .blob{animation:none}
+.b-thinking .blob{animation:breathe 2.6s ease-in-out infinite}
+.b-working  .blob{animation:bob .9s ease-in-out infinite}
+.b-responding .blob{animation:nod 1.15s ease-in-out infinite}
+.b-starting .blob{animation:fadein 1.4s ease-in-out infinite;opacity:.55}
+.b-waiting  .blob{animation:jolt 2.2s ease-in-out infinite}
+.b-failed   .blob{filter:grayscale(1) brightness(.72);animation:none}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-3px) rotate(-2.5deg)}75%{transform:translateY(2px) rotate(2deg)}}
+@keyframes nod{0%,100%{transform:translateY(0) scaleY(1)}50%{transform:translateY(1px) scaleY(.965)}}
+@keyframes fadein{0%,100%{opacity:.4}50%{opacity:.8}}
+@keyframes jolt{0%,86%,100%{transform:translateX(0)}90%{transform:translateX(-2px)}94%{transform:translateX(2px)}}
+@media (prefers-reduced-motion:reduce){.blob{animation:none!important}}
+
+/* status is never colour. three channels: motion, a mono word, a rule. */
+.stat{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.stat .dotline{width:14px;height:1px;background:var(--line);position:relative;overflow:hidden}
+.stat .dotline::after{content:"";position:absolute;inset:0;background:var(--muted);transform:translateX(-100%);animation:sweep 1.1s linear infinite}
+.stat.is-idle .dotline::after,.stat.is-failed .dotline::after{animation:none;transform:translateX(-100%)}
+@keyframes sweep{to{transform:translateX(100%)}}
+.stat.is-responding::after{content:"";width:6px;height:11px;background:var(--muted);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+/* the one inversion on the page, spent on the one state a human must clear */
+.stat.is-waiting{background:var(--ink);color:var(--ground);padding:2px 6px;font-weight:500}
+.stat.is-waiting .dotline{display:none}
+.stat.is-failed{color:var(--ink);text-decoration:line-through;text-decoration-thickness:1px}
+.stat.is-idle{opacity:.55}
+
+/* ---------- variant A: roster + focused conversation + activity ---------- */
+.vA{flex:1;display:grid;grid-template-columns:232px minmax(0,1fr) 288px;min-height:0}
+.vA .rail{border-right:1px solid var(--line);overflow:auto;padding:10px 0}
+.railhead{padding:6px 14px 10px;display:flex;align-items:baseline;gap:8px}
+.agentrow{display:flex;gap:10px;align-items:center;padding:7px 14px;width:100%;text-align:left;border-left:2px solid transparent}
+.agentrow:hover{background:var(--raised)}
+.agentrow.sel{background:var(--raised);border-left-color:var(--ink)}
+.agentrow .who{min-width:0;flex:1}
+.agentrow .nm{display:flex;align-items:baseline;gap:6px}
+.agentrow .nm .grow{flex:1}
+.agentrow .sub{display:flex;align-items:baseline;gap:6px;line-height:1.35}
+.agentrow .nm b{font-weight:500}
+.agentrow .role{color:var(--muted);font-size:12px;flex:0 0 auto}
+.agentrow .stat{font-size:10px}
+.teamrow{display:flex;gap:10px;align-items:center;padding:9px 14px 9px 12px;width:100%;text-align:left;border-left:2px solid transparent}
+.teamrow:hover{background:var(--raised)}
+.teamrow.sel{background:var(--raised);border-left-color:var(--ink)}
+.teamrow .who{min-width:0;flex:1}
+.teamrow .nm{display:flex;align-items:baseline;gap:6px}
+.teamrow .nm b{font-weight:500}
+.teamrow .sub{display:flex;align-items:baseline;gap:6px;line-height:1.35}
+.teamrow .n{color:var(--muted);font-size:12px}
+.teamrow .stat{font-size:10px}
+/* the team reads as a group: its members, overlapped, cut out of the ground */
+.group{display:flex;flex:0 0 auto;--cut:var(--ground)}
+/* the cut follows the silhouette, not a circle — these are blobs, not headshots */
+.group > span{margin-left:-8px;filter:drop-shadow(1.5px 0 0 var(--cut)) drop-shadow(-1.5px 0 0 var(--cut)) drop-shadow(0 1.5px 0 var(--cut)) drop-shadow(0 -1.5px 0 var(--cut))}
+.group > span:first-child{margin-left:0}
+.teamrow.sel .group,.teamrow:hover .group,.convhead .group{--cut:var(--raised)}
+.convhead .group{--cut:var(--ground)}
+.raillabel{padding:12px 14px 6px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.badge{font-family:var(--mono);font-size:10px;border:1px solid var(--ink);padding:0 4px;line-height:14px}
+.vA .conv{display:flex;flex-direction:column;min-width:0}
+.convhead{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line)}
+.convhead .meta{flex:1;min-width:0}
+.convhead .wt{font-family:var(--mono);font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stream{flex:1;overflow:auto;padding:20px 20px 8px;display:flex;flex-direction:column;gap:16px}
+.composer{border-top:1px solid var(--line);padding:12px 20px;display:flex;gap:10px;align-items:center}
+.composer input{flex:1;background:transparent;border:none;color:var(--ink);font:inherit;outline:none}
+.composer input::placeholder{color:var(--muted)}
+.send{border:1px solid var(--line);padding:4px 10px;font-family:var(--mono);font-size:11px;display:inline-flex;align-items:center;gap:6px}
+.send[disabled]{opacity:.35;cursor:not-allowed}
+
+/* the address is the @mention — there is no recipient picker */
+.mentionwrap{position:relative;flex:1;min-width:0}
+.mentionwrap input{position:relative;width:100%;background:transparent;border:none;outline:none;font:inherit;color:transparent;caret-color:var(--ink)}
+.hl{position:absolute;inset:0;pointer-events:none;white-space:pre;overflow:hidden;font:inherit;color:var(--ink)}
+.hl .ph{color:var(--muted)}
+.hl .m{color:var(--ink);font-weight:500;box-shadow:inset 0 -1px 0 var(--ink)}
+.hl .m.bad{color:var(--muted);box-shadow:inset 0 -1px 0 var(--line)}
+.suggest{position:absolute;bottom:calc(100% + 10px);left:-6px;background:var(--raised);border:1px solid var(--line);min-width:196px;padding:4px;z-index:20;box-shadow:0 14px 40px rgba(0,0,0,.6)}
+.suggest button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:6px 8px}
+.suggest button:hover,.suggest button.on{background:var(--ground)}
+.suggest .r{color:var(--muted);font-size:12px;margin-left:auto}
+.hint{font-family:var(--mono);font-size:10.5px;color:var(--muted);white-space:nowrap}
+.vA .feed{border-left:1px solid var(--line);overflow:auto;padding:14px 0}
+.feedhead{padding:0 14px 10px;display:flex;align-items:baseline;justify-content:space-between}
+.fev{display:flex;gap:8px;padding:5px 14px;font-family:var(--mono);font-size:11px;color:var(--muted);align-items:baseline}
+.fev .t{opacity:.5;flex:0 0 auto}
+.fev .who{color:var(--ink);flex:0 0 auto}
+.fev.hi{background:var(--raised)}
+
+/* ---------- messages ---------- */
+.msg{display:flex;gap:12px;max-width:660px}
+.msg .body{min-width:0}
+.msg .hdr{display:flex;align-items:baseline;gap:8px;margin-bottom:3px}
+.msg .hdr .nm{font-weight:500}
+.msg .hdr .tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.msg .txt{white-space:pre-wrap}
+/* from you: solid ink rule, flush left, no ornament */
+.msg.user{border-left:2px solid var(--ink);padding-left:12px}
+/* from the agent: no rule at all — it is the default voice of the pane */
+/* from a peer: dashed enclosure, inset, two blobatars in the header. never a bubble. */
+.peer{border:1px dashed var(--line);padding:12px 14px;margin-left:34px;max-width:620px;background:var(--raised)}
+.peer .route{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.peer .route .arrow{color:var(--muted);font-family:var(--mono)}
+.peer .route .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.peer .ctx{font-family:var(--mono);font-size:11.5px;color:var(--muted);border-left:1px solid var(--line);padding-left:8px;margin-bottom:7px}
+.peer .txt{white-space:pre-wrap}
+.peer .foot{margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--muted)}
+.tool{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;gap:8px;align-items:baseline;margin-left:34px}
+.tool .k{color:var(--ink)}
+.sysline{display:flex;align-items:center;gap:10px;color:var(--muted);font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
+.sysline::before,.sysline::after{content:"";height:1px;background:var(--line);flex:1}
+
+/* ---------- variant B: one team room ---------- */
+.vB{flex:1;display:flex;flex-direction:column;min-height:0}
+.strip{display:flex;gap:8px;padding:14px 20px;border-bottom:1px solid var(--line);align-items:center;overflow:auto}
+.chip{display:flex;align-items:center;gap:8px;border:1px solid var(--line);padding:6px 10px 6px 6px}
+.chip.off{opacity:.4}
+.chip .nm{font-size:13px}
+.vB .room{flex:1;overflow:auto;padding:20px 0}
+.vB .roomwrap{max-width:780px;margin:0 auto;padding:0 20px;display:flex;flex-direction:column;gap:16px}
+.vB .composer{max-width:780px;margin:0 auto;width:100%}
+.collapsed{font-family:var(--mono);font-size:11px;color:var(--muted);border-left:1px solid var(--line);padding-left:10px;margin-left:34px}
+
+/* ---------- variant C: the stage ---------- */
+.vC{flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0;position:relative}
+.lane{display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line)}
+.lane:last-of-type{border-right:none}
+.lane.dim{opacity:.55}
+.lanehead{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 16px 14px;border-bottom:1px solid var(--line)}
+.lanehead .nm{font-size:17px;font-weight:500;letter-spacing:-.01em}
+.lanehead .sub{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.lane .stream{padding:16px;gap:12px}
+.lane .msg,.lane .peer{max-width:none}
+.lane .peer{margin-left:0}
+.lane .tool,.lane .collapsed{margin-left:0}
+.flight{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);background:var(--raised);border:1px dashed var(--line);padding:10px 14px;max-width:340px;z-index:5;box-shadow:0 18px 50px rgba(0,0,0,.55)}
+.flight.gone{display:none}
+.ticker{grid-column:1/-1;border-top:1px solid var(--line);height:30px;display:flex;align-items:center;gap:16px;padding:0 16px;overflow:hidden;font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+/* ---------- prototype switcher (not part of the design) ---------- */
+.switcher{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:2px;background:#fff;color:#000;border-radius:999px;padding:4px;box-shadow:0 8px 30px rgba(0,0,0,.6);z-index:100;font-family:var(--mono);font-size:12px}
+.switcher button{padding:4px 10px;border-radius:999px}
+.switcher button:hover{background:#e6e6e6}
+.switcher .lbl{padding:4px 10px;white-space:nowrap}
+.switcher .sep{width:1px;height:16px;background:#ddd;margin:0 4px}
+.switcher .play{font-weight:600}
+</style>
+
+<div id="app"></div>
+<div class="switcher" id="switcher"></div>
+
+<script>
+const BLOBS = {"alice": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" width=\"96\" height=\"96\"><g fill=\"#e7904b\"><circle cx=\"36.35\" cy=\"51.1\" r=\"23.52\"/><circle cx=\"65.74\" cy=\"51.1\" r=\"23.52\"/><path d=\"M36.35 27.58H65.74V74.62H36.35Z\"/></g><g fill=\"#160d07\"><path d=\"M40.61 46.91C41.07 53.72 41.07 53.72 37.69 53.95C34.31 54.18 34.31 54.18 33.84 47.38C33.38 40.57 33.38 40.57 36.76 40.34C40.15 40.11 40.15 40.11 40.61 46.91Z\"/><path d=\"M63.51 47.49C63.57 53.23 63.57 53.23 60.6 53.26C57.63 53.29 57.63 53.29 57.57 47.55C57.51 41.8 57.51 41.8 60.49 41.78C63.46 41.75 63.46 41.75 63.51 47.49Z\"/></g></svg>", "bob": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" width=\"96\" height=\"96\"><g fill=\"#00bfc1\"><path d=\"M80.33 40.41C89.06 70.4 88.57 71.36 60.23 79.61C31.89 87.87 30.96 87.32 22.22 57.34C13.49 27.35 13.98 26.39 42.32 18.14C70.66 9.88 71.59 10.43 80.33 40.41Z\"/></g><g fill=\"#051212\"><path d=\"M44.48 50.34C43.84 55.87 43.76 56.02 41.53 55.77C39.29 55.51 39.25 55.35 39.88 49.81C40.51 44.27 40.59 44.12 42.83 44.38C45.06 44.63 45.11 44.8 44.48 50.34Z\"/><path d=\"M60.72 50.38C59.82 57.24 59.72 57.42 57.06 57.07C54.39 56.72 54.34 56.52 55.24 49.66C56.14 42.81 56.25 42.63 58.91 42.98C61.57 43.33 61.62 43.53 60.72 50.38Z\"/></g></svg>", "reviewer": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" width=\"96\" height=\"96\"><g fill=\"#f18478\"><path d=\"M82.94 50.17C82.94 72.21 70.75 84.97 49.7 84.97C28.65 84.97 16.46 72.21 16.46 50.17C16.46 28.12 28.65 15.36 49.7 15.36C70.75 15.36 82.94 28.12 82.94 50.17Z\"/></g><g fill=\"#170c0b\"><path d=\"M40.91 45.04C41.87 52.53 41.8 52.78 38.79 53.16C35.78 53.55 35.65 53.32 34.69 45.83C33.73 38.34 33.8 38.09 36.81 37.71C39.82 37.32 39.95 37.55 40.91 45.04Z\"/><path d=\"M64.17 43.65C65.23 53.35 65.15 53.67 61.57 54.06C58 54.45 57.85 54.16 56.79 44.46C55.73 34.76 55.81 34.44 59.38 34.05C62.96 33.66 63.11 33.95 64.17 43.65Z\"/></g></svg>", "alain00": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\" width=\"96\" height=\"96\"><g fill=\"#a5ddff\"><path d=\"M82.41 51.21C82.41 71.76 71.1 82.21 48.84 82.21C26.59 82.21 15.27 71.76 15.27 51.21C15.27 30.65 26.59 20.21 48.84 20.21C71.1 20.21 82.41 30.65 82.41 51.21Z\"/></g><g fill=\"#071117\"><path d=\"M42.55 46.86C44.58 56.44 44.58 56.46 41.2 57.17C37.82 57.89 37.81 57.87 35.78 48.29C33.75 38.71 33.75 38.69 37.13 37.98C40.51 37.26 40.52 37.28 42.55 46.86Z\"/><path d=\"M66.96 47.27C68.85 56.16 68.85 56.18 65.19 56.95C61.53 57.73 61.52 57.72 59.64 48.83C57.75 39.94 57.75 39.93 61.41 39.15C65.06 38.37 65.07 38.39 66.96 47.27Z\"/></g></svg>"};
+
+/* ------------------------------------------------------------------ state */
+const AGENTS = {
+  alice:    {id:"alice",    name:"Alice",    role:"frontend",  runtime:"OpenCode",    wt:"~/.blobot/checkout/alice",    branch:"blobot/checkout/alice"},
+  bob:      {id:"bob",      name:"Bob",      role:"backend",   runtime:"Claude Code", wt:"~/.blobot/checkout/bob",      branch:"blobot/checkout/bob"},
+  reviewer: {id:"reviewer", name:"Reviewer", role:"review",    runtime:"Claude Code", wt:"~/.blobot/checkout/reviewer", branch:"blobot/checkout/reviewer"},
+};
+const ORDER = ["alice","bob","reviewer"];
+
+let S = {};
+function reset(){
+  S = {
+    step:0, sel:"team", playing:false, draft:"", caret:0, focus:false,
+    status:{alice:"idle",bob:"idle",reviewer:"idle"},
+    tool:{}, turns:0, budget:10,
+    stream:{alice:[],bob:[],reviewer:[]},
+    feed:[],
+    flight:null,        // the message currently crossing the gutter (variant C)
+    queued:{},          // messages committed but undelivered
+  };
+}
+const clock = ["14:02","14:02","14:03","14:03","14:03","14:04","14:04","14:04","14:05","14:05","14:06","14:06","14:07"];
+let tick = 0;
+const now = () => clock[Math.min(tick++, clock.length-1)];
+
+function say(who, e){ S.stream[who].push(e); }
+function feed(who, text, hi){ S.feed.unshift({t:now(), who:AGENTS[who]?AGENTS[who].name:"team", text, hi}); }
+
+/* --------------------------------------------------------------- timeline */
+/* A scripted demo of the exact moment the ticket cares about: the user asks
+   Alice something, Alice messages Bob, and both are visibly working at once. */
+const STEPS = [
+  {label:"the user asks Alice", run(){
+    S.sel="alice";
+    say("alice",{kind:"user",text:"The checkout page double-charges when the pay button is double-clicked. Fix the UI side and get the API side sorted too."});
+    S.status.alice="thinking"; feed("alice","turn started");
+  }},
+  {label:"Alice thinks", run(){
+    S.status.alice="working"; S.tool.alice="Read  src/checkout/PayButton.tsx";
+    feed("alice","read PayButton.tsx");
+  }},
+  {label:"Alice finds it", run(){
+    S.status.alice="responding";
+    say("alice",{kind:"agent",text:"Found it — the button has no pending state, so a second click fires a second POST. I'll guard the UI. The idempotency has to happen server-side too, and that's not my worktree."});
+    delete S.tool.alice;
+  }},
+  {label:"Alice messages Bob", run(){
+    S.status.alice="working"; S.tool.alice="message_agent  → bob";
+    const m = {kind:"peer",from:"alice",to:"bob",
+      ctx:"I'm guarding the double-click in PayButton.tsx on my branch (uncommitted).",
+      text:"Can you add an idempotency key to POST /api/charge so a duplicate submit can't double-charge? Reply here when it's in and I'll match the client."};
+    S.pending = m;
+    S.flight = m;
+    say("alice",{...m, view:"sent"});
+    feed("alice","message_agent → Bob"); S.turns++;
+  }},
+  {label:"Bob wakes", run(){
+    S.flight=null;
+    say("bob",{...S.pending, view:"received"});
+    S.status.bob="starting"; feed("bob","session started");
+  }},
+  {label:"both working at once", run(){
+    S.status.bob="working"; S.tool.bob="Grep  \"POST /api/charge\"";
+    S.status.alice="working"; S.tool.alice="Edit  src/checkout/PayButton.tsx";
+    feed("bob","grep POST /api/charge"); feed("alice","edit PayButton.tsx");
+  }},
+  {label:"Alice finishes, Bob keeps going", run(){
+    S.status.alice="responding"; delete S.tool.alice;
+    say("alice",{kind:"agent",text:"Client side is done — the button disables on submit and the handler is guarded. Waiting on Bob's key before I send it."});
+    S.status.bob="thinking"; delete S.tool.bob;
+  }},
+  {label:"Alice idles, Bob writes", run(){
+    S.status.alice="idle";
+    S.status.bob="working"; S.tool.bob="Edit  api/charge.ts";
+    feed("bob","edit api/charge.ts");
+  }},
+  {label:"Bob needs a human", run(){
+    S.status.bob="waiting"; S.tool.bob="Bash  npx prisma migrate dev";
+    feed("bob","permission requested — bash",true);
+  }},
+  {label:"the user allows it", run(){
+    S.status.bob="working"; feed("bob","permission allowed");
+  }},
+  {label:"Bob replies to Alice", run(){
+    S.status.bob="responding"; delete S.tool.bob;
+    say("bob",{kind:"agent",text:"Added an `Idempotency-Key` header on POST /api/charge, keyed per attempt and stored for 24h. Committed to blobot/checkout/bob."});
+    const m = {kind:"peer",from:"bob",to:"alice",
+      ctx:"Committed on blobot/checkout/bob — you'll need to fetch it to see it.",
+      text:"Key is in. Send `Idempotency-Key: <uuid v4 per attempt>`; a repeat returns the original charge instead of a new one."};
+    S.pending=m; S.flight=m; say("bob",{...m,view:"sent"}); S.turns++;
+    feed("bob","message_agent → Alice");
+  }},
+  {label:"Alice is woken", run(){
+    S.flight=null; say("alice",{...S.pending,view:"received"});
+    S.status.alice="working"; S.tool.alice="Edit  src/checkout/api.ts"; S.status.bob="idle";
+  }},
+  {label:"done", run(){
+    S.status.alice="responding"; delete S.tool.alice;
+    say("alice",{kind:"agent",text:"Header wired on the client. Both halves are on their branches — say the word and I'll open the merge."});
+  }},
+  {label:"Reviewer's runtime dies", run(){
+    S.status.alice="idle"; S.status.reviewer="failed";
+    feed("reviewer","process exited — needs restart",true);
+    S.queued.reviewer=2;
+  }},
+];
+
+function stepFwd(){ if(S.step<STEPS.length){ STEPS[S.step].run(); S.step++; render(); } else { pause(); } }
+function play(){ S.playing=true; render(); }
+function pause(){ S.playing=false; render(); }
+setInterval(()=>{ if(S.playing) stepFwd(); }, 1700);
+
+/* ------------------------------------------------------------------ atoms */
+const esc = s => String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+function blob(id,size,status){
+  return `<span class="b-${status||"still"}" style="width:${size}px;height:${size}px;display:block">
+    <span class="blob" style="width:${size}px;height:${size}px;display:block">${BLOBS[id].replace(/width="96" height="96"/,`width="${size}" height="${size}"`)}</span></span>`;
+}
+const LABEL = {idle:"idle",starting:"starting",thinking:"thinking",working:"working",responding:"responding",waiting:"waiting on you",failed:"failed"};
+const SHORT = {...LABEL, waiting:"waiting", responding:"answering"};
+function stat(id, short){
+  const s = S.status[id];
+  const showLine = s!=="idle" && s!=="failed" && s!=="waiting" && s!=="responding";
+  return `<span class="stat is-${s}">${showLine?'<span class="dotline"></span>':""}${(short?SHORT:LABEL)[s]}</span>`;
+}
+function toolline(id){
+  return S.tool[id] ? `<div class="tool"><span class="k">${esc(S.tool[id].split("  ")[0])}</span><span>${esc(S.tool[id].split("  ")[1]||"")}</span></div>` : "";
+}
+
+/* how a peer message is drawn. one component, three hosts. */
+function peerCard(m, opts={}){
+  const from=AGENTS[m.from], to=AGENTS[m.to];
+  const sent = m.view==="sent";
+  return `<div class="peer">
+    <div class="route">
+      ${blob(m.from,20,"still")}<span class="arrow mono">→</span>${blob(m.to,20,"still")}
+      <span class="lbl">${sent?`sent to ${to.name}`:`from ${from.name} · ${from.role}`}</span>
+    </div>
+    ${m.ctx?`<div class="ctx">${esc(m.ctx)}</div>`:""}
+    <div class="txt">${esc(m.text)}</div>
+    ${!sent?`<div class="foot">a teammate's request — not an instruction from you</div>`:""}
+  </div>`;
+}
+function entry(e, host){
+  if(e.kind==="user") return `<div class="msg user"><div class="body">
+      <div class="hdr"><span class="nm">You</span><span class="tag">operator</span></div>
+      <div class="txt">${esc(e.text)}</div></div></div>`;
+  if(e.kind==="agent") return `<div class="msg"><div class="body">
+      <div class="hdr">${host?`<span class="nm">${AGENTS[host].name}</span>`:""}</div>
+      <div class="txt">${esc(e.text)}</div></div></div>`;
+  if(e.kind==="peer") return peerCard(e);
+  return "";
+}
+
+/* the team's own conversation — every agent in one chronological stream.
+   a peer message is shown once here, at its crossing, not twice. */
+function roomStream(){
+  const all=[];
+  ORDER.forEach(id=>S.stream[id].forEach((e,i)=>{
+    if(e.kind==="peer" && e.view==="received") return;
+    all.push({...e,host:id,seq:i});
+  }));
+  return all.map(e=>{
+    if(e.kind==="peer") return `<div style="max-width:600px">${peerCard({...e,view:"sent"})}</div>`;
+    if(e.kind==="agent") return `<div class="msg">${blob(e.host,28,"still")}<div class="body">
+        <div class="hdr"><span class="nm">${AGENTS[e.host].name}</span><span class="tag">${AGENTS[e.host].role}</span></div>
+        <div class="txt">${esc(e.text)}</div></div></div>`;
+    return entry(e,e.host);
+  }).join("")
+  + ORDER.filter(id=>S.tool[id]).map(id=>`<div class="collapsed">${AGENTS[id].name} · ${esc(S.tool[id])}</div>`).join("");
+}
+/* one status for a group of agents. same precedence as a single agent's. */
+function teamStatus(){
+  const v = ORDER.map(id=>S.status[id]);
+  const n = st => v.filter(x=>x===st).length;
+  if(n("waiting"))  return {cls:"waiting", txt:`${n("waiting")} waiting`};
+  if(n("failed"))   return {cls:"failed",  txt:`${n("failed")} failed`};
+  const busy = v.filter(x=>x!=="idle"&&x!=="failed").length;
+  if(busy)          return {cls:"working", txt:`${busy} working`};
+  return {cls:"idle", txt:"all idle"};
+}
+
+/* ---------------------------------------------------------------- composer
+   One component everywhere. The recipient is not a control — it is an
+   @mention inside the sentence, resolved as you type. In an agent's own pane
+   the recipient is implicit and a mention re-routes; in the team pane there is
+   no implicit recipient, so a mention is required before send lights up. */
+function mentionsIn(text){
+  const out=[]; const re=/@([A-Za-z0-9_-]+)/g; let m;
+  while((m=re.exec(text))) out.push({at:m.index, raw:m[0], id:m[1].toLowerCase(), ok:!!AGENTS[m[1].toLowerCase()]});
+  return out;
+}
+function highlight(text, placeholder){
+  if(!text) return `<span class="ph">${esc(placeholder)}</span>`;
+  let out="", i=0;
+  for(const m of mentionsIn(text)){
+    out += esc(text.slice(i,m.at)) + `<span class="m ${m.ok?"":"bad"}">${esc(m.raw)}</span>`;
+    i = m.at + m.raw.length;
+  }
+  return out + esc(text.slice(i));
+}
+/* what a draft resolves to. an explicit mention always wins. */
+function recipient(implicit){
+  const m = mentionsIn(S.draft).filter(x=>x.ok);
+  return m.length ? m[m.length-1].id : (implicit || null);
+}
+function suggestions(){
+  const t=S.draft.slice(0,S.caret);
+  const m=/@([A-Za-z0-9_-]*)$/.exec(t);
+  if(!m) return null;
+  const q=m[1].toLowerCase();
+  const hits=ORDER.filter(id=>id.startsWith(q)||AGENTS[id].name.toLowerCase().startsWith(q));
+  return hits.length?{q,hits}:null;
+}
+function pick(id){
+  const t=S.draft.slice(0,S.caret), rest=S.draft.slice(S.caret);
+  const m=/@([A-Za-z0-9_-]*)$/.exec(t);
+  S.draft = t.slice(0,m.index) + "@" + id + " " + rest;
+  S.caret = m.index + id.length + 2; S.focus = true; render();
+}
+function composer(implicit){
+  const to = recipient(implicit);
+  const sg = S.focus ? suggestions() : null;
+  const ph = implicit ? `Message ${AGENTS[implicit].name}…` : "Message the team — @mention an agent";
+  return `<div class="composer">
+    <div class="mentionwrap">
+      ${sg?`<div class="suggest">${sg.hits.map((id,i)=>`<button class="${i===0?"on":""}" onmousedown="event.preventDefault();pick('${id}')">
+          ${blob(id,20,"still")}<span>${AGENTS[id].name}</span><span class="r">${AGENTS[id].role}</span></button>`).join("")}</div>`:""}
+      <div class="hl">${highlight(S.draft, ph)}</div>
+      <input id="draft" value="${esc(S.draft).replace(/"/g,"&quot;")}" autocomplete="off"
+        oninput="S.draft=this.value;S.caret=this.selectionStart;render()"
+        onkeyup="S.caret=this.selectionStart;if(suggestions()||S.wasSg)render()"
+        onclick="S.caret=this.selectionStart;render()"
+        onfocus="S.focus=true" onblur="S.focus=false;render()">
+    </div>
+    ${to?"":`<span class="hint">@mention to send</span>`}
+    <button class="send" ${to?"":"disabled"}>${to?`${blob(to,16,"still")}send to ${AGENTS[to].name}`:"send"}</button>
+  </div>`;
+}
+
+/* ------------------------------------------------------------- variant A */
+function VariantA(){
+  const isTeam = S.sel==="team";
+  const a = isTeam ? null : AGENTS[S.sel];
+  const ts = teamStatus();
+  return `<div class="vA">
+    <div class="rail">
+      <button class="teamrow ${isTeam?"sel":""}" onclick="S.sel='team';render()">
+        <span class="group">${ORDER.map(id=>blob(id,22,S.status[id])).join("")}</span>
+        <span class="who">
+          <span class="nm"><b>Checkout</b></span>
+          <span class="sub"><span class="n">${ORDER.length} agents</span><span style="flex:1"></span>
+            <span class="stat is-${ts.cls}">${ts.cls==="working"?'<span class="dotline"></span>':""}${ts.txt}</span></span>
+        </span></button>
+      <div class="raillabel">Agents</div>
+      ${ORDER.map(id=>{
+        const g=AGENTS[id];
+        return `<button class="agentrow ${id===S.sel?"sel":""}" onclick="S.sel='${id}';render()">
+          ${blob(id,30,S.status[id])}
+          <span class="who">
+            <span class="nm"><b>${g.name}</b>${S.queued[id]?`<span class="badge">${S.queued[id]}</span>`:""}<span class="grow"></span></span>
+            <span class="sub"><span class="role">${g.role}</span><span class="grow"></span>${stat(id, true)}</span>
+          </span></button>`;
+      }).join("")}
+      <div style="padding:14px">
+        <div class="mono muted">+ add an agent</div>
+      </div>
+    </div>
+
+    <div class="conv">
+      ${isTeam ? `
+      <div class="convhead">
+        <span class="group">${ORDER.map(id=>blob(id,26,S.status[id])).join("")}</span>
+        <div class="meta">
+          <div><b>Checkout</b> <span class="muted">· the whole team</span></div>
+          <div class="wt">~/code/storefront · ${ORDER.length} worktrees</div>
+        </div>
+        <span class="stat is-${ts.cls}">${ts.cls==="working"?'<span class="dotline"></span>':""}${ts.txt}</span>
+      </div>
+      <div class="stream" id="streamA">
+        <div class="sysline">everything the team says · each message once</div>
+        ${roomStream() || `<div class="hand" style="margin:auto;text-align:center">quiet in here</div>`}
+      </div>
+      ${composer(null)}` : `
+      <div class="convhead">
+        ${blob(a.id,30,S.status[a.id])}
+        <div class="meta">
+          <div><b>${a.name}</b> <span class="muted">· ${a.role}</span> <span class="mono muted">${a.runtime}</span></div>
+          <div class="wt">${a.branch}</div>
+        </div>
+        ${stat(a.id)}
+      </div>
+      <div class="stream" id="streamA">
+        ${S.stream[a.id].length?"":`<div class="hand" style="margin:auto;text-align:center">nothing yet — say something to ${a.name}</div>`}
+        ${S.stream[a.id].map(e=>entry(e,a.id)).join("")}
+        ${toolline(a.id)}
+      </div>
+      ${composer(a.id)}`}
+    </div>
+
+    <div class="feed">
+      ${isTeam ? `
+      <div class="feedhead"><span class="mono muted">ACTIVITY · TEAM</span><span class="mono muted">all</span></div>
+      ${S.feed.map(f=>`<div class="fev ${f.hi?"hi":""}"><span class="t">${f.t}</span><span class="who">${f.who}</span><span>${esc(f.text)}</span></div>`).join("")
+        || `<div class="fev"><span class="t">—</span><span>quiet</span></div>`}` : `
+      <div class="feedhead"><span class="mono muted">ACTIVITY · ${a.name}</span><span class="mono muted">all</span></div>
+      ${S.feed.filter(f=>f.who===a.name).map(f=>`<div class="fev ${f.hi?"hi":""}"><span class="t">${f.t}</span><span>${esc(f.text)}</span></div>`).join("")
+        || `<div class="fev"><span class="t">—</span><span>quiet</span></div>`}
+      <div style="height:14px"></div><hr>
+      <div class="feedhead" style="padding-top:12px"><span class="mono muted">TEAM</span></div>
+      ${S.feed.slice(0,10).map(f=>`<div class="fev ${f.hi?"hi":""}"><span class="t">${f.t}</span><span class="who">${f.who}</span><span>${esc(f.text)}</span></div>`).join("")}`}
+    </div>
+  </div>`;
+}
+
+/* ------------------------------------------------------------- variant B */
+function VariantB(){
+  return `<div class="vB">
+    <div class="strip">
+      <span class="mono muted" style="margin-right:6px">CHECKOUT</span>
+      ${ORDER.map(id=>`<span class="chip ${S.status[id]==="failed"?"off":""}">
+        ${blob(id,26,S.status[id])}<span><span class="nm">${AGENTS[id].name}</span> <span>${stat(id)}</span></span></span>`).join("")}
+      <span style="flex:1"></span>
+      <span class="mono muted">${S.turns}/${S.budget} peer turns</span>
+    </div>
+    <div class="room"><div class="roomwrap">
+      <div class="sysline">one room · everything the team says</div>
+      ${roomStream()}
+      ${S.feed.filter(f=>f.hi).slice(0,1).map(f=>`<div class="sysline">${esc(f.who)} — ${esc(f.text)}</div>`).join("")}
+    </div></div>
+    ${composer(null)}
+  </div>`;
+}
+
+/* ------------------------------------------------------------- variant C */
+function VariantC(){
+  const lanes = ["alice","bob"];
+  return `<div class="vC">
+    ${lanes.map(id=>{
+      const g=AGENTS[id], busy=S.status[id]!=="idle"&&S.status[id]!=="failed";
+      return `<div class="lane ${busy?"":"dim"}">
+        <div class="lanehead">
+          ${blob(id,68,S.status[id])}
+          <div class="nm">${g.name}</div>
+          <div class="sub">${g.role} · ${g.runtime}</div>
+          ${stat(id)}
+        </div>
+        <div class="stream">
+          ${S.stream[id].filter(e=>!(e.kind==="peer"&&e.view==="sent")).map(e=>entry(e,id)).join("")}
+          ${toolline(id)}
+        </div>
+      </div>`;
+    }).join("")}
+    ${S.flight?`<div class="flight">${peerCard({...S.flight,view:"received"})}<div class="foot mono muted" style="margin-top:8px">in flight</div></div>`:""}
+    <div style="grid-column:1/-1">${composer("alice")}</div>
+    <div class="ticker">
+      ${S.feed.slice(0,4).map(f=>`<span><span style="opacity:.5">${f.t}</span> ${esc(f.who)} ${esc(f.text)}</span>`).join('<span style="opacity:.3">·</span>')}
+    </div>
+  </div>`;
+}
+
+/* ------------------------------------------------------------------ shell */
+const VARIANTS = {
+  A:{name:"Roster + focused conversation", render:VariantA},
+  B:{name:"One team room",                 render:VariantB},
+  C:{name:"The stage",                     render:VariantC},
+};
+function currentKey(){
+  const k=(new URLSearchParams(location.search).get("variant")||"A").toUpperCase();
+  return VARIANTS[k]?k:"A";
+}
+function setVariant(k){
+  const u=new URL(location.href); u.searchParams.set("variant",k); history.replaceState({},"",u); render();
+}
+function render(){
+  const k=currentKey();
+  document.getElementById("app").innerHTML =
+    `<div class="app">
+      <div class="topbar">
+        <span class="wordmark">blobot</span>
+        <span class="crumb">~/code/<b>storefront</b> · team <b>checkout</b></span>
+        <span class="spacer"></span>
+        <span class="budget"><span class="mono muted">peer turns</span>
+          <span class="pips">${Array.from({length:S.budget},(_,i)=>`<span class="pip ${i<S.turns?"on":""}"></span>`).join("")}</span></span>
+      </div>
+      ${VARIANTS[k].render()}
+    </div>`;
+  const d=document.getElementById("draft");
+  if(d && S.focus){ d.focus(); d.setSelectionRange(S.caret,S.caret); }
+  S.wasSg = !!(S.focus && suggestions());
+  const st=document.getElementById("streamA"); if(st) st.scrollTop=st.scrollHeight;
+  document.querySelectorAll(".lane .stream").forEach(el=>el.scrollTop=el.scrollHeight);
+  document.getElementById("switcher").innerHTML =
+    `<button onclick="cycle(-1)">←</button>
+     <span class="lbl">${k} — ${VARIANTS[k].name}</span>
+     <button onclick="cycle(1)">→</button>
+     <span class="sep"></span>
+     <button class="play" onclick="${S.playing?"pause()":"play()"}">${S.playing?"❚❚":"▶"}</button>
+     <button onclick="stepFwd()">step ${S.step}/${STEPS.length}</button>
+     <button onclick="restart()">↺</button>`;
+}
+function cycle(d){
+  const ks=Object.keys(VARIANTS), i=ks.indexOf(currentKey());
+  setVariant(ks[(i+d+ks.length)%ks.length]);
+}
+function restart(){ tick=0; const p=S.playing; reset(); S.playing=p; render(); }
+addEventListener("keydown",e=>{
+  if(/^(INPUT|TEXTAREA)$/.test(e.target.tagName)||e.target.isContentEditable) return;
+  if(e.key==="ArrowLeft") cycle(-1);
+  if(e.key==="ArrowRight") cycle(1);
+  if(e.key===" "){ e.preventDefault(); S.playing?pause():stepFwd(); }
+});
+reset(); render();
+</script>
