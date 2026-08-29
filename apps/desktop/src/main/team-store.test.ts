@@ -12,7 +12,7 @@ import {
   type WorkspaceInspection,
   type WorkspaceProvider,
 } from '@blobot/core';
-import { TeamCreationError, createTeam } from './team-store.js';
+import { TeamCreationError, createTeam, hireAgent } from './team-store.js';
 
 const migrationsFolder = fileURLToPath(
   new URL('../../../../packages/core/migrations', import.meta.url),
@@ -61,20 +61,26 @@ let store: SqliteStore;
 let workspaces: FakeWorkspaces;
 const clock = new VirtualClock(1_000);
 
-const spec = {
-  name: 'checkout',
-  workspacePath: '/repo',
-  turnBudget: 6,
-  agents: [
-    { name: 'Alice', role: 'frontend', runtimeId: 'claude-code' },
-    { name: 'Bob', role: 'backend', runtimeId: 'claude-code' },
-  ],
-};
+/** Hire the two of them and hand back a spec that forms a team out of them. */
+function teamOf(...members: { name: string; role: string; instructions?: string }[]): {
+  name: string;
+  workspacePath: string;
+  turnBudget: number;
+  profileIds: string[];
+} {
+  const profileIds = members.map(
+    (member) => hireAgent({ ...member, runtimeId: 'claude-code' }, { store, clock }).id,
+  );
+  return { name: 'checkout', workspacePath: '/repo', turnBudget: 6, profileIds };
+}
+
+let spec: ReturnType<typeof teamOf>;
 
 beforeEach(() => {
   opened = openDatabase({ path: ':memory:', migrationsFolder });
   store = new SqliteStore(opened.db);
   workspaces = new FakeWorkspaces();
+  spec = teamOf({ name: 'Alice', role: 'frontend' }, { name: 'Bob', role: 'backend' });
 });
 
 afterEach(() => opened.close());
@@ -130,13 +136,7 @@ describe('creating a team', () => {
   });
 
   it('refuses two agents whose names slug to one branch', async () => {
-    const colliding = {
-      ...spec,
-      agents: [
-        { name: 'Alice', role: 'frontend', runtimeId: 'claude-code' },
-        { name: 'alice!', role: 'backend', runtimeId: 'claude-code' },
-      ],
-    };
+    const colliding = teamOf({ name: 'Ada', role: 'frontend' }, { name: 'ada!', role: 'backend' });
     await expect(createTeam(colliding, { store, clock, workspaces })).rejects.toMatchObject({
       code: 'duplicate_agent',
     });
@@ -145,10 +145,84 @@ describe('creating a team', () => {
   it('never gates on detection: a runtime is stored as chosen, unprobed', async () => {
     // Ticket 11's rule. The user is always allowed to try — a negative probe now is not proof
     // they will not have signed in by the first turn.
-    const team = await createTeam(
-      { ...spec, agents: [{ name: 'Solo', role: 'anything', runtimeId: 'something-unproven' }] },
+    const solo = hireAgent(
+      { name: 'Solo', role: 'anything', runtimeId: 'something-unproven' },
+      { store, clock },
+    );
+    const team = await createTeam({ ...spec, profileIds: [solo.id] }, { store, clock, workspaces });
+    expect(store.agentsOfTeam(team.id)[0]?.runtimeId).toBe('something-unproven');
+  });
+});
+
+describe('agents that exist on their own', () => {
+  it('hires an agent that belongs to no team', () => {
+    const agent = hireAgent(
+      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code', instructions: 'Never ship copy without a source.' },
+      { store, clock },
+    );
+    expect(store.listProfiles().map((profile) => profile.name)).toContain('Mara');
+    expect(store.membershipsOf(agent.id)).toEqual([]);
+  });
+
+  it('puts one agent on two teams at once, with a workspace and a row for each', async () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    const first = await createTeam(
+      { name: 'checkout', workspacePath: '/repo', turnBudget: 6, profileIds: [mara.id] },
       { store, clock, workspaces },
     );
-    expect(store.agentsOfTeam(team.id)[0]?.runtimeId).toBe('something-unproven');
+    const second = await createTeam(
+      { name: 'storefront', workspacePath: '/other', turnBudget: 6, profileIds: [mara.id] },
+      { store, clock, workspaces },
+    );
+
+    const memberships = store.membershipsOf(mara.id);
+    expect(memberships.map((agent) => agent.teamId).sort()).toEqual([first.id, second.id].sort());
+    // Two Agents, two branches, two workspaces: what a team gives an agent cannot be shared.
+    expect(new Set(memberships.map((agent) => agent.id)).size).toBe(2);
+    expect(new Set(memberships.map((agent) => agent.workspacePath)).size).toBe(2);
+    expect(memberships.map((agent) => agent.branch).sort()).toEqual([
+      'blobot/checkout/mara',
+      'blobot/storefront/mara',
+    ]);
+    expect(memberships.every((agent) => agent.profileId === mara.id)).toBe(true);
+  });
+
+  it('copies name, role and instructions onto the Agent, so a later edit cannot rewrite them', async () => {
+    const mara = hireAgent(
+      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code', instructions: 'Cite a source.' },
+      { store, clock },
+    );
+    const team = await createTeam(
+      { ...spec, profileIds: [mara.id] },
+      { store, clock, workspaces },
+    );
+    expect(store.agentsOfTeam(team.id)[0]).toMatchObject({
+      name: 'Mara',
+      role: 'marketing',
+      instructions: 'Cite a source.',
+    });
+  });
+
+  it('refuses a second agent of the same name', () => {
+    hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    expect(() =>
+      hireAgent({ name: 'Mara', role: 'sales', runtimeId: 'claude-code' }, { store, clock }),
+    ).toThrow(TeamCreationError);
+  });
+
+  it('refuses a team formed out of an agent that no longer exists', async () => {
+    await expect(
+      createTeam({ ...spec, profileIds: ['agent_gone'] }, { store, clock, workspaces }),
+    ).rejects.toMatchObject({ code: 'unknown_agent' });
+  });
+
+  it('retiring an agent leaves the teams it is on alone', async () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    const team = await createTeam({ ...spec, profileIds: [mara.id] }, { store, clock, workspaces });
+    store.tombstoneProfile(mara.id, 99);
+
+    expect(store.listProfiles().map((profile) => profile.id)).not.toContain(mara.id);
+    // The team is a real team; ending it is a separate decision from retiring the agent.
+    expect(store.agentsOfTeam(team.id)).toHaveLength(1);
   });
 });

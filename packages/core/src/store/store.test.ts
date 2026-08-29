@@ -54,26 +54,46 @@ afterEach(() => opened.close());
 
 describe('the schema', () => {
   it('has nowhere to put a credential', () => {
-    const columns = opened.db
-      .all<{ name: string }>(sql`SELECT name FROM pragma_table_info('agents')`)
-      .map((row) => row.name);
+    const columnsOf = (table: string): string[] =>
+      opened.db
+        .all<{ name: string }>(sql.raw(`SELECT name FROM pragma_table_info('${table}')`))
+        .map((row) => row.name);
+
     // Runtime config is typed columns, and the TS schema is the allowlist.
-    expect(columns.sort()).toEqual(
+    expect(columnsOf('agents').sort()).toEqual(
       [
         'branch',
         'created_at',
         'deleted_at',
         'executable_path',
         'id',
+        'instructions',
         'model',
         'name',
+        'profile_id',
         'role',
         'runtime_id',
         'team_id',
         'workspace_path',
       ].sort(),
     );
-    expect(columns.join(' ')).not.toMatch(/key|token|secret|config|env/i);
+    // The same rule holds for an agent that exists before any team does.
+    expect(columnsOf('agent_profiles').sort()).toEqual(
+      [
+        'created_at',
+        'deleted_at',
+        'executable_path',
+        'id',
+        'instructions',
+        'model',
+        'name',
+        'role',
+        'runtime_id',
+      ].sort(),
+    );
+    for (const table of ['agents', 'agent_profiles']) {
+      expect(columnsOf(table).join(' ')).not.toMatch(/key|token|secret|config|env/i);
+    }
   });
 
   it('enforces the name uniqueness that branch names depend on', () => {

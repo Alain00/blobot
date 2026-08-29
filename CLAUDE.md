@@ -113,9 +113,15 @@ up. Read it before starting work.
   a missing branch) and the `-d`-versus-`-D` rule on deleting an agent.
 
 - **Persistence and team creation** (11 + 13): one SQLite file under Electron's `userData`, a
-  creation flow that picks a Workspace, names agents and roles and chooses runtimes, and
-  ticket 11's detection behind the picker — four honest states, never the word *authenticated*,
-  gating nothing. With no flags the app is the product; `--demo` is the scripted team.
+  creation flow that picks a Workspace and forms a team out of agents, and ticket 11's detection
+  behind the runtime picker — four honest states, never the word *authenticated*, gating
+  nothing. With no flags the app is the product; `--demo` is the scripted team.
+
+- **Agents exist independently of teams** — `docs/adr/0001-agents-exist-independently-of-teams.md`,
+  the repo's first ADR, and the reason `CONTEXT.md` now has an **AgentProfile**. An agent is
+  hired once, on no team, and can be on several at the same time; joining a team instantiates an
+  Agent from it, because a workspace, a session, a mailbox and a status are things a Team gives
+  an Agent and none of them can be shared.
 
 Next: **ticket 14's disclosure and permission block**, then one orchestrator per team and
 editing a team. OpenCode (03 + 16) is deferred by the author, 2026-08-29; the cost of proving

@@ -14,6 +14,11 @@ export function composePersona(agent: Agent, team: Team, roster: readonly Agent[
     `You are ${agent.name}, ${agent.role}, on the team "${team.name}".`,
     `The team works on ${team.workspacePath}.`,
     `You work in your own copy of it at ${agent.workspacePath}.`,
+    // An agent exists across teams, so its standing instructions are static about *it* rather
+    // than about this team — which is exactly what belongs in the cached prefix.
+    ...(agent.instructions === undefined || agent.instructions.trim() === ''
+      ? []
+      : ['', 'Standing instructions, which apply on every team you are on:', agent.instructions.trim()]),
     '',
     teammates.length === 0
       ? 'You have no teammates on this team yet.'

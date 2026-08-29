@@ -61,6 +61,20 @@ describe('the persona', () => {
   });
 });
 
+describe('an agent that exists across teams', () => {
+  it('carries its standing instructions into the persona', () => {
+    const mara = { ...alice, name: 'Mara', instructions: 'Never ship copy without a source.' };
+    const persona = composePersona(mara, team, [mara, bob]);
+    expect(persona).toContain('Never ship copy without a source.');
+    // Said as what it is: true of this agent everywhere, not something this team asked for.
+    expect(persona).toContain('on every team you are on');
+  });
+
+  it('says nothing extra when it has none', () => {
+    expect(composePersona(alice, team, [alice, bob])).not.toContain('Standing instructions');
+  });
+});
+
 describe('the wake prompt', () => {
   it('carries only what varies: sender, role, context, body', () => {
     const prompt = composeWakePrompt(

@@ -15,6 +15,7 @@ import {
   type WorkspaceProvider,
 } from '@blobot/core';
 import type { RunningTeam } from './running-team.js';
+import { runtimeLabel } from './runtime-labels.js';
 
 export interface StartTeamOptions {
   readonly team: Team;
@@ -24,9 +25,6 @@ export interface StartTeamOptions {
   readonly workspaces?: WorkspaceProvider;
   readonly onLog?: (line: string) => void;
 }
-
-/** Which `runtime_id` values this build can actually construct. */
-const RUNTIME_LABELS: Record<string, string> = { 'claude-code': 'Claude Code' };
 
 /**
  * Bring a persisted team back to life: reconcile every agent's workspace, spawn its runtime,
@@ -72,8 +70,10 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     agents.push({
       id: record.id,
       teamId: team.id,
+      ...(record.profileId === undefined ? {} : { profileId: record.profileId }),
       name: record.name,
       role: record.role,
+      ...(record.instructions === undefined ? {} : { instructions: record.instructions }),
       workspacePath: workspace.path,
     });
     branches[record.id] = workspace.branch;
@@ -92,7 +92,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
   for (const record of records) {
     const agent = agents.find((candidate) => candidate.id === record.id);
     if (agent === undefined) continue;
-    runtimeLabels[record.id] = RUNTIME_LABELS[record.runtimeId] ?? record.runtimeId;
+    runtimeLabels[record.id] = runtimeLabel(record.runtimeId);
     const endpoint = mcp.endpointFor(agent.id);
     const runtime = new ClaudeAgentRuntime({
       agentId: agent.id,

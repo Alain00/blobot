@@ -24,7 +24,7 @@ export type {
   UsageUpdated,
 } from './events.js';
 
-export type { Agent, Message, Team } from './orchestrator/domain.js';
+export type { Agent, AgentProfile, Message, Team } from './orchestrator/domain.js';
 export { findAgentByName } from './orchestrator/roster.js';
 export { AgentStatusTracker, statusAfter } from './status.js';
 export type { AgentStatus } from './status.js';

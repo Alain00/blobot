@@ -17,13 +17,18 @@ import { startTeam } from './start-team.js';
 import {
   TeamCreationError,
   createTeam,
+  hireAgent,
   initializeWorkspace,
   inspectWorkspace,
+  type NewAgentSpec,
   type NewTeamSpec,
 } from './team-store.js';
+import { runtimeLabel } from './runtime-labels.js';
 import type { RunningTeam } from './running-team.js';
 import type {
+  HireResult,
   TeamCreationResult,
+  UiAgentProfile,
   UiRuntimeChoice,
   UiSnapshot,
   UiTeamSummary,
@@ -67,6 +72,25 @@ function teamSummaries(): UiTeamSummary[] {
     name: team.name,
     workspacePath: team.workspacePath,
     agentCount: store?.agentsOfTeam(team.id).length ?? 0,
+  }));
+}
+
+/** Every hired agent, and which teams it is on — a membership query, never a stored count. */
+function agentProfiles(): UiAgentProfile[] {
+  if (store === undefined) return [];
+  const teamNames = new Map(store.listTeams().map((team) => [team.id, team.name]));
+  return store.listProfiles().map((profile) => ({
+    id: profile.id,
+    name: profile.name,
+    role: profile.role,
+    runtimeLabel: runtimeLabel(profile.runtimeId),
+    ...(profile.instructions === undefined ? {} : { instructions: profile.instructions }),
+    teams: store
+      ? store
+          .membershipsOf(profile.id)
+          .map((agent) => teamNames.get(agent.teamId) ?? '')
+          .filter((name) => name !== '')
+      : [],
   }));
 }
 
@@ -248,19 +272,32 @@ void app.whenReady().then(async () => {
       ...(detection.version === undefined ? {} : { version: detection.version }),
     }));
   });
-  ipcMain.handle('blobot:createTeam', async (_event, spec: NewTeamSpec): Promise<TeamCreationResult> => {
+  ipcMain.handle('blobot:listAgents', (): UiAgentProfile[] => agentProfiles());
+  ipcMain.handle('blobot:hireAgent', async (_event, spec: NewAgentSpec): Promise<HireResult> => {
     if (store === undefined) return { ok: false, error: 'No database is open.' };
     try {
       // The executable is resolved here rather than in the renderer: ticket 07 pins the
       // user's own binary, and that resolution is detection's job, not the UI's.
       const detected = await detectRuntimes();
-      const withPaths = spec.agents.map((agent) => {
-        const executablePath = detected.find(
-          (detection) => detection.runtimeId === agent.runtimeId,
-        )?.executablePath;
-        return { ...agent, ...(executablePath === undefined ? {} : { executablePath }) };
-      });
-      const team = await createTeam({ ...spec, agents: withPaths }, { store, clock });
+      const executablePath = detected.find(
+        (detection) => detection.runtimeId === spec.runtimeId,
+      )?.executablePath;
+      const profile = hireAgent(
+        { ...spec, ...(executablePath === undefined ? {} : { executablePath }) },
+        { store, clock },
+      );
+      return { ok: true, profileId: profile.id };
+    } catch (error) {
+      return { ok: false, error: describe(error) };
+    }
+  });
+  ipcMain.handle('blobot:retireAgent', (_event, profileId: string) => {
+    store?.tombstoneProfile(profileId, clock.now());
+  });
+  ipcMain.handle('blobot:createTeam', async (_event, spec: NewTeamSpec): Promise<TeamCreationResult> => {
+    if (store === undefined) return { ok: false, error: 'No database is open.' };
+    try {
+      const team = await createTeam(spec, { store, clock });
       await switchTo(team);
       return { ok: true, teamId: team.id };
     } catch (error) {
@@ -281,18 +318,24 @@ async function liveTeam(workspacePath: string): Promise<Team | undefined> {
   const name = basename(workspacePath);
   const existing = store.teamByName(name);
   if (existing !== undefined) return existing;
-  return createTeam(
-    {
-      name,
-      workspacePath,
-      turnBudget: 6,
-      agents: [
-        { name: 'Alice', role: 'frontend', runtimeId: 'claude-code' },
-        { name: 'Bob', role: 'backend', runtimeId: 'claude-code' },
-      ],
-    },
-    { store, clock },
-  );
+  const claude = (await detectRuntimes()).find((runtime) => runtime.runtimeId === 'claude-code');
+  const profileIds = [
+    { name: 'Alice', role: 'frontend' },
+    { name: 'Bob', role: 'backend' },
+  ].map((member) => {
+    // Hire them once. On a second directory they are the *same* agents joining a second team.
+    const existingProfile = store?.profileByName(member.name);
+    if (existingProfile !== undefined) return existingProfile.id;
+    return hireAgent(
+      {
+        ...member,
+        runtimeId: 'claude-code',
+        ...(claude?.executablePath === undefined ? {} : { executablePath: claude.executablePath }),
+      },
+      { store: store as SqliteStore, clock },
+    ).id;
+  });
+  return createTeam({ name, workspacePath, turnBudget: 6, profileIds }, { store, clock });
 }
 
 async function reportInspection(

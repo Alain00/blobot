@@ -207,6 +207,11 @@ meaningless alone.
 - **One orchestrator at a time.** Switching teams stops one and starts the other, which costs a
   fresh session for every agent. Holding several is wiring rather than surgery — `Orchestrator`
   is per-team already — and is the previous handoff's item 4.
+- **A profile cannot be edited.** Hired and retired, nothing in between: no rename, no change
+  of role or runtime — and therefore no answer yet to what an edit means for the teams an agent
+  is already on. Named in ADR-0001 as not decided.
+- **Agents are only visible inside team creation.** There is no screen for *your agents* on its
+  own, which is the surface the model most obviously wants next.
 - **A team cannot be edited or deleted.** No add-an-agent-later, no rename, no removal — and
   `WorkspaceProvider.remove` (with ticket 10's `-d` versus `-D` rule) therefore has no caller.
 - **A team switch is a hard cut with no confirmation**, even mid-turn: the running agents are
@@ -243,23 +248,26 @@ Items 1 and 2 of the previous handoff are done. What is left of it, in the same 
 4. **Editing a team**: add or remove an agent, and the `remove` path that finally exercises
    ticket 10's `-d`-versus-`-D` rule.
 
-### Open question raised by the author, 2026-08-29: are Agents owned by Teams?
+### Settled, 2026-08-29: agents exist independently of teams
 
-What is built matches `CONTEXT.md`: *"an Agent is a named member of a Team"*, `agents.team_id`
-is `NOT NULL`, and an AgentWorkspace is a worktree of *that Team's* Workspace on
-`blobot/<team>/<agent>`. Creating a team creates its agents; there is no agent outside one.
+Raised by the author on reading the creation flow, and now `docs/adr/0001-agents-exist-
+independently-of-teams.md` — the repo's first ADR. **AgentProfile** is a new aggregate: an
+agent with a name, a role, a runtime and optional standing instructions, belonging to no team.
+A Team is formed *out of* profiles, which instantiates one Agent row per membership, and the
+same agent can be on several teams at once.
 
-The author's model is that Agents exist independently and *join* teams — a marketing
-specialist on two teams at once. **The two are not as far apart as they look**, because what a
-second team could reuse is not the running agent: its workspace is cut from a specific
-repository, its Session is bound to that workspace, its Status is derived from that Session,
-and its mailbox is scoped by the Team. An agent in two teams is two workspaces, two sessions
-and two statuses either way.
+Why not one Agent row on many teams: a Team is what gives an Agent a workspace, a session, a
+mailbox and a status, and none of those four can be shared — an agent on two teams is two of
+each under any model. Only the *definition* is reusable, so that is what the profile holds.
 
-What is genuinely reusable is the *definition* — name, role, persona, runtime choice — which
-argues for a new aggregate (an AgentProfile, say) instantiated per team, rather than for
-loosening `agents.team_id`. That is a real decision with a ticket's worth of consequences for
-`CONTEXT.md`, the schema, and the creation flow. **Not settled here.**
+Name, role and instructions are copied onto the Agent rather than read through the profile: a
+rename must not rewrite what a transcript says an agent was called, and ticket 06's stored
+persona has to keep matching what the agent was actually told.
+
+Standing instructions are folded into the persona under a line saying they apply on every team
+— which is what keeps them distinguishable from the team's own framing. Migration
+`0001_outgoing_vampiro.sql` is additive: `agent_profiles`, plus `profile_id` and `instructions`
+on `agents`, both nullable, so the demo team and any existing database still work.
 
 ## OpenCode is deferred, by the author, 2026-08-29
 

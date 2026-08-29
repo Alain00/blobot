@@ -13,11 +13,36 @@ export interface Team {
   readonly turnBudget: number;
 }
 
+/**
+ * An **AgentProfile**: an Agent that exists on its own, independently of any Team.
+ *
+ * Agents are hired once and can be on several teams at the same time — the marketing
+ * specialist is one profile, not one per team. What a second team reuses is this definition;
+ * what it cannot reuse is the Workspace copy, the Session, the mailbox and the Status, all of
+ * which a Team gives an Agent. So joining a Team instantiates an {@link Agent} from a profile.
+ * See `docs/adr/0001-agents-exist-independently-of-teams.md`.
+ */
+export interface AgentProfile {
+  readonly id: string;
+  readonly name: string;
+  readonly role: string;
+  /** Which runtime this agent runs on. Read by whatever constructs a runtime; never by the UI. */
+  readonly runtimeId: string;
+  readonly executablePath?: string;
+  readonly model?: string;
+  /** Standing instructions, folded into every persona composed for it. */
+  readonly instructions?: string;
+}
+
 export interface Agent {
   readonly id: string;
   readonly teamId: string;
+  /** The AgentProfile this Agent was instantiated from, when it came from one. */
+  readonly profileId?: string;
   readonly name: string;
   readonly role: string;
+  /** Copied from the profile at creation, so the persona stays auditable after an edit. */
+  readonly instructions?: string;
   /** The Agent's own isolated copy of the Workspace. A git worktree today. */
   readonly workspacePath: string;
 }

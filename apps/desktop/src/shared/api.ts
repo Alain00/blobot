@@ -79,21 +79,48 @@ export interface UiWorkspaceInspection {
   readonly branch?: string;
 }
 
+/**
+ * An agent the user has hired. It exists on its own: it is not a member of anything until it
+ * joins a team, and it can be on several at once.
+ */
+export interface UiAgentProfile {
+  readonly id: string;
+  readonly name: string;
+  readonly role: string;
+  /** A label to print. There is no runtime id here for the same reason there is none on
+   *  `UiAgent`: the renderer would eventually branch on it. */
+  readonly runtimeLabel: string;
+  readonly instructions?: string;
+  /** The teams it is currently on, by name. Empty for an agent nobody has put to work yet. */
+  readonly teams: readonly string[];
+}
+
+/** Hiring one. `runtimeId` comes straight back from a `UiRuntimeChoice`, unread. */
+export interface NewAgentSpec {
+  readonly name: string;
+  readonly role: string;
+  readonly runtimeId: string;
+  readonly instructions?: string;
+}
+
 export interface NewTeamSpec {
   readonly name: string;
   readonly workspacePath: string;
   readonly turnBudget: number;
-  readonly agents: readonly {
-    readonly name: string;
-    readonly role: string;
-    readonly runtimeId: string;
-  }[];
+  /** Agents that already exist. A team is formed out of them, never the other way round. */
+  readonly profileIds: readonly string[];
 }
 
-/** A refusal the creation flow renders in place, rather than an exception it throws away. */
+/** A refusal a flow renders in place, rather than an exception it throws away. */
 export interface TeamCreationResult {
   readonly ok: boolean;
   readonly teamId?: string;
+  readonly error?: string;
+}
+
+export interface HireResult {
+  readonly ok: boolean;
+  readonly profileId?: string;
   readonly error?: string;
 }
 
@@ -106,6 +133,11 @@ export interface BlobotApi {
   inspectWorkspace(path: string): Promise<UiWorkspaceInspection | { error: string }>;
   initializeWorkspace(path: string): Promise<UiWorkspaceInspection | { error: string }>;
   detectRuntimes(): Promise<readonly UiRuntimeChoice[]>;
+  /** Every agent the user has hired, with the teams each is currently on. */
+  listAgents(): Promise<readonly UiAgentProfile[]>;
+  hireAgent(spec: NewAgentSpec): Promise<HireResult>;
+  /** Retires the agent. Teams it is on keep working — ending one is a separate decision. */
+  retireAgent(profileId: string): Promise<void>;
   createTeam(spec: NewTeamSpec): Promise<TeamCreationResult>;
   selectTeam(teamId: string): Promise<void>;
   onEvent(listener: (event: AgentEvent) => void): () => void;

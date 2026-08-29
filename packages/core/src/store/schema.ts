@@ -24,6 +24,29 @@ export const teams = sqliteTable('teams', {
   createdAt: integer('created_at').notNull(),
 });
 
+/**
+ * An **AgentProfile**: an Agent that exists on its own, before and between Teams.
+ *
+ * The reusable half of an agent is its *definition* — who it is, what it does, which runtime
+ * it runs on, and any standing instructions. The unreusable half is everything a Team gives
+ * it: a Workspace copy, a Session, a mailbox, a Status. So joining a Team **instantiates** an
+ * Agent row from a profile rather than sharing one, and the same profile can be on many teams
+ * at once. See `docs/adr/0001-agents-exist-independently-of-teams.md`.
+ */
+export const agentProfiles = sqliteTable('agent_profiles', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  role: text('role').notNull(),
+  runtimeId: text('runtime_id').notNull(),
+  executablePath: text('executable_path'),
+  model: text('model'),
+  /** Standing instructions, folded into the persona. Never a credential. */
+  instructions: text('instructions'),
+  createdAt: integer('created_at').notNull(),
+  /** Tombstone, like an agent: teams that used it keep pointing at the row. */
+  deletedAt: integer('deleted_at'),
+});
+
 export const agents = sqliteTable(
   'agents',
   {
@@ -31,8 +54,19 @@ export const agents = sqliteTable(
     teamId: text('team_id')
       .notNull()
       .references(() => teams.id),
+    /**
+     * The profile this Agent was instantiated from. Nullable because the demo team has no
+     * profiles, and because an Agent keeps working if its profile is later tombstoned.
+     */
+    profileId: text('profile_id').references(() => agentProfiles.id),
+    /**
+     * Copied from the profile at creation, not read through it: renaming the profile must not
+     * rewrite what a transcript says this agent was called at the time.
+     */
     name: text('name').notNull(),
     role: text('role').notNull(),
+    /** Copied from the profile too, and for the same reason: the persona is auditable. */
+    instructions: text('instructions'),
     runtimeId: text('runtime_id').notNull(),
     /** Ticket 07 pins CLAUDE_CODE_EXECUTABLE to the user's own binary. */
     executablePath: text('executable_path'),

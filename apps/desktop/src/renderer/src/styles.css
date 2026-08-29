@@ -189,3 +189,15 @@ select.textfield option{background:var(--raised);color:var(--ink)}
 .teamswitch{display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;padding:6px 14px}
 .teamswitch:hover{background:var(--raised)}
 .teamswitch .n{margin-left:auto}
+
+/* your agents: a roster that exists before any team does */
+.rosterrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:7px 10px;border:1px solid transparent}
+.rosterrow:hover{background:var(--raised)}
+.rosterrow.on{border-color:var(--line);background:var(--raised)}
+.rosterrow .tick{width:12px;flex:0 0 auto;color:var(--ink)}
+.rosterrow .who{min-width:0;flex:1;display:flex;flex-direction:column}
+.rosterrow .nm b{font-weight:500}
+.rosterrow .sub{line-height:1.4}
+.hire{align-self:stretch;display:flex;flex-direction:column;gap:8px;border-left:1px solid var(--line);padding-left:12px}
+.hire .agentdraft{grid-template-columns:1fr 1fr minmax(150px,auto) auto}
+textarea.textfield{border:1px solid var(--line);padding:6px 8px;resize:vertical;font-family:var(--sans)}

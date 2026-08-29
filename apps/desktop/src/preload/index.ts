@@ -2,7 +2,10 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import type { AgentEvent, AgentStatus, Message } from '@blobot/core/domain';
 import type {
   BlobotApi,
+  HireResult,
+  NewAgentSpec,
   NewTeamSpec,
+  UiAgentProfile,
   TeamCreationResult,
   UiRuntimeChoice,
   UiSnapshot,
@@ -30,6 +33,11 @@ const api: BlobotApi = {
     >,
   detectRuntimes: () =>
     ipcRenderer.invoke('blobot:detectRuntimes') as Promise<readonly UiRuntimeChoice[]>,
+  listAgents: () => ipcRenderer.invoke('blobot:listAgents') as Promise<readonly UiAgentProfile[]>,
+  hireAgent: (spec: NewAgentSpec) =>
+    ipcRenderer.invoke('blobot:hireAgent', spec) as Promise<HireResult>,
+  retireAgent: (profileId: string) =>
+    ipcRenderer.invoke('blobot:retireAgent', profileId) as Promise<void>,
   createTeam: (spec: NewTeamSpec) =>
     ipcRenderer.invoke('blobot:createTeam', spec) as Promise<TeamCreationResult>,
   selectTeam: (teamId: string) => ipcRenderer.invoke('blobot:selectTeam', teamId) as Promise<void>,

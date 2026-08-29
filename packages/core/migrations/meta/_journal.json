@@ -8,6 +8,13 @@
       "when": 1788015081297,
       "tag": "0000_cold_fantastic_four",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1788021710941,
+      "tag": "0001_outgoing_vampiro",
+      "breakpoints": true
     }
   ]
 }

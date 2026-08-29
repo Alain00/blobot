@@ -60,7 +60,7 @@ export type { ScenarioName } from './mock/scenarios/index.js';
 export { uuidv7 } from './ids.js';
 export type { IdFactory } from './ids.js';
 
-export type { Agent, Message, Team } from './orchestrator/domain.js';
+export type { Agent, AgentProfile, Message, Team } from './orchestrator/domain.js';
 export { composePersona, composeWakePrompt } from './orchestrator/envelope.js';
 export { findAgentByName } from './orchestrator/roster.js';
 export { InMemoryMessageStore } from './orchestrator/message-store.js';
@@ -119,5 +119,5 @@ export type {
 export { openDatabase } from './store/database.js';
 export type { BlobotDatabase, OpenDatabaseOptions, OpenedDatabase } from './store/database.js';
 export { SqliteStore } from './store/sqlite-store.js';
-export type { AgentRecord, SessionRecord } from './store/sqlite-store.js';
+export type { AgentProfileRecord, AgentRecord, SessionRecord } from './store/sqlite-store.js';
 export { SqliteRecorder } from './store/recorder.js';

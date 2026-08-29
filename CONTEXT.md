@@ -4,11 +4,16 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
 
 ## Aggregates
 
-- **Team** — a named group of Agents working on one Workspace. Owns the repository and scopes
-  the message bus: "which agents can Alice address?" is answered by her Team. Also owns the
+- **Team** — a named group of Agents working on one Workspace, formed out of AgentProfiles that
+  already exist. Owns the repository and scopes the message bus: "which agents can Alice address?" is answered by her Team. Also owns the
   turn budget.
-- **Agent** — a named member of a Team with a role, a RuntimeProvider, and an AgentWorkspace.
-  *Alice*, *Bob*.
+- **AgentProfile** — an Agent that exists on its own: a name, a role, a RuntimeProvider and
+  optional standing instructions, belonging to no Team. Agents are hired once and can be on
+  several Teams at the same time. *Mara, marketing.* See
+  `docs/adr/0001-agents-exist-independently-of-teams.md`.
+- **Agent** — an AgentProfile instantiated on a Team: a named member of it with a role and an
+  AgentWorkspace. *Alice*, *Bob*. Name and role are copied from the profile when the team is
+  formed, so renaming an agent later cannot rewrite what a transcript says it was called.
 - **Workspace** — the location a Team points at. Usually a git repository; **not necessarily
   code** — a folder of documents is a valid Workspace. One per Team.
 - **AgentWorkspace** — an Agent's own isolated copy of the Workspace. Implemented today as a
@@ -31,6 +36,8 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
 - **Message** — something said to an Agent. Either from the user or from a peer.
 - **Envelope** — the framing wrapped around a peer Message: sender, their role, their optional
   context line, and the note that a peer carries no operator authority.
+- **Standing instructions** — what is true of an AgentProfile on *every* team it is on. Folded
+  into its Persona, and said as such, so it is never mistaken for this team's framing.
 - **Persona** — an Agent's system prompt. Carries the static facts about its situation (role,
   Workspace, AgentWorkspace path, roster, the rules). Adapter-owned.
 - **Mailbox** — an Agent's queue of undelivered Messages. Delivered as one prompt when the Agent

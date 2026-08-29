@@ -1,15 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type {
   NewTeamSpec,
+  UiAgentProfile,
   UiRuntimeChoice,
   UiWorkspaceInspection,
 } from '../../../shared/api.js';
-
-interface Draft {
-  readonly name: string;
-  readonly role: string;
-  readonly runtimeId: string;
-}
 
 const READINESS_WORD: Record<UiRuntimeChoice['readiness'], string> = {
   ready: 'ready',
@@ -19,7 +14,11 @@ const READINESS_WORD: Record<UiRuntimeChoice['readiness'], string> = {
 };
 
 /**
- * Creating a team: a Workspace, a name, and a roster.
+ * Forming a team: a Workspace, a name, and agents that already exist.
+ *
+ * The order on this screen is the domain model. Agents are hired once and live in *your
+ * agents*, on no team; a team is formed **out of** them, and the same agent can be on several
+ * at once. Hiring one from here is a convenience, not the way agents come into being.
  *
  * Two things this screen refuses to do. It never says *authenticated* — detection observes
  * whether a credential is present, which is not the same claim, so the words are ticket 11's
@@ -42,28 +41,25 @@ export function NewTeam({
   const [name, setName] = useState('');
   const [turnBudget, setTurnBudget] = useState(10);
   const [runtimes, setRuntimes] = useState<readonly UiRuntimeChoice[]>([]);
-  const [agents, setAgents] = useState<Draft[]>([
-    { name: '', role: '', runtimeId: '' },
-    { name: '', role: '', runtimeId: '' },
-  ]);
+  const [roster, setRoster] = useState<readonly UiAgentProfile[]>([]);
+  const [chosen, setChosen] = useState<readonly string[]>([]);
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    void window.blobot.detectRuntimes().then((detected) => {
-      setRuntimes(detected);
-      const preferred = detected.find((runtime) => runtime.supported)?.runtimeId ?? '';
-      setAgents((current) =>
-        current.map((agent) => (agent.runtimeId === '' ? { ...agent, runtimeId: preferred } : agent)),
-      );
-    });
+  const reloadRoster = useCallback(async (): Promise<void> => {
+    setRoster(await window.blobot.listAgents());
   }, []);
 
-  const readWorkspace = async (chosen: string, initialize = false): Promise<void> => {
+  useEffect(() => {
+    void window.blobot.detectRuntimes().then(setRuntimes);
+    void reloadRoster();
+  }, [reloadRoster]);
+
+  const readWorkspace = async (chosenPath: string, initialize = false): Promise<void> => {
     setError(undefined);
     const result = initialize
-      ? await window.blobot.initializeWorkspace(chosen)
-      : await window.blobot.inspectWorkspace(chosen);
+      ? await window.blobot.initializeWorkspace(chosenPath)
+      : await window.blobot.inspectWorkspace(chosenPath);
     if ('error' in result) {
       setInspection(undefined);
       setError(result.error);
@@ -75,19 +71,17 @@ export function NewTeam({
   };
 
   const choose = async (): Promise<void> => {
-    const chosen = await window.blobot.chooseWorkspace();
-    if (chosen === undefined) return;
-    await readWorkspace(chosen);
+    const chosenPath = await window.blobot.chooseWorkspace();
+    if (chosenPath === undefined) return;
+    await readWorkspace(chosenPath);
   };
 
-  const named = agents.filter((agent) => agent.name.trim() !== '');
   const ready =
     inspection !== undefined &&
     inspection.kind === 'git' &&
     inspection.hasCommits &&
     name.trim() !== '' &&
-    named.length > 0 &&
-    named.every((agent) => agent.runtimeId !== '');
+    chosen.length > 0;
 
   const create = async (): Promise<void> => {
     setBusy(true);
@@ -96,11 +90,7 @@ export function NewTeam({
       name: name.trim(),
       workspacePath: path,
       turnBudget,
-      agents: named.map((agent) => ({
-        name: agent.name.trim(),
-        role: agent.role.trim() === '' ? 'generalist' : agent.role.trim(),
-        runtimeId: agent.runtimeId,
-      })),
+      profileIds: chosen,
     };
     const result = await window.blobot.createTeam(spec);
     setBusy(false);
@@ -129,7 +119,9 @@ export function NewTeam({
             </button>
             <span className="pathline mono">{path === '' ? 'nothing chosen yet' : path}</span>
           </div>
-          {inspection !== undefined && <WorkspaceNote inspection={inspection} onInit={() => void readWorkspace(path, true)} />}
+          {inspection !== undefined && (
+            <WorkspaceNote inspection={inspection} onInit={() => void readWorkspace(path, true)} />
+          )}
         </section>
 
         <section>
@@ -147,60 +139,44 @@ export function NewTeam({
         </section>
 
         <section>
-          <div className="fieldlabel mono">AGENTS</div>
-          {agents.map((agent, index) => (
-            <div className="agentdraft" key={index}>
-              <input
-                className="textfield"
-                value={agent.name}
-                placeholder="name"
-                onChange={(event) => setAgents(replace(agents, index, { name: event.target.value }))}
-              />
-              <input
-                className="textfield"
-                value={agent.role}
-                placeholder="role"
-                onChange={(event) => setAgents(replace(agents, index, { role: event.target.value }))}
-              />
-              <select
-                className="textfield"
-                value={agent.runtimeId}
-                onChange={(event) =>
-                  setAgents(replace(agents, index, { runtimeId: event.target.value }))
+          <div className="fieldlabel mono">YOUR AGENTS</div>
+          {roster.length === 0 && (
+            <div className="note mono muted">
+              Nobody hired yet. Agents exist on their own — hire one below and it can join this
+              team and any other.
+            </div>
+          )}
+          {roster.map((agent) => {
+            const picked = chosen.includes(agent.id);
+            return (
+              <button
+                key={agent.id}
+                className={`rosterrow${picked ? ' on' : ''}`}
+                onClick={() =>
+                  setChosen(picked ? chosen.filter((id) => id !== agent.id) : [...chosen, agent.id])
                 }
               >
-                {runtimes.map((runtime) => (
-                  <option
-                    key={runtime.runtimeId}
-                    value={runtime.runtimeId}
-                    disabled={!runtime.supported}
-                  >
-                    {runtime.label}
-                    {runtime.supported ? '' : ' — no adapter yet'}
-                  </option>
-                ))}
-              </select>
-              <button
-                className="send"
-                onClick={() => setAgents(agents.filter((_, at) => at !== index))}
-                disabled={agents.length === 1}
-              >
-                remove
+                <span className="tick mono">{picked ? '✓' : ''}</span>
+                <span className="who">
+                  <span className="nm">
+                    <b>{agent.name}</b> <span className="muted">{agent.role}</span>
+                  </span>
+                  {/* Where the model shows: an agent is on N teams, and this is one more. */}
+                  <span className="sub mono muted">
+                    {agent.runtimeLabel}
+                    {agent.teams.length === 0 ? ' · on no team' : ` · on ${agent.teams.join(', ')}`}
+                  </span>
+                </span>
               </button>
-              <RuntimeNote runtime={runtimes.find((entry) => entry.runtimeId === agent.runtimeId)} />
-            </div>
-          ))}
-          <button
-            className="send"
-            onClick={() =>
-              setAgents([
-                ...agents,
-                { name: '', role: '', runtimeId: agents[0]?.runtimeId ?? '' },
-              ])
-            }
-          >
-            add an agent
-          </button>
+            );
+          })}
+          <HireAgent
+            runtimes={runtimes}
+            onHired={async (profileId) => {
+              await reloadRoster();
+              setChosen((current) => [...current, profileId]);
+            }}
+          />
         </section>
 
         <section className="budgetrow">
@@ -226,6 +202,101 @@ export function NewTeam({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Hiring an agent. It exists after this whether or not this team is ever created. */
+function HireAgent({
+  runtimes,
+  onHired,
+}: {
+  runtimes: readonly UiRuntimeChoice[];
+  onHired: (profileId: string) => Promise<void> | void;
+}): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [role, setRole] = useState('');
+  const [instructions, setInstructions] = useState('');
+  const [runtimeId, setRuntimeId] = useState('');
+  const [error, setError] = useState<string | undefined>();
+
+  const preferred = runtimes.find((runtime) => runtime.supported)?.runtimeId ?? '';
+  const selected = runtimeId === '' ? preferred : runtimeId;
+  const runtime = runtimes.find((entry) => entry.runtimeId === selected);
+
+  if (!open) {
+    return (
+      <button className="send" onClick={() => setOpen(true)}>
+        hire an agent
+      </button>
+    );
+  }
+
+  const hire = async (): Promise<void> => {
+    const result = await window.blobot.hireAgent({
+      name,
+      role,
+      runtimeId: selected,
+      ...(instructions.trim() === '' ? {} : { instructions }),
+    });
+    if (!result.ok || result.profileId === undefined) {
+      setError(result.error ?? 'The agent could not be hired.');
+      return;
+    }
+    await onHired(result.profileId);
+    setOpen(false);
+    setName('');
+    setRole('');
+    setInstructions('');
+    setError(undefined);
+  };
+
+  return (
+    <div className="hire">
+      <div className="agentdraft">
+        <input
+          className="textfield"
+          value={name}
+          placeholder="name"
+          onChange={(event) => setName(event.target.value)}
+        />
+        <input
+          className="textfield"
+          value={role}
+          placeholder="role"
+          onChange={(event) => setRole(event.target.value)}
+        />
+        <select
+          className="textfield"
+          value={selected}
+          onChange={(event) => setRuntimeId(event.target.value)}
+        >
+          {runtimes.map((entry) => (
+            <option key={entry.runtimeId} value={entry.runtimeId} disabled={!entry.supported}>
+              {entry.label}
+              {entry.supported ? '' : ' — no adapter yet'}
+            </option>
+          ))}
+        </select>
+        <button className="send" disabled={name.trim() === ''} onClick={() => void hire()}>
+          hire
+        </button>
+        {runtime !== undefined && (
+          <span className="runtimenote mono muted">
+            {READINESS_WORD[runtime.readiness]}
+            {runtime.version === undefined ? '' : ` · ${runtime.version}`} — {runtime.detail}
+          </span>
+        )}
+      </div>
+      <textarea
+        className="textfield"
+        rows={2}
+        value={instructions}
+        placeholder="standing instructions — anything true of this agent on every team (optional)"
+        onChange={(event) => setInstructions(event.target.value)}
+      />
+      {error !== undefined && <div className="refusal">{error}</div>}
     </div>
   );
 }
@@ -265,20 +336,6 @@ function WorkspaceNote({
         : ' · clean'}
     </div>
   );
-}
-
-function RuntimeNote({ runtime }: { runtime: UiRuntimeChoice | undefined }): React.JSX.Element {
-  if (runtime === undefined) return <span />;
-  return (
-    <span className="runtimenote mono muted">
-      {READINESS_WORD[runtime.readiness]}
-      {runtime.version === undefined ? '' : ` · ${runtime.version}`} — {runtime.detail}
-    </span>
-  );
-}
-
-function replace(agents: Draft[], index: number, patch: Partial<Draft>): Draft[] {
-  return agents.map((agent, at) => (at === index ? { ...agent, ...patch } : agent));
 }
 
 function basename(path: string): string {
