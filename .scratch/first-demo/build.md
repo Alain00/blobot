@@ -30,8 +30,8 @@ apps/desktop/node_modules/.bin/electron apps/desktop --no-sandbox \
   [--demo] --screenshot=/tmp/ui.png [--pane=bob] [--screenshot-at=2200] [--no-autoplay]
 ```
 
-**With no flags the app is the product**: it opens `~/.config/blobot/blobot.db` (Electron's
-`userData`), starts the most recent team, and shows the creation flow when there is none.
+**With no flags the app is the product**: it opens Electron's `userData` — `~/.config/@blobot/desktop/blobot.db`
+on Linux, because the app's package name is `@blobot/desktop`, starts the most recent team, and shows the creation flow when there is none.
 `--demo` is the scripted team on mock runtimes, which is *not* the first-run default — ticket
 08's point is that nobody should meet fake agents without being told.
 
