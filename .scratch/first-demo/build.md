@@ -234,6 +234,12 @@ meaningless alone.
 
 ## Next session
 
+The author is driving the app by hand for the first time and will send UI fixes; take those
+first — the creation flow has never been used with a mouse, only reviewed in screenshots. Two
+things they were asked to judge: whether the creation screen reads in the right order now that
+agents come before the team, and whether a team switch discarding the previous team's live
+agents without asking is acceptable or alarming.
+
 Items 1 and 2 of the previous handoff are done. What is left of it, in the same order:
 
 1. **Ticket 14's disclosure**, which the creation flow is *specified* to carry: once, before
