@@ -67,7 +67,17 @@ Decisions are binding. **If you believe one is wrong, say so and reopen its tick
 quietly contradict it.** Ticket 12 carries an amendment from ticket 14; check for an `##
 Amendment` section before treating an answer as final.
 
-There is **no application code yet** — the repo is the map, the glossary and this file. The first
-build session's job is the monorepo skeleton (`apps/desktop`, `packages/core`), not a feature.
+There is **no application code yet** — the repo is the map, the glossary and this file.
+
+**Build order starts with `MockAgentRuntime`**, so that everything above it has something real to
+run against before a single CLI is spawned. The first build session's deliverable is the mock
+emitting the `AgentEvent` vocabulary (ticket 04) against its fidelity contract (ticket 08), with
+only as much monorepo skeleton (`apps/desktop`, `packages/core`) as it takes to run it. The
+status fold (ticket 09) and the UI (ticket 12) are built against the mock, not against OpenCode.
+
+The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that
+reproduces every observed trap on purpose — ragged deltas, a cancelled tool reporting
+`completed`, `used: 0` on cancel — because a kind mock produces a UI that shatters on first
+contact with a real runtime.
 
 `.scratch/` is tracked in git on purpose — the map is the canonical artifact, not scratch work.
