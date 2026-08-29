@@ -50,15 +50,24 @@ Single-context — one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/
 
 ## Current work
 
-This project is being planned before it is built. The plan is a **wayfinder map** at
+The first demo is **planned, not built**. The plan is a **wayfinder map** at
 `.scratch/first-demo/map.md` — read it before doing anything, along with `CONTEXT.md` for the
 domain glossary.
 
-The map's destination is a locked spec for the first demo. Its decisions are binding: they were
-made deliberately, with reasons recorded on each ticket in `.scratch/first-demo/issues/`, and
-several are backed by research observed against the real CLIs on this machine
-(`.scratch/first-demo/research/`, with raw transcripts).
+**The map is complete.** Sixteen tickets, all resolved, frontier empty: nothing is left to
+*decide* before this code gets written. Do not run `/wayfinder` on it — there is no next ticket.
 
-If you believe a decision is wrong, say so and reopen its ticket. Do not quietly contradict it.
+Read the map's *Decisions so far* index to judge relevance, then zoom into only the tickets your
+task actually touches. No session should hold all sixteen; that is the point of the map. Reasons
+live on each ticket in `.scratch/first-demo/issues/`, and several decisions are backed by
+research observed against the real CLIs on this machine (`.scratch/first-demo/research/`, with
+raw transcripts).
+
+Decisions are binding. **If you believe one is wrong, say so and reopen its ticket. Do not
+quietly contradict it.** Ticket 12 carries an amendment from ticket 14; check for an `##
+Amendment` section before treating an answer as final.
+
+There is **no application code yet** — the repo is the map, the glossary and this file. The first
+build session's job is the monorepo skeleton (`apps/desktop`, `packages/core`), not a feature.
 
 `.scratch/` is tracked in git on purpose — the map is the canonical artifact, not scratch work.

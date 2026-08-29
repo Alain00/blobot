@@ -49,21 +49,25 @@ ticket here and are not up for renegotiation inside one.
 `/research` for the research tickets. `/prototype` where the question is "how should it
 look or behave".
 
-## How to continue this map
+## How to use this map
 
-Run `/wayfinder .scratch/first-demo/map.md` in a fresh session. It will load this file, take
-the first ticket on the frontier, and resolve exactly one.
+**Charting is finished — do not run `/wayfinder` on this map.** All sixteen tickets under
+`issues/` are `Status: resolved` and the frontier is empty. A wayfinder session would find
+nothing to take.
 
-The **frontier** is every ticket under `issues/` that is `Status: open`, unclaimed, and whose
-every `Blocked by:` entry is `Status: resolved`. Tracker conventions — claiming, resolving,
-blocking — are in `docs/agents/issue-tracker.md`.
+What this file is now is an **index for implementation sessions**. Read this file and
+`CONTEXT.md`, use *Decisions so far* below to judge what is relevant, and zoom into only the
+tickets your task touches — the point of the map is that no session has to hold all of it.
 
-**Read this file and the ticket you are taking. Do not read every ticket.** The Decisions-so-far
-index below exists so you can judge relevance and zoom only into what you need; the point of the
-map is that no session has to hold all of it.
+Each ticket's `## Answer` holds the decision and the reasoning behind it, including what was
+rejected and why. Check for an `## Amendment` section too: ticket 12 has one, from ticket 14.
 
 Research findings live in `research/`, with raw transcripts alongside. They are long and
 observed — cite them rather than re-deriving.
+
+Decisions are binding. If one is wrong, reopen its ticket and say so on it; do not quietly
+contradict it. *Not yet specified* below is fog **beyond** this destination — it is not a
+backlog, and nothing there blocks building.
 
 ## Decisions so far
 
