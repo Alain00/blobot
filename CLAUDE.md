@@ -91,8 +91,12 @@ team headlessly):
   `--screenshot=<path>` (optionally `--pane=<agentId>`, `--screenshot-at=<ms>`) to review it
   without a human at the screen.
 
-Next: the OpenCode adapter (03 + 16), then the Claude bridge (07). Nothing has touched a real
-CLI yet, and the permission block from ticket 14's amendment has no callback to render.
+**Build status and session handoff live in `.scratch/first-demo/build.md`** — what is built, what
+was decided while building that no ticket covers, the known gaps, and what the next session picks
+up. Read it before starting work.
+
+Next: the **Claude Code adapter** (tickets 02 + 07), then OpenCode (03 + 16). Nothing has touched
+a real CLI yet.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that
 reproduces every observed trap on purpose — ragged deltas, a cancelled tool reporting
