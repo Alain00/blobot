@@ -70,13 +70,31 @@ export interface UiRuntimeChoice {
   readonly version?: string;
 }
 
-/** What `inspect()` found at the path the user picked, in the words the flow renders. */
-export interface UiWorkspaceInspection {
+/** One repository inside a Workspace that is not itself one, as the scope picker draws it. */
+export interface UiNestedRepo {
   readonly path: string;
-  readonly kind: 'git' | 'plain';
   readonly hasCommits: boolean;
   readonly dirty: boolean;
   readonly branch?: string;
+}
+
+/**
+ * What `inspect()` found at the path the user picked, in the words the flow renders.
+ *
+ * `kind` decides which mechanism gives the agents their isolated copies — worktrees, a
+ * mirrored tree, or plain copies — and the flow says which, because the guarantees differ and
+ * a user who is told nothing will assume the strongest.
+ */
+export interface UiWorkspaceInspection {
+  readonly path: string;
+  readonly kind: 'git' | 'plain' | 'nested';
+  readonly hasCommits: boolean;
+  readonly dirty: boolean;
+  readonly branch?: string;
+  /** Every repository inside a `nested` Workspace. Empty otherwise. */
+  readonly repos: readonly UiNestedRepo[];
+  /** Whether anything in a `nested` tree belongs to no repository, and so would be copied. */
+  readonly looseFiles: boolean;
 }
 
 /**
@@ -109,6 +127,8 @@ export interface NewTeamSpec {
   readonly turnBudget: number;
   /** Agents that already exist. A team is formed out of them, never the other way round. */
   readonly profileIds: readonly string[];
+  /** `nested` only: the repositories the user ticked. Omitted means every one of them. */
+  readonly repoPaths?: readonly string[];
 }
 
 /** A refusal a flow renders in place, rather than an exception it throws away. */

@@ -8,7 +8,17 @@ export interface Team {
   /** Load-bearing: the branch is `blobot/<team>/<agent>`. */
   readonly name: string;
   readonly workspacePath: string;
-  readonly workspaceKind: 'git' | 'plain';
+  /**
+   * Which of the amendment's three kinds of Workspace this is, and therefore which
+   * WorkspaceProvider brings the team back at launch. `nested` is a folder of repositories.
+   */
+  readonly workspaceKind: 'git' | 'plain' | 'nested';
+  /**
+   * The repositories the user put in scope, relative to the Workspace. `nested` only, and
+   * empty on a team created before the picker existed — which the provider reads as "all of
+   * them", so an old team still comes back.
+   */
+  readonly workspaceRepos?: readonly string[];
   /** Total agent turns per user prompt, before the team halts and asks. */
   readonly turnBudget: number;
 }

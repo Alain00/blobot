@@ -258,3 +258,9 @@ textarea.textfield{border:1px solid var(--line);padding:6px 8px;resize:vertical;
 .md img{max-width:100%}
 /* Long paths and URLs must wrap rather than widen the column. */
 .md{overflow-wrap:anywhere}
+
+/* the repositories in a folder of repositories, ticked into scope */
+.reposcope{align-self:stretch;display:flex;flex-direction:column;gap:2px;border-left:1px solid var(--line);padding-left:12px}
+.reposcope .fieldlabel{margin-bottom:4px}
+.reposcope .rosterrow:disabled{opacity:.45;cursor:default}
+.reposcope .rosterrow:disabled:hover{background:none}

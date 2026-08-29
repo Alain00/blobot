@@ -15,6 +15,13 @@
       "when": 1788021710941,
       "tag": "0001_outgoing_vampiro",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788024423942,
+      "tag": "0002_remarkable_stone_men",
+      "breakpoints": true
     }
   ]
 }

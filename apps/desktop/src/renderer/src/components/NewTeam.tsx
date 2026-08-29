@@ -43,6 +43,8 @@ export function NewTeam({
   const [runtimes, setRuntimes] = useState<readonly UiRuntimeChoice[]>([]);
   const [roster, setRoster] = useState<readonly UiAgentProfile[]>([]);
   const [chosen, setChosen] = useState<readonly string[]>([]);
+  /** `nested` only: the repositories in scope. Every one found is ticked by default. */
+  const [repos, setRepos] = useState<readonly string[]>([]);
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
 
@@ -66,6 +68,7 @@ export function NewTeam({
       return;
     }
     setInspection(result);
+    setRepos(result.repos.map((repo) => repo.path));
     setPath(result.path);
     if (name === '') setName(basename(result.path));
   };
@@ -76,12 +79,16 @@ export function NewTeam({
     await readWorkspace(chosenPath);
   };
 
-  const ready =
+  // Every kind of Workspace can carry a team now. What still blocks is a repository with
+  // nothing to branch from, and a folder of repositories with nothing at all in scope.
+  const workspaceUsable =
     inspection !== undefined &&
-    inspection.kind === 'git' &&
-    inspection.hasCommits &&
-    name.trim() !== '' &&
-    chosen.length > 0;
+    (inspection.kind === 'git'
+      ? inspection.hasCommits
+      : inspection.kind === 'nested'
+        ? repos.length > 0 || inspection.looseFiles
+        : true);
+  const ready = workspaceUsable && name.trim() !== '' && chosen.length > 0;
 
   const create = async (): Promise<void> => {
     setBusy(true);
@@ -91,6 +98,7 @@ export function NewTeam({
       workspacePath: path,
       turnBudget,
       profileIds: chosen,
+      ...(inspection?.kind === 'nested' ? { repoPaths: repos } : {}),
     };
     const result = await window.blobot.createTeam(spec);
     setBusy(false);
@@ -121,6 +129,19 @@ export function NewTeam({
           </div>
           {inspection !== undefined && (
             <WorkspaceNote inspection={inspection} onInit={() => void readWorkspace(path, true)} />
+          )}
+          {inspection?.kind === 'nested' && (
+            <RepoScope
+              inspection={inspection}
+              chosen={repos}
+              onToggle={(repo) =>
+                setRepos((current) =>
+                  current.includes(repo)
+                    ? current.filter((other) => other !== repo)
+                    : [...current, repo],
+                )
+              }
+            />
           )}
         </section>
 
@@ -302,6 +323,13 @@ function HireAgent({
 }
 
 /** The three things `inspect()` can say, in the words the flow acts on. */
+/**
+ * What the chosen folder is, and therefore what the agents are about to get.
+ *
+ * Every kind is usable now; the note's job is that the *guarantees* differ and a user told
+ * nothing will assume the strongest. A copy has no branch, no diff and no recovery, and this
+ * is the only place that can say so before the team exists.
+ */
 function WorkspaceNote({
   inspection,
   onInit,
@@ -309,14 +337,26 @@ function WorkspaceNote({
   inspection: UiWorkspaceInspection;
   onInit: () => void;
 }): React.JSX.Element {
-  if (inspection.kind !== 'git') {
+  if (inspection.kind === 'plain') {
     return (
       <div className="note">
-        <span className="mono muted">Not a git repository. </span>
-        {/* Offered, never silent: creating a `.git` in someone's directory is a real change. */}
+        <span className="muted">
+          Not a git repository, which is fine — each agent gets its own copy of this folder. No
+          branch, no diff of what changed, and blobot cannot recover a copy that is deleted.{' '}
+        </span>
+        {/* Offered, never silent: creating a `.git` in someone's directory is a real change.
+            A choice now rather than a gate — the team works either way. */}
         <button className="send" onClick={onInit}>
           run git init here
         </button>
+      </div>
+    );
+  }
+  if (inspection.kind === 'nested') {
+    return (
+      <div className="note mono muted">
+        {inspection.repos.length} repositories in this folder · each agent gets a worktree of the
+        ones you pick{inspection.looseFiles ? ', and a copy of everything else' : ''}
       </div>
     );
   }
@@ -334,6 +374,62 @@ function WorkspaceNote({
       {inspection.dirty
         ? ' · uncommitted changes live in no agent’s workspace, so the agents will not see them'
         : ' · clean'}
+    </div>
+  );
+}
+
+/**
+ * Which repositories the agents may work in.
+ *
+ * Everything found is ticked, because that is what the user pointed at. Unticking is how a
+ * `~/code` with twenty projects avoids twenty `blobot/<team>/<agent>` branches and twenty
+ * checkouts per agent — and a repository left out is **absent** from the agent's workspace
+ * rather than present and off limits, which is the only version of "out of scope" an agent
+ * with shell access cannot ignore.
+ */
+function RepoScope({
+  inspection,
+  chosen,
+  onToggle,
+}: {
+  inspection: UiWorkspaceInspection;
+  chosen: readonly string[];
+  onToggle: (repo: string) => void;
+}): React.JSX.Element {
+  return (
+    <div className="reposcope">
+      <div className="fieldlabel mono">REPOSITORIES IN SCOPE</div>
+      {inspection.repos.map((repo) => {
+        const on = chosen.includes(repo.path);
+        return (
+          <button
+            key={repo.path}
+            className={`rosterrow${on ? ' on' : ''}`}
+            onClick={() => onToggle(repo.path)}
+            // A repository with no commits has nothing to branch from. It is skipped with a
+            // reason rather than refusing the whole team — one empty project in a folder of
+            // twenty must not stop anybody working.
+            disabled={!repo.hasCommits}
+          >
+            <span className="tick mono">{on && repo.hasCommits ? '✓' : ''}</span>
+            <span className="who">
+              <span className="nm">
+                <b>{repo.path}</b>
+              </span>
+              <span className="sub mono muted">
+                {repo.hasCommits
+                  ? `${repo.branch ?? 'detached'}${repo.dirty ? ' · uncommitted changes' : ''}`
+                  : 'no commits yet — nothing to branch from, so it is left out'}
+              </span>
+            </span>
+          </button>
+        );
+      })}
+      {chosen.length === 0 && !inspection.looseFiles && (
+        <div className="refusal">
+          Nothing is in scope. Pick at least one repository.
+        </div>
+      )}
     </div>
   );
 }

@@ -8,10 +8,29 @@
  * later without renaming anything.
  */
 
+/**
+ * One git repository found *inside* a Workspace that is not itself a repository.
+ *
+ * `path` is relative to the Workspace, because that is what the mirrored tree is built from
+ * and what survives the user moving the folder.
+ */
+export interface NestedRepo {
+  readonly path: string;
+  /** A repo with no commits is skipped with a reason, never a refusal for the whole team. */
+  readonly hasCommits: boolean;
+  readonly dirty: boolean;
+  readonly branch?: string;
+}
+
 /** What we found at the path a team points at, before anything is created. */
 export interface WorkspaceInspection {
   readonly path: string;
-  readonly kind: 'git' | 'plain';
+  /**
+   * `git` — a repository. `nested` — not a repository, but it contains some. `plain` — no
+   * repository anywhere. The amendment to ticket 10 gives each one its own provider, and the
+   * kind is stored on the team because it decides which one brings the team back at launch.
+   */
+  readonly kind: 'git' | 'plain' | 'nested';
   /** False on a freshly `git init`'d directory: `HEAD` does not resolve, so nothing to branch. */
   readonly hasCommits: boolean;
   /**
@@ -21,12 +40,21 @@ export interface WorkspaceInspection {
   readonly dirty: boolean;
   /** The branch a team is created from, or undefined on a detached HEAD. */
   readonly branch?: string;
+  /** Every repository inside a `nested` Workspace, for the picker to draw. Empty otherwise. */
+  readonly repos: readonly NestedRepo[];
+  /** Whether anything at the top of a `nested` tree belongs to no repository. */
+  readonly looseFiles: boolean;
 }
 
 export interface AgentWorkspace {
   readonly agentId: string;
   readonly path: string;
-  readonly branch: string;
+  /**
+   * Absent on a copied AgentWorkspace, which has no branch to name — the copy *is* the work.
+   * A `nested` workspace has one branch name shared by all its repositories, so a single
+   * string still says what to look for.
+   */
+  readonly branch?: string;
 }
 
 export interface ProvisionRequest {
@@ -34,6 +62,11 @@ export interface ProvisionRequest {
   readonly teamName: string;
   readonly agentId: string;
   readonly agentName: string;
+  /**
+   * The repositories the user ticked, relative to the Workspace. `nested` only: a repository
+   * left out is absent from the agent's workspace rather than present and ignored.
+   */
+  readonly repos?: readonly string[];
 }
 
 /** Ticket 10's reconcile table, plus the state it does not cover: never provisioned at all. */
@@ -51,10 +84,15 @@ export type ReconcileOutcome =
   /** Branch gone. Data loss has already happened; saying so is the whole job. */
   | { readonly state: 'lost'; readonly detail: string };
 
-/** What became of an agent's branch when the agent was deleted. */
+/**
+ * What became of an agent's work when the agent was deleted.
+ *
+ * Named for the work rather than for the branch, because a copied AgentWorkspace has no
+ * branch and still has to answer the question.
+ */
 export type RemovalOutcome =
-  | { readonly branch: 'deleted' }
-  | { readonly branch: 'kept'; readonly detail: string };
+  | { readonly work: 'discarded' }
+  | { readonly work: 'kept'; readonly detail: string };
 
 /**
  * The seam a non-git AgentWorkspace would implement. Runtime implementations sit behind
@@ -90,7 +128,7 @@ export function refSlug(name: string): string {
 }
 
 export class WorkspaceError extends Error {
-  readonly code: 'not_git' | 'no_commits' | 'git_failed';
+  readonly code: 'not_git' | 'no_commits' | 'git_failed' | 'empty_workspace' | 'copy_failed';
 
   constructor(code: WorkspaceError['code'], message: string) {
     super(message);

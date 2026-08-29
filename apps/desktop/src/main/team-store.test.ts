@@ -26,6 +26,8 @@ class FakeWorkspaces implements WorkspaceProvider {
     hasCommits: true,
     dirty: false,
     branch: 'main',
+    repos: [],
+    looseFiles: false,
   };
   readonly provisioned: ProvisionRequest[] = [];
   initialized: string[] = [];
@@ -52,7 +54,7 @@ class FakeWorkspaces implements WorkspaceProvider {
   }
 
   async remove(): Promise<RemovalOutcome> {
-    return { branch: 'deleted' };
+    return { work: 'discarded' };
   }
 }
 
@@ -87,7 +89,7 @@ afterEach(() => opened.close());
 
 describe('creating a team', () => {
   it('writes the team and gives every agent its own copy of the repository', async () => {
-    const team = await createTeam(spec, { store, clock, workspaces });
+    const team = await createTeam(spec, { store, clock, workspaces, inspect: () => workspaces.inspect() });
 
     expect(store.teamByName('checkout')?.id).toBe(team.id);
     const agents = store.agentsOfTeam(team.id);
@@ -102,42 +104,105 @@ describe('creating a team', () => {
   });
 
   it('survives being read back by a second store over the same database', async () => {
-    const team = await createTeam(spec, { store, clock, workspaces });
+    const team = await createTeam(spec, { store, clock, workspaces, inspect: () => workspaces.inspect() });
     const reopened = new SqliteStore(opened.db);
     expect(reopened.listTeams().map((entry) => entry.id)).toEqual([team.id]);
     expect(reopened.agentsOfTeam(team.id)).toHaveLength(2);
   });
 
-  it('refuses a Workspace that is not a git repository, so the flow can offer git init', async () => {
-    workspaces.inspection = { ...workspaces.inspection, kind: 'plain' };
-    await expect(createTeam(spec, { store, clock, workspaces })).rejects.toMatchObject({
-      code: 'not_git',
+  // The amendment to ticket 10: not being a git repository stopped being a refusal. A plain
+  // folder gets a copy per agent, and the team records which mechanism it was given so the
+  // same one brings it back at launch.
+  it('accepts a folder that is not a git repository, and records it as plain', async () => {
+    workspaces.inspection = { ...workspaces.inspection, kind: 'plain', hasCommits: false };
+    const team = await createTeam(spec, {
+      store,
+      clock,
+      workspaces,
+      inspect: () => workspaces.inspect(),
     });
+    expect(team.workspaceKind).toBe('plain');
+    expect(store.teamById(team.id)?.workspaceKind).toBe('plain');
+  });
+
+  it('puts every repository of a nested workspace in scope by default, and stores the list', async () => {
+    workspaces.inspection = {
+      ...workspaces.inspection,
+      kind: 'nested',
+      repos: [
+        { path: 'storefront', hasCommits: true, dirty: false },
+        { path: 'api', hasCommits: true, dirty: false },
+      ],
+      looseFiles: true,
+    };
+    const team = await createTeam(spec, {
+      store,
+      clock,
+      workspaces,
+      inspect: () => workspaces.inspect(),
+    });
+    expect(team.workspaceRepos).toEqual(['storefront', 'api']);
+    expect(store.teamById(team.id)?.workspaceRepos).toEqual(['storefront', 'api']);
+    // The scope reaches the provider, because a repository out of scope must be absent from
+    // the agent's workspace rather than present and off limits.
+    expect(workspaces.provisioned[0]?.repos).toEqual(['storefront', 'api']);
+  });
+
+  it('carries the user’s chosen subset through instead of every repository found', async () => {
+    workspaces.inspection = {
+      ...workspaces.inspection,
+      kind: 'nested',
+      repos: [
+        { path: 'storefront', hasCommits: true, dirty: false },
+        { path: 'api', hasCommits: true, dirty: false },
+      ],
+      looseFiles: false,
+    };
+    const team = await createTeam(
+      { ...spec, repoPaths: ['api'] },
+      { store, clock, workspaces, inspect: () => workspaces.inspect() },
+    );
+    expect(team.workspaceRepos).toEqual(['api']);
+  });
+
+  it('refuses a nested workspace with nothing at all in scope', async () => {
+    workspaces.inspection = {
+      ...workspaces.inspection,
+      kind: 'nested',
+      repos: [{ path: 'storefront', hasCommits: true, dirty: false }],
+      looseFiles: false,
+    };
+    await expect(
+      createTeam(
+        { ...spec, repoPaths: [] },
+        { store, clock, workspaces, inspect: () => workspaces.inspect() },
+      ),
+    ).rejects.toMatchObject({ code: 'empty_workspace' });
     expect(store.listTeams()).toHaveLength(0);
   });
 
-  it('refuses a repository with no commits, because there is nothing to branch from', async () => {
-    workspaces.inspection = { ...workspaces.inspection, hasCommits: false };
-    await expect(createTeam(spec, { store, clock, workspaces })).rejects.toMatchObject({
+  it('refuses a *repository* with no commits, because there is nothing to branch from', async () => {
+    workspaces.inspection = { ...workspaces.inspection, kind: 'git', hasCommits: false };
+    await expect(createTeam(spec, { store, clock, workspaces, inspect: () => workspaces.inspect() })).rejects.toMatchObject({
       code: 'no_commits',
     });
   });
 
   it('allows a dirty tree — it is warned about, not refused', async () => {
     workspaces.inspection = { ...workspaces.inspection, dirty: true };
-    await expect(createTeam(spec, { store, clock, workspaces })).resolves.toBeDefined();
+    await expect(createTeam(spec, { store, clock, workspaces, inspect: () => workspaces.inspect() })).resolves.toBeDefined();
   });
 
   it('refuses a second team of the same name, since the name is half of a branch', async () => {
-    await createTeam(spec, { store, clock, workspaces });
+    await createTeam(spec, { store, clock, workspaces, inspect: () => workspaces.inspect() });
     await expect(
-      createTeam({ ...spec, workspacePath: '/elsewhere' }, { store, clock, workspaces }),
+      createTeam({ ...spec, workspacePath: '/elsewhere' }, { store, clock, workspaces, inspect: () => workspaces.inspect() }),
     ).rejects.toBeInstanceOf(TeamCreationError);
   });
 
   it('refuses two agents whose names slug to one branch', async () => {
     const colliding = teamOf({ name: 'Ada', role: 'frontend' }, { name: 'ada!', role: 'backend' });
-    await expect(createTeam(colliding, { store, clock, workspaces })).rejects.toMatchObject({
+    await expect(createTeam(colliding, { store, clock, workspaces, inspect: () => workspaces.inspect() })).rejects.toMatchObject({
       code: 'duplicate_agent',
     });
   });
@@ -149,7 +214,7 @@ describe('creating a team', () => {
       { name: 'Solo', role: 'anything', runtimeId: 'something-unproven' },
       { store, clock },
     );
-    const team = await createTeam({ ...spec, profileIds: [solo.id] }, { store, clock, workspaces });
+    const team = await createTeam({ ...spec, profileIds: [solo.id] }, { store, clock, workspaces, inspect: () => workspaces.inspect() });
     expect(store.agentsOfTeam(team.id)[0]?.runtimeId).toBe('something-unproven');
   });
 });
@@ -168,11 +233,11 @@ describe('agents that exist on their own', () => {
     const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
     const first = await createTeam(
       { name: 'checkout', workspacePath: '/repo', turnBudget: 6, profileIds: [mara.id] },
-      { store, clock, workspaces },
+      { store, clock, workspaces, inspect: () => workspaces.inspect() },
     );
     const second = await createTeam(
       { name: 'storefront', workspacePath: '/other', turnBudget: 6, profileIds: [mara.id] },
-      { store, clock, workspaces },
+      { store, clock, workspaces, inspect: () => workspaces.inspect() },
     );
 
     const memberships = store.membershipsOf(mara.id);
@@ -194,7 +259,7 @@ describe('agents that exist on their own', () => {
     );
     const team = await createTeam(
       { ...spec, profileIds: [mara.id] },
-      { store, clock, workspaces },
+      { store, clock, workspaces, inspect: () => workspaces.inspect() },
     );
     expect(store.agentsOfTeam(team.id)[0]).toMatchObject({
       name: 'Mara',
@@ -212,13 +277,13 @@ describe('agents that exist on their own', () => {
 
   it('refuses a team formed out of an agent that no longer exists', async () => {
     await expect(
-      createTeam({ ...spec, profileIds: ['agent_gone'] }, { store, clock, workspaces }),
+      createTeam({ ...spec, profileIds: ['agent_gone'] }, { store, clock, workspaces, inspect: () => workspaces.inspect() }),
     ).rejects.toMatchObject({ code: 'unknown_agent' });
   });
 
   it('retiring an agent leaves the teams it is on alone', async () => {
     const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
-    const team = await createTeam({ ...spec, profileIds: [mara.id] }, { store, clock, workspaces });
+    const team = await createTeam({ ...spec, profileIds: [mara.id] }, { store, clock, workspaces, inspect: () => workspaces.inspect() });
     store.tombstoneProfile(mara.id, 99);
 
     expect(store.listProfiles().map((profile) => profile.id)).not.toContain(mara.id);

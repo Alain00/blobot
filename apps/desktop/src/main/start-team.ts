@@ -1,6 +1,6 @@
 import {
   ClaudeAgentRuntime,
-  GitWorktreeWorkspaces,
+  workspaceProviderFor,
   Orchestrator,
   PeerMessageServer,
   SqliteRecorder,
@@ -41,7 +41,9 @@ export interface StartTeamOptions {
 export async function startTeam(options: StartTeamOptions): Promise<RunningTeam> {
   const { team, store, db, clock } = options;
   const log = options.onLog ?? ((line: string) => process.stderr.write(`${line}\n`));
-  const workspaces = options.workspaces ?? new GitWorktreeWorkspaces();
+  // The kind was decided when the team was created and stored on the row, so a team of
+  // copies and a team of worktrees both come back without anything here knowing which is which.
+  const workspaces = options.workspaces ?? workspaceProviderFor(team.workspaceKind);
 
   const records = store.agentsOfTeam(team.id);
   const inspection = await workspaces.inspect(team.workspacePath);
@@ -59,6 +61,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       teamName: team.name,
       agentId: record.id,
       agentName: record.name,
+      ...(team.workspaceRepos === undefined ? {} : { repos: team.workspaceRepos }),
     };
     // `absent` is a first launch, `repaired` is a directory recreated from an intact branch,
     // and `lost` is data loss that has already happened. Saying which is the whole job.
@@ -76,7 +79,8 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       ...(record.instructions === undefined ? {} : { instructions: record.instructions }),
       workspacePath: workspace.path,
     });
-    branches[record.id] = workspace.branch;
+    // A copied AgentWorkspace has no branch to show, and the UI already treats it as optional.
+    if (workspace.branch !== undefined) branches[record.id] = workspace.branch;
   }
 
   let orchestrator: Orchestrator;

@@ -89,9 +89,16 @@ export {
 
 // Ticket 10: AgentWorkspaces. The git implementation shells out, so it is not in `/domain`.
 export { GitWorktreeWorkspaces, defaultWorktreeRoot } from './workspace/git-worktrees.js';
+// The amendment's other two kinds of Workspace: a folder git cannot hold, and a folder of
+// repositories. `workspaceProviderFor` is how a caller picks one without knowing the classes.
+export { CopiedDirectoryWorkspaces, defaultCopyRoot } from './workspace/copied-directory.js';
+export { NestedRepoWorkspaces, defaultTreeRoot } from './workspace/nested-repos.js';
+export { inspectWorkspace } from './workspace/inspect.js';
+export { workspaceProviderFor } from './workspace/provider-for.js';
 export { WorkspaceError, branchNameFor, refSlug } from './workspace/workspace.js';
 export type {
   AgentWorkspace,
+  NestedRepo,
   ProvisionRequest,
   ReconcileOutcome,
   RemovalOutcome,

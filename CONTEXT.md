@@ -14,11 +14,18 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
 - **Agent** — an AgentProfile instantiated on a Team: a named member of it with a role and an
   AgentWorkspace. *Alice*, *Bob*. Name and role are copied from the profile when the team is
   formed, so renaming an agent later cannot rewrite what a transcript says it was called.
-- **Workspace** — the location a Team points at. Usually a git repository; **not necessarily
-  code** — a folder of documents is a valid Workspace. One per Team.
-- **AgentWorkspace** — an Agent's own isolated copy of the Workspace. Implemented today as a
-  git worktree on a `blobot/<team>/<agent>` branch, but the name deliberately promises neither
-  git nor Docker.
+- **Workspace** — the location a Team points at. **Not necessarily code, and not necessarily a
+  repository** — a folder of documents is a valid Workspace. One per Team. It is one of three
+  *kinds*, decided by looking at it and stored on the Team, because the kind chooses the
+  mechanism: `git` (a repository), `nested` (not a repository, but it contains some), `plain`
+  (no repository anywhere).
+- **AgentWorkspace** — an Agent's own isolated copy of the Workspace. One per Agent per Team.
+  The name deliberately promises neither git nor Docker, because the mechanism follows the
+  kind: a worktree on a `blobot/<team>/<agent>` branch, a mirrored tree of worktrees for the
+  repositories in **scope**, or a plain copy. The isolation is the same in all three; the
+  *guarantees* are not, and a copy has no branch, no diff and no recovery.
+- **Scope** — for a `nested` Workspace, the repositories the user put in. A repository out of
+  scope is **absent** from the AgentWorkspace, not present and off limits.
 
 ## Runtimes
 

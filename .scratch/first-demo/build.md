@@ -282,6 +282,56 @@ the previous team's live agents without asking is acceptable or alarming. The cr
 now been used with a mouse; whether it reads in the right order with agents before the team was
 not reported on.
 
+### Settled, 2026-08-29: a Workspace need not be a git repository
+
+Raised by the author while driving the app, and now an `## Amendment` on ticket 10. A Workspace
+is one of three kinds, decided by inspecting the folder and **stored on the team**, because the
+kind chooses the provider that brings the team back at launch:
+
+| Kind | AgentWorkspace | Where |
+|---|---|---|
+| `git` | A worktree on `blobot/<team>/<agent>`. Unchanged. | `~/.local/share/blobot/worktrees/` |
+| `nested` | The tree mirrored: a worktree per **chosen** repo, loose files copied. | `.../trees/` |
+| `plain` | A copy of the folder per agent. | `.../copies/` |
+
+"Not a git repository" is no longer a refusal. Two remain: a repository with no commits, and a
+`nested` workspace with nothing at all in scope.
+
+- `packages/core/src/workspace/inspect.ts` is the single classification pass, and every
+  provider's `inspect` delegates to it so the three can never disagree about what a folder is.
+  It looks two levels deep, because `~/code/thing` and `~/code/acme/thing` are both shapes
+  people keep and walking a home directory to the leaves to answer a folder picker would feel
+  broken.
+- `GitWorktreeWorkspaces` grew `addWorktree` / `reconcileWorktree` / `removeWorktree`, addressed
+  by path rather than by agent, because `NestedRepoWorkspaces` does exactly that per repository
+  and a second copy of `worktree add`, `prune` and the `-d`-versus-`-D` rule is how two
+  providers start disagreeing about what git does.
+- **A copied workspace's reconcile has no `repaired` row.** The copy *is* the work, so a
+  missing directory is `lost`. Telling that from `absent` needs a marker, since there is no
+  branch to ask about: provisioning writes `<root>/<team>/<agent>.json` *beside* the copy, so
+  an agent that empties its own workspace cannot erase the evidence it was ever provisioned.
+- **Deleting an agent keeps a copy** and says where it is. `-d` versus `-D` asks git whether a
+  branch holds unmerged commits and nothing can ask that of a directory, so ticket 10's own
+  rule decides: never put unrecoverable loss behind a dialog. Copies accumulate; the UI says
+  the path. `RemovalOutcome` is now `{work: 'discarded' | 'kept'}` rather than naming a branch.
+- **In the mirrored tree, a repository that is `absent` among provisioned siblings is `lost`.**
+  On its own, no-branch-and-no-directory is a first run; beside eight repositories that are
+  fine it cannot be, and reading it as "new" is exactly the confusion `absent` was added to
+  prevent.
+- `NestedRepoWorkspaces.initialize` **throws**. Offering `git init` on a folder that contains
+  repositories would create a repository wrapping repositories — the wrong action, not an
+  unhelpful one.
+- Migration `0002_remarkable_stone_men.sql` is additive (`teams.workspace_repos`, JSON), and
+  `workspaceKind` gained `nested`. An existing team keeps working, and a `nested` team created
+  before the picker existed reads an empty scope as "every repository", so it still comes back.
+
+Known gaps this leaves: **no way to change a workspace's scope after creation** (it is part of
+team editing, still unbuilt), the loose files in a mirrored tree are a copy inside an otherwise
+git-backed workspace and a repair re-copies them over the agent's edits (said in the reconcile
+detail, but nothing surfaces it in the UI yet), and **the scope picker has been screenshotted
+but never clicked** — it was reviewed by pointing the flow at a fixture folder, not with a
+mouse.
+
 ## Next session
 
 Items 1 and 2 of the previous handoff are done. What is left of it, in the same order:

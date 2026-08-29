@@ -19,7 +19,10 @@ export const teams = sqliteTable('teams', {
   // collision is a filesystem collision. This is where that becomes enforceable.
   name: text('name').notNull().unique(),
   workspacePath: text('workspace_path').notNull(),
-  workspaceKind: text('workspace_kind', { enum: ['git', 'plain'] }).notNull(),
+  workspaceKind: text('workspace_kind', { enum: ['git', 'plain', 'nested'] }).notNull(),
+  // JSON, because it is a list the app reads whole and never queries into — and a join table
+  // for a handful of relative paths per team would be a schema nobody thanks you for.
+  workspaceRepos: text('workspace_repos'),
   turnBudget: integer('turn_budget').notNull().default(10),
   createdAt: integer('created_at').notNull(),
 });

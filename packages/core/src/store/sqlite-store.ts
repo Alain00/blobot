@@ -52,6 +52,8 @@ export class SqliteStore implements MessageStore {
       name: team.name,
       workspacePath: team.workspacePath,
       workspaceKind: team.workspaceKind,
+      workspaceRepos:
+        team.workspaceRepos === undefined ? null : JSON.stringify(team.workspaceRepos),
       turnBudget: team.turnBudget,
       createdAt: team.createdAt,
     }).run();
@@ -73,6 +75,9 @@ export class SqliteStore implements MessageStore {
         name: row.name,
         workspacePath: row.workspacePath,
         workspaceKind: row.workspaceKind,
+        ...(row.workspaceRepos === null
+          ? {}
+          : { workspaceRepos: JSON.parse(row.workspaceRepos) as string[] }),
         turnBudget: row.turnBudget,
         createdAt: row.createdAt,
       }));

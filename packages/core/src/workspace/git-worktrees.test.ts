@@ -232,9 +232,9 @@ describe('deleting an agent', () => {
     const workspaces = provider();
     const workspace = await workspaces.provision(request(repo));
 
-    expect(await workspaces.remove(request(repo))).toEqual({ branch: 'deleted' });
+    expect(await workspaces.remove(request(repo))).toEqual({ work: 'discarded' });
     expect(existsSync(workspace.path)).toBe(false);
-    expect(git(repo, 'branch', '--list', workspace.branch).trim()).toBe('');
+    expect(git(repo, 'branch', '--list', workspace.branch as string).trim()).toBe('');
   });
 
   it('keeps a branch with unmerged commits, and says where it is', async () => {
@@ -244,9 +244,9 @@ describe('deleting an agent', () => {
     git(workspace.path, 'commit', '--allow-empty', '-m', 'work worth keeping');
 
     const outcome = await workspaces.remove(request(repo));
-    expect(outcome.branch).toBe('kept');
+    expect(outcome.work).toBe('kept');
     expect(existsSync(workspace.path)).toBe(false);
-    expect(git(repo, 'branch', '--list', workspace.branch).trim()).toContain('blobot/checkout/alice');
+    expect(git(repo, 'branch', '--list', workspace.branch as string).trim()).toContain('blobot/checkout/alice');
   });
 });
 

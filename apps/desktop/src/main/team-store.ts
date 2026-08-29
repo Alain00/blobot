@@ -1,7 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import {
-  GitWorktreeWorkspaces,
+  inspectWorkspace as inspectPath,
   SqliteStore,
+  workspaceProviderFor,
   WorkspaceError,
   refSlug,
   uuidv7,
@@ -28,12 +29,27 @@ export interface NewTeamSpec {
   readonly workspacePath: string;
   readonly turnBudget: number;
   readonly profileIds: readonly string[];
+  /**
+   * Which repositories inside the Workspace are in scope, relative to it. Only a `nested`
+   * Workspace has any; leaving it out means every repository found, which is what the picker
+   * offers by default.
+   */
+  readonly repoPaths?: readonly string[];
 }
 
 export interface CreateTeamDeps {
   readonly store: SqliteStore;
   readonly clock: Clock;
+  /**
+   * Overrides the provider the inspection would have chosen. Injected by tests; in the app the
+   * kind of Workspace decides it, which is the point of `workspaceProviderFor`.
+   */
   readonly workspaces?: WorkspaceProvider;
+  /**
+   * Injected separately from the provider because inspection is what *chooses* the provider —
+   * asking one of the three what a folder is would mean having already picked one.
+   */
+  readonly inspect?: (path: string) => Promise<WorkspaceInspection>;
 }
 
 /** Refusals the flows are expected to render, rather than crash on. */
@@ -41,6 +57,7 @@ export class TeamCreationError extends Error {
   readonly code:
     | 'not_git'
     | 'no_commits'
+    | 'empty_workspace'
     | 'name_taken'
     | 'no_agents'
     | 'duplicate_agent'
@@ -92,14 +109,17 @@ export function hireAgent(spec: NewAgentSpec, deps: CreateTeamDeps): AgentProfil
  * four of those are things a Team gives an Agent. Name and role are copied at this moment so
  * that renaming an agent later does not rewrite what a transcript says it was called.
  *
- * Two refusals and one warning, all of them ticket 10's: a Workspace that is not a git
- * repository (the flow offers `git init` — never silent, because creating a `.git` in
- * someone's directory is a visible change), a repository with no commits (`HEAD` does not
- * resolve, so there is nothing to branch from), and uncommitted work, which is **allowed and
- * warned about** because it lives in no agent's workspace.
+ * The Workspace decides the mechanism rather than gating the team. A repository gets
+ * worktrees, a folder of repositories gets the mirrored tree of the ones the user put in
+ * scope, and a plain folder gets a copy per agent — the amendment to ticket 10, which removed
+ * "this is not a git repository" from the list of refusals entirely.
+ *
+ * What is still refused: a repository with no commits (`HEAD` does not resolve, so there is
+ * nothing to branch from), and a folder of repositories with nothing at all in scope. What is
+ * still only warned about: uncommitted work, which lives in no agent's workspace and is
+ * therefore a version of the file the agents will not see.
  */
 export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promise<Team> {
-  const workspaces = deps.workspaces ?? new GitWorktreeWorkspaces();
   const name = spec.name.trim();
 
   if (spec.profileIds.length === 0) {
@@ -122,14 +142,26 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
     throw new TeamCreationError('name_taken', `A team called ${name} already exists.`);
   }
 
-  const inspection = await workspaces.inspect(spec.workspacePath);
-  if (inspection.kind !== 'git') {
-    throw new TeamCreationError('not_git', `${spec.workspacePath} is not a git repository.`);
-  }
-  if (!inspection.hasCommits) {
+  // Which kind of Workspace this is decides the provider, and "not a git repository" is no
+  // longer a refusal: the amendment to ticket 10 gives a plain folder copies and a folder of
+  // repositories a mirrored tree.
+  const inspection = await (deps.inspect ?? inspectPath)(spec.workspacePath);
+  const workspaces = deps.workspaces ?? workspaceProviderFor(inspection.kind);
+
+  if (inspection.kind === 'git' && !inspection.hasCommits) {
     throw new TeamCreationError(
       'no_commits',
       `${spec.workspacePath} has no commits yet, so there is nothing to branch from.`,
+    );
+  }
+  const repoPaths =
+    inspection.kind === 'nested'
+      ? (spec.repoPaths ?? inspection.repos.map((repo) => repo.path))
+      : [];
+  if (inspection.kind === 'nested' && repoPaths.length === 0 && !inspection.looseFiles) {
+    throw new TeamCreationError(
+      'empty_workspace',
+      `Nothing in ${spec.workspacePath} is in scope: no repositories chosen and no other files to copy.`,
     );
   }
 
@@ -138,7 +170,8 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
     id: `team_${uuidv7(now)}`,
     name,
     workspacePath: spec.workspacePath,
-    workspaceKind: 'git',
+    workspaceKind: inspection.kind,
+    ...(repoPaths.length === 0 ? {} : { workspaceRepos: repoPaths }),
     turnBudget: spec.turnBudget,
   };
   deps.store.createTeam({ ...team, createdAt: now });
@@ -150,6 +183,7 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
       teamName: team.name,
       agentId: id,
       agentName: profile.name,
+      ...(repoPaths.length === 0 ? {} : { repos: repoPaths }),
     });
     deps.store.createAgent({
       id,
@@ -162,7 +196,7 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
       ...(profile.executablePath === undefined ? {} : { executablePath: profile.executablePath }),
       ...(profile.model === undefined ? {} : { model: profile.model }),
       workspacePath: workspace.path,
-      branch: workspace.branch,
+      ...(workspace.branch === undefined ? {} : { branch: workspace.branch }),
       createdAt: deps.clock.now(),
     });
   }
@@ -171,20 +205,19 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
 }
 
 /** The creation flow's first screen: what is at the path the user picked. */
-export async function inspectWorkspace(
-  path: string,
-  workspaces: WorkspaceProvider = new GitWorktreeWorkspaces(),
-): Promise<WorkspaceInspection> {
-  return workspaces.inspect(path);
+export async function inspectWorkspace(path: string): Promise<WorkspaceInspection> {
+  return inspectPath(path);
 }
 
-/** Offered, never silent. `WorkspaceError` is what a directory that cannot be a repo throws. */
-export async function initializeWorkspace(
-  path: string,
-  workspaces: WorkspaceProvider = new GitWorktreeWorkspaces(),
-): Promise<WorkspaceInspection> {
-  await workspaces.initialize(path);
-  return workspaces.inspect(path);
+/**
+ * Offered, never silent — and now a genuine choice rather than a gate, since a plain folder
+ * works without it. The `nested` provider refuses outright: a repository wrapping repositories
+ * is the wrong action, not an unhelpful one.
+ */
+export async function initializeWorkspace(path: string): Promise<WorkspaceInspection> {
+  const inspection = await inspectPath(path);
+  await workspaceProviderFor(inspection.kind).initialize(path);
+  return inspectPath(path);
 }
 
 export { WorkspaceError };

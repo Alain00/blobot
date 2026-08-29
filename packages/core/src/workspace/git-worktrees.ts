@@ -4,6 +4,7 @@ import { mkdir, rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
+import { inspectWorkspace } from './inspect.js';
 import {
   branchNameFor,
   refSlug,
@@ -41,24 +42,9 @@ export class GitWorktreeWorkspaces implements WorkspaceProvider {
     return this.#root;
   }
 
+  /** Delegated, so the three providers can never disagree about what a folder is. */
   async inspect(workspacePath: string): Promise<WorkspaceInspection> {
-    const isGit = await this.#isGitRepository(workspacePath);
-    if (!isGit) {
-      return { path: workspacePath, kind: 'plain', hasCommits: false, dirty: false };
-    }
-    // A fresh `git init` has no HEAD to branch from — a real case, and the reason this is
-    // asked separately from "is it a repo".
-    const hasCommits = await this.#succeeds(workspacePath, ['rev-parse', '--verify', 'HEAD']);
-    const status = await this.#git(workspacePath, ['status', '--porcelain']);
-    const branch = (await this.#git(workspacePath, ['branch', '--show-current'])).trim();
-    return {
-      path: workspacePath,
-      kind: 'git',
-      hasCommits,
-      dirty: status.trim().length > 0,
-      // Empty on a detached HEAD, which is allowed: `git worktree add` is fine with it.
-      ...(branch.length === 0 ? {} : { branch }),
-    };
+    return inspectWorkspace(workspacePath);
   }
 
   async initialize(workspacePath: string): Promise<void> {
@@ -74,19 +60,14 @@ export class GitWorktreeWorkspaces implements WorkspaceProvider {
   async provision(request: ProvisionRequest): Promise<AgentWorkspace> {
     await this.#requireUsableWorkspace(request.workspacePath);
     const workspace = this.workspaceFor(request);
+    const branch = branchNameFor(request.teamName, request.agentName);
     if (existsSync(workspace.path)) {
       // Reuse rather than refuse: recreating an agent of the same name in the same team is an
       // ordinary thing to do, and its branch is where its work already is.
       return workspace;
     }
 
-    await mkdir(dirname(workspace.path), { recursive: true });
-    const exists = await this.#branchExists(request.workspacePath, workspace.branch);
-    await this.#git(request.workspacePath, [
-      'worktree',
-      'add',
-      ...(exists ? [workspace.path, workspace.branch] : ['-b', workspace.branch, workspace.path]),
-    ]);
+    await this.addWorktree(request.workspacePath, workspace.path, branch);
     return workspace;
   }
 
@@ -100,25 +81,18 @@ export class GitWorktreeWorkspaces implements WorkspaceProvider {
    */
   async reconcile(request: ProvisionRequest): Promise<ReconcileOutcome> {
     const workspace = this.workspaceFor(request);
-    const branchExists = await this.#branchExists(request.workspacePath, workspace.branch);
-    if (!branchExists && !existsSync(workspace.path)) return { state: 'absent' };
-    if (!branchExists) {
-      return {
-        state: 'lost',
-        detail: `the branch ${workspace.branch} no longer exists; any work on it is not recoverable by blobot`,
-      };
+    const branch = branchNameFor(request.teamName, request.agentName);
+    const outcome = await this.reconcileWorktree(request.workspacePath, workspace.path, branch);
+    switch (outcome.state) {
+      case 'absent':
+        return { state: 'absent' };
+      case 'ok':
+        return { state: 'ok', workspace };
+      case 'repaired':
+        return { state: 'repaired', workspace, detail: outcome.detail };
+      case 'lost':
+        return { state: 'lost', detail: outcome.detail };
     }
-    if (existsSync(workspace.path)) return { state: 'ok', workspace };
-
-    // `git worktree add` refuses a branch git still believes is checked out somewhere.
-    await this.#git(request.workspacePath, ['worktree', 'prune']);
-    await mkdir(dirname(workspace.path), { recursive: true });
-    await this.#git(request.workspacePath, ['worktree', 'add', workspace.path, workspace.branch]);
-    return {
-      state: 'repaired',
-      workspace,
-      detail: `recreated ${workspace.path} from ${workspace.branch}`,
-    };
   }
 
   /**
@@ -130,22 +104,8 @@ export class GitWorktreeWorkspaces implements WorkspaceProvider {
    */
   async remove(request: ProvisionRequest): Promise<RemovalOutcome> {
     const workspace = this.workspaceFor(request);
-    if (existsSync(workspace.path)) {
-      await this.#git(request.workspacePath, ['worktree', 'remove', '--force', workspace.path]);
-    }
-    await this.#git(request.workspacePath, ['worktree', 'prune']);
-    await rm(workspace.path, { recursive: true, force: true });
-
-    const deleted = await this.#succeeds(request.workspacePath, [
-      'branch',
-      '-d',
-      workspace.branch,
-    ]);
-    if (deleted) return { branch: 'deleted' };
-    return {
-      branch: 'kept',
-      detail: `${workspace.branch} has unmerged commits and was kept; delete it with 'git branch -D ${workspace.branch}'`,
-    };
+    const branch = branchNameFor(request.teamName, request.agentName);
+    return this.removeWorktree(request.workspacePath, workspace.path, branch);
   }
 
   /** Where an agent's workspace and branch live. Pure: no git, no filesystem. */
@@ -154,6 +114,87 @@ export class GitWorktreeWorkspaces implements WorkspaceProvider {
       agentId: request.agentId,
       path: join(this.#root, refSlug(request.teamName), refSlug(request.agentName)),
       branch: branchNameFor(request.teamName, request.agentName),
+    };
+  }
+
+  // ------------------------------------------------- worktrees, by explicit path
+
+  /**
+   * The three worktree operations, addressed by path rather than by agent.
+   *
+   * They are public because the `nested` provider does exactly this per repository inside a
+   * mirrored tree, and the alternative — a second copy of `worktree add`, `prune` and the
+   * `-d`-versus-`-D` rule — is how two providers start disagreeing about what git does.
+   */
+  async addWorktree(repoPath: string, targetPath: string, branch: string): Promise<void> {
+    await this.#requireUsableWorkspace(repoPath);
+    await mkdir(dirname(targetPath), { recursive: true });
+    const exists = await this.#branchExists(repoPath, branch);
+    await this.#git(repoPath, [
+      'worktree',
+      'add',
+      ...(exists ? [targetPath, branch] : ['-b', branch, targetPath]),
+    ]);
+  }
+
+  /**
+   * Ticket 10's launch reconcile: repair the lossless case, report the lossy one.
+   *
+   * The asymmetry is the point. A missing directory has one right answer, so asking would be
+   * pestering. A missing branch means the work is already gone, and quietly creating a fresh
+   * empty one would hide it — Alice returning healthy with three commits missing is the worst
+   * outcome this ticket can produce.
+   */
+  async reconcileWorktree(
+    repoPath: string,
+    targetPath: string,
+    branch: string,
+  ): Promise<
+    | { state: 'ok' }
+    | { state: 'absent' }
+    | { state: 'repaired'; detail: string }
+    | { state: 'lost'; detail: string }
+  > {
+    const branchExists = await this.#branchExists(repoPath, branch);
+    if (!branchExists && !existsSync(targetPath)) return { state: 'absent' };
+    if (!branchExists) {
+      return {
+        state: 'lost',
+        detail: `the branch ${branch} no longer exists; any work on it is not recoverable by blobot`,
+      };
+    }
+    if (existsSync(targetPath)) return { state: 'ok' };
+
+    // `git worktree add` refuses a branch git still believes is checked out somewhere.
+    await this.#git(repoPath, ['worktree', 'prune']);
+    await mkdir(dirname(targetPath), { recursive: true });
+    await this.#git(repoPath, ['worktree', 'add', targetPath, branch]);
+    return { state: 'repaired', detail: `recreated ${targetPath} from ${branch}` };
+  }
+
+  /**
+   * Remove the worktree, then keep the branch only if it has unmerged commits.
+   *
+   * This is git's own `git branch -d` versus `-D` distinction, which is also the least
+   * surprising: an agent that did nothing leaves nothing behind, and an agent that produced
+   * commits leaves them on a findable branch.
+   */
+  async removeWorktree(
+    repoPath: string,
+    targetPath: string,
+    branch: string,
+  ): Promise<RemovalOutcome> {
+    if (existsSync(targetPath)) {
+      await this.#git(repoPath, ['worktree', 'remove', '--force', targetPath]);
+    }
+    await this.#git(repoPath, ['worktree', 'prune']);
+    await rm(targetPath, { recursive: true, force: true });
+
+    const deleted = await this.#succeeds(repoPath, ['branch', '-d', branch]);
+    if (deleted) return { work: 'discarded' };
+    return {
+      work: 'kept',
+      detail: `${branch} has unmerged commits and was kept; delete it with 'git branch -D ${branch}'`,
     };
   }
 

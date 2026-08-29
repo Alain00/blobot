@@ -22,7 +22,8 @@ and raise it rather than working around it.
   adapter. Nothing outside the adapter may know which provider an agent is.
 - **The UI is provider-agnostic.** No provider-specific logic in React components, ever.
 - **Docker is invisible infrastructure.** The user never sees or types a Docker command.
-- **Git-aware.** Agents are isolated by git worktree, not by convention.
+- **Git-aware.** Agents are isolated by AgentWorkspace, not by convention — a git worktree
+  wherever git can hold the Workspace, a plain copy where it cannot. Never a shared directory.
 - **The orchestrator owns agent-to-agent communication.** It is our concern, not ACP's, and
   never a full context copy between agents — always compact context.
 
@@ -110,7 +111,11 @@ up. Read it before starting work.
 - **Ticket 10's AgentWorkspaces** in `packages/core/src/workspace`: git worktrees on
   `blobot/<team>/<agent>` under `~/.local/share/blobot/worktrees/`, branched from `HEAD`,
   outside the user's repository, with the launch reconcile (repair a missing directory, report
-  a missing branch) and the `-d`-versus-`-D` rule on deleting an agent.
+  a missing branch) and the `-d`-versus-`-D` rule on deleting an agent. **Amended 2026-08-29:
+  a Workspace need not be a repository.** Three kinds — `git`, `nested` (a folder of
+  repositories, of which the user picks the ones in scope), `plain` (a copy per agent) — one
+  provider each behind `workspaceProviderFor`. A copy has no branch, no diff and no recovery,
+  and the flow says so where the folder is chosen.
 
 - **Persistence and team creation** (11 + 13): one SQLite file under Electron's `userData`, a
   creation flow that picks a Workspace and forms a team out of agents, and ticket 11's detection
