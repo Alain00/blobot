@@ -47,7 +47,11 @@ export const toolFailureContinues: Scenario = scenario('tool-failure-continues')
   .say('There is no config/missing.json, so I used the defaults instead.')
   .end();
 
-/** A turn that errors halfway. Bob survives; the turn does not, and there is no `turn_ended`. */
+/**
+ * A turn that errors halfway: no `turn_ended`, because the RPC never replied. `error` is
+ * fatal by definition in this vocabulary, so Bob ends up `failed` and needs a restart — what
+ * `die` adds is that the process is gone too.
+ */
 export const bobFailsMidturn: Scenario = scenario('bob-fails-midturn')
   .think('Starting the review.')
   .say('Pulling up the diff now')

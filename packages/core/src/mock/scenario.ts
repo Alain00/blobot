@@ -132,7 +132,11 @@ export class Scenario {
     );
   }
 
-  /** A turn that errors halfway. The agent survives; the turn does not. */
+  /**
+   * A turn that errors halfway. The process is still up, but `error` is fatal by definition
+   * — the agent is `failed` and needs a restart. The non-fatal way for a turn to go wrong is
+   * a failed tool call, which the turn survives.
+   */
   errorMidTurn(message: string, code?: string): Scenario {
     return this.#with(
       code === undefined

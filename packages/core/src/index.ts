@@ -34,6 +34,9 @@ export { SystemClock, VirtualClock } from './clock.js';
 
 export { assembleMessages, MessageAssembler } from './message-assembler.js';
 
+export { AgentStatusTracker, statusAfter } from './status.js';
+export type { AgentStatus, StatusListener } from './status.js';
+
 export { AsyncQueue } from './mock/async-queue.js';
 export { raggedFragments } from './mock/ragged.js';
 export type { Fragment } from './mock/ragged.js';

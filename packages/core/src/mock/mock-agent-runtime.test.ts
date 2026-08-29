@@ -256,7 +256,7 @@ describe('the traps it reproduces on purpose', () => {
     expect((last(events) as TurnEnded).stopReason).toBe('end_turn');
   });
 
-  it('errors halfway without a turn_ended, and stays answerable', async () => {
+  it('errors halfway without a turn_ended, leaving the process up', async () => {
     const { runtime, clock } = make({ script: scenarios['bob-fails-midturn'] });
     await runtime.start();
     const events = await runTurn(runtime, clock);
@@ -266,6 +266,7 @@ describe('the traps it reproduces on purpose', () => {
     expect(types(events)).not.toContain('turn_ended');
     // The partial transcript survives: the error is an event, not a rejection.
     expect(types(events)).toContain('agent_message_completed');
+    // The process is alive — but the status fold still reads a fatal error as `failed`.
     expect(runtime.lifecycle).toBe('ready');
   });
 
