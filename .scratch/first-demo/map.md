@@ -88,6 +88,10 @@ observed — cite them rather than re-deriving.
 
 - [Verify loopback HTTP MCP against both runtimes](issues/15-verify-loopback-http-mcp.md) — **Viable on both**; the transport decision stands. Bearer token honoured on every request. Four requirements added: readiness must come from the inbound MCP handshake (a dead port fails silently at `session/new`), the endpoint must be stateless (no re-handshake after a drop), `message_agent` needs an idempotency key and a non-blocking handler, and `mcpServers` must be re-supplied on `session/load`.
 
+- [The team and conversation UI](issues/12-team-and-conversation-ui.md) — Rail / conversation / feed, with the **team as an item in the rail drawn as a group**, so there is one conversation per agent *and* one for the team without a second surface. A peer message is a dashed enclosure with both blobatars in its header — never a bubble, because dashed-against-solid reads as lower authority before a word is parsed. Status is monochrome through three channels (motion, a mono word, a sweeping hairline), with inversion reserved for `waiting` and desaturation for `failed`. The recipient is an `@mention`, not a picker.
+
+- [The SQLite schema for the demo](issues/13-sqlite-schema-for-the-demo.md) — Eight tables, **Drizzle** over `better-sqlite3` inside `packages/core`, one connection in main and none in the renderer. Our store is the transcript of record (04's question, answered yes) and persists the *durable subset*, never deltas. A peer message is **one row**, discriminated by `from_agent_id IS NULL`; the mailbox is `delivered_at IS NULL`, a predicate rather than a table. Runtime config is typed columns so there is nowhere to put a secret. Agents tombstone, never cascade. Status and the consumed turn count stay unpersisted.
+
 ## Not yet specified
 
 - **Enforcing commit-before-review across worktrees.** Ticket 06 chose to *tell* agents that
@@ -108,6 +112,22 @@ observed — cite them rather than re-deriving.
   what happens when Bob's runtime dies mid-turn while Alice is waiting on him, and what a
   provider/API failure mid-turn even looks like — the one event-surface case the research
   could not observe.
+- **The team stream past three agents.** The team pane interleaves every agent's messages
+  into one chronological stream and de-duplicates a peer message to its single crossing. That
+  reads well at three. What it does at eight — ordering, density, whether tool activity belongs
+  in it at all — was not prototyped, and the answer probably arrives as filtering rather than
+  as a new layout.
+
+- **Making the hop visible.** The killed variant C drew a peer message physically crossing the
+  gutter between two agents, which is the clearest rendering of the demo's claim that anyone
+  produced. It does not survive a third agent, but the in-flight moment is worth stealing back
+  into the team stream once there is something to animate against.
+
+- **Retention.** Ticket 13 prunes nothing, deliberately — at demo scale it is kilobytes a day
+  and a policy wants real usage behind it. `events` was kept append-only and never updated
+  specifically so the decision stays cheap: a future prune is a `DELETE WHERE at < ?` and
+  nothing else in the schema has to care.
+
 - **First-run and onboarding flow.** The "zero setup" experience from step 19. Needs
   detection to have a shape first.
 - **Packaging and distribution.** Signing, auto-update, what an OSS release even looks
