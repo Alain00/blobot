@@ -72,6 +72,19 @@ export type {
   TurnRecorder,
 } from './orchestrator/orchestrator.js';
 
+// The Claude Code adapter. Exported from the full entry point only: it spawns a process, so
+// it has no business in `@blobot/core/domain`, which the renderer imports.
+export { ClaudeAgentRuntime } from './adapters/claude/claude-agent-runtime.js';
+export type {
+  ClaudeAgentRuntimeOptions,
+  McpServerConfig,
+} from './adapters/claude/claude-agent-runtime.js';
+export {
+  BRIDGE_PACKAGE,
+  BRIDGE_VERSION,
+  resolveClaudeExecutable,
+} from './adapters/claude/stdio-bridge.js';
+
 export { openDatabase } from './store/database.js';
 export type { BlobotDatabase, OpenDatabaseOptions, OpenedDatabase } from './store/database.js';
 export { SqliteStore } from './store/sqlite-store.js';

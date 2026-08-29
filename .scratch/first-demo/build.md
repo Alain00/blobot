@@ -16,6 +16,12 @@ pnpm -r build
 pnpm demo                          # headless: two agents, one peer message, printed
 ```
 
+The Claude adapter against a real, logged-in `claude` (off by default — it costs tokens):
+
+```sh
+BLOBOT_LIVE_CLAUDE=1 pnpm --filter @blobot/core exec vitest run src/adapters/claude/live.test.ts
+```
+
 The Electron app, including a way to review it without a human at the screen:
 
 ```sh
@@ -27,6 +33,11 @@ apps/desktop/node_modules/.bin/electron apps/desktop --no-sandbox \
 `--screenshot` implies `--autoplay`, which sends one user prompt and lets the scripted demo
 scenarios run. A window opens on the display for a few seconds and quits itself.
 
+`--live-claude=<dir>` swaps the mock runtimes for **one real Claude Code agent** working in
+`<dir>` — the same orchestrator, store and UI, with `demoMode: false`. One agent, not two,
+because peer messaging needs ticket 15's loopback MCP tool and a second agent would inherit a
+persona promising a tool that does not exist.
+
 ## What exists
 
 | Area | Where | Ticket |
@@ -37,12 +48,21 @@ scenarios run. A window opens on the display for a few seconds and quits itself.
 | Orchestrator: mailbox, wake, budget, `message_agent` handler, persona/envelope | `packages/core/src/orchestrator/` | 05, 06 |
 | SQLite: schema, migrations, store, recorder | `packages/core/src/store/` | 13 |
 | Electron + React UI, demo mode | `apps/desktop/src/` | 12 |
+| Claude Code adapter over the ACP bridge | `packages/core/src/adapters/claude/` | 02, 07, 14 |
 
 `@blobot/core` is the full entry point (pulls in `better-sqlite3` + Drizzle).
 `@blobot/core/domain` is the pure one — vocabulary, aggregates, status fold, roster lookup — for
 consumers that must not pull in SQLite: the renderer today, a CLI later.
 
-**Nothing has touched a real CLI yet.** Every runtime so far is `MockAgentRuntime`.
+**A real `claude` has answered, streamed, run a tool and been cancelled** — see
+`adapters/claude/live.test.ts`, and the same turn rendered by the real UI via `--live-claude`.
+OpenCode is still untouched.
+
+The adapter is four small files, and the split is the point: `jsonrpc.ts` moves messages,
+`wire.ts` declares the handful of fields we read, `translate.ts` is the pure function where
+every Claude-shaped quirk dies, and `claude-agent-runtime.ts` owns the process and the session.
+`fake-bridge.ts` speaks the protocol without spawning anything, so the contract is testable at
+wire level; `live.test.ts` is the only thing that can prove the fake is not lying.
 
 ## Decided while building — not in any ticket
 
@@ -67,6 +87,24 @@ These were forced by writing the code. None contradicts a ticket; if one looks w
 - **`Orchestrator.start()` swallows a per-agent spawn failure**, leaving that agent `failed` and
   the rest of the team working — extending ticket 11's "detection never gates team creation"
   from pre-flight detection to startup.
+- **The adapter speaks JSON-RPC itself rather than importing the ACP SDK.** The bridge is a
+  *process* we spawn, not a library we link — so the pinned dependency stays a runtime
+  artifact, `no-acp-in-core.test.ts` stays green without an exemption, and the wire shapes we
+  actually consume are declared in `wire.ts` where they can be read in one screen.
+- **`bridgeEntryPath()` resolves from two anchors, and `apps/desktop` carries the same exact
+  pin.** Electron-vite bundles core into `out/main/`, whose `node_modules` chain is the app's
+  rather than core's, so a single `import.meta.url` anchor resolves under vitest and fails
+  under Electron. `BLOBOT_CLAUDE_BRIDGE` overrides both; packaging will use it.
+- **The bridge is spawned with `ELECTRON_RUN_AS_NODE=1`.** `process.execPath` is Electron in
+  the desktop app, and Electron only behaves like node when told to. Plain node ignores it.
+- **`stop()` closes the session before the pipe.** Dropping stdin works — the bridge exits on
+  EOF — but it tears the SDK query down mid-flight and the bridge logs a cleanup failure,
+  which is a real error message for a routine shutdown.
+- **A permission request with no handler attached is answered `cancelled`, approving nothing.**
+  Blocking an unattended agent's turn forever is the worse failure.
+- **Ten ACP tool kinds collapse onto blobot's four** in `translate.ts` — `search`/`fetch` read,
+  `delete`/`move` edit, everything else `other`, which is why a client-supplied tool is told
+  apart by its name prefix rather than by its kind.
 - **Adapter order: Claude Code first, then OpenCode.** Reversed from the original suggestion by
   the author, 2026-08-29: Claude Code is the runtime they can test easily, and the bridge is the
   riskier integration, so discovering its problems early is worth more than momentum. The
@@ -75,6 +113,18 @@ These were forced by writing the code. None contradicts a ticket; if one looks w
   *second* adapter cheap.
 
 ## Known gaps
+
+- **A real Claude agent cannot message a peer yet.** Ticket 15's loopback MCP server is not
+  built; `mcpServers` is the seam it plugs into.
+- **`used: 0` on cancel is forwarded, not suppressed.** Ticket 04 makes suppression a
+  *consumer* duty and the mock reproduces the trap on purpose, so the adapter is faithful and
+  nothing downstream suppresses it yet. The renderer has no context gauge, so it costs nothing
+  today — and it will be a visible bug the moment one is drawn.
+- **Only `session/new`.** No `session/load`, so nothing resumes across a restart yet. Ticket
+  14's trap applies when it lands: re-send `session/set_mode` after every load or resume —
+  `#applyPermissionMode()` is the call site.
+- **`--live-claude` runs the agent in the directory it was pointed at**, not in a git worktree.
+  Ticket 10 is not built.
 
 - **The renderer hides blobot's own `message_agent` tool by matching its name**
   (`apps/desktop/src/renderer/src/model.ts`). This is the leak ticket 04 warned about in a
@@ -91,27 +141,22 @@ These were forced by writing the code. None contradicts a ticket; if one looks w
   package, because the map settled two packages. If a CLI is ever built, that is the moment to
   reopen it.
 
-## Next session: the Claude Code adapter
+## Next session: peer messaging on a real runtime (ticket 15), then OpenCode
 
-**Read first:** tickets 02 (the bridge is real, and pinned), 07 (what the adapter absorbs), 04
-(the vocabulary it must emit), 14 (its permission posture is *forced* — the bridge overrides
-`permissionMode` and `canUseTool`, so it gets `session/set_mode("default")`), and
-`research/02-claude-code-acp.md` with its transcripts. They are observed against this machine —
-cite them rather than re-deriving.
+**Read first:** ticket 15 (loopback HTTP MCP) with `research/15-loopback-http-mcp.md`, then
+tickets 03 and 16 for OpenCode.
 
-**Build:** `packages/core/src/adapters/claude/` implementing `AgentRuntime`, exported from the
-full entry point only. It is the first adapter, so it also fixes the interface's shape for the
-second one.
+The Claude adapter is the shape the second one has to fit, and it left exactly one seam open
+for ticket 15: `ClaudeAgentRuntimeOptions.mcpServers`, forwarded verbatim into `session/new`
+(with `type` deliberately omitted — 0.70.0 reads an absent type as stdio, and ticket 01's
+"omitting it drops the server" trap was observed against 0.16.2). Until a server is passed
+there, a real Claude agent has no `message_agent` tool, which is why `--live-claude` builds a
+**one-agent** team: `composePersona` on a one-agent roster says "You have no teammates on this
+team yet" rather than promising a tool that is not there.
 
-The contract it must meet already exists and is executable: `MockAgentRuntime`'s tests are the
-behaviours every runtime owes the orchestrator. The adapter should pass the equivalent ones —
-ragged deltas concatenating correctly, a cancelled tool reporting `completed` with `exit: null`,
-`used: 0` suppressed on cancel, a tool failure continuing the turn, `turn_ended` synthesized from
-the `session/prompt` reply's `stopReason`, `error` only for what actually ends a turn.
-
-**Verify against the real binary.** This is the first code that spawns a CLI, so the session is
-not done when it typechecks — it is done when a real `claude` answers a prompt in a real
-AgentWorkspace and the UI renders the turn. Keep the mock as the default demo mode either way.
+Then OpenCode (03 + 16). Its six live update kinds are a strict subset of the bridge's eleven,
+so `translate.ts` is the file to read first — the mapping it makes is most of the second
+adapter's work, already done and tested.
 
 **Do not** subscribe to subagent transcripts (07), store anything resembling a credential (13),
 or let the UI learn which provider an agent is (the permanent rules in `CLAUDE.md`).

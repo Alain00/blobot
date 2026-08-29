@@ -3,7 +3,8 @@ import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { AgentStatus } from '@blobot/core';
-import { createDemoTeam, demoBranchOf, type DemoTeam } from './demo-team.js';
+import { createDemoTeam, type DemoTeam } from './demo-team.js';
+import { createLiveClaudeTeam } from './live-team.js';
 import type { UiSnapshot } from '../shared/api.js';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
@@ -13,6 +14,11 @@ const screenshotPath = process.argv
   .find((arg) => arg.startsWith('--screenshot='))
   ?.slice('--screenshot='.length);
 const autoplay = process.argv.includes('--autoplay') || screenshotPath !== undefined;
+
+/** `--live-claude=<dir>` swaps the mock runtimes for a real Claude Code agent in `<dir>`. */
+const liveClaudePath = process.argv
+  .find((arg) => arg.startsWith('--live-claude='))
+  ?.slice('--live-claude='.length);
 
 let demo: DemoTeam | undefined;
 let window: BrowserWindow | undefined;
@@ -32,14 +38,14 @@ function snapshot(): UiSnapshot {
       role: agent.role,
       runtimeLabel: demo?.runtimeLabels[agent.id] ?? 'unknown',
       workspacePath: agent.workspacePath,
-      branch: demoBranchOf(agent),
+      branch: `blobot/${demo?.team.name ?? 'team'}/${agent.name.toLowerCase()}`,
     })),
     statuses: Object.fromEntries(
       demo.agents.map((agent) => [agent.id, demo?.orchestrator.statusOf(agent.id) ?? 'idle']),
     ) as Record<string, AgentStatus>,
     messages: demo.store.forTeam(demo.team.id),
     turnsThisPrompt: demo.orchestrator.turnsThisPrompt,
-    demoMode: true,
+    demoMode: demo.demoMode,
   };
 }
 
@@ -85,10 +91,8 @@ async function createWindow(): Promise<void> {
   if (autoplay) {
     // `loadFile` already resolved, so a `did-finish-load` listener attached here never fires.
     setTimeout(() => {
-      void demo?.orchestrator.promptFromUser(
-        'alice',
-        'The checkout page double-charges on a double click. Fix the UI side and get the API side sorted too.',
-      );
+      const team = demo;
+      if (team !== undefined) void team.orchestrator.promptFromUser('alice', team.autoplayPrompt);
     }, 700);
   }
 
@@ -110,7 +114,11 @@ async function createWindow(): Promise<void> {
 void app.whenReady().then(async () => {
   // Dev-time path: core's migrations live in its package. Packaging will copy them next to
   // the bundle, and this is the line that changes when it does.
-  demo = await createDemoTeam(':memory:', join(app.getAppPath(), '../../packages/core/migrations'));
+  const migrations = join(app.getAppPath(), '../../packages/core/migrations');
+  demo =
+    liveClaudePath === undefined
+      ? await createDemoTeam(':memory:', migrations)
+      : await createLiveClaudeTeam(liveClaudePath, migrations);
 
   ipcMain.handle('blobot:snapshot', () => snapshot());
   ipcMain.handle('blobot:prompt', async (_event, agentId: string, text: string) => {

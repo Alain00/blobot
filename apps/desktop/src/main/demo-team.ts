@@ -28,6 +28,10 @@ export interface DemoTeam {
   readonly orchestrator: Orchestrator;
   readonly store: SqliteStore;
   readonly runtimeLabels: Record<string, string>;
+  /** False when the agents are real. The rail says so, so nobody mistakes a mock for a hire. */
+  readonly demoMode: boolean;
+  /** What `--autoplay` sends, so a scripted team and a real one can each get a fair prompt. */
+  readonly autoplayPrompt: string;
   close(): void;
 }
 
@@ -127,12 +131,12 @@ export async function createDemoTeam(
     orchestrator,
     store,
     runtimeLabels: Object.fromEntries(agents.map((agent) => [agent.id, 'Mock (demo)'])),
+    demoMode: true,
+    autoplayPrompt:
+      'The checkout page double-charges on a double click. Fix the UI side and get the API side sorted too.',
     close: () => {
       orchestrator.dispose();
       opened.close();
     },
   };
 }
-
-export const demoBranchOf = (agent: Agent): string =>
-  `blobot/${team.name}/${agent.name.toLowerCase()}`;

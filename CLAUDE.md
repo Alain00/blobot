@@ -95,8 +95,14 @@ team headlessly):
 was decided while building that no ticket covers, the known gaps, and what the next session picks
 up. Read it before starting work.
 
-Next: the **Claude Code adapter** (tickets 02 + 07), then OpenCode (03 + 16). Nothing has touched
-a real CLI yet.
+- The **Claude Code adapter** (02 + 07 + 14) in `packages/core/src/adapters/claude`: the pinned
+  `@agentclientprotocol/claude-agent-acp` bridge spawned over stdio, JSON-RPC spoken directly so
+  core still imports no ACP type, `session/set_mode("default")` forced on every session. A real
+  `claude` answers, streams, runs tools and cancels — `BLOBOT_LIVE_CLAUDE=1` runs those tests,
+  and `--live-claude=<dir>` puts a real agent behind the real UI.
+
+Next: **ticket 15**, the loopback MCP server that gives a real agent `message_agent` (the Claude
+adapter's `mcpServers` option is the seam it plugs into), then OpenCode (03 + 16).
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that
 reproduces every observed trap on purpose — ragged deltas, a cancelled tool reporting

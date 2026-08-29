@@ -12,6 +12,7 @@
     "start": "electron-vite preview"
   },
   "dependencies": {
+    "@agentclientprotocol/claude-agent-acp": "0.70.0",
     "@blobatar/react": "^2.7.0",
     "@blobot/core": "workspace:*",
     "better-sqlite3": "^13.0.3",
