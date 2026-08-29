@@ -107,7 +107,15 @@ up. Read it before starting work.
   than by `session/new`. `--live-claude=<dir>` now runs **two real Claude agents who message
   each other** through the orchestrator's mailbox.
 
-Next: OpenCode (03 + 16).
+- **Ticket 10's AgentWorkspaces** in `packages/core/src/workspace`: git worktrees on
+  `blobot/<team>/<agent>` under `~/.local/share/blobot/worktrees/`, branched from `HEAD`,
+  outside the user's repository, with the launch reconcile (repair a missing directory, report
+  a missing branch) and the `-d`-versus-`-D` rule on deleting an agent.
+
+Next: **the desktop app as a real product** — teams and agents the user creates, persistence
+that survives a restart, and ticket 14's disclosure and permission block. OpenCode (03 + 16) is
+deferred by the author, 2026-08-29; the cost of proving `AgentRuntime` against one provider only
+is recorded in `build.md`.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that
 reproduces every observed trap on purpose — ragged deltas, a cancelled tool reporting

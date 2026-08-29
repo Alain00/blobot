@@ -87,6 +87,18 @@ export {
   resolveClaudeExecutable,
 } from './adapters/claude/stdio-bridge.js';
 
+// Ticket 10: AgentWorkspaces. The git implementation shells out, so it is not in `/domain`.
+export { GitWorktreeWorkspaces, defaultWorktreeRoot } from './workspace/git-worktrees.js';
+export { WorkspaceError, branchNameFor, refSlug } from './workspace/workspace.js';
+export type {
+  AgentWorkspace,
+  ProvisionRequest,
+  ReconcileOutcome,
+  RemovalOutcome,
+  WorkspaceInspection,
+  WorkspaceProvider,
+} from './workspace/workspace.js';
+
 // Ticket 15: blobot's own MCP server, over loopback HTTP. Not in `/domain` — it binds a port.
 export { PeerMessageServer } from './mcp/peer-message-server.js';
 export type {

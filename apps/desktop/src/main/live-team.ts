@@ -1,6 +1,7 @@
 import { basename } from 'node:path';
 import {
   ClaudeAgentRuntime,
+  GitWorktreeWorkspaces,
   Orchestrator,
   PeerMessageServer,
   SqliteRecorder,
@@ -20,11 +21,11 @@ import type { DemoTeam } from './demo-team.js';
  *
  * This is demo mode's shape with the mocks taken out: the same orchestrator, store, recorder
  * and renderer, plus ticket 15's loopback MCP server handing each agent a `message_agent` tool
- * whose handler is `Orchestrator.handleMessageAgent` in this very process.
+ * whose handler is `Orchestrator.handleMessageAgent` in this very process, and ticket 10's
+ * worktrees giving each agent its own copy of the repository on its own branch.
  *
- * A dev flag, not shipped behaviour, and one thing is knowingly wrong: **both agents work in
- * the same directory**, because ticket 10's worktrees are not built. Their personas tell them
- * otherwise. Do not point it at anything you mind being edited twice.
+ * Still a dev flag rather than a product surface: there is no team-creation UI, so the team is
+ * this file, and ticket 14's disclosure has nowhere to appear yet.
  */
 export async function createLiveClaudeTeam(
   workspacePath: string,
@@ -38,10 +39,42 @@ export async function createLiveClaudeTeam(
     workspaceKind: 'git',
     turnBudget: 6,
   };
-  const agents: Agent[] = [
-    { id: 'alice', teamId: team.id, name: 'Alice', role: 'frontend', workspacePath },
-    { id: 'bob', teamId: team.id, name: 'Bob', role: 'backend', workspacePath },
+  // Ticket 10: each agent gets its own AgentWorkspace — a git worktree on
+  // `blobot/<team>/<agent>`, outside the user's repository, branched from HEAD.
+  const workspaces = new GitWorktreeWorkspaces();
+  const inspection = await workspaces.inspect(workspacePath);
+  if (inspection.dirty) {
+    // The ticket 06 trap, and the reason this warning belongs at creation time: the user's
+    // uncommitted work is in no agent's workspace, so agents will read a version of the file
+    // the user is not looking at.
+    process.stderr.write(
+      `[workspace] ${workspacePath} has uncommitted changes; the agents will not see them\n`,
+    );
+  }
+
+  const roster = [
+    { id: 'alice', name: 'Alice', role: 'frontend' },
+    { id: 'bob', name: 'Bob', role: 'backend' },
   ];
+  const agents: Agent[] = [];
+  const branches = new Map<string, string>();
+  for (const member of roster) {
+    const request = {
+      workspacePath,
+      teamName: team.name,
+      agentId: member.id,
+      agentName: member.name,
+    };
+    // Reconcile first: a repaired directory is silent, a lost branch is loud, and a first run
+    // is `absent` — which is neither, and is why the two are separate states.
+    const reconciled = await workspaces.reconcile(request);
+    if (reconciled.state === 'lost' || reconciled.state === 'repaired') {
+      process.stderr.write(`[workspace] ${member.id}: ${reconciled.detail}\n`);
+    }
+    const agentWorkspace = await workspaces.provision(request);
+    agents.push({ ...member, teamId: team.id, workspacePath: agentWorkspace.path });
+    branches.set(member.id, agentWorkspace.branch);
+  }
 
   const opened: OpenedDatabase = openDatabase({
     path: ':memory:',
@@ -63,7 +96,7 @@ export async function createLiveClaudeTeam(
       const endpoint = mcp.endpointFor(agent.id);
       const runtime = new ClaudeAgentRuntime({
         agentId: agent.id,
-        cwd: workspacePath,
+        cwd: agent.workspacePath,
         persona: personas.get(agent.id) ?? '',
         mcpServers: [
           {
@@ -86,7 +119,7 @@ export async function createLiveClaudeTeam(
     store.createAgent({
       ...agent,
       runtimeId: 'claude-code',
-      branch: `blobot/${team.name}/${agent.name.toLowerCase()}`,
+      branch: branches.get(agent.id) ?? '',
       createdAt: clock.now(),
     });
   }

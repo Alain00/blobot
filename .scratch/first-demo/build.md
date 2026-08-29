@@ -38,9 +38,9 @@ scenarios run. A window opens on the display for a few seconds and quits itself.
 loopback MCP server so they can message each other. Verified end to end: Alice asks Bob a
 question through `message_agent`, the orchestrator wakes Bob, Bob reads the repo and answers.
 
-One thing about it is knowingly wrong: **both agents share one directory**, because ticket 10's
-worktrees are not built, and their personas tell them otherwise. It is a dev flag — do not point
-it at anything you mind being edited twice.
+Each agent gets its own AgentWorkspace — a git worktree on `blobot/<team>/<agent>` under
+`~/.local/share/blobot/worktrees/`, branched from `HEAD`, with the user's repository untouched.
+It therefore needs a git repo with at least one commit, and warns on a dirty tree.
 
 ## What exists
 
@@ -54,6 +54,7 @@ it at anything you mind being edited twice.
 | Electron + React UI, demo mode | `apps/desktop/src/` | 12 |
 | Claude Code adapter over the ACP bridge | `packages/core/src/adapters/claude/` | 02, 07, 14 |
 | Loopback MCP server: `message_agent` | `packages/core/src/mcp/` | 15, 05 |
+| AgentWorkspaces: git worktrees, reconcile | `packages/core/src/workspace/` | 10 |
 
 `@blobot/core` is the full entry point (pulls in `better-sqlite3` + Drizzle).
 `@blobot/core/domain` is the pure one — vocabulary, aggregates, status fold, roster lookup — for
@@ -124,6 +125,18 @@ These were forced by writing the code. None contradicts a ticket; if one looks w
   sender saying the same words to the same teammate twice is one message. Between swallowing a
   deliberate duplicate and waking Bob twice for one message, the first is the failure a human
   can see.
+- **`reconcile` has a fourth state, `absent`.** Ticket 10's table covers directory-gone and
+  branch-gone, and its `lost` means data loss has already happened. A first run looks identical
+  to branch-gone unless the two are separated, and the live team duly reported "your work is
+  not recoverable" for an agent that had never existed. A caller that cannot tell "new" from
+  "gone" will eventually report one as the other, which is the failure that ticket cares most
+  about.
+- **The `lost` case is reached by `git update-ref -d`, not `git branch -D`.** git refuses to
+  delete a branch that is checked out in a worktree, so the shape the loss actually takes in
+  the wild is the ref going while the stale directory stays. Worth knowing before writing a
+  test that cannot happen.
+- **Team and agent names are slugged into git refs** (`refSlug`). A team name comes from a
+  directory basename and an agent name is whatever the user typed; neither is a valid ref.
 - **The MCP token is the caller's identity.** `PeerMessageCall.from` has to come from somewhere,
   and the tool arguments are model-authored. One token per agent, minted at `endpointFor`, and
   the URL path must agree with it.
@@ -164,10 +177,20 @@ These were forced by writing the code. None contradicts a ticket; if one looks w
   package, because the map settled two packages. If a CLI is ever built, that is the moment to
   reopen it.
 
-## Next session: OpenCode (tickets 03 + 16)
+## OpenCode is deferred, by the author, 2026-08-29
 
-**Read first:** tickets 03 and 16 with `research/03-opencode-acp-surface.md` and
-`research/16-opencode-persona.md`. Its six live update kinds are a strict subset of the bridge's eleven, so
+Claude works end to end, so the second adapter is postponed in favour of making the desktop app
+a real product: teams and agents the user creates, rather than a team that is a TypeScript file.
+
+**The cost, stated rather than discovered later:** `AgentRuntime` has now been proven against
+exactly one real provider, and product surface built on top of it is how a provider-agnostic
+interface quietly becomes Claude-shaped. The seams most likely to bend are the ones the adapter
+had to invent: persona injection through `_meta`, the permission pre-approval, and the MCP
+endpoint shape. `MockAgentRuntime` is a second implementation and covers some of it; it is not
+full cover.
+
+When OpenCode does come back (tickets 03 + 16, with `research/03-opencode-acp-surface.md` and
+`research/16-opencode-persona.md`): Its six live update kinds are a strict subset of the bridge's eleven, so
 `adapters/claude/translate.ts` is the file to read first — the mapping it makes is most of the
 second adapter's work, already done and tested. `jsonrpc.ts` is provider-neutral and should move
 up a directory rather than be copied.
