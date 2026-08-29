@@ -101,8 +101,13 @@ up. Read it before starting work.
   `claude` answers, streams, runs tools and cancels — `BLOBOT_LIVE_CLAUDE=1` runs those tests,
   and `--live-claude=<dir>` puts a real agent behind the real UI.
 
-Next: **ticket 15**, the loopback MCP server that gives a real agent `message_agent` (the Claude
-adapter's `mcpServers` option is the seam it plugs into), then OpenCode (03 + 16).
+- **Ticket 15's loopback MCP server** in `packages/core/src/mcp`: one tool, `message_agent`,
+  over `127.0.0.1` with a per-agent bearer token that *is* the caller's identity, stateless
+  because neither runtime re-handshakes, and readiness measured by the inbound handshake rather
+  than by `session/new`. `--live-claude=<dir>` now runs **two real Claude agents who message
+  each other** through the orchestrator's mailbox.
+
+Next: OpenCode (03 + 16).
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that
 reproduces every observed trap on purpose — ragged deltas, a cancelled tool reporting

@@ -84,3 +84,21 @@ Revisit if someone runs ten agents and notices.
 The bridge is a third party on the critical path with no Anthropic involvement, and Anthropic's
 Pro/Max coverage of Agent SDK usage was announced-then-paused. Both belong in the README as
 honesty, not in the architecture as a hedge.
+
+## Amendment (observed while building, 2026-08-29)
+
+**Two inherited tools are disallowed: `SendMessage` and `ListAgents`.**
+
+"We inherit all of it" holds for MCP servers, hooks, skills and `CLAUDE.md`. It does not hold
+for these two, which are Claude Code's *own* inter-session messaging — they reach other Claude
+sessions on the machine.
+
+Observed live, before the exclusion: asked to message Bob, Alice ignored blobot's
+`message_agent` entirely, called `ListAgents`, found three unrelated Claude sessions belonging
+to the user, and told the user Bob was unreachable. Not a near-miss — a confident wrong answer
+produced by a tool that looked more native than ours.
+
+The permanent rule in `CLAUDE.md` decides it: **the orchestrator owns agent-to-agent
+communication.** These two are a second, unowned channel for exactly that — messages that never
+reach the mailbox, never persist, never appear in the UI, and are invisible to the turn budget.
+Passed as `disallowedTools` in `_meta.claudeCode.options`. Nothing else is excluded.

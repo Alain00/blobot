@@ -224,3 +224,36 @@ user a dial they must understand in order to be safe.
 `opencode debug agent <name>` prints the fully resolved rule list, so the OpenCode half of this
 posture is assertable in a test rather than assumed. The Claude half is verified by reading back
 `currentModeId` from `session/new` and after each `set_mode`.
+
+## Amendment (observed while building the Claude adapter, 2026-08-29)
+
+**"MCP tools are outside all of this" is false on Claude under the mode this ticket forces.**
+
+The claim above — *"MCP tools are not permission-gated … this is also load-bearing in our
+favour: `message_agent` rides the same ungated path, which is why peer messaging works without
+a prompt on every hop"* — rests on ticket 03's OpenCode observation and on research 02, which
+watched Claude in `auto` mode, where a classifier silently approved the MCP tool.
+
+Under `session/set_mode("default")`, which this ticket requires, **Claude prompts for
+`mcp__blobot__message_agent` like any other tool.** Observed live: Alice called it, the bridge
+raised `session/request_permission`, and with no human attached the call came back
+`Tool use aborted`. Unattended peer messaging — the entire product — does not work.
+
+**Decision: blobot pre-approves the MCP servers it injected itself, and only those.** The
+adapter passes `allowedTools: ['mcp__<server>']` for each entry it put in
+`session/new.mcpServers`. The user's own inherited MCP servers are untouched and keep prompting
+exactly as this ticket describes.
+
+This does not weaken the posture. The prompt it removes is blobot asking the user for
+permission to use blobot's own mailbox — a channel the user was already told about at team
+creation, in the disclosure above, and which the orchestrator owns end to end. Prompting on
+every hop would not make anyone safer; it would make `waiting` the normal state and destroy the
+signal ticket 09 and ticket 12 both spent real design on.
+
+The Agent SDK is explicit that this is a genuine bypass rather than a default we could tighten:
+
+> `canUseTool will not be invoked for: mcp__blobot`. Bare allowedTools entries auto-approve the
+> whole tool before the callback is consulted.
+
+So this is a real hole if a server we inject is ever one we do not own. Today the only one is
+ticket 15's loopback endpoint, whose handler is a function in our own process.

@@ -77,13 +77,22 @@ export type {
 export { ClaudeAgentRuntime } from './adapters/claude/claude-agent-runtime.js';
 export type {
   ClaudeAgentRuntimeOptions,
+  McpHttpServer,
   McpServerConfig,
+  McpStdioServer,
 } from './adapters/claude/claude-agent-runtime.js';
 export {
   BRIDGE_PACKAGE,
   BRIDGE_VERSION,
   resolveClaudeExecutable,
 } from './adapters/claude/stdio-bridge.js';
+
+// Ticket 15: blobot's own MCP server, over loopback HTTP. Not in `/domain` — it binds a port.
+export { PeerMessageServer } from './mcp/peer-message-server.js';
+export type {
+  PeerMessageEndpoint,
+  PeerMessageServerOptions,
+} from './mcp/peer-message-server.js';
 
 export { openDatabase } from './store/database.js';
 export type { BlobotDatabase, OpenDatabaseOptions, OpenedDatabase } from './store/database.js';

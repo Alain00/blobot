@@ -1,5 +1,10 @@
 export { ClaudeAgentRuntime } from './claude-agent-runtime.js';
-export type { ClaudeAgentRuntimeOptions, McpServerConfig } from './claude-agent-runtime.js';
+export type {
+  ClaudeAgentRuntimeOptions,
+  McpHttpServer,
+  McpServerConfig,
+  McpStdioServer,
+} from './claude-agent-runtime.js';
 export {
   BRIDGE_PACKAGE,
   BRIDGE_VERSION,

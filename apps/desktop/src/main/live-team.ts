@@ -2,6 +2,7 @@ import { basename } from 'node:path';
 import {
   ClaudeAgentRuntime,
   Orchestrator,
+  PeerMessageServer,
   SqliteRecorder,
   SqliteStore,
   SystemClock,
@@ -15,15 +16,15 @@ import {
 import type { DemoTeam } from './demo-team.js';
 
 /**
- * A real Claude Code agent, in a real directory, rendered by the real UI.
+ * Two real Claude Code agents who can message each other, rendered by the real UI.
  *
- * One agent, not two, and that is the honest shape today: peer messaging rides an MCP tool
- * blobot serves over loopback (ticket 15), which is not built. A second agent would inherit a
- * persona promising a `message_agent` tool that does not exist, so `composePersona` gets a
- * one-agent roster and tells the truth — "You have no teammates on this team yet."
+ * This is demo mode's shape with the mocks taken out: the same orchestrator, store, recorder
+ * and renderer, plus ticket 15's loopback MCP server handing each agent a `message_agent` tool
+ * whose handler is `Orchestrator.handleMessageAgent` in this very process.
  *
- * Nothing here is provider-specific beyond the one `new ClaudeAgentRuntime`: the orchestrator,
- * the store and the UI are the same ones demo mode drives.
+ * A dev flag, not shipped behaviour, and one thing is knowingly wrong: **both agents work in
+ * the same directory**, because ticket 10's worktrees are not built. Their personas tell them
+ * otherwise. Do not point it at anything you mind being edited twice.
  */
 export async function createLiveClaudeTeam(
   workspacePath: string,
@@ -35,17 +36,12 @@ export async function createLiveClaudeTeam(
     name: basename(workspacePath),
     workspacePath,
     workspaceKind: 'git',
-    turnBudget: 10,
+    turnBudget: 6,
   };
-  // No worktree yet (ticket 10): the agent works in the directory it was pointed at.
-  const alice: Agent = {
-    id: 'alice',
-    teamId: team.id,
-    name: 'Alice',
-    role: 'engineer',
-    workspacePath,
-  };
-  const agents = [alice];
+  const agents: Agent[] = [
+    { id: 'alice', teamId: team.id, name: 'Alice', role: 'frontend', workspacePath },
+    { id: 'bob', teamId: team.id, name: 'Bob', role: 'backend', workspacePath },
+  ];
 
   const opened: OpenedDatabase = openDatabase({
     path: ':memory:',
@@ -54,27 +50,48 @@ export async function createLiveClaudeTeam(
   const store = new SqliteStore(opened.db);
   store.createTeam({ ...team, createdAt: clock.now() });
 
-  const persona = composePersona(alice, team, agents);
-  const runtime = new ClaudeAgentRuntime({
-    agentId: alice.id,
-    cwd: workspacePath,
-    persona,
-    onStderr: (line) => process.stderr.write(`[bridge:alice] ${line}\n`),
+  let orchestrator: Orchestrator;
+  const mcp = new PeerMessageServer({
+    handler: (call) => orchestrator.handleMessageAgent(call),
+    onLog: (line) => process.stderr.write(`${line}\n`),
   });
-  const runtimes = new Map<string, AgentRuntime>([[alice.id, runtime]]);
+  await mcp.start();
 
-  store.createAgent({
-    ...alice,
-    runtimeId: 'claude-code',
-    branch: `blobot/${team.name}/alice`,
-    createdAt: clock.now(),
-  });
+  const personas = new Map(agents.map((agent) => [agent.id, composePersona(agent, team, agents)]));
+  const runtimes = new Map<string, AgentRuntime>(
+    agents.map((agent) => {
+      const endpoint = mcp.endpointFor(agent.id);
+      const runtime = new ClaudeAgentRuntime({
+        agentId: agent.id,
+        cwd: workspacePath,
+        persona: personas.get(agent.id) ?? '',
+        mcpServers: [
+          {
+            type: 'http',
+            name: 'blobot',
+            url: endpoint.url,
+            headers: [{ name: 'Authorization', value: `Bearer ${endpoint.token}` }],
+          },
+        ],
+        onStderr: (line) => process.stderr.write(`[bridge:${agent.id}] ${line}\n`),
+      });
+      runtime.onLifecycleChange((lifecycle) =>
+        process.stderr.write(`[${agent.id}] ${lifecycle}\n`),
+      );
+      return [agent.id, runtime];
+    }),
+  );
 
-  // `Orchestrator.start()` swallows a spawn failure by design — one dead agent must not stop
-  // the team — so the reason is only visible if someone logs it.
-  runtime.onLifecycleChange((lifecycle) => process.stderr.write(`[alice] ${lifecycle}\n`));
+  for (const agent of agents) {
+    store.createAgent({
+      ...agent,
+      runtimeId: 'claude-code',
+      branch: `blobot/${team.name}/${agent.name.toLowerCase()}`,
+      createdAt: clock.now(),
+    });
+  }
 
-  const orchestrator = new Orchestrator({
+  orchestrator = new Orchestrator({
     team,
     agents,
     runtimes,
@@ -84,25 +101,45 @@ export async function createLiveClaudeTeam(
   });
   await orchestrator.start();
 
-  // The session id only exists once the bridge has answered `session/new`, so the row is
-  // written after `start()` rather than before it.
-  store.startSession({
-    id: runtime.sessionId,
-    agentId: alice.id,
-    personaText: persona,
-    startedAt: clock.now(),
-  });
+  for (const agent of agents) {
+    // The session id only exists once the bridge has answered `session/new`.
+    const runtime = runtimes.get(agent.id);
+    store.startSession({
+      id: runtime?.sessionId === undefined || runtime.sessionId === '' ? agent.id : runtime.sessionId,
+      agentId: agent.id,
+      personaText: personas.get(agent.id) ?? '',
+      startedAt: clock.now(),
+    });
+  }
+
+  // Ticket 15's first hazard: a dead port or a rejected token yields a perfectly normal
+  // `sessionId` and nothing in the ACP stream, so the agent simply has no tool and only finds
+  // out when it tries. The handshake reaching us is the only honest signal, and the runtimes
+  // handshake lazily — so this is a report, not a gate.
+  void Promise.all(
+    agents.map(async (agent) => {
+      const ready = await mcp.whenReady(agent.id, 30_000);
+      if (!ready) {
+        process.stderr.write(
+          `[mcp] ${agent.id} has not handshaked yet — it may have no message_agent tool\n`,
+        );
+      }
+    }),
+  );
 
   return {
     team,
     agents,
     orchestrator,
     store,
-    runtimeLabels: { [alice.id]: 'Claude Code' },
+    runtimeLabels: Object.fromEntries(agents.map((agent) => [agent.id, 'Claude Code'])),
     demoMode: false,
-    autoplayPrompt: 'In one short sentence: what is in this directory?',
+    autoplayPrompt:
+      'Ask Bob, using your message_agent tool, what he thinks the riskiest part of this ' +
+      'repository is. Tell him you are looking at it from the frontend side. Then wait.',
     close: () => {
       orchestrator.dispose();
+      void mcp.stop();
       opened.close();
     },
   };

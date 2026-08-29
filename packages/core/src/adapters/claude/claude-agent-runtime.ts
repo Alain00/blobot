@@ -39,12 +39,54 @@ const PROTOCOL_VERSION = 1;
  */
 const PERMISSION_MODE = 'default';
 
-/** An MCP server handed to the session. Ticket 15's loopback `message_agent` tool plugs in here. */
-export interface McpServerConfig {
+/**
+ * Claude Code ships its own inter-session messaging — `SendMessage` and `ListAgents`, which
+ * reach *other Claude sessions on the machine*. Observed live: asked to message Bob, Alice
+ * ignored blobot's tool, called `ListAgents`, found three unrelated Claude sessions and told
+ * the user Bob was unreachable.
+ *
+ * They are disallowed for a blobot agent. This is narrower than it looks and it is not a
+ * retreat from ticket 07's "inherit the user's whole setup": a permanent rule says **the
+ * orchestrator owns agent-to-agent communication**, and these two tools are a second,
+ * unowned channel for exactly that — messages that never reach the mailbox, never persist,
+ * and never appear in the UI. Every other inherited tool, MCP server, hook and skill stays.
+ */
+const SHADOWING_TOOLS = ['SendMessage', 'ListAgents'];
+
+/**
+ * The servers blobot injects are pre-approved, by name, as `mcp__<server>`.
+ *
+ * Ticket 14 assumed MCP tools ride an ungated path — true of OpenCode, and true of the `auto`
+ * mode research 02 happened to observe. It is **not** true of the `default` mode that same
+ * ticket forces on us: Claude prompts for `mcp__blobot__message_agent` like any other tool,
+ * and an unattended Alice messaging Bob then stalls on a permission request nobody answers.
+ *
+ * This pre-approves only what blobot itself passed in `session/new.mcpServers` — never the
+ * user's own inherited servers, which keep prompting exactly as ticket 14 describes.
+ */
+function preApprovedTools(servers: readonly McpServerConfig[]): string[] {
+  return servers.map((server) => `mcp__${server.name}`);
+}
+
+/**
+ * An MCP server handed to the session. Ticket 15's loopback `message_agent` endpoint is the
+ * `http` variant; `stdio` is here because ACP offers it and someone will want it.
+ */
+export type McpServerConfig = McpStdioServer | McpHttpServer;
+
+export interface McpStdioServer {
+  readonly type?: 'stdio';
   readonly name: string;
   readonly command: string;
   readonly args?: readonly string[];
   readonly env?: readonly { readonly name: string; readonly value: string }[];
+}
+
+export interface McpHttpServer {
+  readonly type: 'http';
+  readonly name: string;
+  readonly url: string;
+  readonly headers?: readonly { readonly name: string; readonly value: string }[];
 }
 
 export interface ClaudeAgentRuntimeOptions {
@@ -157,20 +199,17 @@ export class ClaudeAgentRuntime implements AgentRuntime {
 
     const session = await connection.request<NewSessionResult>('session/new', {
       cwd: this.#options.cwd,
-      mcpServers: (this.#options.mcpServers ?? []).map((server) => ({
-        name: server.name,
-        command: server.command,
-        args: server.args ?? [],
-        env: server.env ?? [],
-        // `type` is deliberately omitted: 0.70.0 reads an absent type as stdio, and ticket
-        // 01's "omitting it drops the server" trap was observed against 0.16.2.
-      })),
+      mcpServers: (this.#options.mcpServers ?? []).map(toAcpMcpServer),
       _meta: {
         // Off-spec, and it stays in here: `_meta` is an adapter extension OpenCode ignores.
         ...(this.#options.persona === undefined ? {} : { systemPrompt: this.#options.persona }),
-        ...(this.#options.model === undefined
-          ? {}
-          : { claudeCode: { options: { model: this.#options.model } } }),
+        claudeCode: {
+          options: {
+            disallowedTools: SHADOWING_TOOLS,
+            allowedTools: preApprovedTools(this.#options.mcpServers ?? []),
+            ...(this.#options.model === undefined ? {} : { model: this.#options.model }),
+          },
+        },
       },
     });
     if (session.sessionId === undefined) {
@@ -360,6 +399,27 @@ export class ClaudeAgentRuntime implements AgentRuntime {
     this.#lifecycle = lifecycle;
     for (const listener of this.#lifecycleListeners) listener(lifecycle);
   }
+}
+
+/**
+ * For stdio, `type` is deliberately omitted: 0.70.0 reads an absent type as stdio, and ticket
+ * 01's "omitting it drops the server" trap was observed against the long-dead 0.16.2.
+ */
+function toAcpMcpServer(server: McpServerConfig): unknown {
+  if (server.type === 'http') {
+    return {
+      type: 'http',
+      name: server.name,
+      url: server.url,
+      headers: server.headers ?? [],
+    };
+  }
+  return {
+    name: server.name,
+    command: server.command,
+    args: server.args ?? [],
+    env: server.env ?? [],
+  };
 }
 
 function permissionKind(kind: string | undefined): PermissionOption['kind'] {

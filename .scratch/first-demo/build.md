@@ -33,10 +33,14 @@ apps/desktop/node_modules/.bin/electron apps/desktop --no-sandbox \
 `--screenshot` implies `--autoplay`, which sends one user prompt and lets the scripted demo
 scenarios run. A window opens on the display for a few seconds and quits itself.
 
-`--live-claude=<dir>` swaps the mock runtimes for **one real Claude Code agent** working in
-`<dir>` — the same orchestrator, store and UI, with `demoMode: false`. One agent, not two,
-because peer messaging needs ticket 15's loopback MCP tool and a second agent would inherit a
-persona promising a tool that does not exist.
+`--live-claude=<dir>` swaps the mock runtimes for **two real Claude Code agents** working in
+`<dir>` — the same orchestrator, store, recorder and UI, with `demoMode: false`, plus the
+loopback MCP server so they can message each other. Verified end to end: Alice asks Bob a
+question through `message_agent`, the orchestrator wakes Bob, Bob reads the repo and answers.
+
+One thing about it is knowingly wrong: **both agents share one directory**, because ticket 10's
+worktrees are not built, and their personas tell them otherwise. It is a dev flag — do not point
+it at anything you mind being edited twice.
 
 ## What exists
 
@@ -49,12 +53,14 @@ persona promising a tool that does not exist.
 | SQLite: schema, migrations, store, recorder | `packages/core/src/store/` | 13 |
 | Electron + React UI, demo mode | `apps/desktop/src/` | 12 |
 | Claude Code adapter over the ACP bridge | `packages/core/src/adapters/claude/` | 02, 07, 14 |
+| Loopback MCP server: `message_agent` | `packages/core/src/mcp/` | 15, 05 |
 
 `@blobot/core` is the full entry point (pulls in `better-sqlite3` + Drizzle).
 `@blobot/core/domain` is the pure one — vocabulary, aggregates, status fold, roster lookup — for
 consumers that must not pull in SQLite: the renderer today, a CLI later.
 
-**A real `claude` has answered, streamed, run a tool and been cancelled** — see
+**Two real `claude` agents have held a conversation through blobot's mailbox.** A real `claude`
+has also answered, streamed, run a tool and been cancelled — see
 `adapters/claude/live.test.ts`, and the same turn rendered by the real UI via `--live-claude`.
 OpenCode is still untouched.
 
@@ -102,6 +108,25 @@ These were forced by writing the code. None contradicts a ticket; if one looks w
   which is a real error message for a routine shutdown.
 - **A permission request with no handler attached is answered `cancelled`, approving nothing.**
   Blocking an unattended agent's turn forever is the worse failure.
+- **`SendMessage` and `ListAgents` are disallowed for a Claude agent** — Claude Code's own
+  inter-session messaging, which reaches other Claude sessions on the machine. Before the
+  exclusion, Alice ignored blobot's tool, called `ListAgents`, found three unrelated sessions of
+  the user's and reported Bob unreachable. Amendment on ticket 07; the permanent rule that the
+  orchestrator owns agent-to-agent communication is what decides it.
+- **blobot pre-approves the MCP servers it injected itself** (`allowedTools: ['mcp__blobot']`).
+  Ticket 14 assumed MCP tools ride an ungated path; that is true on OpenCode and in the `auto`
+  mode research 02 observed, but **not** in the `default` mode ticket 14 forces — Claude prompts
+  for `mcp__blobot__message_agent` and an unattended turn dies on `Tool use aborted`. Amendment
+  on ticket 14. The user's own inherited servers still prompt.
+- **The `message_agent` idempotency key is derived server-side** from sender, recipient, body
+  and context — the model would invent one, and a retried `tools/call` carries a fresh JSON-RPC
+  id, so nothing on the wire is stable across the retry that matters. The cost is real: the same
+  sender saying the same words to the same teammate twice is one message. Between swallowing a
+  deliberate duplicate and waking Bob twice for one message, the first is the failure a human
+  can see.
+- **The MCP token is the caller's identity.** `PeerMessageCall.from` has to come from somewhere,
+  and the tool arguments are model-authored. One token per agent, minted at `endpointFor`, and
+  the URL path must agree with it.
 - **Ten ACP tool kinds collapse onto blobot's four** in `translate.ts` — `search`/`fetch` read,
   `delete`/`move` edit, everything else `other`, which is why a client-supplied tool is told
   apart by its name prefix rather than by its kind.
@@ -114,8 +139,6 @@ These were forced by writing the code. None contradicts a ticket; if one looks w
 
 ## Known gaps
 
-- **A real Claude agent cannot message a peer yet.** Ticket 15's loopback MCP server is not
-  built; `mcpServers` is the seam it plugs into.
 - **`used: 0` on cancel is forwarded, not suppressed.** Ticket 04 makes suppression a
   *consumer* duty and the mock reproduces the trap on purpose, so the adapter is faithful and
   nothing downstream suppresses it yet. The renderer has no context gauge, so it costs nothing
@@ -141,22 +164,19 @@ These were forced by writing the code. None contradicts a ticket; if one looks w
   package, because the map settled two packages. If a CLI is ever built, that is the moment to
   reopen it.
 
-## Next session: peer messaging on a real runtime (ticket 15), then OpenCode
+## Next session: OpenCode (tickets 03 + 16)
 
-**Read first:** ticket 15 (loopback HTTP MCP) with `research/15-loopback-http-mcp.md`, then
-tickets 03 and 16 for OpenCode.
+**Read first:** tickets 03 and 16 with `research/03-opencode-acp-surface.md` and
+`research/16-opencode-persona.md`. Its six live update kinds are a strict subset of the bridge's eleven, so
+`adapters/claude/translate.ts` is the file to read first — the mapping it makes is most of the
+second adapter's work, already done and tested. `jsonrpc.ts` is provider-neutral and should move
+up a directory rather than be copied.
 
-The Claude adapter is the shape the second one has to fit, and it left exactly one seam open
-for ticket 15: `ClaudeAgentRuntimeOptions.mcpServers`, forwarded verbatim into `session/new`
-(with `type` deliberately omitted — 0.70.0 reads an absent type as stdio, and ticket 01's
-"omitting it drops the server" trap was observed against 0.16.2). Until a server is passed
-there, a real Claude agent has no `message_agent` tool, which is why `--live-claude` builds a
-**one-agent** team: `composePersona` on a one-agent roster says "You have no teammates on this
-team yet" rather than promising a tool that is not there.
-
-Then OpenCode (03 + 16). Its six live update kinds are a strict subset of the bridge's eleven,
-so `translate.ts` is the file to read first — the mapping it makes is most of the second
-adapter's work, already done and tested.
+Two things the Claude adapter learned that the OpenCode one inherits: the permission posture is
+ticket 16's `OPENCODE_CONFIG_CONTENT` rather than a mode call, and the MCP server it must be
+handed is `PeerMessageServer.endpointFor(agentId)` — same endpoint shape, `{type:"http", url,
+headers}`, with the tool arriving as `blobot_message_agent` rather than
+`mcp__blobot__message_agent`.
 
 **Do not** subscribe to subagent transcripts (07), store anything resembling a credential (13),
 or let the UI learn which provider an agent is (the permanent rules in `CLAUDE.md`).

@@ -3,6 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { AgentEvent } from '../../events.js';
+import { PeerMessageServer } from '../../mcp/peer-message-server.js';
+import type { PeerMessageCall } from '../../runtime.js';
 import { ClaudeAgentRuntime } from './claude-agent-runtime.js';
 
 /**
@@ -82,6 +84,58 @@ live('against a real claude', () => {
         .map((event) => event.text)
         .join(''),
     ).toContain('ZUCCHINI-42');
+  }, 180_000);
+
+  it('finds and calls blobot own message_agent tool over loopback HTTP', async () => {
+    // Ticket 15's actual claim, against the real thing: invocation, not just discovery.
+    const calls: PeerMessageCall[] = [];
+    const mcp = new PeerMessageServer({
+      handler: async (call) => {
+        calls.push(call);
+        return { delivered: true, recipient: 'Bob', status: 'started' };
+      },
+    });
+    await mcp.start();
+    const endpoint = mcp.endpointFor('alice');
+
+    const runtime = new ClaudeAgentRuntime({
+      agentId: 'alice',
+      cwd: workspace(),
+      persona:
+        'You are Alice, a blobot teammate. Bob is your teammate. Answer in as few words as ' +
+        'possible, and use the message_agent tool when asked to message a teammate.',
+      mcpServers: [
+        {
+          type: 'http',
+          name: 'blobot',
+          url: endpoint.url,
+          headers: [{ name: 'Authorization', value: `Bearer ${endpoint.token}` }],
+        },
+      ],
+    });
+    await runtime.start();
+
+    const events: AgentEvent[] = [];
+    for await (const event of runtime.sendPrompt({
+      text: "Send Bob this message, exactly: the retry loop needs a backoff",
+      from: 'user',
+    })) {
+      events.push(event);
+    }
+    await runtime.stop();
+    // The handshake reached us, which is the only honest readiness signal there is.
+    expect(mcp.isReady('alice')).toBe(true);
+    await mcp.stop();
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({ from: 'alice', agent: 'Bob' });
+    expect(calls[0]?.message).toContain('backoff');
+    // The tool surfaces as an ordinary tool call, prefixed by the server name.
+    const tool = events.find(
+      (event) => event.type === 'tool_call_started' && event.title.includes('message_agent'),
+    );
+    expect(tool).toBeDefined();
+    expect(events.at(-1)).toMatchObject({ type: 'turn_ended' });
   }, 180_000);
 
   it('cancels a turn mid-flight and leaves the session usable', async () => {
