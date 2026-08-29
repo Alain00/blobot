@@ -53,7 +53,16 @@ look or behave".
 
 - [The normalized AgentEvent vocabulary](issues/04-the-normalized-agentevent-vocabulary.md) — Nine members, our own type (never an ACP passthrough; `packages/core` exports no ACP type). OpenCode's set is a strict subset of Claude's, so no reconciliation problem. `turn_ended`, `agent_message_completed` and `agent_message_sent` are synthesized; tool failure stays in the tool lifecycle; permission requests are a callback, not an event; `available_commands_update` is dropped.
 
+- [How messageAgent reaches an agent](issues/05-how-messageagent-reaches-an-agent.md) — Orchestrator hosts an MCP server on loopback HTTP (token-guarded) and is itself the tool handler. Free-form recipient validated by the orchestrator; ack carries recipient state, no message id. Auto-wake on idle, queue mid-turn and deliver as one prompt. Replies are explicit, never auto-routed. Per-team turn budget (default 10) bounds runaway. Ack means committed to SQLite.
+
+- [What Bob actually receives](issues/06-what-bob-receives.md) — Static situation (role, repo, worktree, roster, peer-visibility rule) goes in an adapter-owned persona; the envelope carries only sender, their role, an optional context line they supply, and a trust framing marking it as a peer request rather than an operator instruction. One shared session per agent, fully visible to the user. Queued batches arrive as a numbered list. Alice's uncommitted work is invisible to Bob — stated, not hidden.
+
 ## Not yet specified
+
+- **Enforcing commit-before-review across worktrees.** Ticket 06 chose to *tell* agents that
+  peers cannot see uncommitted work rather than enforce it. The enforced version — blocking or
+  warning on `messageAgent` when the sender references paths she has modified but not committed —
+  needs the git-awareness layer to exist first.
 
 - **A live plan/todo view per agent.** The Claude bridge maps `TodoWrite` to a `plan` event
   and OpenCode has no counterpart, so it was cut from the vocabulary as a provider leak. It is
