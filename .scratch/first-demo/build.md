@@ -232,13 +232,57 @@ meaningless alone.
   package, because the map settled two packages. If a CLI is ever built, that is the moment to
   reopen it.
 
-## Next session
+### UI fixes from the first hands-on session, 2026-08-29
 
-The author is driving the app by hand for the first time and will send UI fixes; take those
-first — the creation flow has never been used with a mouse, only reviewed in screenshots. Two
-things they were asked to judge: whether the creation screen reads in the right order now that
-agents come before the team, and whether a team switch discarding the previous team's live
-agents without asking is acceptable or alarming.
+The author drove the app with a mouse for the first time and reported three things. All three
+are fixed; the first two were bugs, the third was a design mistake.
+
+- **The transcript could not scroll.** `.stream` had `overflow:auto` and always had, but a grid
+  item's automatic minimum size is its content, so the conversation grew the grid row past the
+  viewport instead of overflowing inside it. The fix is three declarations, and all three are
+  needed: `grid-auto-rows:minmax(0,1fr)` on `.vA`, `min-height:0` on `.vA .conv`, and
+  `flex:1 1 0;min-height:0` on `.stream`. The pane now also follows the newest line and stops
+  following the moment the reader scrolls away from the bottom (`useStickToBottom` in
+  `Conversation.tsx`) — an agent streaming for a minute must not drag a reader out of the
+  paragraph they went back to read.
+- **Messages are markdown now**, via `streamdown` (`components/Markdown.tsx`), for agent
+  answers and peer messages. Not for the user's own line: that stays verbatim, because it is the
+  one voice in the pane whose exact characters the user typed. Streamdown rather than a plain
+  renderer because deltas arrive with the syntax half-typed — an unclosed fence, a table missing
+  its last row — and it completes the incomplete node instead of flashing raw asterisks; a
+  settled message is rendered `mode="static"` and skips the repair. It ships Tailwind class
+  names and this app runs no Tailwind, so its classes are inert and the elements are dressed by
+  `.md` in `styles.css` in the page's own vocabulary. Two things that needed knowing: each
+  source line of a fenced block is a `<span>` that Tailwind would have made `block`, so
+  `.md pre code > span{display:block}` is what stops a code block collapsing onto one line; and
+  `controls={false}` drops its copy/download chrome, which is styled by the framework we do not
+  run.
+- **"How do I switch teams?"** — the rail showed the running team alone, with the others as a
+  list at the foot that appeared only once a second team existed. So the question had no answer
+  on screen, and a user with one team could not see that teams are a set at all. The rail is now
+  the set: every team is a row under `TEAMS`, the running one drawn as its group of blobatars
+  and carrying its agents indented underneath, the rest as names and counts marked `stopped`.
+  Only the running team has statuses or blobatars to draw, because only one orchestrator runs at
+  a time — the rail now says that rather than hiding it. A first pass put this in a dropdown on
+  the topbar's team name; the author rejected it, and was right: an aside that lists what you
+  have beats a menu that hides it.
+
+- **The blobatars were too small**, on a reference to Grok's agent list. The reason is not
+  cosmetic: the blobatar is ticket 09's *motion* channel, and at 26px in the rail and 22px in
+  the transcript, breathing and bobbing are a few pixels of wobble — the one thing carrying
+  "Alice is working" was the hardest thing on the page to see. Rail agent 26→34, team group
+  24→28, conversation header 30→38, a message's 22→28, the peer route's 18→20, with row
+  padding and the peer/tool indents following. What was deliberately *not* taken from the
+  reference is its second line: Grok's is a last-message preview, ours is the role, which is the
+  durable fact about that agent and appears nowhere else — and the status word already occupies
+  the right of the row.
+
+Still open from that session, and asked of the author again: whether a team switch discarding
+the previous team's live agents without asking is acceptable or alarming. The creation flow has
+now been used with a mouse; whether it reads in the right order with agents before the team was
+not reported on.
+
+## Next session
 
 Items 1 and 2 of the previous handoff are done. What is left of it, in the same order:
 

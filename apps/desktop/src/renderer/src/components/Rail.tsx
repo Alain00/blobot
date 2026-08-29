@@ -5,8 +5,13 @@ import { Blob } from './Blob.js';
 import { StatusWord } from './StatusWord.js';
 
 /**
- * The team is an item in the rail, drawn as a group — not a second surface. Selecting it
- * renders into the same pane the agents do.
+ * Every team the user has is a row here, not just the running one. The rail used to show the
+ * active team alone, with the others as a list at the foot that only appeared once a second
+ * team existed — so "how do I switch teams?" had no answer on screen. The set is the rail.
+ *
+ * The active team is drawn as a group of blobatars and carries its agents underneath it,
+ * indented; the rest are names and counts. Only the running team has statuses, sessions or
+ * blobatars to draw, because only one orchestrator runs at a time.
  */
 export function Rail({
   team,
@@ -29,10 +34,17 @@ export function Rail({
   onNewTeam?: () => void;
 }): React.JSX.Element {
   const teamStatus = foldTeamStatus(agents.map((agent) => statuses[agent.id] ?? 'idle'));
+  // The running team may not be in the summary list at all — demo mode has no row for it —
+  // so it is drawn from `team` and the list only supplies the others.
+  const rows: readonly UiTeamSummary[] = [
+    { id: team.id, name: team.name, workspacePath: team.workspacePath, agentCount: agents.length },
+    ...teams.filter((other) => other.id !== team.id),
+  ];
+
   return (
     <div className="rail">
       <div className="railhead">
-        <span className="mono muted">TEAM</span>
+        <span className="mono muted">TEAMS</span>
         <span style={{ flex: 1 }} />
         {onNewTeam !== undefined && (
           <button className="railadd mono" onClick={onNewTeam} title="New team">
@@ -40,73 +52,86 @@ export function Rail({
           </button>
         )}
       </div>
-      <button
-        className={`teamrow${pane.kind === 'team' ? ' sel' : ''}`}
-        onClick={() => onSelect({ kind: 'team' })}
-      >
-        <span className="group">
-          {agents.map((agent) => (
-            <span key={agent.id}>
-              <Blob name={agent.id} size={24} status={statuses[agent.id] ?? 'idle'} />
-            </span>
-          ))}
-        </span>
-        <span className="who">
-          <span className="nm">
-            <b>{team.name}</b>
-          </span>
-          <span className="sub">
-            <span className="n">{agents.length} agents</span>
-            <span style={{ flex: 1 }} />
-            <StatusWord status={teamStatus.status} label={teamStatus.label} />
-          </span>
-        </span>
-      </button>
 
-      <div className="raillabel">Agents</div>
-      {agents.map((agent) => {
-        const status = statuses[agent.id] ?? 'idle';
-        const selected = pane.kind === 'agent' && pane.agentId === agent.id;
+      {rows.map((row) => {
+        const running = row.id === team.id;
+        if (!running) {
+          return (
+            <button
+              key={row.id}
+              className="teamrow off"
+              // Switching stops this team's agents where they stand and starts the other's:
+              // one orchestrator at a time. Disabled rather than silently inert in demo mode.
+              disabled={onSelectTeam === undefined}
+              onClick={() => onSelectTeam?.(row.id)}
+              title={`Switch to ${row.name} — stops ${team.name}'s agents`}
+            >
+              <span className="ghost" aria-hidden="true" />
+              <span className="who">
+                <span className="nm">
+                  <b>{row.name}</b>
+                </span>
+                <span className="sub">
+                  <span className="n">{row.agentCount} agents</span>
+                  <span style={{ flex: 1 }} />
+                  <span className="stat">stopped</span>
+                </span>
+              </span>
+            </button>
+          );
+        }
+
         return (
-          <button
-            key={agent.id}
-            className={`agentrow${selected ? ' sel' : ''}`}
-            onClick={() => onSelect({ kind: 'agent', agentId: agent.id })}
-          >
-            <Blob name={agent.id} size={26} status={status} />
-            <span className="who">
-              <span className="nm">
-                <b>{agent.name}</b>
+          <div key={row.id} className="teamgroup">
+            <button
+              className={`teamrow${pane.kind === 'team' ? ' sel' : ''}`}
+              onClick={() => onSelect({ kind: 'team' })}
+            >
+              <span className="group">
+                {agents.map((agent) => (
+                  <span key={agent.id}>
+                    <Blob name={agent.id} size={28} status={statuses[agent.id] ?? 'idle'} />
+                  </span>
+                ))}
               </span>
-              <span className="sub">
-                <span className="role">{agent.role}</span>
-                <span style={{ flex: 1 }} />
-                <StatusWord status={status} />
+              <span className="who">
+                <span className="nm">
+                  <b>{row.name}</b>
+                </span>
+                <span className="sub">
+                  <span className="n">{row.agentCount} agents</span>
+                  <span style={{ flex: 1 }} />
+                  <StatusWord status={teamStatus.status} label={teamStatus.label} />
+                </span>
               </span>
-            </span>
-          </button>
+            </button>
+
+            {agents.map((agent) => {
+              const status = statuses[agent.id] ?? 'idle';
+              const selected = pane.kind === 'agent' && pane.agentId === agent.id;
+              return (
+                <button
+                  key={agent.id}
+                  className={`agentrow${selected ? ' sel' : ''}`}
+                  onClick={() => onSelect({ kind: 'agent', agentId: agent.id })}
+                >
+                  <Blob name={agent.id} size={34} status={status} />
+                  <span className="who">
+                    <span className="nm">
+                      <b>{agent.name}</b>
+                    </span>
+                    <span className="sub">
+                      <span className="role">{agent.role}</span>
+                      <span style={{ flex: 1 }} />
+                      <StatusWord status={status} />
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         );
       })}
-
-      {/* Switching stops this team's agents and starts the other one's: one orchestrator at a
-          time, which is why the other teams are a list down here rather than a second rail. */}
-      {onSelectTeam !== undefined && teams.length > 1 && (
-        <>
-          <div className="raillabel">Other teams</div>
-          {teams
-            .filter((other) => other.id !== team.id)
-            .map((other) => (
-              <button
-                key={other.id}
-                className="teamswitch"
-                onClick={() => onSelectTeam(other.id)}
-              >
-                <span className="nm">{other.name}</span>
-                <span className="n mono muted">{other.agentCount}</span>
-              </button>
-            ))}
-        </>
-      )}
     </div>
   );
 }

@@ -69,10 +69,13 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .stat.is-idle{opacity:.55}
 
 /* ---------- variant A: roster + focused conversation + activity ---------- */
-.vA{flex:1;display:grid;grid-template-columns:232px minmax(0,1fr) 288px;min-height:0}
+/* `minmax(0,1fr)` on the row and `min-height:0` on the column are what make `.stream`
+   scroll: a grid item's automatic minimum is its content, so without them the conversation
+   grows the row past the viewport instead of overflowing inside it. */
+.vA{flex:1;display:grid;grid-template-columns:232px minmax(0,1fr) 288px;grid-auto-rows:minmax(0,1fr);min-height:0;overflow:hidden}
 .vA .rail{border-right:1px solid var(--line);overflow:auto;padding:10px 0}
 .railhead{padding:6px 14px 10px;display:flex;align-items:baseline;gap:8px}
-.agentrow{display:flex;gap:10px;align-items:center;padding:7px 14px;width:100%;text-align:left;border-left:2px solid transparent}
+.agentrow{display:flex;gap:11px;align-items:center;padding:9px 14px;width:100%;text-align:left;border-left:2px solid transparent}
 .agentrow:hover{background:var(--raised)}
 .agentrow.sel{background:var(--raised);border-left-color:var(--ink)}
 .agentrow .who{min-width:0;flex:1}
@@ -82,7 +85,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .agentrow .nm b{font-weight:500}
 .agentrow .role{color:var(--muted);font-size:12px;flex:0 0 auto}
 .agentrow .stat{font-size:10px}
-.teamrow{display:flex;gap:10px;align-items:center;padding:9px 14px 9px 12px;width:100%;text-align:left;border-left:2px solid transparent}
+.teamrow{display:flex;gap:11px;align-items:center;padding:10px 14px 10px 12px;width:100%;text-align:left;border-left:2px solid transparent}
 .teamrow:hover{background:var(--raised)}
 .teamrow.sel{background:var(--raised);border-left-color:var(--ink)}
 .teamrow .who{min-width:0;flex:1}
@@ -91,21 +94,31 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .teamrow .sub{display:flex;align-items:baseline;gap:6px;line-height:1.35}
 .teamrow .n{color:var(--muted);font-size:12px}
 .teamrow .stat{font-size:10px}
+/* A team nobody is running: no blobatars, because it has no live agents to draw. The ghost
+   holds the group's width so the names stay on one left edge. */
+.teamrow.off .ghost{width:28px;height:28px;flex:0 0 auto;border:1px dashed var(--line);border-radius:40% 60% 55% 45%}
+.teamrow.off b{font-weight:400;color:var(--muted)}
+.teamrow.off:hover b{color:var(--ink)}
+.teamrow.off:disabled{cursor:default}
+.teamrow.off:disabled:hover{background:none}
+/* The running team's agents belong to it, so they are indented under its row. */
+.teamgroup .agentrow{padding-left:24px}
+.teamgroup{border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:6px}
 /* the team reads as a group: its members, overlapped, cut out of the ground */
 .group{display:flex;flex:0 0 auto;--cut:var(--ground)}
 /* the cut follows the silhouette, not a circle — these are blobs, not headshots */
-.group > span{margin-left:-8px;filter:drop-shadow(1.5px 0 0 var(--cut)) drop-shadow(-1.5px 0 0 var(--cut)) drop-shadow(0 1.5px 0 var(--cut)) drop-shadow(0 -1.5px 0 var(--cut))}
+.group > span{margin-left:-9px;filter:drop-shadow(1.5px 0 0 var(--cut)) drop-shadow(-1.5px 0 0 var(--cut)) drop-shadow(0 1.5px 0 var(--cut)) drop-shadow(0 -1.5px 0 var(--cut))}
 .group > span:first-child{margin-left:0}
 .teamrow.sel .group,.teamrow:hover .group,.convhead .group{--cut:var(--raised)}
 .convhead .group{--cut:var(--ground)}
 .raillabel{padding:12px 14px 6px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .badge{font-family:var(--mono);font-size:10px;border:1px solid var(--ink);padding:0 4px;line-height:14px}
-.vA .conv{display:flex;flex-direction:column;min-width:0}
-.convhead{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line)}
+.vA .conv{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+.convhead{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line)}
 .convhead .meta{flex:1;min-width:0}
 .convhead .wt{font-family:var(--mono);font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.stream{flex:1;overflow:auto;padding:20px 20px 8px;display:flex;flex-direction:column;gap:16px}
-.composer{border-top:1px solid var(--line);padding:12px 20px;display:flex;gap:10px;align-items:center}
+.stream{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:20px 20px 8px;display:flex;flex-direction:column;gap:16px}
+.composer{flex:0 0 auto;border-top:1px solid var(--line);padding:12px 20px;display:flex;gap:10px;align-items:center}
 .composer input{flex:1;background:transparent;border:none;color:var(--ink);font:inherit;outline:none}
 .composer input::placeholder{color:var(--muted)}
 .send{border:1px solid var(--line);padding:4px 10px;font-family:var(--mono);font-size:11px;display:inline-flex;align-items:center;gap:6px}
@@ -131,7 +144,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .fev.hi{background:var(--raised)}
 
 /* ---------- messages ---------- */
-.msg{display:flex;gap:12px;max-width:660px}
+.msg{display:flex;gap:12px;max-width:680px}
 .msg .body{min-width:0}
 .msg .hdr{display:flex;align-items:baseline;gap:8px;margin-bottom:3px}
 .msg .hdr .nm{font-weight:500}
@@ -141,14 +154,14 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .msg.user{border-left:2px solid var(--ink);padding-left:12px}
 /* from the agent: no rule at all — it is the default voice of the pane */
 /* from a peer: dashed enclosure, inset, two blobatars in the header. never a bubble. */
-.peer{border:1px dashed var(--line);padding:12px 14px;margin-left:34px;max-width:620px;background:var(--raised)}
+.peer{border:1px dashed var(--line);padding:12px 14px;margin-left:40px;max-width:620px;background:var(--raised)}
 .peer .route{display:flex;align-items:center;gap:7px;margin-bottom:7px}
 .peer .route .arrow{color:var(--muted);font-family:var(--mono)}
 .peer .route .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
 .peer .ctx{font-family:var(--mono);font-size:11.5px;color:var(--muted);border-left:1px solid var(--line);padding-left:8px;margin-bottom:7px}
 .peer .txt{white-space:pre-wrap}
 .peer .foot{margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--muted)}
-.tool{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;gap:8px;align-items:baseline;margin-left:34px}
+.tool{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;gap:8px;align-items:baseline;margin-left:40px}
 .tool .k{color:var(--ink)}
 .sysline{display:flex;align-items:center;gap:10px;color:var(--muted);font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
 .sysline::before,.sysline::after{content:"";height:1px;background:var(--line);flex:1}
@@ -201,3 +214,47 @@ select.textfield option{background:var(--raised);color:var(--ink)}
 .hire{align-self:stretch;display:flex;flex-direction:column;gap:8px;border-left:1px solid var(--line);padding-left:12px}
 .hire .agentdraft{grid-template-columns:1fr 1fr minmax(150px,auto) auto}
 textarea.textfield{border:1px solid var(--line);padding:6px 8px;resize:vertical;font-family:var(--sans)}
+
+/* ---------- markdown in the transcript ----------
+ * Agents write markdown and Streamdown renders it (see `components/Markdown.tsx`). It ships
+ * Tailwind class names, which this app does not run, so the elements arrive unstyled and are
+ * dressed here — in the page's own vocabulary: hairline rules, mono for anything literal, and
+ * no colour, because the blobatars are still the only saturated thing on the page.
+ */
+.md{min-width:0}
+.md > * > *:first-child, .md > *:first-child{margin-top:0}
+.md > * > *:last-child, .md > *:last-child{margin-bottom:0}
+.md p{margin:0 0 10px}
+.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{margin:16px 0 8px;font-weight:600;line-height:1.3}
+.md h1{font-size:19px;letter-spacing:-.02em}
+.md h2{font-size:16px;letter-spacing:-.01em}
+.md h3{font-size:14px}
+.md h4,.md h5,.md h6{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.md ul,.md ol{margin:0 0 10px;padding-left:20px}
+.md li{margin:2px 0}
+.md li::marker{color:var(--muted)}
+.md li > ul,.md li > ol{margin:2px 0}
+.md li > p{margin:0}
+/* a task list keeps its checkbox but loses the browser's blue */
+.md input[type=checkbox]{accent-color:var(--muted);margin-right:6px}
+.md a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:2px}
+.md a:hover{text-decoration-color:var(--ink)}
+.md strong{font-weight:600}
+.md blockquote{margin:0 0 10px;padding-left:12px;border-left:1px solid var(--line);color:var(--muted)}
+.md hr{margin:14px 0}
+.md code{font-family:var(--mono);font-size:12px;background:var(--raised);border:1px solid var(--line);padding:0 3px;border-radius:2px}
+/* A fenced block is a container, a header carrying the language, and the <pre> — so the frame
+   belongs to the container and the <pre> is bare inside it. */
+.md [data-streamdown=code-block]{margin:0 0 10px;border:1px solid var(--line);background:var(--raised);max-width:100%;overflow:hidden}
+.md [data-streamdown=code-block-header]{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:4px 10px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.md [data-streamdown=code-block-body]{overflow:auto}
+.md pre{margin:0;background:none;border:none;padding:10px 12px;overflow-x:auto;max-width:100%}
+.md pre code{background:none;border:none;padding:0;font-size:12px;line-height:1.55;white-space:pre}
+/* Each source line is a <span>, laid out by Tailwind classes this app does not load. */
+.md pre code > span{display:block}
+.md table{border-collapse:collapse;margin:0 0 10px;font-size:13px;display:block;overflow-x:auto;max-width:100%}
+.md th,.md td{border:1px solid var(--line);padding:4px 9px;text-align:left;vertical-align:top}
+.md th{font-weight:500;color:var(--muted);font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;background:var(--raised);white-space:nowrap}
+.md img{max-width:100%}
+/* Long paths and URLs must wrap rather than widen the column. */
+.md{overflow-wrap:anywhere}

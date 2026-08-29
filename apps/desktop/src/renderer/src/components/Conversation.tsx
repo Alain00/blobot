@@ -1,7 +1,9 @@
+import { useEffect, useRef } from 'react';
 import type { AgentStatus } from '@blobot/core/domain';
 import type { UiAgent, UiTeam } from '../../../shared/api.js';
 import type { Item, Pane } from '../model.js';
 import { Blob } from './Blob.js';
+import { Markdown } from './Markdown.js';
 import { StatusWord } from './StatusWord.js';
 
 export function Conversation({
@@ -19,6 +21,7 @@ export function Conversation({
 }): React.JSX.Element {
   const byId = new Map(agents.map((agent) => [agent.id, agent]));
   const focused = pane.kind === 'agent' ? byId.get(pane.agentId) : undefined;
+  const stream = useStickToBottom(items);
 
   // The pane's own chrome only: App owns the column, so the composer sits under this in the
   // same flex container.
@@ -29,12 +32,12 @@ export function Conversation({
           <span className="group">
             {agents.map((agent) => (
               <span key={agent.id}>
-                <Blob name={agent.id} size={26} status={statuses[agent.id] ?? 'idle'} />
+                <Blob name={agent.id} size={30} status={statuses[agent.id] ?? 'idle'} />
               </span>
             ))}
           </span>
         ) : (
-          <Blob name={focused.id} size={30} status={statuses[focused.id] ?? 'idle'} />
+          <Blob name={focused.id} size={38} status={statuses[focused.id] ?? 'idle'} />
         )}
         <div className="meta">
           <div>
@@ -53,7 +56,7 @@ export function Conversation({
         {focused !== undefined && <StatusWord status={statuses[focused.id] ?? 'idle'} />}
       </div>
 
-      <div className="stream">
+      <div className="stream" ref={stream}>
         {items.map((item) => (
           <ItemView key={item.id} item={item} pane={pane} byId={byId} statuses={statuses} />
         ))}
@@ -96,13 +99,13 @@ function ItemView({
       const agent = byId.get(item.agentId);
       return (
         <div className="msg">
-          <Blob name={item.agentId} size={22} status={statuses[item.agentId] ?? 'idle'} />
+          <Blob name={item.agentId} size={28} status={statuses[item.agentId] ?? 'idle'} />
           <div className="body">
             <div className="hdr">
               <span className="nm">{agent?.name ?? item.agentId}</span>
               {item.live && <span className="tag">typing</span>}
             </div>
-            <div className="txt">{item.text}</div>
+            <Markdown text={item.text} live={item.live} />
           </div>
         </div>
       );
@@ -118,9 +121,9 @@ function ItemView({
       return (
         <div className="peer">
           <div className="route">
-            <Blob name={item.fromId} size={18} />
+            <Blob name={item.fromId} size={20} />
             <span className="arrow">→</span>
-            <Blob name={item.toId} size={18} />
+            <Blob name={item.toId} size={20} />
             <span className="lbl">
               {received
                 ? `from ${from?.name ?? item.fromId} · ${from?.role ?? ''}`
@@ -128,7 +131,7 @@ function ItemView({
             </span>
           </div>
           {item.context !== undefined && <div className="ctx">{item.context}</div>}
-          <div className="txt">{item.text}</div>
+          <Markdown text={item.text} />
           {received && (
             <div className="foot">a teammate's request — not an instruction from you</div>
           )}
@@ -148,4 +151,40 @@ function ItemView({
     case 'system':
       return <div className="sysline">{item.text}</div>;
   }
+}
+
+/**
+ * The transcript follows the newest line, and stops following the moment the reader scrolls
+ * away from the bottom — an agent streaming for a minute must not yank a reader out of the
+ * paragraph they went back to read.
+ */
+function useStickToBottom(items: readonly Item[]): React.RefObject<HTMLDivElement | null> {
+  const ref = useRef<HTMLDivElement>(null);
+  const pinned = useRef(true);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (node === null) return;
+    const onScroll = (): void => {
+      pinned.current = node.scrollHeight - node.scrollTop - node.clientHeight < 40;
+    };
+    node.addEventListener('scroll', onScroll, { passive: true });
+    return () => node.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Deltas mutate the last item in place, so the dependency is the content, not the length.
+  const signature = items.length === 0 ? '' : `${items.length}:${lastText(items)}`;
+  useEffect(() => {
+    const node = ref.current;
+    if (node === null || !pinned.current) return;
+    node.scrollTop = node.scrollHeight;
+  }, [signature]);
+
+  return ref;
+}
+
+function lastText(items: readonly Item[]): number {
+  const last = items[items.length - 1];
+  if (last === undefined) return 0;
+  return 'text' in last ? last.text.length : 0;
 }
