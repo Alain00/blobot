@@ -32,6 +32,9 @@ ticket here and are not up for renegotiation inside one.
 - Orchestrator runs in the **Electron main process**, written as a plain TypeScript module
   with no Electron imports so it stays extractable.
 - **Team is a real aggregate** — it owns the repository and scopes the message bus.
+- **Not only for code.** An agent owns an isolated directory and does whatever it likes in it.
+  A git worktree is the mechanism when the Workspace is a repo, not the concept. Docker stays
+  out of scope, but a non-code Workspace must remain plausible.
 - Monorepo is **two packages**: `apps/desktop` and `packages/core`. The boundary exists to
   make "the UI cannot import a provider" a dependency-graph fact.
 - *Avatar* is the domain term. `blobatar@2.6.0` is a dependency, seeded on agent id, and
@@ -58,6 +61,8 @@ look or behave".
 - [What Bob actually receives](issues/06-what-bob-receives.md) — Static situation (role, repo, worktree, roster, peer-visibility rule) goes in an adapter-owned persona; the envelope carries only sender, their role, an optional context line they supply, and a trust framing marking it as a peer request rather than an operator instruction. One shared session per agent, fully visible to the user. Queued batches arrive as a numbered list. Alice's uncommitted work is invisible to Bob — stated, not hidden.
 
 - [The agent status state machine](issues/09-agent-status-state-machine.md) — Seven statuses (`done` dropped, `responding` added), precedence `waiting > working > responding > thinking`. Derived in memory from the event stream, never persisted. Only process-level failure is sticky; cancel/refusal/max-tokens return to `idle`. On relaunch everything is `idle` and queued messages are held, not auto-delivered. Runtime availability stays orthogonal.
+
+- [Worktree layout and launch reconcile](issues/10-worktree-layout-and-launch-reconcile.md) — AgentWorkspaces live outside the user's repo under blobot's data dir, on `blobot/<team>/<agent>` branches cut from `HEAD`. A non-git Workspace is *offered* `git init`. blobot never commits for an agent. Reconcile repairs a missing directory silently and reports a missing branch as data loss. Deleting an agent keeps its branch only if it has unmerged commits.
 
 ## Not yet specified
 
