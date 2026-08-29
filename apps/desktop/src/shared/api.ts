@@ -1,4 +1,4 @@
-import type { AgentEvent, AgentStatus, Message } from '@blobot/core/ui';
+import type { AgentEvent, AgentStatus, Message } from '@blobot/core/domain';
 
 /**
  * What the renderer is allowed to know about an agent.

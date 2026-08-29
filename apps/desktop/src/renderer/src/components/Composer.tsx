@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { findAgentByName } from '@blobot/core/ui';
-import type { Agent } from '@blobot/core/ui';
+import { findAgentByName } from '@blobot/core/domain';
+import type { Agent } from '@blobot/core/domain';
 import type { UiAgent } from '../../../shared/api.js';
 import type { Pane } from '../model.js';
 import { Blob } from './Blob.js';

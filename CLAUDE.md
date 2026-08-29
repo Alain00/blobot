@@ -82,6 +82,9 @@ team headlessly):
   prompt, per-team turn budget, persona and envelope composition, `message_agent` tool handler.
 - The SQLite store (13): Drizzle schema, checked-in migrations, `SqliteStore` behind
   `MessageStore`, and `SqliteRecorder` persisting the durable subset of the event stream.
+- `@blobot/core/domain`: the pure entry point (event vocabulary, aggregates, status fold,
+  roster lookup) with no Node dependencies, for consumers that must not pull in SQLite — the
+  renderer today, a CLI later.
 - The UI (12) in `apps/desktop`: Electron + React, variant A's rail / conversation / feed, the
   three voices, monochrome status, `@mention` addressing. Runs demo mode on mock runtimes.
   `pnpm --filter @blobot/desktop exec electron-vite build` then run electron with

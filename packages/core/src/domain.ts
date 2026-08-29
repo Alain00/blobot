@@ -1,9 +1,11 @@
 /**
- * The subset of core a renderer may import: types, the status fold, and the roster lookup.
+ * blobot's domain: the event vocabulary, the aggregates, the status fold and the roster
+ * lookup. Pure TypeScript with no Node dependencies — no store, no runtime, no adapter.
  *
- * It exists because the main entry pulls in `better-sqlite3` and Drizzle, which have no place
- * in a browser bundle — and because the boundary is worth stating rather than discovering. The
- * UI gets vocabulary and pure functions; it gets no store, no runtime, and no adapter.
+ * It is a separate entry point because the main one pulls in `better-sqlite3` and Drizzle,
+ * which have no place in a browser bundle. It is named for what it holds rather than for who
+ * imports it: today that is the renderer, but a CLI would want exactly the same subset and
+ * would want nothing to do with a UI.
  */
 export type {
   AgentError,

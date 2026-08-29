@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
-import type { AgentEvent, AgentStatus, Message } from '@blobot/core/ui';
+import type { AgentEvent, AgentStatus, Message } from '@blobot/core/domain';
 import type { BlobotApi, UiSnapshot } from '../shared/api.js';
 
 /**

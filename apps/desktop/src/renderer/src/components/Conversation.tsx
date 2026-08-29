@@ -1,4 +1,4 @@
-import type { AgentStatus } from '@blobot/core/ui';
+import type { AgentStatus } from '@blobot/core/domain';
 import type { UiAgent, UiTeam } from '../../../shared/api.js';
 import type { Item, Pane } from '../model.js';
 import { Blob } from './Blob.js';

@@ -1,5 +1,5 @@
 import { Blobatar } from '@blobatar/react';
-import type { AgentStatus } from '@blobot/core/ui';
+import type { AgentStatus } from '@blobot/core/domain';
 
 /**
  * A blobatar, wrapped in the one element that carries status as motion. The animation classes

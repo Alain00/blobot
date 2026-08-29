@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AgentEvent, Message } from '@blobot/core/ui';
+import type { AgentEvent, Message } from '@blobot/core/domain';
 import { initialState, itemsFor, reduce, type AppState } from './model.js';
 
 const identity = { agentId: 'alice', sessionId: 'session_alice' } as const;

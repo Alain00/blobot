@@ -1,4 +1,4 @@
-import type { AgentEvent, AgentStatus, Message } from '@blobot/core/ui';
+import type { AgentEvent, AgentStatus, Message } from '@blobot/core/domain';
 import type { UiSnapshot } from '../../shared/api.js';
 
 /** What a conversation pane is showing: one agent's session, or the whole team's stream. */

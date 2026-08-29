@@ -1,4 +1,4 @@
-import type { AgentStatus } from '@blobot/core/ui';
+import type { AgentStatus } from '@blobot/core/domain';
 
 /**
  * Status, spelled out. Seven states cannot be inferred from a shape, and a coloured dot is
