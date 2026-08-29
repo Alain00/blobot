@@ -16,7 +16,9 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "esbuild"
+      "esbuild",
+      "electron",
+      "better-sqlite3"
     ]
   }
 }

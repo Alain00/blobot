@@ -82,9 +82,14 @@ team headlessly):
   prompt, per-team turn budget, persona and envelope composition, `message_agent` tool handler.
 - The SQLite store (13): Drizzle schema, checked-in migrations, `SqliteStore` behind
   `MessageStore`, and `SqliteRecorder` persisting the durable subset of the event stream.
+- The UI (12) in `apps/desktop`: Electron + React, variant A's rail / conversation / feed, the
+  three voices, monochrome status, `@mention` addressing. Runs demo mode on mock runtimes.
+  `pnpm --filter @blobot/desktop exec electron-vite build` then run electron with
+  `--screenshot=<path>` (optionally `--pane=<agentId>`, `--screenshot-at=<ms>`) to review it
+  without a human at the screen.
 
-Next: the UI (12), then the OpenCode adapter (03 + 16), then the Claude bridge (07). Nothing
-has touched a real CLI yet.
+Next: the OpenCode adapter (03 + 16), then the Claude bridge (07). Nothing has touched a real
+CLI yet, and the permission block from ticket 14's amendment has no callback to render.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that
 reproduces every observed trap on purpose — ragged deltas, a cancelled tool reporting

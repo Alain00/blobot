@@ -62,6 +62,7 @@ export type { IdFactory } from './ids.js';
 
 export type { Agent, Message, Team } from './orchestrator/domain.js';
 export { composePersona, composeWakePrompt } from './orchestrator/envelope.js';
+export { findAgentByName } from './orchestrator/roster.js';
 export { InMemoryMessageStore } from './orchestrator/message-store.js';
 export type { MessageStore } from './orchestrator/message-store.js';
 export { Orchestrator } from './orchestrator/orchestrator.js';

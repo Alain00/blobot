@@ -11,6 +11,7 @@ import type {
 } from '../runtime.js';
 import { AgentStatusTracker, type AgentStatus } from '../status.js';
 import type { Agent, Message, Team } from './domain.js';
+import { findAgentByName } from './roster.js';
 import { composeWakePrompt } from './envelope.js';
 import { InMemoryMessageStore, type MessageStore } from './message-store.js';
 
@@ -63,6 +64,7 @@ export class Orchestrator {
   readonly #eventListeners = new Set<(event: AgentEvent) => void>();
   readonly #statusListeners = new Set<(agentId: string, status: AgentStatus) => void>();
   readonly #budgetListeners = new Set<(exhausted: BudgetExhausted) => void>();
+  readonly #messageListeners = new Set<(message: Message) => void>();
   readonly #subscriptions: Unsubscribe[] = [];
 
   /** The budget is per *user prompt*: it is the thing that bounds cost when agents ping-pong. */
@@ -124,6 +126,15 @@ export class Orchestrator {
     return () => this.#statusListeners.delete(listener);
   }
 
+  /**
+   * Every committed Message, the user's and a peer's alike. The store is the record; this is
+   * how a UI hears that it changed without polling it.
+   */
+  onMessage(listener: (message: Message) => void): Unsubscribe {
+    this.#messageListeners.add(listener);
+    return () => this.#messageListeners.delete(listener);
+  }
+
   onBudgetExhausted(listener: (exhausted: BudgetExhausted) => void): Unsubscribe {
     this.#budgetListeners.add(listener);
     return () => this.#budgetListeners.delete(listener);
@@ -175,6 +186,7 @@ export class Orchestrator {
       at: now,
     });
     this.#store.markDelivered([message.id], now);
+    this.#announceMessage(message);
     await this.#runTurn(agent, { text, from: 'user' }, message.id);
   }
 
@@ -203,6 +215,8 @@ export class Orchestrator {
       ...(call.context === undefined ? {} : { context: call.context }),
       ...(call.idempotencyKey === undefined ? {} : { idempotencyKey: call.idempotencyKey }),
     });
+
+    this.#announceMessage(message);
 
     // Ack means committed. Only now is it safe to tell the sender the message exists.
     // The peer message is announced by the orchestrator, never by an adapter, so the UI can
@@ -343,6 +357,10 @@ export class Orchestrator {
     }
   }
 
+  #announceMessage(message: Message): void {
+    for (const listener of this.#messageListeners) listener(message);
+  }
+
   #publish(event: AgentEvent): void {
     for (const listener of this.#eventListeners) listener(event);
   }
@@ -363,9 +381,9 @@ export class Orchestrator {
    * because the error is something the sender can act on.
    */
   #resolveRecipient(name: string, sender: Agent): Agent {
-    const recipient = this.#agents.find(
-      (candidate) => candidate.name.toLowerCase() === name.toLowerCase() || candidate.id === name,
-    );
+    // The same resolution the composer's @mention uses. One function, or the human-facing
+    // "unresolved mention" and the agent-facing "no such teammate" will drift apart.
+    const recipient = findAgentByName(this.#agents, name);
     const roster = this.#agents
       .filter((candidate) => candidate.id !== sender.id)
       .map((candidate) => candidate.name)

@@ -1,0 +1,155 @@
+/*
+ * Ported from the ticket 12 prototype (`.scratch/first-demo/prototypes/12-team-ui`), variant A,
+ * which is the one that won. The prototype is the design decision; retyping it here would be a
+ * redesign nobody asked for, so the rules are lifted as they were and only the dead variants
+ * dropped.
+ *
+ * The governing rule: the blobatars are the only saturated thing on the page. Status is
+ * monochrome, carried by motion, a mono word and a sweeping hairline.
+ */
+
+:root{
+  --ground:#0a0a0b; --raised:#131315; --ink:#fafaf8; --muted:#8a8a93; --line:#232327;
+  --sans:"Geist",ui-sans-serif,system-ui,sans-serif;
+  --mono:"Geist Mono",ui-monospace,monospace;
+  --hand:"Caveat","Segoe Print",cursive;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+::selection{background:var(--ink);color:var(--ground)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+.mono{font-family:var(--mono);font-size:11px;letter-spacing:.02em}
+.muted{color:var(--muted)}
+.hand{font-family:var(--hand);font-size:20px;color:var(--muted)}
+hr{border:0;border-top:1px solid var(--line);margin:0}
+
+/* ---------- app chrome (shared by all variants) ---------- */
+.app{height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;gap:14px;padding:0 16px;height:44px;border-bottom:1px solid var(--line);flex:0 0 auto}
+.wordmark{font-weight:600;letter-spacing:-.02em}
+.crumb{color:var(--muted);font-family:var(--mono);font-size:11px}
+.crumb b{color:var(--ink);font-weight:500}
+.topbar .spacer{flex:1}
+.budget{display:flex;align-items:center;gap:6px}
+.budget .pips{display:flex;gap:2px}
+.pip{width:4px;height:12px;background:var(--line)}
+.pip.on{background:var(--muted)}
+
+/* ---------- blobatar + status ---------- */
+.blob{display:block;flex:0 0 auto;transform-origin:50% 62%}
+.blob svg{display:block;width:100%;height:100%}
+.b-still .blob{animation:none}
+.b-thinking .blob{animation:breathe 2.6s ease-in-out infinite}
+.b-working  .blob{animation:bob .9s ease-in-out infinite}
+.b-responding .blob{animation:nod 1.15s ease-in-out infinite}
+.b-starting .blob{animation:fadein 1.4s ease-in-out infinite;opacity:.55}
+.b-waiting  .blob{animation:jolt 2.2s ease-in-out infinite}
+.b-failed   .blob{filter:grayscale(1) brightness(.72);animation:none}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-3px) rotate(-2.5deg)}75%{transform:translateY(2px) rotate(2deg)}}
+@keyframes nod{0%,100%{transform:translateY(0) scaleY(1)}50%{transform:translateY(1px) scaleY(.965)}}
+@keyframes fadein{0%,100%{opacity:.4}50%{opacity:.8}}
+@keyframes jolt{0%,86%,100%{transform:translateX(0)}90%{transform:translateX(-2px)}94%{transform:translateX(2px)}}
+@media (prefers-reduced-motion:reduce){.blob{animation:none!important}}
+
+/* status is never colour. three channels: motion, a mono word, a rule. */
+.stat{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.stat .dotline{width:14px;height:1px;background:var(--line);position:relative;overflow:hidden}
+.stat .dotline::after{content:"";position:absolute;inset:0;background:var(--muted);transform:translateX(-100%);animation:sweep 1.1s linear infinite}
+.stat.is-idle .dotline::after,.stat.is-failed .dotline::after{animation:none;transform:translateX(-100%)}
+@keyframes sweep{to{transform:translateX(100%)}}
+.stat.is-responding::after{content:"";width:6px;height:11px;background:var(--muted);animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+/* the one inversion on the page, spent on the one state a human must clear */
+.stat.is-waiting{background:var(--ink);color:var(--ground);padding:2px 6px;font-weight:500}
+.stat.is-waiting .dotline{display:none}
+.stat.is-failed{color:var(--ink);text-decoration:line-through;text-decoration-thickness:1px}
+.stat.is-idle{opacity:.55}
+
+/* ---------- variant A: roster + focused conversation + activity ---------- */
+.vA{flex:1;display:grid;grid-template-columns:232px minmax(0,1fr) 288px;min-height:0}
+.vA .rail{border-right:1px solid var(--line);overflow:auto;padding:10px 0}
+.railhead{padding:6px 14px 10px;display:flex;align-items:baseline;gap:8px}
+.agentrow{display:flex;gap:10px;align-items:center;padding:7px 14px;width:100%;text-align:left;border-left:2px solid transparent}
+.agentrow:hover{background:var(--raised)}
+.agentrow.sel{background:var(--raised);border-left-color:var(--ink)}
+.agentrow .who{min-width:0;flex:1}
+.agentrow .nm{display:flex;align-items:baseline;gap:6px}
+.agentrow .nm .grow{flex:1}
+.agentrow .sub{display:flex;align-items:baseline;gap:6px;line-height:1.35}
+.agentrow .nm b{font-weight:500}
+.agentrow .role{color:var(--muted);font-size:12px;flex:0 0 auto}
+.agentrow .stat{font-size:10px}
+.teamrow{display:flex;gap:10px;align-items:center;padding:9px 14px 9px 12px;width:100%;text-align:left;border-left:2px solid transparent}
+.teamrow:hover{background:var(--raised)}
+.teamrow.sel{background:var(--raised);border-left-color:var(--ink)}
+.teamrow .who{min-width:0;flex:1}
+.teamrow .nm{display:flex;align-items:baseline;gap:6px}
+.teamrow .nm b{font-weight:500}
+.teamrow .sub{display:flex;align-items:baseline;gap:6px;line-height:1.35}
+.teamrow .n{color:var(--muted);font-size:12px}
+.teamrow .stat{font-size:10px}
+/* the team reads as a group: its members, overlapped, cut out of the ground */
+.group{display:flex;flex:0 0 auto;--cut:var(--ground)}
+/* the cut follows the silhouette, not a circle — these are blobs, not headshots */
+.group > span{margin-left:-8px;filter:drop-shadow(1.5px 0 0 var(--cut)) drop-shadow(-1.5px 0 0 var(--cut)) drop-shadow(0 1.5px 0 var(--cut)) drop-shadow(0 -1.5px 0 var(--cut))}
+.group > span:first-child{margin-left:0}
+.teamrow.sel .group,.teamrow:hover .group,.convhead .group{--cut:var(--raised)}
+.convhead .group{--cut:var(--ground)}
+.raillabel{padding:12px 14px 6px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.badge{font-family:var(--mono);font-size:10px;border:1px solid var(--ink);padding:0 4px;line-height:14px}
+.vA .conv{display:flex;flex-direction:column;min-width:0}
+.convhead{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line)}
+.convhead .meta{flex:1;min-width:0}
+.convhead .wt{font-family:var(--mono);font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stream{flex:1;overflow:auto;padding:20px 20px 8px;display:flex;flex-direction:column;gap:16px}
+.composer{border-top:1px solid var(--line);padding:12px 20px;display:flex;gap:10px;align-items:center}
+.composer input{flex:1;background:transparent;border:none;color:var(--ink);font:inherit;outline:none}
+.composer input::placeholder{color:var(--muted)}
+.send{border:1px solid var(--line);padding:4px 10px;font-family:var(--mono);font-size:11px;display:inline-flex;align-items:center;gap:6px}
+.send[disabled]{opacity:.35;cursor:not-allowed}
+
+/* the address is the @mention — there is no recipient picker */
+.mentionwrap{position:relative;flex:1;min-width:0}
+.mentionwrap input{position:relative;width:100%;background:transparent;border:none;outline:none;font:inherit;color:transparent;caret-color:var(--ink)}
+.hl{position:absolute;inset:0;pointer-events:none;white-space:pre;overflow:hidden;font:inherit;color:var(--ink)}
+.hl .ph{color:var(--muted)}
+.hl .m{color:var(--ink);font-weight:500;box-shadow:inset 0 -1px 0 var(--ink)}
+.hl .m.bad{color:var(--muted);box-shadow:inset 0 -1px 0 var(--line)}
+.suggest{position:absolute;bottom:calc(100% + 10px);left:-6px;background:var(--raised);border:1px solid var(--line);min-width:196px;padding:4px;z-index:20;box-shadow:0 14px 40px rgba(0,0,0,.6)}
+.suggest button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:6px 8px}
+.suggest button:hover,.suggest button.on{background:var(--ground)}
+.suggest .r{color:var(--muted);font-size:12px;margin-left:auto}
+.hint{font-family:var(--mono);font-size:10.5px;color:var(--muted);white-space:nowrap}
+.vA .feed{border-left:1px solid var(--line);overflow:auto;padding:14px 0}
+.feedhead{padding:0 14px 10px;display:flex;align-items:baseline;justify-content:space-between}
+.fev{display:flex;gap:8px;padding:5px 14px;font-family:var(--mono);font-size:11px;color:var(--muted);align-items:baseline}
+.fev .t{opacity:.5;flex:0 0 auto}
+.fev .who{color:var(--ink);flex:0 0 auto}
+.fev.hi{background:var(--raised)}
+
+/* ---------- messages ---------- */
+.msg{display:flex;gap:12px;max-width:660px}
+.msg .body{min-width:0}
+.msg .hdr{display:flex;align-items:baseline;gap:8px;margin-bottom:3px}
+.msg .hdr .nm{font-weight:500}
+.msg .hdr .tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.msg .txt{white-space:pre-wrap}
+/* from you: solid ink rule, flush left, no ornament */
+.msg.user{border-left:2px solid var(--ink);padding-left:12px}
+/* from the agent: no rule at all — it is the default voice of the pane */
+/* from a peer: dashed enclosure, inset, two blobatars in the header. never a bubble. */
+.peer{border:1px dashed var(--line);padding:12px 14px;margin-left:34px;max-width:620px;background:var(--raised)}
+.peer .route{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.peer .route .arrow{color:var(--muted);font-family:var(--mono)}
+.peer .route .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.peer .ctx{font-family:var(--mono);font-size:11.5px;color:var(--muted);border-left:1px solid var(--line);padding-left:8px;margin-bottom:7px}
+.peer .txt{white-space:pre-wrap}
+.peer .foot{margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--muted)}
+.tool{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;gap:8px;align-items:baseline;margin-left:34px}
+.tool .k{color:var(--ink)}
+.sysline{display:flex;align-items:center;gap:10px;color:var(--muted);font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
+.sysline::before,.sysline::after{content:"";height:1px;background:var(--line);flex:1}
+
