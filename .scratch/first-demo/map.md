@@ -64,6 +64,8 @@ look or behave".
 
 - [Worktree layout and launch reconcile](issues/10-worktree-layout-and-launch-reconcile.md) — AgentWorkspaces live outside the user's repo under blobot's data dir, on `blobot/<team>/<agent>` branches cut from `HEAD`. A non-git Workspace is *offered* `git init`. blobot never commits for an agent. Reconcile repairs a missing directory silently and reports a missing branch as data loss. Deleting an agent keeps its branch only if it has unmerged commits.
 
+- [The Claude Code adapter strategy](issues/07-the-claude-code-adapter-strategy.md) — Claude's own subagents run unobserved (we never subscribe to the subagent transcript). Bob inherits the user's entire Claude Code config — MCP servers, hooks, skills, project `CLAUDE.md` — with the surprise vectors named. Exact-pinned dependency that fails loudly, `CLAUDE_CODE_EXECUTABLE` pinned to the user's binary, one bridge process per agent.
+
 ## Not yet specified
 
 - **Enforcing commit-before-review across worktrees.** Ticket 06 chose to *tell* agents that
