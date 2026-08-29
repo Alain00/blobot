@@ -91,13 +91,19 @@ export class VirtualClock implements Clock {
 
   /** Run until nothing is pending — a whole scenario in no wall-clock time at all. */
   async runAll(maxSteps = 100_000): Promise<void> {
+    // A turn that ends can set off another one several awaits later — an orchestrator waking
+    // a peer, say — so an empty timer list is only the end once it survives a few drains.
+    const idleDrainsBeforeStopping = 8;
+    let idleDrains = 0;
     for (let step = 0; step < maxSteps; step += 1) {
       const next = this.#earliest();
       if (next === undefined) {
         await drainMicrotasks();
-        if (this.#earliest() === undefined) return;
+        idleDrains += 1;
+        if (idleDrains >= idleDrainsBeforeStopping && this.#earliest() === undefined) return;
         continue;
       }
+      idleDrains = 0;
       this.#now = Math.max(this.#now, next.at);
       this.#fire(next);
       await drainMicrotasks();

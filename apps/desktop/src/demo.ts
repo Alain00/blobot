@@ -1,29 +1,90 @@
 /**
- * A throwaway harness for watching `MockAgentRuntime` run: two agents, one peer message,
- * printed as they happen.
- *
- * It is deliberately *not* the orchestrator. The mailbox, the wake policy, the turn budget
- * and persistence belong to ticket 05 and ticket 13; what this file exists to show is that
- * the mock emits the event vocabulary and that a peer message reaches an injected handler.
+ * Demo mode, headless: a two-agent team on mock runtimes, driven by the real orchestrator.
+ * The mailbox, the wake policy, the envelope and the turn budget are all the shipping ones —
+ * only the runtimes are fake.
  *
  *   pnpm demo
  */
 import {
   MockAgentRuntime,
+  Orchestrator,
   SystemClock,
+  composePersona,
+  scenario,
   scenarios,
+  type Agent,
   type AgentEvent,
-  type PeerMessageAck,
-  type PeerMessageCall,
+  type AgentRuntime,
+  type AgentStatus,
+  type Team,
 } from '@blobot/core';
+
+const team: Team = {
+  id: 'team_demo',
+  name: 'demo',
+  workspacePath: '/repo',
+  workspaceKind: 'git',
+  turnBudget: 10,
+};
+
+const alice: Agent = {
+  id: 'alice',
+  teamId: team.id,
+  name: 'Alice',
+  role: 'frontend',
+  workspacePath: '/repo/.agents/alice',
+};
+const bob: Agent = {
+  id: 'bob',
+  teamId: team.id,
+  name: 'Bob',
+  role: 'reviewer',
+  workspacePath: '/repo/.agents/bob',
+};
 
 const clock = new SystemClock();
 const started = clock.now();
+let orchestrator: Orchestrator;
+
+const runtimes = new Map<string, AgentRuntime>([
+  [
+    alice.id,
+    new MockAgentRuntime({
+      agentId: alice.id,
+      clock,
+      peerMessageHandler: (call) => orchestrator.handleMessageAgent(call),
+      script: [scenarios['alice-asks-bob'], scenario('after').say('Good catch — fixing.').end()],
+    }),
+  ],
+  [
+    bob.id,
+    new MockAgentRuntime({
+      agentId: bob.id,
+      clock,
+      peerMessageHandler: (call) => orchestrator.handleMessageAgent(call),
+      script: scenarios['bob-reviews'],
+    }),
+  ],
+]);
+
+orchestrator = new Orchestrator({ team, agents: [alice, bob], runtimes, clock });
+
+const name = (agentId: string): string => (agentId === alice.id ? 'alice' : 'bob  ');
+
+orchestrator.onEvent((event) => print(event));
+orchestrator.onStatusChange((agentId, status: AgentStatus) => {
+  write(clock.now(), name(agentId), `status    ${status}`);
+});
+orchestrator.onBudgetExhausted((exhausted) => {
+  write(clock.now(), 'team ', `budget    ${exhausted.turnsUsed}/${exhausted.turnBudget} — continue?`);
+});
+
+function write(at: number, who: string, line: string): void {
+  process.stdout.write(`${String(at - started).padStart(6, ' ')}ms ${who} ${line}\n`);
+}
 
 function print(event: AgentEvent): void {
-  const at = String(event.at - started).padStart(6, ' ');
-  const who = event.agentId.padEnd(5, ' ');
-  process.stdout.write(`${at}ms ${who} ${describe(event)}\n`);
+  write(event.at, name(event.agentId), describe(event));
 }
 
 function describe(event: AgentEvent): string {
@@ -39,7 +100,7 @@ function describe(event: AgentEvent): string {
     case 'tool_call_updated':
       return `tool      ${event.toolCallId} ${event.status}${event.exit === null ? ' exit=null' : ''}${event.error === undefined ? '' : ` error=${event.error}`}`;
     case 'agent_message_sent':
-      return `peer      → ${event.to}: ${event.message}`;
+      return `peer      → ${event.to}: ${JSON.stringify(event.message)}`;
     case 'usage_updated':
       return `usage     ${event.used}/${event.size}`;
     case 'turn_ended':
@@ -49,34 +110,10 @@ function describe(event: AgentEvent): string {
   }
 }
 
-const bob = new MockAgentRuntime({
-  agentId: 'bob',
-  clock,
-  script: scenarios['bob-reviews'],
-  peerMessageHandler: async (call: PeerMessageCall): Promise<PeerMessageAck> => {
-    process.stdout.write(`       ${call.from} → ${call.agent}: ${call.message}\n`);
-    return { delivered: true, recipient: call.agent, status: 'started' };
-  },
-});
+process.stdout.write(`--- Bob's persona ---\n${composePersona(bob, team, [alice, bob])}\n---\n\n`);
 
-const alice = new MockAgentRuntime({
-  agentId: 'alice',
-  clock,
-  script: scenarios['alice-asks-bob'],
-  // Stand-in for the orchestrator's tool handler: wake Bob, drain his turn, ack "started".
-  peerMessageHandler: async (call: PeerMessageCall): Promise<PeerMessageAck> => {
-    void (async () => {
-      for await (const event of bob.sendPrompt({ text: call.message, from: 'peer' })) {
-        print(event);
-      }
-    })();
-    return { delivered: true, recipient: call.agent, status: 'started' };
-  },
-});
+await orchestrator.start();
+await orchestrator.promptFromUser(alice.id, 'Get the session refresh reviewed before we ship.');
+await orchestrator.settled();
 
-await alice.start();
-await bob.start();
-
-for await (const event of alice.sendPrompt({ text: 'Review the auth change with Bob.', from: 'user' })) {
-  print(event);
-}
+process.stdout.write(`\n${orchestrator.turnsThisPrompt} agent turns from one user prompt.\n`);

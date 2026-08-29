@@ -56,3 +56,13 @@ export type {
 } from './mock/mock-agent-runtime.js';
 export { scenarios } from './mock/scenarios/index.js';
 export type { ScenarioName } from './mock/scenarios/index.js';
+
+export { uuidv7 } from './ids.js';
+export type { IdFactory } from './ids.js';
+
+export type { Agent, Message, Team } from './orchestrator/domain.js';
+export { composePersona, composeWakePrompt } from './orchestrator/envelope.js';
+export { InMemoryMessageStore } from './orchestrator/message-store.js';
+export type { MessageStore } from './orchestrator/message-store.js';
+export { Orchestrator } from './orchestrator/orchestrator.js';
+export type { BudgetExhausted, OrchestratorOptions } from './orchestrator/orchestrator.js';

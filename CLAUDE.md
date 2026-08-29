@@ -50,7 +50,7 @@ Single-context — one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/
 
 ## Current work
 
-The first demo is **planned, not built**. The plan is a **wayfinder map** at
+The first demo is **planned, and being built**. The plan is a **wayfinder map** at
 `.scratch/first-demo/map.md` — read it before doing anything, along with `CONTEXT.md` for the
 domain glossary.
 
@@ -67,13 +67,22 @@ Decisions are binding. **If you believe one is wrong, say so and reopen its tick
 quietly contradict it.** Ticket 12 carries an amendment from ticket 14; check for an `##
 Amendment` section before treating an answer as final.
 
-There is **no application code yet** — the repo is the map, the glossary and this file.
-
 **Build order starts with `MockAgentRuntime`**, so that everything above it has something real to
-run against before a single CLI is spawned. The first build session's deliverable is the mock
-emitting the `AgentEvent` vocabulary (ticket 04) against its fidelity contract (ticket 08), with
-only as much monorepo skeleton (`apps/desktop`, `packages/core`) as it takes to run it. The
-status fold (ticket 09) and the UI (ticket 12) are built against the mock, not against OpenCode.
+run against before a single CLI is spawned. The UI (ticket 12) is built against the mock, not
+against OpenCode.
+
+Built so far, all in `packages/core` (pnpm workspaces + vitest; `pnpm demo` plays a two-agent
+team headlessly):
+
+- The `AgentEvent` vocabulary (04), the `AgentRuntime` interface, the injected `Clock`, and
+  core's message assembler — deltas pass through, `agent_message_completed` is synthesized.
+- `MockAgentRuntime` (08) with eight checked-in scenarios, reproducing the observed traps.
+- The status fold (09): `AgentStatusTracker`, derived, never persisted.
+- The orchestrator (05 + 06): mailbox, auto-wake, mid-turn queueing delivered as one numbered
+  prompt, per-team turn budget, persona and envelope composition, `message_agent` tool handler.
+
+Next: ticket 13's SQLite store behind `MessageStore`, then the UI (12), then the OpenCode
+adapter (03 + 16). Nothing has touched a real CLI yet.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that
 reproduces every observed trap on purpose — ragged deltas, a cancelled tool reporting
