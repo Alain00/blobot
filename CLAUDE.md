@@ -80,9 +80,11 @@ team headlessly):
 - The status fold (09): `AgentStatusTracker`, derived, never persisted.
 - The orchestrator (05 + 06): mailbox, auto-wake, mid-turn queueing delivered as one numbered
   prompt, per-team turn budget, persona and envelope composition, `message_agent` tool handler.
+- The SQLite store (13): Drizzle schema, checked-in migrations, `SqliteStore` behind
+  `MessageStore`, and `SqliteRecorder` persisting the durable subset of the event stream.
 
-Next: ticket 13's SQLite store behind `MessageStore`, then the UI (12), then the OpenCode
-adapter (03 + 16). Nothing has touched a real CLI yet.
+Next: the UI (12), then the OpenCode adapter (03 + 16), then the Claude bridge (07). Nothing
+has touched a real CLI yet.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that
 reproduces every observed trap on purpose — ragged deltas, a cancelled tool reporting

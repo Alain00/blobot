@@ -1,0 +1,174 @@
+import { index, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
+
+/**
+ * Ticket 13's eight tables. Drizzle is used as a **typed query builder, not an ORM**, and it
+ * stays behind the store interface: `packages/core` exports domain types (`Team`, `Agent`,
+ * `Message`), never inferred Drizzle row types.
+ *
+ * Two rules the shape enforces rather than promises:
+ * - **No credential column exists anywhere.** Runtime config is typed columns — the TS schema
+ *   *is* the allowlist, and a JSON config blob (where a token ends up six weeks from now) has
+ *   nowhere to live.
+ * - **No SQL time defaults.** Every timestamp is epoch millis written by the injected clock,
+ *   so a checked-in scenario under a virtual clock stays testable.
+ */
+
+export const teams = sqliteTable('teams', {
+  id: text('id').primaryKey(),
+  // Load-bearing: the branch is `blobot/<team>/<agent>` with no id suffix, so a name
+  // collision is a filesystem collision. This is where that becomes enforceable.
+  name: text('name').notNull().unique(),
+  workspacePath: text('workspace_path').notNull(),
+  workspaceKind: text('workspace_kind', { enum: ['git', 'plain'] }).notNull(),
+  turnBudget: integer('turn_budget').notNull().default(10),
+  createdAt: integer('created_at').notNull(),
+});
+
+export const agents = sqliteTable(
+  'agents',
+  {
+    id: text('id').primaryKey(),
+    teamId: text('team_id')
+      .notNull()
+      .references(() => teams.id),
+    name: text('name').notNull(),
+    role: text('role').notNull(),
+    runtimeId: text('runtime_id').notNull(),
+    /** Ticket 07 pins CLAUDE_CODE_EXECUTABLE to the user's own binary. */
+    executablePath: text('executable_path'),
+    model: text('model'),
+    workspacePath: text('workspace_path').notNull(),
+    /** NULL when the Workspace is not a git repository. */
+    branch: text('branch'),
+    createdAt: integer('created_at').notNull(),
+    /** Tombstone. Rows are never removed: a cascade would tear holes in Alice's transcript. */
+    deletedAt: integer('deleted_at'),
+  },
+  (table) => [unique('agents_team_name').on(table.teamId, table.name)],
+);
+
+export const sessions = sqliteTable('sessions', {
+  id: text('id').primaryKey(),
+  agentId: text('agent_id')
+    .notNull()
+    .references(() => agents.id),
+  /** Stored, used by nothing. The difference between turning resume on later and not. */
+  providerSessionId: text('provider_session_id'),
+  /** What this agent was actually told — the recoverable explanation of a strange turn. */
+  personaText: text('persona_text').notNull(),
+  startedAt: integer('started_at').notNull(),
+});
+
+/**
+ * Something said TO an agent. The user's and a peer's, one table:
+ * `from_agent_id IS NULL` means the user, and that foreign key IS the discriminator.
+ * The mailbox is `delivered_at IS NULL` — a predicate, not a table.
+ */
+export const messages = sqliteTable(
+  'messages',
+  {
+    id: text('id').primaryKey(),
+    teamId: text('team_id')
+      .notNull()
+      .references(() => teams.id),
+    fromAgentId: text('from_agent_id').references(() => agents.id),
+    toAgentId: text('to_agent_id')
+      .notNull()
+      .references(() => agents.id),
+    body: text('body').notNull(),
+    context: text('context'),
+    /** Ticket 15: a retried tool call must collide with the row it already wrote. */
+    idempotencyKey: text('idempotency_key').unique(),
+    at: integer('at').notNull(),
+    deliveredAt: integer('delivered_at'),
+  },
+  (table) => [
+    index('messages_mailbox').on(table.toAgentId, table.deliveredAt),
+    index('messages_team_stream').on(table.teamId, table.at),
+  ],
+);
+
+export const turns = sqliteTable(
+  'turns',
+  {
+    id: text('id').primaryKey(),
+    agentId: text('agent_id')
+      .notNull()
+      .references(() => agents.id),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => sessions.id),
+    triggerMessageId: text('trigger_message_id').references(() => messages.id),
+    startedAt: integer('started_at').notNull(),
+    endedAt: integer('ended_at'),
+    stopReason: text('stop_reason'),
+  },
+  (table) => [index('turns_agent').on(table.agentId, table.startedAt)],
+);
+
+/**
+ * The agent's own output, folded from deltas. Trap from ticket 04: thinking and answer share
+ * one provider message id, so the key is `(provider_message_id, kind)`.
+ */
+export const agentMessages = sqliteTable(
+  'agent_messages',
+  {
+    id: text('id').primaryKey(),
+    turnId: text('turn_id')
+      .notNull()
+      .references(() => turns.id),
+    agentId: text('agent_id')
+      .notNull()
+      .references(() => agents.id),
+    kind: text('kind', { enum: ['answer', 'thought'] }).notNull(),
+    text: text('text').notNull(),
+    providerMessageId: text('provider_message_id'),
+    at: integer('at').notNull(),
+  },
+  (table) => [index('agent_messages_turn').on(table.turnId)],
+);
+
+export const toolCalls = sqliteTable(
+  'tool_calls',
+  {
+    id: text('id').primaryKey(),
+    turnId: text('turn_id')
+      .notNull()
+      .references(() => turns.id),
+    agentId: text('agent_id')
+      .notNull()
+      .references(() => agents.id),
+    providerToolCallId: text('provider_tool_call_id').notNull(),
+    name: text('name').notNull(),
+    kind: text('kind'),
+    arguments: text('arguments'),
+    status: text('status').notNull(),
+    exitCode: integer('exit_code'),
+    failureReason: text('failure_reason'),
+    output: text('output'),
+    startedAt: integer('started_at').notNull(),
+    endedAt: integer('ended_at'),
+  },
+  (table) => [index('tool_calls_turn').on(table.turnId)],
+);
+
+/**
+ * Append-only, never updated — which is what keeps a future retention policy cheap: a prune is
+ * `DELETE WHERE at < ?` and nothing else in the schema has to care. `usage_updated` and
+ * `error` live here. The orchestrator's `agent_message_sent` does not: it is transport, and
+ * the `messages` row is the record.
+ */
+export const events = sqliteTable(
+  'events',
+  {
+    id: text('id').primaryKey(),
+    teamId: text('team_id')
+      .notNull()
+      .references(() => teams.id),
+    agentId: text('agent_id').references(() => agents.id),
+    kind: text('kind').notNull(),
+    payload: text('payload').notNull(),
+    at: integer('at').notNull(),
+  },
+  (table) => [index('events_team').on(table.teamId, table.at)],
+);

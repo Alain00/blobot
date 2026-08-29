@@ -10,9 +10,16 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "tsc -p tsconfig.build.json",
-    "demo": "vitest run --silent=false demo"
+    "demo": "vitest run --silent=false demo",
+    "db:generate": "drizzle-kit generate"
   },
   "devDependencies": {
-    "@types/node": "^22.15.3"
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^22.15.3",
+    "drizzle-kit": "^0.31.10"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "drizzle-orm": "^0.45.2"
   }
 }

@@ -8,8 +8,11 @@
 import {
   MockAgentRuntime,
   Orchestrator,
+  SqliteRecorder,
+  SqliteStore,
   SystemClock,
   composePersona,
+  openDatabase,
   scenario,
   scenarios,
   type Agent,
@@ -46,6 +49,11 @@ const clock = new SystemClock();
 const started = clock.now();
 let orchestrator: Orchestrator;
 
+// The real schema, in memory: the demo exercises the store rather than pretending it exists.
+const { db, close } = openDatabase({ path: ':memory:' });
+const store = new SqliteStore(db);
+store.createTeam({ ...team, createdAt: clock.now() });
+
 const runtimes = new Map<string, AgentRuntime>([
   [
     alice.id,
@@ -67,7 +75,31 @@ const runtimes = new Map<string, AgentRuntime>([
   ],
 ]);
 
-orchestrator = new Orchestrator({ team, agents: [alice, bob], runtimes, clock });
+for (const agent of [alice, bob]) {
+  store.createAgent({
+    ...agent,
+    runtimeId: 'mock',
+    branch: `blobot/${team.name}/${agent.name.toLowerCase()}`,
+    createdAt: clock.now(),
+  });
+  store.startSession({
+    id: `session_${agent.id}`,
+    agentId: agent.id,
+    // Stored because ticket 06's refusability is only auditable if what an agent was told
+    // can be recovered later.
+    personaText: composePersona(agent, team, [alice, bob]),
+    startedAt: clock.now(),
+  });
+}
+
+orchestrator = new Orchestrator({
+  team,
+  agents: [alice, bob],
+  runtimes,
+  store,
+  clock,
+  recorder: new SqliteRecorder(db, team.id),
+});
 
 const name = (agentId: string): string => (agentId === alice.id ? 'alice' : 'bob  ');
 
@@ -117,3 +149,9 @@ await orchestrator.promptFromUser(alice.id, 'Get the session refresh reviewed be
 await orchestrator.settled();
 
 process.stdout.write(`\n${orchestrator.turnsThisPrompt} agent turns from one user prompt.\n`);
+
+const counts = Object.entries(store.transcriptCounts())
+  .map(([table, n]) => `${n} ${table}`)
+  .join(', ');
+process.stdout.write(`persisted: ${counts}\n`);
+close();

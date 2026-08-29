@@ -14,6 +14,12 @@ import type { Agent, Message, Team } from './domain.js';
 import { composeWakePrompt } from './envelope.js';
 import { InMemoryMessageStore, type MessageStore } from './message-store.js';
 
+/** What the orchestrator tells the transcript. Structural, so core never imports the store. */
+export interface TurnRecorder {
+  turnStarted(agentId: string, at: number, triggerMessageId?: string): void;
+  record(event: AgentEvent): void;
+}
+
 export interface OrchestratorOptions {
   readonly team: Team;
   readonly agents: readonly Agent[];
@@ -22,6 +28,8 @@ export interface OrchestratorOptions {
   readonly store?: MessageStore;
   readonly clock?: Clock;
   readonly createId?: IdFactory;
+  /** Where the durable subset of the stream is written. Omit and nothing is persisted. */
+  readonly recorder?: TurnRecorder;
 }
 
 export interface BudgetExhausted {
@@ -47,6 +55,7 @@ export class Orchestrator {
   readonly #store: MessageStore;
   readonly #clock: Clock;
   readonly #createId: IdFactory;
+  readonly #recorder: TurnRecorder | undefined;
 
   readonly #trackers = new Map<string, AgentStatusTracker>();
   readonly #busy = new Set<string>();
@@ -66,6 +75,7 @@ export class Orchestrator {
     this.#store = options.store ?? new InMemoryMessageStore();
     this.#clock = options.clock ?? new SystemClock();
     this.#createId = options.createId ?? uuidv7;
+    this.#recorder = options.recorder;
 
     for (const agent of this.#agents) {
       const tracker = new AgentStatusTracker(agent.id);
@@ -82,6 +92,7 @@ export class Orchestrator {
         runtime.onEvent((event) => {
           this.#publish(event);
           tracker.apply(event);
+          this.#recorder?.record(event);
         }),
       );
     }
@@ -164,7 +175,7 @@ export class Orchestrator {
       at: now,
     });
     this.#store.markDelivered([message.id], now);
-    await this.#runTurn(agent, { text, from: 'user' });
+    await this.#runTurn(agent, { text, from: 'user' }, message.id);
   }
 
   // ------------------------------------------------------------------ the peer-message tool
@@ -277,10 +288,10 @@ export class Orchestrator {
           : this.#agents.find((candidate) => candidate.id === message.fromAgentId),
       this.#agents.filter((candidate) => candidate.id !== agentId),
     );
-    await this.#runTurn(agent, { text, from: 'peer' });
+    await this.#runTurn(agent, { text, from: 'peer' }, mail[mail.length - 1]?.id);
   }
 
-  async #runTurn(agent: Agent, prompt: Prompt): Promise<void> {
+  async #runTurn(agent: Agent, prompt: Prompt, triggerMessageId?: string): Promise<void> {
     const runtime = this.#runtimes.get(agent.id);
     const tracker = this.#trackers.get(agent.id);
     if (runtime === undefined || tracker === undefined) return;
@@ -288,6 +299,7 @@ export class Orchestrator {
     this.#busy.add(agent.id);
     this.#turnsThisPrompt += 1;
     tracker.turnStarted();
+    this.#recorder?.turnStarted(agent.id, this.#clock.now(), triggerMessageId);
 
     const turn = (async () => {
       try {
@@ -295,6 +307,7 @@ export class Orchestrator {
           // Publish first, fold second: a consumer sees the event, then the status it caused.
           this.#publish(event);
           tracker.apply(event);
+          this.#recorder?.record(event);
         }
       } finally {
         this.#busy.delete(agent.id);

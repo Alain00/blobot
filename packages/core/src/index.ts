@@ -65,4 +65,14 @@ export { composePersona, composeWakePrompt } from './orchestrator/envelope.js';
 export { InMemoryMessageStore } from './orchestrator/message-store.js';
 export type { MessageStore } from './orchestrator/message-store.js';
 export { Orchestrator } from './orchestrator/orchestrator.js';
-export type { BudgetExhausted, OrchestratorOptions } from './orchestrator/orchestrator.js';
+export type {
+  BudgetExhausted,
+  OrchestratorOptions,
+  TurnRecorder,
+} from './orchestrator/orchestrator.js';
+
+export { openDatabase } from './store/database.js';
+export type { BlobotDatabase, OpenDatabaseOptions, OpenedDatabase } from './store/database.js';
+export { SqliteStore } from './store/sqlite-store.js';
+export type { AgentRecord, SessionRecord } from './store/sqlite-store.js';
+export { SqliteRecorder } from './store/recorder.js';
