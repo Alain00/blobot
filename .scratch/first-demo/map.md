@@ -70,6 +70,8 @@ look or behave".
 
 - [OpenCode's persona mechanism](issues/16-opencode-persona-mechanism.md) — Real and native: ACP "modes" are OpenCode agents, and `agent.prompt` becomes a genuine cached system prefix. Injected via `OPENCODE_CONFIG_CONTENT` (inline JSON env var) so blobot writes no file into the user's repo. No fallback preamble needed. Trap: restored mode comes from message history, so the adapter must re-send `session/set_mode` after every load or resume.
 
+- [Verify loopback HTTP MCP against both runtimes](issues/15-verify-loopback-http-mcp.md) — **Viable on both**; the transport decision stands. Bearer token honoured on every request. Four requirements added: readiness must come from the inbound MCP handshake (a dead port fails silently at `session/new`), the endpoint must be stateless (no re-handshake after a drop), `message_agent` needs an idempotency key and a non-blocking handler, and `mcpServers` must be re-supplied on `session/load`.
+
 ## Not yet specified
 
 - **Enforcing commit-before-review across worktrees.** Ticket 06 chose to *tell* agents that

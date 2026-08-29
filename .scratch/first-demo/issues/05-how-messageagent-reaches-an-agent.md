@@ -107,3 +107,20 @@ The tool handler writes the message to SQLite and acks **only after commit**. On
 The failure this prevents is the worst kind: Alice believes with certainty that she told Bob
 something, Bob never heard it, and neither can detect the gap — an unrecoverable divergence in a
 system whose entire premise is that agents coordinate by message. **Ack means committed.**
+
+## Amendments (from ticket 15's verification)
+
+The loopback HTTP transport chosen above is **verified on both runtimes** — invocation, not just
+discovery, with the bearer token honoured on every request including the SSE stream. The decision
+stands. Four requirements it added:
+
+- **Readiness is the inbound handshake, not `session/new`.** A dead port or rejected token still
+  returns a normal `sessionId` with no error anywhere in ACP. The orchestrator must treat the MCP
+  `initialize`/`tools/list` arriving *at us* as the signal the agent actually has its tool.
+- **The endpoint must be stateless.** Neither runtime re-handshakes after a transport drop — both
+  POST `tools/call` at a restarted orchestrator with no `initialize` and no session id.
+- **`message_agent` needs an idempotency key, and the handler must never block.** A mid-turn drop
+  stalls the turn for the full timeout (60s OpenCode / 120s Claude) and then fails with genuine
+  at-most-once ambiguity about whether the message was delivered.
+- **Naming:** server `blobot`, tool `message_agent`. Naming the tool `blobot_message_agent` makes
+  OpenCode double the prefix.
