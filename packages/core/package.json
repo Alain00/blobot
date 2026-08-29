@@ -1,0 +1,18 @@
+{
+  "name": "@blobot/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "tsc -p tsconfig.build.json",
+    "demo": "vitest run --silent=false demo"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3"
+  }
+}
