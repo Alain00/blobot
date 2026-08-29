@@ -195,3 +195,19 @@ message is the one idea from it worth stealing back into A later.
 No variant needed to know which runtime an agent is. `OpenCode` and `Claude Code` appear
 exactly once each, as a label in the conversation header, sourced from the agent record like
 its role. The UI never branches on it.
+
+## Amendment — from ticket 14
+
+Ticket 14 chose a posture where an agent genuinely prompts before a short list of shell
+commands, and rejected a modal for answering. The transcript therefore gains one element this
+prototype does not have: a **permission block**, rendered inline where the in-flight tool line
+already appears, offering exactly two choices — **Allow once** and **Reject**.
+
+`allow_always` is deliberately not surfaced even though both runtimes offer it over ACP: it
+persists for the session, which makes it a rule the user authored with nowhere to see or revoke
+it.
+
+The conversation header also gains a small permanent posture indicator beside the branch.
+
+Neither changes anything decided above — `waiting` already had its contrast inversion, and the
+block sits in a position the layout already uses.

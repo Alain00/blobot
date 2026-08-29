@@ -11,6 +11,11 @@ messages Bob → both blobatars are visibly working at once.**
 
 The map is done when nothing is left to *decide* before someone writes that code.
 
+**Reached, 2026-08-29.** All sixteen tickets are resolved and the frontier is empty. What
+remains under *Not yet specified* is fog beyond this destination, not work blocking it — an
+implementation session should read this file, `CONTEXT.md`, and the tickets its task touches,
+and start building. Do not reopen a decision without saying so on its ticket.
+
 ## Notes
 
 **Domain.** blobot is a local-first Electron desktop app that assembles teams from the
@@ -92,6 +97,8 @@ observed — cite them rather than re-deriving.
 
 - [The SQLite schema for the demo](issues/13-sqlite-schema-for-the-demo.md) — Eight tables, **Drizzle** over `better-sqlite3` inside `packages/core`, one connection in main and none in the renderer. Our store is the transcript of record (04's question, answered yes) and persists the *durable subset*, never deltas. A peer message is **one row**, discriminated by `from_agent_id IS NULL`; the mailbox is `delivered_at IS NULL`, a predicate rather than a table. Runtime config is typed columns so there is nowhere to put a secret. Agents tombstone, never cascade. Status and the consumed turn count stay unpersisted.
 
+- [The permission posture in an agent worktree](issues/14-permission-posture-in-an-agent-worktree.md) — Each runtime gets the **best posture it can express**, and the difference is stated rather than smoothed over: OpenCode gets pattern rules (`edit: allow`, bash allowed except an ask-list), Claude gets a forced `session/set_mode("default")` because the bridge overrides `permissionMode` and `canUseTool` outright. **Nothing is hard-blocked** — a guarantee that holds for Alice and not for Bob is worse than none. The pattern list is named as a speed bump, not a boundary; MCP tools are ungated on both and the gap is disclosed. Told at team creation, stated not consented to, with no checkbox and no settings screen.
+
 ## Not yet specified
 
 - **Enforcing commit-before-review across worktrees.** Ticket 06 chose to *tell* agents that
@@ -127,6 +134,12 @@ observed — cite them rather than re-deriving.
   and a policy wants real usage behind it. `events` was kept append-only and never updated
   specifically so the decision stays cheap: a future prune is a `DELETE WHERE at < ?` and
   nothing else in the schema has to care.
+
+- **Per-team permission posture.** Ticket 14 ships one fixed posture and refuses to surface it
+  as a setting, because a permissions screen is an approvals feature wearing a smaller hat. Once
+  there is more than one kind of team — a review-only team, a team pointed at a scratch repo —
+  wanting different postures becomes legitimate rather than a dial handed to the user in place
+  of a decision.
 
 - **First-run and onboarding flow.** The "zero setup" experience from step 19. Needs
   detection to have a shape first.
