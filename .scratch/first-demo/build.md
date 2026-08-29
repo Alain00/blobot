@@ -159,8 +159,11 @@ These were forced by writing the code. None contradicts a ticket; if one looks w
 - **Only `session/new`.** No `session/load`, so nothing resumes across a restart yet. Ticket
   14's trap applies when it lands: re-send `session/set_mode` after every load or resume —
   `#applyPermissionMode()` is the call site.
-- **`--live-claude` runs the agent in the directory it was pointed at**, not in a git worktree.
-  Ticket 10 is not built.
+- **Nothing survives a restart.** Both team factories open the database at `:memory:`, so the
+  transcript ticket 13 persists is thrown away when the window closes.
+- **A team is a TypeScript file.** `demo-team.ts` and `live-team.ts` hardcode the roster; there
+  is no team creation, so ticket 11's detection and ticket 14's disclosure have nowhere to
+  appear, and the UI's team rail lists exactly one team forever.
 
 - **The renderer hides blobot's own `message_agent` tool by matching its name**
   (`apps/desktop/src/renderer/src/model.ts`). This is the leak ticket 04 warned about in a
@@ -176,6 +179,31 @@ These were forced by writing the code. None contradicts a ticket; if one looks w
 - **`packages/domain` was considered and not done.** The pure subset is a subpath rather than a
   package, because the map settled two packages. If a CLI is ever built, that is the moment to
   reopen it.
+
+## Next session: the desktop app as a real product
+
+The author's call, 2026-08-29: teams and agents the user creates, before a second adapter. The
+order below is argued rather than assumed — the first item is a hazard, the rest is surface.
+
+1. **Persistence.** `openDatabase({path: ':memory:'})` in both team factories, and the
+   dev-time relative path to migrations in `apps/desktop/src/main/index.ts`. Two lines, and
+   nothing else on this list means anything without them.
+2. **Team creation.** Pick a Workspace, name agents and roles, choose runtimes. `inspect()`
+   already returns what the flow needs to refuse (not a repo, no commits), to offer `git init`,
+   and to warn on a dirty tree. Ticket 11 (detecting what is installed and authenticated) feeds
+   the runtime picker; `initialize` returning `authMethods: []` is the probe.
+3. **Ticket 14's disclosure**, which that flow is *specified* to carry: once, before the first
+   agent is spawned, stated rather than consented to. Its text is written out in the ticket.
+   Plus the posture indicator in the conversation header.
+4. **Multiple teams.** The rail already has the shape; it needs a list, a switch, and one
+   orchestrator per team. `Orchestrator` is per-team already, so this is wiring, not surgery.
+5. **Ticket 14's permission block.** Unreachable in demo mode, reachable on day one of real
+   repos: an agent that asks about `rm` or `git push` currently stalls, because
+   `setPermissionHandler` is never called by the app. Inline in the transcript, exactly **Allow
+   once** and **Reject**.
+
+Two live-mode shortcuts to undo along the way, both marked in `live-team.ts`: the roster is
+hardcoded, and `--live-claude` is a flag rather than a product path.
 
 ## OpenCode is deferred, by the author, 2026-08-29
 
