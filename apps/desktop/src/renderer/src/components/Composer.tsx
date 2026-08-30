@@ -13,9 +13,19 @@ import { Blob } from './Blob.js';
  *
  * A picker defaulting to `to Alice ▾` quietly implies a broadcast surface that does not exist:
  * a message lands in exactly one agent's session. So in an agent's pane the recipient is
- * implicit and a mention overrides it (last valid mention wins), and in the team pane send
- * stays disabled until a mention resolves — which makes the team pane what it honestly is, the
- * place you read the whole team and address one of them by name.
+ * implicit and a mention overrides it (last valid mention wins).
+ *
+ * **The team pane has an implicit recipient too, and it is the team's lead.** Ticket 12 said it
+ * did not, and was reopened on that one point: talking to a team meant naming a member first,
+ * and the ask was to say something to a team without deciding who it is for. The reason ticket
+ * 12 gave survives and shapes this rather than blocking it — the objection was to a control
+ * that *implied a broadcast*, and nothing here broadcasts: the lead receives the message as
+ * itself, in one session, exactly as a mention would have delivered it. What the reopen demands
+ * in exchange is that the composer **say** who it resolved to, and keep saying it: the send
+ * control in the team pane carries the lead's name, and the placeholder says who is being
+ * written to before a key is pressed. A team with no lead — one formed before leads
+ * existed, or one whose lead has left the roster — is unchanged: send stays disabled until a
+ * mention resolves, and nobody is promoted into the job unseen.
  *
  * Resolution goes through `findAgentByName`, the same function the orchestrator validates
  * `message_agent` with: the unresolved-mention state is the human-facing twin of its
@@ -23,8 +33,10 @@ import { Blob } from './Blob.js';
  *
  * The send control says who it resolved to only where that is a live question. In an agent's
  * pane the pane *is* the recipient, so `send to Alice` under a transcript of Alice was the
- * third time the screen said Alice; it is an arrow. In the team pane the button wears the
- * resolved agent's blobatar instead, because there the answer is not on screen anywhere else.
+ * third time the screen said Alice; it is an arrow alone. In the team pane it takes the
+ * resolved agent's name as well, because there the answer is not on screen anywhere else — and
+ * once the recipient can be one nobody typed, the name has to survive the placeholder
+ * disappearing on the first keystroke.
  *
  * The suggestion list is `cmdk`, for the half nobody screenshots: arrow keys, one active item
  * that the pointer and the keyboard cannot disagree about, `role="listbox"`/`"option"`, and the
@@ -42,6 +54,7 @@ export function Composer({
   agents,
   commands,
   pane,
+  lead,
   onSend,
   opening = false,
 }: {
@@ -49,6 +62,12 @@ export function Composer({
   /** Each agent's own slash menu. Per session, so two teammates can offer different ones. */
   commands: Record<string, readonly UiCommand[]>;
   pane: Pane;
+  /**
+   * The team's lead, when it has one: the team pane's recipient when the user names nobody.
+   * Passed rather than read off the pane, because a pane is a place on screen and this is a
+   * fact about the team.
+   */
+  lead?: string;
   onSend: (agentId: string, text: string) => void;
   /**
    * The team is still starting. Sending is closed, because there is no session to send to yet,
@@ -68,7 +87,7 @@ export function Composer({
   const resolvedMentions = mentions
     .map((match) => findAgentByName(roster, match[1] ?? ''))
     .filter((agent): agent is Agent => agent !== undefined);
-  const implicit = pane.kind === 'agent' ? pane.agentId : undefined;
+  const implicit = pane.kind === 'agent' ? pane.agentId : lead;
   const recipientId = resolvedMentions.at(-1)?.id ?? implicit;
   const recipient = agents.find((agent) => agent.id === recipientId);
 
@@ -112,6 +131,18 @@ export function Composer({
     const agent = suggestions.find((it) => it.id === active) ?? suggestions[0];
     if (agent !== undefined) complete(agent);
   };
+
+  /**
+   * Who the empty field is about to write to. In an agent's pane the pane already says it, so
+   * this is the plain sentence it always was; in the team pane it names the lead and says the
+   * mention still overrides, because the recipient there is one the user did not type.
+   */
+  const placeholder =
+    pane.kind === 'agent'
+      ? `Message ${recipient?.name ?? ''}`
+      : recipient === undefined
+        ? 'Message the team. Start with @ to say who'
+        : `Message ${recipient.name}. @ to say who else`;
 
   const send = (): void => {
     const text = draft.trim();
@@ -163,11 +194,7 @@ export function Composer({
         )}
         <div className="hl" aria-hidden>
           {draft === '' ? (
-            <span className="ph">
-              {pane.kind === 'team'
-                ? 'Message the team. Start with @ to say who'
-                : `Message ${recipient?.name ?? ''}`}
-            </span>
+            <span className="ph">{placeholder}</span>
           ) : (
             highlight(draft, roster)
           )}
@@ -206,7 +233,7 @@ export function Composer({
         />
       </Command>
       <button
-        className="send"
+        className={`send${pane.kind === 'team' && recipient !== undefined ? ' named' : ''}`}
         disabled={opening || recipientId === undefined || draft.trim() === ''}
         onClick={send}
         title={
@@ -218,11 +245,15 @@ export function Composer({
         }
         aria-label={recipient === undefined ? 'Send' : `Send to ${recipient.name}`}
       >
-        {pane.kind === 'team' && recipient !== undefined ? (
-          <Blob name={recipient.name} size={17} hue={recipient.hue} />
-        ) : (
-          <ArrowUp size={16} strokeWidth={2.25} aria-hidden />
+        {/* The name, and never the face. The recipient's blobatar was here, which was the
+            recipient identified a fourth time: the pill carries it, the `@mention` you typed
+            carries it, and the tooltip carries it. A blobatar on a button also reads as the
+            affordance rather than as an identity, which is the one thing a face must never be
+            here. The word is what the button is promising, so the word is what it shows. */}
+        {pane.kind === 'team' && recipient !== undefined && (
+          <span className="to">{recipient.name}</span>
         )}
+        <ArrowUp size={16} strokeWidth={2.25} aria-hidden />
       </button>
       </div>
     </div>

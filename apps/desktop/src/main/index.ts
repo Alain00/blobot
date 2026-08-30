@@ -167,6 +167,9 @@ function teamSummaries(): UiTeamSummary[] {
   if (store === undefined) return [];
   return store.listTeams().map((team) => {
     const lastActiveAt = store?.lastActiveAt(team.id);
+    const lead = (store?.agentsOfTeam(team.id) ?? []).find(
+      (agent) => agent.id === team.leadAgentId,
+    );
     return {
       id: team.id,
       name: team.name,
@@ -177,8 +180,13 @@ function teamSummaries(): UiTeamSummary[] {
       members: (store?.agentsOfTeam(team.id) ?? []).map((agent) => ({
         id: agent.id,
         name: agent.name,
+        ...(agent.profileId === undefined ? {} : { profileId: agent.profileId }),
         ...(agent.hue === undefined ? {} : { hue: agent.hue }),
       })),
+      // The lead as a *profile* id, because the roster dialog is a set of ticks on profiles and
+      // this is the tick it has to draw marked. Absent on a team formed before there were
+      // leads, and on one whose lead has left.
+      ...(lead?.profileId === undefined ? {} : { leadProfileId: lead.profileId }),
       ...(lastActiveAt === undefined ? {} : { lastActiveAt }),
     };
   });
@@ -244,6 +252,7 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
       name: team.name,
       workspacePath: team.workspacePath,
       turnBudget: team.turnBudget,
+      ...(team.leadAgentId === undefined ? {} : { leadAgentId: team.leadAgentId }),
     },
     teams: teamSummaries(),
     agents: records.map((record) => ({
@@ -299,6 +308,7 @@ function snapshot(): UiSnapshot {
       name: team.team.name,
       workspacePath: team.team.workspacePath,
       turnBudget: team.team.turnBudget,
+      ...(team.team.leadAgentId === undefined ? {} : { leadAgentId: team.team.leadAgentId }),
     },
     teams: team.demoMode
       ? [
@@ -626,12 +636,17 @@ void app.whenReady().then(async () => {
    */
   ipcMain.handle(
     'blobot:editTeam',
-    async (_event, teamId: string, profileIds: readonly string[]): Promise<TeamDeletionResult> => {
+    async (
+      _event,
+      teamId: string,
+      profileIds: readonly string[],
+      leadProfileId?: string,
+    ): Promise<TeamDeletionResult> => {
       if (store === undefined) return { ok: false, error: 'No database is open.' };
       const wasLive = pool.find(teamId) !== undefined;
       await pool.release(teamId);
       try {
-        const removals = await editTeamRoster(teamId, profileIds, { store, clock });
+        const removals = await editTeamRoster(teamId, profileIds, { store, clock }, leadProfileId);
         return { ok: true, removals: removals.map(asUiRemoval) };
       } catch (error) {
         return { ok: false, error: describe(error) };

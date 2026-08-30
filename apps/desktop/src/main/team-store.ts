@@ -32,6 +32,13 @@ export interface NewTeamSpec {
   readonly turnBudget: number;
   readonly profileIds: readonly string[];
   /**
+   * Whose agent is the team's lead: the one the team pane addresses when the user names
+   * nobody. A profile id, because that is what this screen is holding; it is resolved to the
+   * membership instantiated from it. Leaving it out means the first agent on the roster, which
+   * is what the flow shows marked before the team is created.
+   */
+  readonly leadProfileId?: string;
+  /**
    * Which repositories inside the Workspace are in scope, relative to it. Only a `nested`
    * Workspace has any; leaving it out means every repository found, which is what the picker
    * offers by default.
@@ -253,6 +260,7 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
   }
 
   const now = deps.clock.now();
+  const lead = spec.leadProfileId ?? profiles[0]?.id;
   const team: Team = {
     id: `team_${uuidv7(now)}`,
     name,
@@ -263,8 +271,10 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
   };
   deps.store.createTeam({ ...team, createdAt: now });
 
+  let leadAgentId: string | undefined;
   for (const profile of profiles) {
     const id = `${refSlug(profile.name)}_${randomBytes(3).toString('hex')}`;
+    if (profile.id === lead) leadAgentId = id;
     const workspace = await workspaces.provision({
       workspacePath: spec.workspacePath,
       teamName: team.name,
@@ -289,7 +299,11 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
     });
   }
 
-  return team;
+  // After the agents, because the lead is an agent id and the agent rows are what this loop
+  // just made. A team is created with one rather than without: the flow shows which agent is
+  // marked, so nobody is silently made the default recipient of everything typed at the team.
+  deps.store.setTeamLead(team.id, leadAgentId);
+  return { ...team, ...(leadAgentId === undefined ? {} : { leadAgentId }) };
 }
 
 /** The creation flow's first screen: what is at the path the user picked. */
@@ -371,6 +385,7 @@ export async function editTeamRoster(
   teamId: string,
   profileIds: readonly string[],
   deps: CreateTeamDeps,
+  leadProfileId?: string,
 ): Promise<readonly AgentRemoval[]> {
   const team = deps.store.teamById(teamId);
   if (team === undefined) throw new TeamCreationError('unknown_agent', 'That team is already gone.');
@@ -427,6 +442,20 @@ export async function editTeamRoster(
       createdAt: deps.clock.now(),
     });
   }
+
+  // The lead, before anybody is tombstoned, because it is resolved against the roster this
+  // edit produced. Three cases and only three: the user named one, the sitting lead stayed on
+  // the roster, or the team has none. The last is not repaired by promoting whoever is left —
+  // the default recipient is only ever somebody the user has seen chosen, so the team pane goes
+  // back to asking for an `@`.
+  const gone = new Set(leaving.map((member) => member.id));
+  const roster = deps.store.agentsOfTeam(team.id).filter((member) => !gone.has(member.id));
+  const named =
+    leadProfileId === undefined
+      ? undefined
+      : roster.find((member) => member.profileId === leadProfileId);
+  const sitting = roster.find((member) => member.id === team.leadAgentId);
+  deps.store.setTeamLead(team.id, (named ?? sitting)?.id);
 
   const removals: AgentRemoval[] = [];
   for (const member of leaving) {

@@ -21,6 +21,15 @@ export interface Team {
   readonly workspaceRepos?: readonly string[];
   /** Total agent turns per user prompt, before the team halts and asks. */
   readonly turnBudget: number;
+  /**
+   * The **lead**: who the team pane is talking to when the user names nobody.
+   *
+   * Addressing only. The lead receives the message as itself, exactly as an `@mention` would
+   * have delivered it, and nothing forwards it onward — a message still lands in exactly one
+   * agent's session. Absent is a real state: the team pane then behaves as ticket 12 specified
+   * and waits for a mention.
+   */
+  readonly leadAgentId?: string;
 }
 
 /**

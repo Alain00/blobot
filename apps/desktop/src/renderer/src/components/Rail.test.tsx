@@ -142,3 +142,69 @@ describe('a team the user is not looking at', () => {
     done(drawn);
   });
 });
+
+/**
+ * The face as a second status channel, and the line drawn through the middle of the rail.
+ *
+ * An agent row is about one agent, so a pose on it is a true sentence. A team mark folds its
+ * members' statuses into one word, and a pose is per face, so posing the mark would draw every
+ * member asserting what the fold only ever claimed of somebody. The mark keeps the body
+ * animation it already had.
+ */
+describe('status worn on the face', () => {
+  /** The agent rows under the open team. */
+  function agentRow(drawn: Drawn): HTMLElement {
+    const row = drawn.host.querySelector('.agentrow');
+    if (row === null) throw new Error('no agent row was drawn');
+    return row as HTMLElement;
+  }
+
+  it('poses an agent row for the states a pose can carry', () => {
+    // Inline SVG rather than an `<img>` is the tell: `animate` is what puts the parts where
+    // CSS can reach them, and `expression` writes the pose onto the same element.
+    const drawn = draw({ alice: 'thinking' });
+    const svg = agentRow(drawn).querySelector('.blob svg');
+    expect(svg).not.toBeNull();
+    // `--mo-rock` is the seesaw, and `thinking` is the only pose in the roster that sets it.
+    expect((svg as SVGElement).getAttribute('style')).toContain('--mo-rock');
+    done(drawn);
+  });
+
+  it('leaves an agent row unposed for the states the body already carries', () => {
+    // `working` and `responding` are a whole creature busy or talking, and there is no pose for
+    // hands. `idle` is still, because still is what says nothing is happening. They are all
+    // still alive, though: the rail's blobatars breathe at rest, so what is absent here is the
+    // pose, not the face.
+    for (const status of ['idle', 'working', 'responding', 'failed'] as const) {
+      const svg = agentRow(draw({ alice: status })).querySelector('.blob svg');
+      expect(svg).not.toBeNull();
+      expect((svg as SVGElement).getAttribute('style') ?? '').not.toContain('--mo-rock');
+    }
+  });
+
+  it('keeps the rail alive at rest, and lets a failed agent out of it', () => {
+    // The floor: every rail face is animated, always, so an idle roster breathes. `failed` is
+    // the one status that leaves, because grayscale with a pulse is a corpse — and it leaves
+    // through `.b-failed`, which the stylesheet takes the amp back on.
+    // The library puts its classes on an inner `<g>`, not on the `<svg>`, which is also what
+    // both stylesheet rules below reach for.
+    const alive = agentRow(draw({ alice: 'idle' })).querySelector('.blob svg .mo-root');
+    expect(alive?.getAttribute('class')).toContain('mo-always');
+    // `failed` still renders the animated face; the stylesheet takes the amp back through the
+    // wrapper, which is the element that has to be there for it to have anything to hook onto.
+    const dead = agentRow(draw({ alice: 'failed' }));
+    expect(dead.querySelector('.b-failed .blob svg .mo-root')).not.toBeNull();
+  });
+
+  it('never poses a team mark, whatever its members are doing', () => {
+    // The whole of the marks-unposed decision, in one assertion. If this fails, a team of four
+    // is drawing four faces claiming the thing one of them is doing.
+    for (const status of ['thinking', 'starting', 'waiting'] as const) {
+      const drawn = draw({ mara: status, nils: 'idle' });
+      for (const mark of drawn.host.querySelectorAll('.mark')) {
+        expect(mark.querySelector('svg')).toBeNull();
+      }
+      done(drawn);
+    }
+  });
+});

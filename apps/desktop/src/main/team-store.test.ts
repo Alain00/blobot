@@ -116,6 +116,20 @@ describe('creating a team', () => {
     expect(agents.every((agent) => agent.runtimeId === 'claude-code')).toBe(true);
   });
 
+  it('makes the first agent on the roster the lead, and takes the one the flow named', async () => {
+    const team = await createTeam(spec, { store, clock, workspaces, inspect: () => workspaces.inspect() });
+    const agents = store.agentsOfTeam(team.id);
+    expect(team.leadAgentId).toBe(agents[0]?.id);
+    expect(store.teamById(team.id)?.leadAgentId).toBe(agents[0]?.id);
+
+    workspaces.provisioned.length = 0;
+    const second = await createTeam(
+      { ...spec, name: 'billing', leadProfileId: spec.profileIds[1] as string },
+      { store, clock, workspaces, inspect: () => workspaces.inspect() },
+    );
+    expect(second.leadAgentId).toBe(store.agentsOfTeam(second.id)[1]?.id);
+  });
+
   it('survives being read back by a second store over the same database', async () => {
     const team = await createTeam(spec, { store, clock, workspaces, inspect: () => workspaces.inspect() });
     const reopened = new SqliteStore(opened.db);
@@ -541,6 +555,37 @@ describe('editing a team', () => {
       /one branch name/,
     );
     expect(store.agentsOfTeam(team.id)).toHaveLength(2);
+  });
+
+  it('keeps the sitting lead when the roster changes around it', async () => {
+    const team = await createTeam(spec, deps());
+    const carol = hireAgent({ name: 'Carol', role: 'infra', runtimeId: 'claude-code' }, { store, clock });
+    const alice = store.agentsOfTeam(team.id)[0];
+
+    await editTeamRoster(team.id, [...spec.profileIds, carol.id], deps());
+
+    expect(store.teamById(team.id)?.leadAgentId).toBe(alice?.id);
+  });
+
+  it('takes a new lead by profile, resolving it to the membership on this team', async () => {
+    const team = await createTeam(spec, deps());
+    const bob = store.agentsOfTeam(team.id)[1];
+
+    await editTeamRoster(team.id, spec.profileIds, deps(), spec.profileIds[1]);
+
+    expect(store.teamById(team.id)?.leadAgentId).toBe(bob?.id);
+  });
+
+  // Nobody is promoted into the job unseen: the default recipient is only ever an agent the
+  // user watched themselves choose, so a team can be left with none and the pane says so.
+  it('leaves the team with no lead when the lead is taken off the roster', async () => {
+    const team = await createTeam(spec, deps());
+    expect(store.teamById(team.id)?.leadAgentId).toBeDefined();
+
+    await editTeamRoster(team.id, [spec.profileIds[1] as string], deps());
+
+    expect(store.teamById(team.id)?.leadAgentId).toBeUndefined();
+    expect(store.agentsOfTeam(team.id).map((agent) => agent.name)).toEqual(['Bob']);
   });
 
   it('changes nothing when the roster it is given is the roster it has', async () => {

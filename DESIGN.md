@@ -19,7 +19,7 @@ Everything else is `--ground`, `--raised`, `--ink`, `--muted`, `--line`. No acce
 brand colour, no coloured badges, no red errors, no green success. Colour means *identity*, and
 an agent is the only thing on screen that has one.
 
-Two consequences you will keep bumping into:
+Consequences you will keep bumping into:
 
 - **Status is never colour.** It has three channels instead: motion on the blobatar, a mono word
   spelled out, and a hairline that sweeps while a turn is in flight. Seven states do not fit in
@@ -30,6 +30,13 @@ Two consequences you will keep bumping into:
   lists by profile id and the hire preview by the name being typed, and one agent wore three
   faces. The colour picker already says the name gives the face; this is that sentence enforced.
   Only the hue is stored, because the user can choose it.
+- **A blobatar appears where you are identifying among agents or choosing one, and never
+  where a single agent is merely named.** Saturation is the one channel that pulls the eye, so
+  a face repeated on every surface that mentions its agent spends the channel on repetition and
+  leaves the rail, which is the census, no louder than a button. That earns a face for the rail,
+  the composer's mention menu, and a turn in the transcript; it takes one off the conversation
+  header, off the send button, and off the far end of a peer route that the pane you are in
+  already is. Where the rule takes a face away, the name stays.
 - **Contrast is the attention channel**, because colour is spoken for. Spend it almost never.
   There are two inversions in the whole app: `waiting` (the one state where an agent sits
   forever until a human looks) and an armed primary button.
@@ -69,17 +76,23 @@ conversation and the reason it is not a generic chat app.
   routing tag (`to Alice`) sits under it, and only in the team pane.
 - **From the agent** — no container at all. It is the pane's default voice; boxing it would make
   the agent look like a guest in its own transcript.
-- **From a peer** — inset, unfilled, one **dashed** edge down the left, a route header carrying
-  both blobatars, and the trust framing printed verbatim on the received side. Folded to about
-  eight lines with a `more` toggle, because a peer message is often a whole turn quoted back and
-  at full height a single one buries every reply around it.
+- **From a peer** — inset and unfilled: one line, being a chevron, `message received from` or
+  `message sent to`, the far end's blobatar and its name. **Shut, with no peek**, and it opens on
+  a click into the message and the trust framing printed verbatim on the received side. The
+  **dashed** edge is on the opened message and not on the shut line: a one-line label needs no
+  enclosure, because it says in words what the border says in texture. A peer message is usually a whole turn quoted back at an agent; at full
+  height a single one buries every reply around it, and the eight-line fold it had before still
+  outweighed the reply it was about. A peek also claims the first eight lines are the part worth
+  reading, which for a quoted turn is rarely true. One blobatar, not two: the near end of the
+  route is the pane the line is already sitting in.
 
 **Dashed against solid is the whole trick, so do not soften it.** A user message and a peer
 message are both "text someone sent this agent"; solid-and-filled against dashed-and-unfilled
 reads as higher against lower authority before a word is parsed, which is the visual form of a
 peer message being refusable rather than an instruction. The enclosure was four dashed sides on
-a raised ground and is now one edge; that is a weight change, not a signal change, and the
-signal is not yours to spend.
+a raised ground, then one edge, and is now one edge down the *opened* message only; each of those
+is a weight change, not a signal change, and the signal is not yours to spend. Wherever a quoted
+turn is on screen, the dashed edge is on it.
 
 Other transcript rules:
 
@@ -91,16 +104,17 @@ Other transcript rules:
 - **Only the message being written carries status.** A blobatar beside a settled message is
   still: that message is a record of something already said, and twenty of them bobbing in
   unison the moment their agent starts working is the same fidget the team mark's single
-  folded animation exists to avoid. The header, the status word, the rail row and the pending
-  dots carry the state instead.
-- **Folding is for the peer voice only.** A message from you is yours and short; an agent's
-  answer is the thing the pane exists to show, and folding it would be hiding the work.
+  folded animation exists to avoid. The rail row, its status word and the pending dots carry
+  the state instead — not the transcript's header, which carries no status at all.
+- **Hiding a message is for the peer voice only.** A message from you is yours and short; an
+  agent's answer is the thing the pane exists to show, and putting it behind a click would be
+  hiding the work.
 - **A permission block is a transcript item, not a modal.** An agent that has been asked to run
   something dangerous stops until a human answers, and two agents can be stopped at once: a
   modal would serialise them into whichever arrived first. It stands where that tool's line
   would have stood, in the same gutter, wearing `.refusal`'s ink edge because it is the same
   kind of event — something stopped, and a person is the only way past it. **No button is
-  armed**: `waiting` already spends the app's one inversion in the rail and the header, and
+  armed**: `waiting` already spends the app's one inversion in the rail, and
   blobot has no opinion about whether the call should run, which is why it is asking. Three
   answers, **allow once**, **allow always** and **reject** (ticket 14 and its second
   amendment), and the tool line does not print `running` while nothing is running. The block
@@ -239,7 +253,11 @@ One flat file, one flat namespace, no build step between it and the DOM.
   deleting a team live on the team's own row as icon buttons, revealed on hover **and on
   `:focus-within`** — hover-only would put both out of reach of the keyboard — because a delete
   button sitting on every row at rest would be the loudest thing in a column whose job is quiet.
-- **The transcript** — the three voices above, in a centred column.
+- **The transcript** — the three voices above, in a centred column, under **one mono hairline
+  row** carrying only what the rail does not: the agent's role, its runtime, where it is working,
+  and the posture. No face, no bold name, no status word up there. The selected rail row is a few
+  pixels to the left already saying all three, larger, so a header that repeated them was a
+  second and weaker copy of the rail outranking the rail.
 - **The activity column** — the log. Tool calls and finished turns. Hideable from the chrome,
   remembered. Never auto-collapses: it would reappear on the first tool call and shove the
   conversation sideways mid-turn.

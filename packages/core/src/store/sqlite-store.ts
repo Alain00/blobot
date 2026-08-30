@@ -55,9 +55,26 @@ export class SqliteStore implements MessageStore {
       workspaceRepos:
         team.workspaceRepos === undefined ? null : JSON.stringify(team.workspaceRepos),
       turnBudget: team.turnBudget,
+      leadAgentId: team.leadAgentId ?? null,
       createdAt: team.createdAt,
     }).run();
     return team;
+  }
+
+  /**
+   * Name the team's lead, or take the designation off it.
+   *
+   * Its own method rather than a field on `createTeam`, because the lead is an agent id and
+   * the agent rows are written after the team row. Passing `undefined` is the state a team is
+   * in when the lead has left the roster and the user has not said who takes over: no default
+   * recipient, and the composer says so.
+   */
+  setTeamLead(teamId: string, agentId: string | undefined): void {
+    this.#db
+      .update(teams)
+      .set({ leadAgentId: agentId ?? null })
+      .where(eq(teams.id, teamId))
+      .run();
   }
 
   /**
@@ -86,6 +103,7 @@ export class SqliteStore implements MessageStore {
           ? {}
           : { workspaceRepos: JSON.parse(row.workspaceRepos) as string[] }),
         turnBudget: row.turnBudget,
+        ...(row.leadAgentId === null ? {} : { leadAgentId: row.leadAgentId }),
         createdAt: row.createdAt,
         ...(row.deletedAt === null ? {} : { deletedAt: row.deletedAt }),
       }));

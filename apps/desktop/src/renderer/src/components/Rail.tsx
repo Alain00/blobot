@@ -176,7 +176,12 @@ export function Rail({
                   className={`agentrow${selected ? ' sel' : ''}`}
                   onClick={() => onSelect({ kind: 'agent', agentId: agent.id })}
                 >
-                  <Blob name={agent.name} size={34} status={status} hue={agent.hue} />
+                  {/* The one surface wearing status on the face as well as on the body. A row
+                      is about one agent, so "this agent is thinking" is a true sentence here;
+                      the team mark above it stays unposed, because the mark folds its members'
+                      statuses and a pose is per face, so posing it would draw four faces each
+                      asserting what the fold only ever claimed of somebody. */}
+                  <Blob name={agent.name} size={34} status={status} hue={agent.hue} animated />
                   <span className="who">
                     <span className="nm">
                       <b>{agent.name}</b>

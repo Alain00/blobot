@@ -8,6 +8,7 @@ import type {
 } from '../../../shared/api.js';
 import { HireAgent } from './AgentForm.js';
 import { Blob } from './Blob.js';
+import { LeadPicker } from './Lead.js';
 
 /**
  * Forming a team: a Workspace, a name, and agents that already exist.
@@ -46,6 +47,12 @@ export function NewTeam({
   const [runtimes, setRuntimes] = useState<readonly UiRuntimeChoice[]>([]);
   const [roster, setRoster] = useState<readonly UiAgentProfile[]>([]);
   const [chosen, setChosen] = useState<readonly string[]>([]);
+  /**
+   * Who leads, when the user has said. Until they do it is the first agent they ticked, which
+   * is what the picker below the roster shows marked — so a team is never created with a
+   * default recipient nobody was shown.
+   */
+  const [lead, setLead] = useState<string | undefined>();
   /** `nested` only: the repositories in scope. Every one found is ticked by default. */
   const [repos, setRepos] = useState<readonly string[]>([]);
   const [error, setError] = useState<string | undefined>();
@@ -109,6 +116,8 @@ export function NewTeam({
         ? repos.length > 0 || inspection.looseFiles
         : true);
   const ready = !reading && workspaceUsable && name.trim() !== '' && chosen.length > 0;
+  /** The marked face. An unticked lead is no longer on the team, so the first ticked leads. */
+  const leading = lead !== undefined && chosen.includes(lead) ? lead : chosen[0];
 
   const create = async (): Promise<void> => {
     setBusy(true);
@@ -118,6 +127,7 @@ export function NewTeam({
       workspacePath: path,
       turnBudget,
       profileIds: chosen,
+      ...(leading === undefined ? {} : { leadProfileId: leading }),
       ...(inspection?.kind === 'nested' ? { repoPaths: repos } : {}),
     };
     const result = await window.blobot.createTeam(spec);
@@ -237,6 +247,11 @@ export function NewTeam({
               })}
             </div>
           )}
+          <LeadPicker
+            chosen={roster.filter((agent) => chosen.includes(agent.id))}
+            {...(leading === undefined ? {} : { lead: leading })}
+            onPick={setLead}
+          />
         </Step>
 
         <Step n="04" title="How far they go on their own">

@@ -1,28 +1,15 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { AgentStatus } from '@blobot/core/domain';
-import type { PermissionChoice, UiAgent, UiTeam } from '../../../shared/api.js';
-import { continuesSpeaker, foldTeamStatus, isPending, type Item, type Pane } from '../model.js';
+import type { PermissionChoice, UiAgent } from '../../../shared/api.js';
+import { continuesSpeaker, isPending, type Item, type Pane } from '../model.js';
 import { timeRule } from '../time.js';
 import { Blob } from './Blob.js';
-import { TeamMark } from './TeamMark.js';
 import { Markdown } from './Markdown.js';
-import { StatusWord } from './StatusWord.js';
 
-/**
- * Ticket 14's posture, in the one place both panes read it from.
- *
- * A claim about what blobot arranged, and deliberately the *weakest* claim that is true on
- * every runtime: blobot asks the runtime to prompt, and only some runtimes let it name the
- * commands. It used to read "asks before rm, git push, curl", which is OpenCode's rule list
- * printed over an agent whose prompting rules are Claude's own. Nothing here branches on the
- * provider, so nothing here may promise something one provider cannot keep.
- */
-const POSTURE = 'asks before dangerous commands';
 
 export function Conversation({
   pane,
-  team,
   agents,
   statuses,
   items,
@@ -30,7 +17,6 @@ export function Conversation({
   opening = false,
 }: {
   pane: Pane;
-  team: UiTeam;
   agents: readonly UiAgent[];
   statuses: Record<string, AgentStatus>;
   items: readonly Item[];
@@ -47,45 +33,33 @@ export function Conversation({
   // same flex container.
   return (
     <>
+      {/* One hairline row, and only what is nowhere else.
+
+          It carried a blobatar, the agent's name in bold, its role, and its status word. The
+          rail row for this pane sits a few pixels to the left carrying every one of those: the
+          same face, selected and larger than this one was, the same name, the role until the
+          agent has spoken, and the same `StatusWord`. A header that repeats the thing you
+          selected with is a second, weaker copy of the rail outranking the rail.
+
+          What is left is the facts the rail does not carry — the role, the runtime and where
+          this agent is working — in the register they deserve, which is mono and muted. The
+          pane says which pane it is by being open.
+
+          Ticket 14's posture line was here too, and is not any more, by the author, 2026-08-30:
+          a permanent indicator repeating the same sentence over every pane all day is a
+          sentence nobody reads by the second day. The creation flow's disclosure is where it is
+          said, once, before any agent exists.
+
+          The blobatar rule the rest of the app now follows: a face appears where you are
+          identifying among agents or choosing one, and never where a single agent is merely
+          named. */}
       <div className="convhead">
-        {focused === undefined ? (
-          <TeamMark
-            agents={agents}
-            status={foldTeamStatus(agents.map((agent) => statuses[agent.id] ?? 'idle')).status}
-            size={48}
-          />
-        ) : (
-          <Blob
-            name={focused.name}
-            size={38}
-            status={statuses[focused.id] ?? 'idle'}
-            hue={focused.hue}
-          />
-        )}
-        <div className="meta">
-          <div>
-            <b>{focused?.name ?? team.name}</b>{' '}
-            <span className="muted" style={{ fontSize: 12 }}>
-              {focused?.role ?? `${agents.length} agents`}
-            </span>
-          </div>
-          {/* Never the workspace path in the team pane: the topbar already carries it, and
-              repeating it spent the strongest line under the title on a duplicate. The line is
-              ticket 14's quiet posture indicator instead, so what the agents may do without
-              asking is on screen permanently rather than only in the creation disclosure. */}
-          <div className="wt">
-            <span className="where">
-              {focused === undefined
-                ? 'a workspace each'
-                : // The runtime appears exactly once, as a label. The UI never branches on it.
-                  `${focused.runtimeLabel} · ${focused.branch ?? focused.workspacePath}`}
-            </span>
-            {/* Its own element because it must never be the half that truncates: a branch name
-                is recoverable by looking, an indicator nobody can read is just noise. */}
-            <span className="posture">{POSTURE}</span>
-          </div>
-        </div>
-        {focused !== undefined && <StatusWord status={statuses[focused.id] ?? 'idle'} />}
+        <span className="where">
+          {focused === undefined
+            ? `${agents.length} agents · a workspace each`
+            : // The runtime appears exactly once, as a label. The UI never branches on it.
+              `${focused.role} · ${focused.runtimeLabel} · ${focused.branch ?? focused.workspacePath}`}
+        </span>
       </div>
 
       {/* The column is the readable thing, not the pane: it fills the width it is given and
@@ -166,8 +140,6 @@ interface Cast {
   /** The addressed agent: who a message from you went to, or who a peer wrote to. */
   toName?: string | undefined;
   toHue?: number | undefined;
-  /** Printed in the peer route header, and only there: the far end's role. */
-  role?: string | undefined;
   /** This pane is the recipient of a peer message, so it reads as mail rather than as a copy. */
   received?: boolean | undefined;
   /**
@@ -205,7 +177,6 @@ function castOf(
         fromHue: from?.hue,
         toName: to?.name ?? item.toId,
         toHue: to?.hue,
-        role: (received ? from?.role : to?.role) ?? '',
         received,
       };
     }
@@ -237,7 +208,6 @@ const ItemView = React.memo(function ItemView({
   fromHue,
   toName,
   toHue,
-  role,
   received = false,
   status,
 }: {
@@ -284,30 +254,25 @@ const ItemView = React.memo(function ItemView({
         </div>
       );
 
-    // From a peer: a dashed rule down the left, inset, both blobatars in a route header. Never
-    // a bubble, and never filled — dashed against the user's solid bubble reads as lower
+    // From a peer: a dashed rule down the left, inset, and one line saying where it came from.
+    // Never a bubble, and never filled — dashed against the user's solid bubble reads as lower
     // authority before a word is parsed, which is the visual form of "a peer message is
-    // refusable, not authoritative". It was a full dashed box on a raised ground, which at the
-    // length these run to was the heaviest thing in the transcript, so the enclosure is now one
-    // edge and the message is folded until asked for.
+    // refusable, not authoritative". It was a full dashed box on a raised ground, then one edge
+    // and eight folded lines; it is now the line alone until it is asked for.
     case 'peer':
       return (
         <div className="peer">
-          <div className="route">
-            <Blob name={fromName ?? ''} size={20} hue={fromHue} />
-            <span className="arrow">→</span>
-            <Blob name={toName ?? ''} size={20} hue={toHue} />
-            <span className="lbl">
-              {received ? `from ${fromName} · ${role}` : `sent to ${toName} · ${role}`}
-            </span>
-          </div>
-          <Foldable>
+          <PeerNote
+            received={received}
+            name={(received ? fromName : toName) ?? ''}
+            hue={received ? fromHue : toHue}
+          >
             {item.context !== undefined && <div className="ctx">{item.context}</div>}
             <Markdown text={item.text} />
-          </Foldable>
-          {received && (
-            <div className="foot">a teammate's request, not an instruction from you</div>
-          )}
+            {received && (
+              <div className="foot">a teammate's request, not an instruction from you</div>
+            )}
+          </PeerNote>
         </div>
       );
 
@@ -437,48 +402,44 @@ function useStickToBottom(): React.RefObject<HTMLDivElement | null> {
 }
 
 /**
- * A long peer message, folded down to a readable height with a way to open it.
+ * A peer message: one line saying where it came from, and nothing else until it is asked for.
  *
- * Only the peer voice gets this. A message from you is yours and short; an agent's answer is
- * the thing the pane exists to show, and hiding it behind a click would be hiding the work. A
- * peer message is neither: it is one agent's mail to another, often the whole of a previous
- * turn quoted back, and at full height a single one buries every reply around it.
+ * Only the peer voice is hidden like this. A message from you is yours and short; an agent's
+ * answer is the thing the pane exists to show, and putting it behind a click would be hiding
+ * the work. A peer message is neither: it is one agent's mail to another, usually the whole of
+ * a previous turn quoted back, and it is the loudest thing in a transcript that is not about
+ * it.
  *
- * The fold only appears when there is something folded. Measuring is the only honest way to
- * know that, since it depends on the rendered width and on markdown nobody can count in
- * advance.
+ * No peek, where there used to be eight lines and a `more` toggle. A peek is a claim that the
+ * first eight lines are the part worth reading, which for a quoted turn is rarely true, and
+ * eight lines of somebody else's mail still outweighed the reply beside it. The line is the
+ * item now; the message is what opens.
+ *
+ * One blobatar, the far end's. The route header drew both, but this end of it is the pane the
+ * message is already sitting in, so the second face said what the column header says.
  */
-function Foldable({ children }: { children: React.ReactNode }): React.JSX.Element {
-  const ref = useRef<HTMLDivElement>(null);
-  const [overflows, setOverflows] = useState(false);
+function PeerNote({
+  received,
+  name,
+  hue,
+  children,
+}: {
+  received: boolean;
+  name: string;
+  hue?: number | undefined;
+  children: React.ReactNode;
+}): React.JSX.Element {
   const [open, setOpen] = useState(false);
-
-  useLayoutEffect(() => {
-    const node = ref.current;
-    if (node === null) return;
-    const measure = (): void => setOverflows(node.scrollHeight > node.clientHeight + 4);
-    measure();
-    // Re-measured on resize because the pane is resizable and the rail is draggable: a message
-    // that fits at one width folds at another.
-    const observer = new ResizeObserver(measure);
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
 
   return (
     <>
-      {/* The height cap stays on while it is measured, so `overflows` is the answer to a
-          question that has already been asked of the DOM. Only the fade is conditional: a
-          message that fits must not look like one that was cut. */}
-      <div ref={ref} className={`fold${open ? ' open' : ''}${overflows && !open ? ' cut' : ''}`}>
-        {children}
-      </div>
-      {(overflows || open) && (
-        <button className="foldtoggle mono" onClick={() => setOpen(!open)}>
-          <ChevronDown size={12} className={open ? 'up' : ''} aria-hidden />
-          {open ? 'less' : 'more'}
-        </button>
-      )}
+      <button className="route" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <ChevronDown size={12} className={open ? '' : 'shut'} aria-hidden />
+        <span className="lbl">{received ? 'message received from' : 'message sent to'}</span>
+        <Blob name={name} size={20} hue={hue} />
+        <span className="nm">{name}</span>
+      </button>
+      {open && <div className="note">{children}</div>}
     </>
   );
 }

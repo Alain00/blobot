@@ -34,6 +34,9 @@ const team: Team = {
   workspacePath: '~/code/storefront',
   workspaceKind: 'git',
   turnBudget: 10,
+  // Alice leads, so the demo shows the team pane addressing somebody rather than asking for an
+  // `@`. Bob is still a mention away.
+  leadAgentId: 'alice',
 };
 
 const alice: Agent = {

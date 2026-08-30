@@ -3,6 +3,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import { Check, X } from 'lucide-react';
 import type { UiAgentProfile, UiAgentRemoval, UiTeamSummary } from '../../../shared/api.js';
 import { Blob } from './Blob.js';
+import { LeadPicker } from './Lead.js';
 
 /**
  * The two things you can do to a team that already exists: change who is on it, and end it.
@@ -147,6 +148,13 @@ export function EditTeam({
 }): React.JSX.Element {
   const [roster, setRoster] = useState<readonly UiAgentProfile[]>([]);
   const [chosen, setChosen] = useState<readonly string[]>([]);
+  /**
+   * Who leads. Seeded from the team, and undefined is a real value here in a way it is not on
+   * the creation screen: a team formed before leads existed has none, and so does one whose
+   * lead has left. Neither is repaired by promoting somebody the user never saw chosen, so the
+   * pane goes back to asking for an `@` until this says otherwise.
+   */
+  const [lead, setLead] = useState<string | undefined>(team.leadProfileId);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [removals, setRemovals] = useState<readonly UiAgentRemoval[] | undefined>();
@@ -165,11 +173,15 @@ export function EditTeam({
   );
   const leaving = roster.filter((agent) => members.has(agent.id) && !chosen.includes(agent.id));
   const joining = roster.filter((agent) => !members.has(agent.id) && chosen.includes(agent.id));
-  const changed = leaving.length > 0 || joining.length > 0;
+  /** An unticked lead is off the team, so it leads nothing. Nobody takes over automatically. */
+  const leading = lead !== undefined && chosen.includes(lead) ? lead : undefined;
+  // Naming a lead is a change on its own. A team that has never had one is the ordinary case
+  // for opening this dialog and touching nothing else.
+  const changed = leaving.length > 0 || joining.length > 0 || leading !== team.leadProfileId;
 
   const save = async (): Promise<void> => {
     setBusy(true);
-    const result = await window.blobot.editTeam(team.id, chosen);
+    const result = await window.blobot.editTeam(team.id, chosen, leading);
     setBusy(false);
     if (!result.ok) {
       setError(result.error ?? 'The team could not be changed.');
@@ -243,6 +255,12 @@ export function EditTeam({
                   );
                 })}
               </div>
+
+              <LeadPicker
+                chosen={roster.filter((agent) => chosen.includes(agent.id))}
+                {...(leading === undefined ? {} : { lead: leading })}
+                onPick={setLead}
+              />
 
               {/* Stated before the click, because both halves are surprising: an agent who
                   leaves takes its workspace with it, and saving stops and restarts the team. */}

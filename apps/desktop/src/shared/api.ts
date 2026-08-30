@@ -37,6 +37,14 @@ export interface UiTeam {
   readonly name: string;
   readonly workspacePath: string;
   readonly turnBudget: number;
+  /**
+   * The team's **lead**: who the team pane addresses when the user names nobody.
+   *
+   * The composer resolves to this agent the way an agent pane resolves to its own, and an
+   * `@mention` still overrides it. Absent is a real state and not a missing value: the team
+   * pane then waits for a mention, exactly as ticket 12 specified.
+   */
+  readonly leadAgentId?: string;
 }
 
 /**
@@ -48,6 +56,8 @@ export interface UiTeam {
  */
 export interface UiTeamMember {
   readonly id: string;
+  /** The agent this membership was instantiated from, so a roster of ticks can find it. */
+  readonly profileId?: string;
   readonly name: string;
   /** The blobatar's hue, when the user chose one. Absent means the name derives it. */
   readonly hue?: number;
@@ -70,6 +80,11 @@ export interface UiTeamSummary {
    * count is `members.length` and the mark is the members.
    */
   readonly members: readonly UiTeamMember[];
+  /**
+   * Who leads it, as a profile id — which is what the roster dialog is a set of ticks on.
+   * Absent on a team formed before leads existed, and on one whose lead has left.
+   */
+  readonly leadProfileId?: string;
   /** When it last said anything. Undefined for a team that has never held a turn. */
   readonly lastActiveAt?: number;
 }
@@ -255,6 +270,8 @@ export interface NewTeamSpec {
   readonly turnBudget: number;
   /** Agents that already exist. A team is formed out of them, never the other way round. */
   readonly profileIds: readonly string[];
+  /** Which of them leads: the team pane's recipient when the user names nobody. */
+  readonly leadProfileId?: string;
   /** `nested` only: the repositories the user ticked. Omitted means every one of them. */
   readonly repoPaths?: readonly string[];
 }
@@ -326,7 +343,11 @@ export interface BlobotApi {
    * Change who is on a team. The whole roster, not a delta: the screen shows a set of ticks
    * and this is what they say.
    */
-  editTeam(teamId: string, profileIds: readonly string[]): Promise<TeamDeletionResult>;
+  editTeam(
+    teamId: string,
+    profileIds: readonly string[],
+    leadProfileId?: string,
+  ): Promise<TeamDeletionResult>;
   /** Removes every agent's workspace, then the team. The transcript stays in the database. */
   deleteTeam(teamId: string): Promise<TeamDeletionResult>;
   /**

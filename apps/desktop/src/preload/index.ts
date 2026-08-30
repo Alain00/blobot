@@ -51,8 +51,13 @@ const api: BlobotApi = {
     ipcRenderer.invoke('blobot:createTeam', spec) as Promise<TeamCreationResult>,
   selectTeam: (teamId: string) =>
     ipcRenderer.invoke('blobot:selectTeam', teamId) as Promise<TeamOpenResult>,
-  editTeam: (teamId: string, profileIds: readonly string[]) =>
-    ipcRenderer.invoke('blobot:editTeam', teamId, profileIds) as Promise<TeamDeletionResult>,
+  editTeam: (teamId: string, profileIds: readonly string[], leadProfileId?: string) =>
+    ipcRenderer.invoke(
+      'blobot:editTeam',
+      teamId,
+      profileIds,
+      leadProfileId,
+    ) as Promise<TeamDeletionResult>,
   deleteTeam: (teamId: string) =>
     ipcRenderer.invoke('blobot:deleteTeam', teamId) as Promise<TeamDeletionResult>,
   answerPermission: (requestId: string, choice: PermissionChoice) =>

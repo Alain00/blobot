@@ -22,9 +22,6 @@
   --ease-out:cubic-bezier(0.23,1,0.32,1);
   --ease-in-out:cubic-bezier(0.77,0,0.175,1);
   color-scheme:dark;
-  /* Lets `max-height` interpolate to an intrinsic keyword, which is what makes the peer
-     message's fold open by growing instead of jumping. */
-  interpolate-size:allow-keywords;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
@@ -78,6 +75,39 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 @keyframes fadein{0%,100%{opacity:.4}50%{opacity:.8}}
 @keyframes jolt{0%,86%,100%{transform:translateX(0)}90%{transform:translateX(-2px)}94%{transform:translateX(2px)}}
 @media (prefers-reduced-motion:reduce){.blob{animation:none!important}}
+
+/* ---------- the face as a second status channel (the rail only, so far) ----------
+ *
+ * A posed blobatar is rendered with `animate`, which is what puts it in inline SVG where CSS
+ * can reach the parts and morph between poses. It also brings `blobatar/motion.css`, whose
+ * idle layer — breathe, bob, blink, glance — is a second ambient animation that means nothing,
+ * and ambient motion here is spoken for: it means status.
+ *
+ * The library is factored along exactly that seam. Every idle behaviour multiplies through one
+ * variable, `--mo-amp`, which is 0 until `:hover` or `.mo-always` raises it, while the morph
+ * and the `thinking` seesaw never read it at all. So holding it at zero costs us nothing we
+ * came for. `animate="hover"` already keeps it there at rest; this is the pointer case.
+ *
+ * The rail raises `--mo-amp` deliberately, with `animate="always"`, and that is the exception
+ * DESIGN.md's rule anticipates rather than a hole in it. The reason is amplitude: at 34px the
+ * idle bob travels 0.37px and the glance 0.38px, against 3px for the `working` bob and 2.9px
+ * for the `thinking` seesaw. A floor three to eight times under the signal reads as breathing
+ * beneath motion that reads as working, so it gives the status channel a floor instead of
+ * standing beside it. Everything below is what keeps that true.
+ *
+ * The lift goes, everywhere. It is inside the interaction budget at 220ms, but the rail is a
+ * column a user's pointer crosses all day, and frequency is the disqualifier there, not taste.
+ * `:not(.mo-always)` on the amp, because without it this rule and the library's `.mo-always`
+ * carry identical specificity and ours is later, so pointing at a rail row would stop the
+ * animation rather than leave it alone. */
+.mo-root:hover{transform:none}
+.mo-root:not(.mo-always):hover{--mo-amp:0}
+
+/* A failed agent does not breathe. The drained saturation says "not alive", and an idle loop
+   running underneath it says the opposite in the same square: grayscale with a pulse is a
+   corpse. This is the one status that leaves the floor, and it is why the floor is written as
+   a variable we can take back rather than as an animation we would have to unpick. */
+.b-failed .mo-root{--mo-amp:0}
 
 /* status is never colour. three channels: motion, a mono word, a rule. */
 .stat{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
@@ -193,16 +223,11 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .raillabel{padding:12px 14px 6px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .badge{font-family:var(--mono);font-size:10px;border:1px solid var(--ink);padding:0 4px;line-height:14px}
 .vA .conv{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
-.convhead{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line)}
-.convhead .meta{flex:1;min-width:0}
-/* Wraps rather than shrinks: in a narrow window the posture drops to its own line instead of
-   squeezing the branch down to an ellipsis. `min-width` on the branch is what forces the wrap,
-   since flex would otherwise shrink it to nothing and never break the line. */
-.convhead .wt{font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:0;min-width:0}
-.convhead .wt .where{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:10em}
-/* the separator rides the half that cannot truncate, or it disappears with the path */
-.convhead .wt .posture{flex:0 0 auto;white-space:nowrap}
-.convhead .wt .posture::before{content:"· "}
+/* One mono row of the facts the rail does not carry. It was a two-line block with a blobatar,
+   a bold name, a role and a status word, all of which the selected rail row is already saying
+   larger and to the left of it. */
+.convhead{flex:0 0 auto;display:flex;align-items:center;padding:9px 20px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--muted);min-width:0}
+.convhead .where{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stream{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:20px 20px 28px;display:flex;flex-direction:column}
 /* The transcript is a column, not a left margin. It fills the pane up to a measure a paragraph
    can still be read at and centres in whatever is left, so a wide window widens the reading
@@ -226,6 +251,10 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .composer .send{flex:0 0 auto;width:32px;height:32px;padding:0;border-radius:50%;justify-content:center;color:var(--muted)}
 .composer .send:not([disabled]){background:var(--ink);border-color:var(--ink);color:var(--ground)}
 .composer .send[disabled]{opacity:.55}
+/* the team pane's send says who, because there the recipient can be one nobody typed: a name
+   the placeholder stops saying the moment the first key is pressed. */
+.composer .send.named{width:auto;padding:0 9px 0 13px;border-radius:16px;gap:7px}
+.composer .send .to{font-family:var(--mono);font-size:11px;letter-spacing:.02em}
 
 /* the address is the @mention — there is no recipient picker */
 .mentionwrap{position:relative;flex:1;min-width:0}
@@ -274,34 +303,39 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .msg.user .bubble{background:var(--raised);border:1px solid var(--line);border-radius:14px;padding:7px 13px;white-space:pre-wrap;overflow-wrap:anywhere}
 .msg.user .tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 /* from the agent: no container at all — it is the default voice of the pane */
-/* From a peer: one dashed edge, inset, two blobatars in the header. Never a bubble and never
-   filled. It was a full dashed box on a raised ground, and at the length a peer message
-   actually runs to that made it the heaviest thing in the transcript — the reply it was about
-   read as a footnote to it. Dashed against the user's solid bubble is what carries the lower
-   authority, and one edge carries that as well as four did. */
-.peer{border-left:1px dashed var(--line);padding:2px 0 2px 14px;margin-left:40px;max-width:min(620px,100%)}
-.peer .route{display:flex;align-items:center;gap:7px;margin-bottom:7px}
-.peer .route .arrow{color:var(--muted);font-family:var(--mono)}
-.peer .route .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+/* From a peer: one dashed edge, inset, and a single line naming the far end. Never a bubble and
+   never filled. It was a full dashed box on a raised ground, then one edge with eight folded
+   lines behind it, and at the length a peer message actually runs to even eight lines made it
+   the heaviest thing in the transcript — the reply it was about read as a footnote to it. It is
+   now the line alone, and the message opens on a click. Dashed against the user's solid bubble
+   is what carries the lower authority, and one edge carries that as well as four did. */
+.peer{padding:2px 0;margin-left:40px;max-width:min(620px,100%)}
+/* The line is the whole item when it is shut, so it is also the control: the chevron turns, and
+   the label lifts to full ink on hover, which is the same "this opens" grammar as the sheets. */
+.peer .route{display:flex;align-items:center;gap:7px;text-align:left;color:var(--muted)}
+.peer .route:hover{color:var(--ink)}
+.peer .route:hover .lbl{color:var(--ink)}
+.peer .route svg{flex:0 0 auto;transition:rotate 180ms var(--ease-out)}
+.peer .route svg.shut{rotate:-90deg}
+.peer .route .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);transition:color 120ms}
+/* The name in the pane's own voice rather than in mono. It is the one word on this line that is
+   somebody, and the label around it is the machinery. */
+.peer .route .nm{color:var(--ink);font-weight:500}
+/* The dashed edge moved here, off the shut line and onto the message it was always about.
+   A one-line label needs no enclosure — it is a label, and it says in words what the border was
+   saying in texture. The quoted turn underneath still needs it: open, it is somebody else's
+   words in the pane's own column, and dashed-against-the-user's-solid is what carries the lower
+   authority before a word is parsed. */
+.peer .note{border-left:1px dashed var(--line);padding-left:14px;margin:8px 0 0 6px;animation:enterpeer 200ms var(--ease-out)}
+/* Opening is a fade with a short lift, not a height animation. There is no cut to grow out of
+   any more: the message was not on screen at all a moment ago, so what the eye needs is a
+   thing arriving, which is the same entrance the permission block makes. */
+@keyframes enterpeer{from{opacity:0;translate:0 -4px}}
 /* The sender's own summary of what they are asking about. A quiet line, not a code block: it
    is prose the agent wrote, and the mono box it used to sit in read as a payload. */
 .peer .ctx{font-size:12.5px;color:var(--muted);margin-bottom:8px}
 .peer .txt{white-space:pre-wrap}
 .peer .foot{margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--muted)}
-/* Folded to about eight lines, with the last of them fading out so the cut is legible as a cut
-   rather than as a message that ends mid-sentence. */
-/* `more` opens by hundreds of pixels, which is the jump the transcript's ResizeObserver exists
-   to chase. Growing into it instead gives the observer something continuous to follow, and the
-   reader a bridge between the eight lines they had and the turn they now have. `max-content`
-   rather than `none` because only an intrinsic keyword interpolates.
-   The cut's mask is left discrete on purpose: it is pinned to the element's own bottom edge,
-   which is moving anyway, so there is nothing for a cross-fade to smooth. */
-.fold{max-height:184px;overflow:hidden;position:relative;transition:max-height 260ms var(--ease-in-out)}
-.fold.cut{-webkit-mask-image:linear-gradient(#000 74%,transparent)}
-.fold.open{max-height:max-content}
-.foldtoggle{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.foldtoggle:hover{color:var(--ink)}
-.foldtoggle svg.up{transform:rotate(180deg)}
 /* Something landed and an answer is coming. Muted, small, and gone the moment there is text
    to watch instead. */
 .msg.pending .dots{display:flex;gap:4px;align-items:center;height:21px}
@@ -432,6 +466,15 @@ textarea.field{resize:vertical;line-height:1.5}
 .rosterrow .tick{width:20px;height:20px;flex:0 0 auto;border:1px solid var(--line);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ground)}
 .rosterrow .tick.on{background:var(--ink);border-color:var(--ink)}
 .rosterrow:disabled{opacity:.45;cursor:default}
+/* who leads: the same faces the roster just showed, one of them marked. Not a status, so it
+   takes the raised ground and the border every other chosen thing here takes. */
+.leadpick{display:flex;flex-direction:column;gap:8px;align-self:stretch}
+.leadpick .faces{display:flex;flex-wrap:wrap;gap:6px}
+.leadface{display:inline-flex;align-items:center;gap:7px;padding:5px 12px 5px 6px;border:1px solid var(--line);border-radius:16px;background:transparent}
+.leadface:hover{background:var(--raised)}
+.leadface.on{background:var(--raised);border-color:var(--muted)}
+.leadface .nm{font-size:12px;color:var(--muted)}
+.leadface.on .nm{color:var(--ink)}
 .rosterrow:disabled:hover{background:none}
 
 /* the repositories in a folder of repositories, ticked into scope */
@@ -655,7 +698,8 @@ textarea.field{resize:vertical;line-height:1.5}
   @keyframes enterperm{from{opacity:.3}}
   @keyframes entersheet{from{opacity:.3}}
   @keyframes entermodal{from{opacity:.3}}
+  @keyframes enterpeer{from{opacity:0}}
   .btn,.iconbtn,.swatch{transition:none}
   .btn:active:not([disabled]),.iconbtn:active,.swatch:hover{scale:1}
-  .fold{transition:none}
+  .peer .route svg{transition:none}
 }

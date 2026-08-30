@@ -20,7 +20,9 @@ export function App(): React.JSX.Element {
   const [pane, setPane] = useState<Pane>(
     initialPane === '' ? { kind: 'team' } : { kind: 'agent', agentId: initialPane },
   );
-  const [creating, setCreating] = useState(false);
+  // `--screen=new-team` opens it, for the same reason `--screen=agents` exists: the flow is a
+  // surface a screenshot cannot click its way to, and now one of its steps decides who leads.
+  const [creating, setCreating] = useState(opened.get('screen') === 'new-team');
   /** *Your agents*, over the working surface. Not a modal: it is a place, not a decision. */
   const [browsingAgents, setBrowsingAgents] = useState(opened.get('screen') === 'agents');
   /** The team a modal is about, and which one. Never the team on screen by implication. */
@@ -210,7 +212,6 @@ export function App(): React.JSX.Element {
         <div className="conv">
           <Conversation
             pane={pane}
-            team={snapshot.team}
             agents={snapshot.agents}
             statuses={state.statuses}
             items={items}
@@ -223,6 +224,9 @@ export function App(): React.JSX.Element {
             agents={snapshot.agents}
             commands={state.commands}
             pane={pane}
+            {...(snapshot.team?.leadAgentId === undefined
+              ? {}
+              : { lead: snapshot.team.leadAgentId })}
             opening={snapshot.opening === true}
             onSend={(agentId, text) => void window.blobot.prompt(agentId, text)}
           />

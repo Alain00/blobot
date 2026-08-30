@@ -648,6 +648,13 @@ Restarting is cheap now that `session/load` resumes each agent where it was.
    draws its members and folds their status, and it said `STOPPED` about a live team until it
    did. See the section at the foot of this file.
 4. **Renaming a team**, which needs a decision about the branches first.
+5. **Talking to a team without naming a member**, charted 2026-08-29 at
+   `.scratch/team-addressing/`. Issue 01, the ergonomic, is **built** — see the section at the
+   foot of this file. The coordinator is not decided. The author's ask is a team group chat with a
+   coordinator that routes messages and hands out work; the effort splits that into the
+   ergonomic (a default recipient, which reopens ticket 12 on one point) and the coordinator
+   itself, whose cost, single point of failure and relayed-authority question are the reason it
+   is charted rather than built.
 
 Things left unverified, worth knowing before trusting them:
 
@@ -1199,3 +1206,89 @@ Verified against two real Claude agents with the start artificially slowed: the 
 `2 STARTING` on the team row and `STARTING` on each agent, the hairline sweeps, and send is
 closed. **The `--screenshot` review flag cannot see this on its own** — the renderer mounts after
 a real 2s start has already finished, so reviewing it means slowing `pool.start` on purpose.
+
+## Settled, 2026-08-30: the blobatar has a rule, and the header stopped repeating the rail
+
+Raised by the author: the blobatars are readable and expressive, and that is exactly the
+problem — the same face appeared often enough that the rail, which is the census, was no louder
+than a send button. Counted for one agent on the team pane, one moment: the rail row (34,
+animated), the rail's team mark (46), the conversation header (38 for an agent, 48 for the team
+mark), every settled turn (28), the pending row (28), the peer route header (20, twice), the
+composer's mention menu (18) and the send button (17). Five simultaneous instances of one
+identity, and **the largest was the header, not the rail**.
+
+Ticket 12 is amended and `DESIGN.md` carries the rule:
+
+> A blobatar appears where you are **identifying among** agents or **choosing** one, and never
+> where a single agent is **merely named**.
+
+It is a rule rather than a list so the next surface answers itself. Four changes came out of it.
+
+- **The conversation header is one mono hairline row.** It was a face, a bold name, a role and a
+  `StatusWord` over the workspace line; the selected rail row a few pixels to its left already
+  carries all four, larger, and carries the same `StatusWord`. What is left is the role, the
+  runtime, the branch or path and ticket 14's posture, all mono and muted: the facts the rail
+  does *not* have. `team` is no longer a prop of `Conversation` at all — the topbar crumb is
+  where the team's name and path live. Height went from ~56px to ~28px and nothing above the
+  transcript is bold or saturated any more.
+- **A peer message is one shut line.** `message received from ⬤ Alice`, opening on a click into
+  the context, the message and the received side's trust framing. The eight-line fold is gone
+  and `Foldable` with it, along with `interpolate-size:allow-keywords`, which existed only so
+  that fold could grow. The dashed edge moved off the line and onto the opened message, where the
+  quoted turn it was always about actually is: a one-line label needs no enclosure, since it says
+  in words what the border said in texture. Opening is a 200ms fade-and-lift, not a height animation: there is no cut
+  to grow out of when the message was not on screen at all a moment ago. One face, the far end's.
+- **The send button shows the recipient's name and the arrow, never their face.** A blobatar on
+  a button reads as the affordance rather than as an identity.
+- Kept, and each for the rule's own reason: the rail (identify, choose, status), the composer's
+  mention menu (choosing among faces, and the fastest way to pick), and a turn in the transcript
+  (identifying among agents in a mixed-team column).
+
+Reviewed with `--screenshot` on the demo team pane and on `--pane=bob`. Desktop typecheck and
+all 113 tests pass. `Conversation.test.tsx`'s `draw` grew a `then` callback, because the peer
+voice can only be asserted on the far side of a click now.
+
+`DESIGN.md` had two lines saying the header carries status; both are corrected there.
+
+## Built, 2026-08-30: a team has a lead, and the team pane writes to it
+
+`.scratch/team-addressing/`, issue 01, and the answer to ticket 12's one-point reopen. The ask
+was to say something to a team without naming a member first. This is the ergonomic half of it
+and nothing more: **no routing, no coordinator, no broadcast.** The lead receives the message as
+itself, in one session, exactly as `@lead` would have delivered it, and issues 02 to 05 are
+untouched and still open.
+
+`teams.lead_agent_id`, migration `0005`. An **agent id**, because leading is a fact about a
+membership rather than about the agent — the same agent leads one team and not another, and
+ADR-0002's "an edit restates the definition" would otherwise drag the designation across every
+team the agent is on. No foreign key: `agents.team_id` already points the other way, and a
+circular reference is a thing SQLite will create and drizzle-kit will not drop.
+
+**NULL is a behaviour, not a missing value.** The pane reverts to what ticket 12 specified, send
+disabled until a mention resolves. Three ways to be there: a team formed before the column, a
+lead taken off the roster, and a caller that named nobody. The rule that decides all three is
+**the default recipient is only ever somebody the user watched themselves choose** — so nobody
+is promoted when the lead leaves, and an existing team gets no lead until the user opens its
+roster and says. That rule is also what keeps this from being the quiet default ticket 12
+removed.
+
+`LeadPicker` (`components/Lead.tsx`) is on both screens that decide a roster: the creation flow's
+*Who joins* and the roster dialog. Faces with one marked, which is what DESIGN.md's new blobatar
+rule earns a face for — choosing among agents. In creation the first agent ticked is marked
+before the team exists; in the dialog, naming a lead counts as a change on its own, since a team
+that never had one is the ordinary reason to open it.
+
+In the composer only `implicit` changed. The reopen's price is the composer saying who: the
+placeholder is `Message Alice. @ to say who else`, and the send control carries the name once the
+placeholder is gone.
+
+`--screen=new-team` joins `--pane=` and `--screen=agents`, for the same reason they exist.
+
+Tested: five cases in `team-store.test.ts` (first agent leads, the flow's choice is honoured, a
+sitting lead survives a roster change, a named lead resolves to this team's membership, a lead
+taken off the roster leaves none) and four in a new `Composer.test.tsx`. Reviewed on screen: the
+demo team's pane addressing Alice, and the lead picker under a ticked roster.
+
+**Unclicked**, in the sense this file already uses: nobody has saved the roster dialog with a new
+lead in the running app. The store half is covered by tests and the picker was rendered, but the
+dialog's own save path with a lead change has only been exercised by `editTeamRoster` directly.

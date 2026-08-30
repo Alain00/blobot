@@ -24,6 +24,21 @@ export const teams = sqliteTable('teams', {
   // for a handful of relative paths per team would be a schema nobody thanks you for.
   workspaceRepos: text('workspace_repos'),
   turnBudget: integer('turn_budget').notNull().default(10),
+  /**
+   * The team's **lead**: the agent the team pane addresses when the user names nobody.
+   *
+   * An agent id rather than a profile id, because the lead is a fact about this membership —
+   * the same agent leads one team and not another. It is nullable, and NULL is a real state
+   * with a real behaviour: the team pane reverts to what ticket 12 specified, where send stays
+   * disabled until an `@mention` resolves. Every team created before this column had one is
+   * NULL, and a lead who is taken off the roster leaves it NULL rather than promoting somebody
+   * the user never saw chosen.
+   *
+   * No foreign key, and deliberately: `agents.team_id` already points here, and a circular
+   * reference between two tables is a thing SQLite will let you create and drizzle-kit will not
+   * let you drop. The id is written from an agent row this same transaction created.
+   */
+  leadAgentId: text('lead_agent_id'),
   createdAt: integer('created_at').notNull(),
   /**
    * Tombstone, like an agent and a profile. A team owns a transcript, and `messages.team_id`

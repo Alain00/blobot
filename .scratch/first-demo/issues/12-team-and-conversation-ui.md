@@ -295,3 +295,67 @@ The conversation header also gains a small permanent posture indicator beside th
 
 Neither changes anything decided above — `waiting` already had its contrast inversion, and the
 block sits in a position the layout already uses.
+
+## Reopened, 2026-08-29: one point only — the team pane's implicit recipient
+
+Raised by the author. *The recipient is an `@mention`, not a picker* decided that **in the team
+pane there is no implicit recipient** and send stays disabled until a mention resolves. That is
+the point now open, and only that point. Charted at `.scratch/team-addressing/`, issue 01.
+
+The ask is to talk to a team without naming a member first. Nothing else in this ticket is in
+question: `@` stays the human's addressing gesture, an agent pane's implicit recipient is
+unchanged, and last valid mention still wins.
+
+**The reason given here survives and constrains the answer rather than blocking it.** The picker
+was removed because a quiet default implied a broadcast surface ticket 05 does not have. A
+message still lands in exactly one session and this effort proposes no broadcast, so a default
+recipient is admissible **only if the composer names and draws the agent it resolved to**. A team
+pane that looks like it is talking to *the team* is the surface this ticket removed, and would be
+a second reopen rather than a fix.
+
+**Answered 2026-08-30, and the amendment is this:** the team pane addresses the team's **lead**
+when the user names nobody, and nothing else in the ticket moves. A team may have no lead, and
+then this ticket's original rule stands unchanged — send stays disabled until a mention resolves.
+The exchange is the one demanded above: the composer names who it resolved to, in the placeholder
+before a key is pressed and on the send control afterwards. See
+`.scratch/team-addressing/issues/01-a-default-recipient-for-the-team-pane.md`.
+
+## Amendment, 2026-08-30: where a blobatar may appear, and what the header is for
+
+Raised by the author, on the working surface as built. The blobatars are the app's only
+saturated thing and they are the readable, expressive part of it, which is exactly why the same
+face was on screen five times at once for one agent: the rail row, the rail's team mark, the
+conversation header, every turn in the transcript, the pending row, the peer route header, the
+composer's mention menu and the send button. The header's face was 38px against the rail's 34px,
+so the copy outranked the original.
+
+Three decisions, one rule.
+
+**The rule.** A blobatar appears where you are *identifying among* agents or *choosing* one, and
+never where a single agent is *merely named*. It keeps a face in the rail, in the composer's
+mention menu and on a turn in the transcript. It takes one off everywhere else, and the name
+always stays where the face goes.
+
+**The conversation header is one mono hairline row.** It carried a blobatar, the agent's name in
+bold, its role and its status word — and the selected rail row a few pixels to its left carries
+every one of those, larger, including the same `StatusWord`. What is left is the three facts the
+rail does not carry: the role, the runtime, where this agent is working, and ticket 14's posture
+indicator. Nothing above the transcript is saturated or bold any more, and the header carries no
+status at all, which supersedes this ticket's "the header carries the state" wherever it appears
+above.
+
+**The send button shows the recipient's name, never their face.** The pill, the `@mention` the
+user just typed and the tooltip already name them; a face on a button also reads as the
+affordance rather than as an identity.
+
+**A peer message is one line, shut, with no peek.** A chevron, `message received from` or
+`message sent to`, the far end's blobatar, the name. It opens on a click into the context, the
+message and the received side's trust framing. The dashed edge went with it, onto the opened
+message: a one-line label needs no enclosure, and the edge is still on every quoted turn that is
+actually on screen. This supersedes the eight-line fold with a `more`
+toggle decided above: at the length a quoted turn actually runs to, even eight lines outweighed
+the reply the message was about, and a peek asserts the first eight lines are the part worth
+reading, which for a whole turn quoted back is rarely true. One blobatar rather than two,
+because the near end of the route is the pane the line is already sitting in.
+
+`DESIGN.md` carries all four, and `Foldable` is gone with the fold.

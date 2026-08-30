@@ -16,7 +16,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentStatus } from '@blobot/core/domain';
-import type { UiAgent, UiTeam } from '../../../shared/api.js';
+import type { UiAgent } from '../../../shared/api.js';
 import type { Item, Pane } from '../model.js';
 
 // React's own flag for "these updates are being driven by a test", which is what lets `act`
@@ -41,7 +41,6 @@ vi.mock('./Markdown.js', () => ({
 
 const { Conversation } = await import('./Conversation.js');
 
-const TEAM: UiTeam = { id: 't', name: 'Team', workspacePath: '/w', turnBudget: 10 };
 const AGENTS: readonly UiAgent[] = [
   { id: 'a', name: 'Alice', role: 'builds', runtimeLabel: 'mock', workspacePath: '/w/a' },
   { id: 'b', name: 'Bob', role: 'reviews', runtimeLabel: 'mock', workspacePath: '/w/b' },
@@ -73,7 +72,6 @@ function costPerDelta(depth: number, deltas: number): number {
       root.render(
         React.createElement(Conversation, {
           pane: { kind: 'team' },
-          team: TEAM,
           agents: AGENTS,
           statuses: { a: 'responding', b: 'idle' },
           items,
@@ -115,11 +113,18 @@ describe('streaming into a long transcript', () => {
   });
 });
 
-/** Renders a transcript and answers with the text of the column, whitespace collapsed. */
+/**
+ * Renders a transcript and answers with the text of the column, whitespace collapsed.
+ *
+ * `then` runs against the mounted DOM before the text is read, which is how the peer voice is
+ * tested: a peer message is a line until somebody clicks it, so the message itself is only in
+ * the document on the far side of that click.
+ */
 function draw(
   items: readonly Item[],
   pane: Pane,
   statuses: Record<string, AgentStatus> = { a: 'working', b: 'idle' },
+  then?: (host: HTMLElement) => void,
 ): string {
   const host = document.createElement('div');
   document.body.append(host);
@@ -128,7 +133,6 @@ function draw(
     root.render(
       React.createElement(Conversation, {
         pane,
-        team: TEAM,
         agents: AGENTS,
         statuses,
         items,
@@ -136,6 +140,7 @@ function draw(
       }),
     );
   });
+  if (then !== undefined) act(() => then(host));
   const text = host.querySelector('.col')?.textContent ?? '';
   const grouped = host.querySelectorAll('.msg.grouped').length;
   act(() => root.unmount());
@@ -175,10 +180,23 @@ describe('the voices, after the roster stopped being passed down', () => {
     const items: Item[] = [
       { kind: 'peer', id: 'p', at, fromId: 'a', toId: 'b', text: 'could you check this' },
     ];
-    expect(draw(items, { kind: 'agent', agentId: 'b' })).toContain('from Alice · builds');
-    expect(draw(items, { kind: 'agent', agentId: 'b' })).toContain("a teammate's request");
-    expect(draw(items, { kind: 'team' })).toContain('sent to Bob · reviews');
-    expect(draw(items, { kind: 'team' })).not.toContain("a teammate's request");
+    const open = (host: HTMLElement): void =>
+      host.querySelector<HTMLButtonElement>('.peer .route')?.click();
+
+    // Shut, it is one line naming the far end, and the far end is whoever this pane is not.
+    // No space between the two: the sender's blobatar is the element sitting between them.
+    expect(draw(items, { kind: 'agent', agentId: 'b' })).toContain('message received fromAlice');
+    expect(draw(items, { kind: 'team' })).toContain('message sent toBob');
+    // And no peek: the message is not in the document until the line is clicked.
+    expect(draw(items, { kind: 'agent', agentId: 'b' })).not.toContain('could you check this');
+    expect(draw(items, { kind: 'agent', agentId: 'b' }, undefined, open)).toContain(
+      'could you check this',
+    );
+    // The trust framing is on the received side only, and it opens with the message it frames.
+    expect(draw(items, { kind: 'agent', agentId: 'b' }, undefined, open)).toContain(
+      "a teammate's request",
+    );
+    expect(draw(items, { kind: 'team' }, undefined, open)).not.toContain("a teammate's request");
   });
 
   it('says who is asking to run what, and what was answered', () => {

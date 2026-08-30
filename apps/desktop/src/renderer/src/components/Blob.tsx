@@ -1,4 +1,5 @@
 import { Blobatar } from '@blobatar/react';
+import { idle, sleepy, surprised, thinking, type Expression } from 'blobatar/expression';
 import type { AgentStatus } from '@blobot/core/domain';
 
 /**
@@ -26,17 +27,105 @@ export function Blob({
   size = 22,
   status,
   hue,
+  animated = false,
 }: {
   name: string;
   size?: number;
   status?: AgentStatus | undefined;
   hue?: number | undefined;
+  /**
+   * Whether this surface's blobatars are alive: inline SVG, breathing at rest, and wearing the
+   * pose for the states that have one.
+   *
+   * Off everywhere by default, and the two reasons are different. A settled transcript message
+   * must not wear a pose at all, and must not move: both would be a claim about *now* on a
+   * record of *then*, which is the same error the stillness rule exists to prevent. And this
+   * switches the blobatar from one `<img>` to about a dozen inline SVG nodes running four
+   * infinite animations — fine for the handful of faces in the rail, not for a transcript that
+   * grows all day, which is the case the `<img>` default was chosen for.
+   */
+  animated?: boolean;
 }): React.JSX.Element {
+  if (!animated) {
+    return (
+      <span className={`b-${status ?? 'still'}`} style={{ width: size, height: size }}>
+        <span className="blob" style={{ width: size, height: size }}>
+          <Blobatar name={name} size={size} {...(hue === undefined ? {} : { hue })} />
+        </span>
+      </span>
+    );
+  }
+
   return (
     <span className={`b-${status ?? 'still'}`} style={{ width: size, height: size }}>
       <span className="blob" style={{ width: size, height: size }}>
-        <Blobatar name={name} size={size} {...(hue === undefined ? {} : { hue })} />
+        {/* `always` raises the library's `--mo-amp` to 1, which is the one variable every idle
+            behaviour multiplies through: breathe, bob, blink and the glance, each phased off the
+            agent's name so a roster reads as a crowd rather than a drill team.
+
+            That is an ambient animation beside the one that means status, which DESIGN.md warns
+            is almost always wrong, and the reason it is right here is amplitude. At 34px the
+            idle bob travels 0.37px and the glance 0.38px, against 3px for the `working` bob and
+            2.9px for the `thinking` seesaw. The floor is three to eight times under the signal,
+            so it reads as breathing beneath motion that reads as working. It gives the existing
+            channel a floor rather than adding a second channel next to it.
+
+            `expression` defaults to `idle`, which the library documents as byte-identical to
+            passing nothing. Passing it explicitly rather than omitting it keeps the pose
+            variables on the element at all times, so a status change morphs between two poses
+            instead of appearing from nothing. */}
+        <Blobatar
+          name={name}
+          size={size}
+          animate="always"
+          expression={poseFor(status) ?? idle}
+          {...(hue === undefined ? {} : { hue })}
+        />
       </span>
     </span>
   );
+}
+
+/**
+ * Status, worn on the face. Three of the seven states, and the four gaps are deliberate.
+ *
+ * The roster is chosen against DESIGN.md's governing rule before anything else: `mad`, `love`,
+ * `shy` and `sick` tint the palette, and colour here means *identity*. A green blob would say
+ * "sick agent" on the one surface where saturation is the agent and the hue is a thing the user
+ * picked. They are out permanently, not on taste.
+ *
+ * Of what is left:
+ *
+ * - `thinking` is the reason to do any of this. The library calls it "the two-dot loader, drawn
+ *   with the two dots a blobatar already has", and it swings the eyes 8.4 viewBox units, which
+ *   is 2.9px at the rail's 34px — the same magnitude as the `bob` the rail already has, spent
+ *   on the eyes instead of the whole square.
+ * - `starting` gets `sleepy`: an agent whose runtime is still coming up, said with the face
+ *   rather than by dimming to 55%, which reads as disabled rather than as waking.
+ * - `waiting` gets `surprised`, the only pose that grows the eyes. It does not read as surprise
+ *   so much as *eyes on you*, which is the literal content of the one state where an agent sits
+ *   forever until a human looks.
+ *
+ * `working` and `responding` keep the body channel alone: the bob and the nod are about a whole
+ * creature busy or talking, and the library has no pose for hands. `idle` is still, because
+ * still is what tells you nothing is happening. `failed` keeps the grayscale and no pose: the
+ * drained saturation already says "not alive", and a sad face on top is a second claim made at
+ * the moment the user has something to fix.
+ *
+ * The poses that are here are all scale channels — `surprised` is eyes at 1.34×, `sleepy` is
+ * eyes at 0.22× — so they read the same at 34px as at 112px. The offsets inside them are
+ * secondary, and the size-dependent effects the library warns about (the glance, at 0.38px on a
+ * rail row) belong to the idle layer we hold at zero.
+ */
+function poseFor(status: AgentStatus | undefined): Expression | undefined {
+  switch (status) {
+    case 'thinking':
+      return thinking;
+    case 'starting':
+      return sleepy;
+    case 'waiting':
+      return surprised;
+    default:
+      return undefined;
+  }
 }
