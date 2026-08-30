@@ -43,12 +43,19 @@ export function Composer({
   commands,
   pane,
   onSend,
+  opening = false,
 }: {
   agents: readonly UiAgent[];
   /** Each agent's own slash menu. Per session, so two teammates can offer different ones. */
   commands: Record<string, readonly UiCommand[]>;
   pane: Pane;
   onSend: (agentId: string, text: string) => void;
+  /**
+   * The team is still starting. Sending is closed, because there is no session to send to yet,
+   * but the field stays open: a cold start is seconds and the thing the user came to say is
+   * worth more than the wait. The draft is still here when the team arrives.
+   */
+  opening?: boolean;
 }): React.JSX.Element {
   const [draft, setDraft] = useState('');
   /** The item the arrow keys are on. cmdk owns it; this mirrors it so Tab can read it. */
@@ -108,7 +115,7 @@ export function Composer({
 
   const send = (): void => {
     const text = draft.trim();
-    if (text === '' || recipientId === undefined) return;
+    if (opening || text === '' || recipientId === undefined) return;
     onSend(recipientId, text);
     setDraft('');
   };
@@ -200,9 +207,15 @@ export function Composer({
       </Command>
       <button
         className="send"
-        disabled={recipientId === undefined || draft.trim() === ''}
+        disabled={opening || recipientId === undefined || draft.trim() === ''}
         onClick={send}
-        title={recipient === undefined ? 'Say who with @' : `Send to ${recipient.name}`}
+        title={
+          opening
+            ? 'The team is still starting'
+            : recipient === undefined
+              ? 'Say who with @'
+              : `Send to ${recipient.name}`
+        }
         aria-label={recipient === undefined ? 'Send' : `Send to ${recipient.name}`}
       >
         {pane.kind === 'team' && recipient !== undefined ? (

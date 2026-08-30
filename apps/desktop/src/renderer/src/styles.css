@@ -15,7 +15,16 @@
   /* The display face of the one page that is read rather than worked in. It was already here
      for one line on that page; it now carries the page. No second family was added for it. */
   --hand:"Caveat","Segoe Print",cursive;
+  /* Interaction motion. Distinct from the status animations above the fold in DESIGN.md: those
+     loop and carry state, these run once because a person just did something and are over
+     before the eye gets back to the status column. Two curves, no more — a third would be a
+     decision nobody could state the reason for. */
+  --ease-out:cubic-bezier(0.23,1,0.32,1);
+  --ease-in-out:cubic-bezier(0.77,0,0.175,1);
   color-scheme:dark;
+  /* Lets `max-height` interpolate to an intrinsic keyword, which is what makes the peer
+     message's fold open by growing instead of jumping. */
+  interpolate-size:allow-keywords;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
@@ -97,8 +106,18 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .railhead{padding:6px 14px 10px;display:flex;align-items:baseline;gap:8px}
 /* Selection is the raised ground alone. The 2px ink rule that used to mark it was a third
    emphasis on a row that already lifts and brightens, and it cut into the blobatar's column. */
-.agentrow{display:flex;gap:11px;align-items:center;padding:9px 14px;width:100%;text-align:left}
-.agentrow:hover{background:var(--raised)}
+/* Inset and rounded, because the raised ground is a lifted surface and every other one in this
+   app is: the bubble, the field, the menu, the roster's own row. The 6px margin plus 8px of
+   padding keeps the text on the 14px column the labels and headers already sit on, so nothing
+   above or below these rows moves. 12px is `.field`'s radius, the sheet's documented default. */
+.agentrow{display:flex;gap:11px;align-items:center;padding:9px 8px;width:calc(100% - 12px);margin:0 6px;border-radius:12px;text-align:left}
+/* Hover and selection answer different questions — "where is the pointer" and "which pane am I
+   in" — so they cannot both be the raised ground, which is what they were: two identical
+   declarations, and no way to tell the row you are pointing at from the one you are already in.
+   Selection keeps the ground, because it is the more lasting answer and the stronger mark.
+   Hover takes the row's muted second line to ink instead: a difference of kind rather than of
+   degree, and one that is present on every row — including an agent that has not spoken yet and
+   is showing its role in that line rather than a preview. */
 .agentrow.sel{background:var(--raised)}
 .agentrow .who{min-width:0;flex:1}
 .agentrow .nm{display:flex;align-items:baseline;gap:6px}
@@ -112,26 +131,32 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .agentrow .when{font-family:var(--mono);font-size:10px;color:var(--muted);flex:0 0 auto}
 .agentrow .preview{color:var(--muted);font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .agentrow .sub .stat{flex:0 0 auto}
-.agentrow.sel .preview,.agentrow:hover .preview{color:var(--ink)}
-.teamrow{display:flex;gap:11px;align-items:center;padding:10px 14px 10px 12px;width:100%;text-align:left}
-.teamrow:hover{background:var(--raised)}
+.agentrow:hover .preview,.agentrow:hover .role{color:var(--ink)}
+.teamrow{display:flex;gap:11px;align-items:center;padding:10px 8px 10px 6px;width:calc(100% - 12px);margin:0 6px;border-radius:12px;text-align:left}
 .teamrow.sel{background:var(--raised)}
 .teamrow .who{min-width:0;flex:1}
 .teamrow .nm{display:flex;align-items:baseline;gap:6px}
 .teamrow .nm b{font-weight:500}
 .teamrow .sub{display:flex;align-items:baseline;gap:6px;line-height:1.35}
 .teamrow .n{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
+.teamrow:hover .n{color:var(--ink)}
 .teamrow .sub .stat{flex:0 0 auto}
 .teamrow .stat{font-size:10px}
-/* A team nobody is running: no blobatars, because it has no live agents to draw. The ghost
-   holds the mark's whole box so the names stay on one left edge, and draws a single silhouette
-   inside it at the size a team of one would be. */
+/* A team with nobody on it, which is the only team that has no face to draw. It used to be
+   every team but the one on screen, because the row was handed a count instead of its members.
+   The ghost holds the mark's whole box so the names stay on one left edge, and draws a single
+   silhouette inside it at the size a team of one would be. */
 .teamrow.off .ghost{position:relative;width:46px;height:46px;flex:0 0 auto}
 .teamrow.off .ghost::after{content:"";position:absolute;left:7px;top:7px;width:32px;height:32px;border:1px dashed var(--line);border-radius:40% 60% 55% 45%}
+/* A team you are not in reads one step back: lighter name, muted ink. Contrast is the app's
+   attention channel, and the team on screen is what has it. */
 .teamrow.off b{font-weight:400;color:var(--muted)}
 .teamrow.off:hover b{color:var(--ink)}
+/* Unless it is working. A row that is saying `2 working` while its name sits at --muted is a
+   row that whispers the one thing on it worth noticing. Spending contrast here is the whole
+   reason this row can be glanced at instead of clicked into. */
+.teamrow.off.busy b{color:var(--ink)}
 .teamrow.off:disabled{cursor:default}
-.teamrow.off:disabled:hover{background:none}
 /* Not indented under their team: only one team runs at a time, so there is never a second
    group to tell them apart from, and the rule under the group already closes it. Flush left
    also puts every blobatar on one column, where the team's mark is the wider one. */
@@ -142,8 +167,14 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    `:focus-within` is not a nicety here — hover-only would make both actions unreachable from
    the keyboard. */
 .teamrowwrap{position:relative}
-.rowacts{position:absolute;right:10px;top:8px;display:flex;gap:4px;opacity:0;pointer-events:none}
+.rowacts{position:absolute;right:16px;top:8px;display:flex;gap:4px;opacity:0;pointer-events:none}
 .teamrowwrap:hover .rowacts,.teamrowwrap:focus-within .rowacts{opacity:1;pointer-events:auto}
+/* Two icons appearing in one frame is a pop, and this is the quietest column in the app. 120ms
+   is under the threshold where a reveal reads as delayed, so it removes the pop without making
+   the row feel slow. Pointer devices only: on touch there is no hover to bridge. */
+@media (hover:hover) and (pointer:fine){
+  .rowacts{transition:opacity 120ms var(--ease-out)}
+}
 /* The rail's own size for a chrome button: the 32px circle would be taller than the row's
    second line and would push the name off centre. */
 .iconbtn.sm{width:24px;height:24px;background:var(--ground)}
@@ -154,8 +185,8 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* Members overlap, so each is cut out of the ground behind it. The cut follows the silhouette
    rather than a circle, because these are blobs and not headshots. */
 .mark > .blob{position:absolute;filter:drop-shadow(1.5px 0 0 var(--cut)) drop-shadow(-1.5px 0 0 var(--cut)) drop-shadow(0 1.5px 0 var(--cut)) drop-shadow(0 -1.5px 0 var(--cut))}
-.teamrow.sel .mark,.teamrow:hover .mark{--cut:var(--raised)}
-/* the same dashed silhouette a stopped team's ghost wears, so `+2` reads as members not drawn */
+.teamrow.sel .mark{--cut:var(--raised)}
+/* the same dashed silhouette an empty team's ghost wears, so `+2` reads as members not drawn */
 .more{position:absolute;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--muted);border:1px dashed var(--line);border-radius:40% 60% 55% 45%}
 .railadd{color:var(--muted)}
 .railadd:hover{color:var(--ink)}
@@ -203,9 +234,17 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .hl .ph{color:var(--muted)}
 .hl .m{color:var(--ink);font-weight:500;box-shadow:inset 0 -1px 0 var(--ink)}
 .hl .m.bad{color:var(--muted);box-shadow:inset 0 -1px 0 var(--line)}
-.suggest{position:absolute;bottom:calc(100% + 10px);left:-6px;background:var(--raised);border:1px solid var(--line);min-width:196px;padding:4px;z-index:20;box-shadow:0 14px 40px rgba(0,0,0,.6)}
-.suggest button{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:6px 8px}
-.suggest button:hover,.suggest button.on{background:var(--ground)}
+/* The same object as the select's menu — a floating list of rows over a control, with one
+   active item — so it takes the same numbers rather than a second set that happens to be close.
+   `.selectmenu` and `.selectitem` are the definition; if those move, move these with them. */
+.suggest{position:absolute;bottom:calc(100% + 10px);left:-6px;background:var(--raised);border:1px solid var(--line);border-radius:12px;min-width:196px;padding:5px;z-index:20;box-shadow:0 20px 60px rgba(0,0,0,.65)}
+/* cmdk's own DOM: the list wraps its items in a sizer div, and an item is a div with
+   `role="option"`, not a button. `data-selected` is set by the arrow keys *and* by pointer
+   move, from one piece of state — so the pointer and the keyboard can no longer highlight two
+   different rows, which is what the old `:hover` plus `.on` pair could do. */
+.suggest [cmdk-list-sizer]{display:flex;flex-direction:column}
+.suggest [cmdk-item]{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:7px 10px;border-radius:8px;font-size:13px;cursor:pointer}
+.suggest [cmdk-item][data-selected='true']{background:var(--ground)}
 .suggest .r{color:var(--muted);font-size:12px;margin-left:auto}
 .hint{font-family:var(--mono);font-size:10.5px;color:var(--muted);white-space:nowrap}
 .vA .feed{border-left:1px solid var(--line);overflow:auto;padding:14px 0}
@@ -251,9 +290,15 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .peer .foot{margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--muted)}
 /* Folded to about eight lines, with the last of them fading out so the cut is legible as a cut
    rather than as a message that ends mid-sentence. */
-.fold{max-height:184px;overflow:hidden;position:relative}
+/* `more` opens by hundreds of pixels, which is the jump the transcript's ResizeObserver exists
+   to chase. Growing into it instead gives the observer something continuous to follow, and the
+   reader a bridge between the eight lines they had and the turn they now have. `max-content`
+   rather than `none` because only an intrinsic keyword interpolates.
+   The cut's mask is left discrete on purpose: it is pinned to the element's own bottom edge,
+   which is moving anyway, so there is nothing for a cross-fade to smooth. */
+.fold{max-height:184px;overflow:hidden;position:relative;transition:max-height 260ms var(--ease-in-out)}
 .fold.cut{-webkit-mask-image:linear-gradient(#000 74%,transparent)}
-.fold.open{max-height:none;overflow:visible}
+.fold.open{max-height:max-content}
 .foldtoggle{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .foldtoggle:hover{color:var(--ink)}
 .foldtoggle svg.up{transform:rotate(180deg)}
@@ -273,7 +318,22 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    invert, and neither button is armed — `waiting` already spends the app's one inversion on the
    rail and the header, and blobot has no opinion about whether this call should run, which is
    the entire reason it is asking. */
-.perm{margin-left:40px;border-left:2px solid var(--ink);padding:2px 0 2px 12px;display:flex;flex-direction:column;gap:6px}
+/* It arrives mid-stream, and it is the moment everything stops until a person looks, so it does
+   not get a tool line's ceremony. It comes in off its own ink edge: the gutter rule is the thing
+   that arrived. Once, on mount, and no scale — this is a block of text, not a card. */
+/* Entrances are keyframes, not `@starting-style` transitions, and the reason is a failure
+   direction rather than a preference. A transition out of a starting style sits at the starting
+   value until the element has been rendered once, and a window that is not painting (offscreen,
+   occluded, mid-screenshot) can leave it there for seconds: measured here, an agents screen that
+   stayed blank for four. An animation that never runs leaves the element at its ordinary
+   computed style, which is arrived. Late is a bug you never see; invisible is one you cannot
+   miss. And they start from a *dim* frame rather than an invisible one. A busy main thread can
+   starve an entrance of frames for seconds — measured here against demo autoplay, which saturates
+   it from the first paint — and a starved fade holds its opening frame for as long as the
+   starvation lasts. Held at `.3` that is content the user can read; held at `0` it is a screen
+   that looks broken. Over 200ms the difference between the two is not visible. */
+.perm{margin-left:40px;border-left:2px solid var(--ink);padding:2px 0 2px 12px;display:flex;flex-direction:column;gap:6px;animation:enterperm 200ms var(--ease-out)}
+@keyframes enterperm{from{opacity:.3;translate:-4px 0}}
 .perm .ask{font-size:13.5px}
 .perm .ask .mono{font-size:12.5px;color:var(--ink)}
 .perm .why{font-size:12px;color:var(--muted);line-height:1.5;max-width:52ch}
@@ -332,14 +392,20 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 textarea.field{resize:vertical;line-height:1.5}
 .labelled{display:flex;flex-direction:column;gap:6px;min-width:0}
 
-.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--raised);border-radius:999px;padding:7px 16px;font-size:13px;white-space:nowrap}
+/* `scale` rather than `transform`, here and everywhere below: the individual property composes
+   with a `translate` used for layout instead of overwriting it, which is what `.modal` needs. */
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--raised);border-radius:999px;padding:7px 16px;font-size:13px;white-space:nowrap;scale:1;transition:scale 160ms var(--ease-out)}
 .btn:hover{border-color:var(--muted)}
+/* The app's only press feedback, and it is deliberately not on the composer's send: that one is
+   pressed constantly and usually from the keyboard, where there is nothing to give back. */
+.btn:active:not([disabled]){scale:.97}
 .btn[disabled]{opacity:.4;cursor:not-allowed}
 .btn[disabled]:hover{border-color:var(--line)}
 /* The one armed action on the page, inverted exactly like the composer's send. */
 .btn.primary:not([disabled]){background:var(--ink);color:var(--ground);border-color:var(--ink)}
-.iconbtn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);color:var(--muted);flex:0 0 auto}
+.iconbtn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);color:var(--muted);flex:0 0 auto;scale:1;transition:scale 160ms var(--ease-out)}
 .iconbtn:hover{color:var(--ink);border-color:var(--muted)}
+.iconbtn:active{scale:.97}
 
 /* A refusal, not an error dialog: it says what is wrong where the user can act on it. */
 .refusal{border-left:2px solid var(--ink);padding:8px 0 8px 12px;font-size:13px}
@@ -377,8 +443,17 @@ textarea.field{resize:vertical;line-height:1.5}
  * behaviour it brings is the half nobody screenshots: a focus trap, focus returned to the
  * button that opened it, Escape, and keyboard-driven listbox and slider.
  */
-.scrim{position:fixed;inset:0;background:rgba(0,0,0,.66);z-index:60}
-.modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(560px,calc(100vw - 48px));max-height:calc(100vh - 48px);overflow:auto;background:var(--ground);border:1px solid var(--line);border-radius:20px;padding:24px 26px 22px;display:flex;flex-direction:column;gap:22px;box-shadow:0 30px 90px rgba(0,0,0,.7);z-index:61}
+/* Entrance only. Radix unmounts on close, and an exit would mean `forceMount` plus a held-open
+   state in all six dialogs; the arrival is the half that was jarring. The sheet stays centred
+   and does not grow from its trigger: a modal is here because it outlives the screen that
+   opened it, so it has no place to come from. */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.66);z-index:60;animation:enterscrim 150ms var(--ease-out)}
+@keyframes enterscrim{from{opacity:0}}
+/* Centred with `translate`, not `transform`, so the scale below composes with it rather than
+   replacing it. `transform` applies innermost, which would have scaled the -50% offset too and
+   walked the sheet a few pixels sideways on the way in. */
+.modal{position:fixed;top:50%;left:50%;translate:-50% -50%;animation:entermodal 200ms var(--ease-out);width:min(560px,calc(100vw - 48px));max-height:calc(100vh - 48px);overflow:auto;background:var(--ground);border:1px solid var(--line);border-radius:20px;padding:24px 26px 22px;display:flex;flex-direction:column;gap:22px;box-shadow:0 30px 90px rgba(0,0,0,.7);z-index:61}
+@keyframes entermodal{from{opacity:.3;scale:.97}}
 .modalhead{display:flex;align-items:flex-start;gap:16px}
 .modalhead > div{flex:1;min-width:0}
 .modalhead .display{margin-top:2px}
@@ -392,13 +467,13 @@ textarea.field{resize:vertical;line-height:1.5}
 /* Seven by two, exactly filled: a ragged wrap reads as a list that ran out of room, and a
    fixed block reads as a set that was chosen. */
 .swatches{display:grid;grid-template-columns:repeat(7,26px);gap:10px;justify-content:center}
-.swatch{width:26px;height:26px;border-radius:50%;flex:0 0 auto;padding:0;border:1px solid transparent}
-.swatch:hover{transform:scale(1.08)}
+.swatch{width:26px;height:26px;border-radius:50%;flex:0 0 auto;padding:0;border:1px solid transparent;scale:1;transition:scale 140ms var(--ease-out)}
+.swatch:hover{scale:1.08}
 .swatch.on{box-shadow:0 0 0 2px var(--ground),0 0 0 3px var(--ink)}
 .swatch.auto{background:transparent;border:1px dashed var(--line);color:var(--muted);display:flex;align-items:center;justify-content:center}
 .swatch.auto:hover{border-color:var(--muted);color:var(--ink)}
 .swatch:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
-@media (prefers-reduced-motion:reduce){.swatch:hover{transform:none}}
+@media (prefers-reduced-motion:reduce){.swatch:hover{scale:1}}
 .fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .fields > .labelled:nth-child(n+3){grid-column:1 / -1}
 .modalfoot{display:flex;justify-content:flex-end;gap:10px}
@@ -433,28 +508,45 @@ textarea.field{resize:vertical;line-height:1.5}
  * dressed here — in the page's own vocabulary: hairline rules, mono for anything literal, and
  * no colour, because the blobatars are still the only saturated thing on the page.
  */
-.md{min-width:0}
+.md{
+  min-width:0;
+  /* Prose is set to a measure. Past about 75 characters the eye loses the line return, and a
+     900px column at 14px runs to 120 — so the paragraph, not the column, carries the width.
+     Payload (code, tables, images) is exempt below: it is scanned, not read. */
+  --measure:74ch;
+  font-size:14.5px;
+  /* Leading and the paragraph gap are set together: the gap must exceed one line of leading,
+     or a paragraph break reads as weaker than the line breaks inside it and the block sets
+     as one wall. */
+  line-height:1.65;
+}
 .md > * > *:first-child, .md > *:first-child{margin-top:0}
 .md > * > *:last-child, .md > *:last-child{margin-bottom:0}
-.md p{margin:0 0 10px}
-.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{margin:16px 0 8px;font-weight:600;line-height:1.3}
-.md h1{font-size:19px;letter-spacing:-.02em}
-.md h2{font-size:16px;letter-spacing:-.01em}
-.md h3{font-size:14px}
+.md p{margin:0 0 1em;max-width:var(--measure)}
+.md h1,.md h2,.md h3,.md h4,.md h5,.md h6{margin:1.6em 0 .5em;font-weight:600;line-height:1.25;max-width:var(--measure)}
+.md h1{font-size:21px;letter-spacing:-.02em}
+.md h2{font-size:18px;letter-spacing:-.015em}
+.md h3{font-size:15px}
 .md h4,.md h5,.md h6{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-.md ul,.md ol{margin:0 0 10px;padding-left:20px}
-.md li{margin:2px 0}
+.md ul,.md ol{margin:0 0 1em;padding-left:22px;max-width:var(--measure)}
+.md li{margin:.4em 0}
 .md li::marker{color:var(--muted)}
-.md li > ul,.md li > ol{margin:2px 0}
+.md li > ul,.md li > ol{margin:.35em 0;max-width:none}
 .md li > p{margin:0}
 /* a task list keeps its checkbox but loses the browser's blue */
 .md input[type=checkbox]{accent-color:var(--muted);margin-right:6px}
 .md a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:2px}
 .md a:hover{text-decoration-color:var(--ink)}
 .md strong{font-weight:600}
-.md blockquote{margin:0 0 10px;padding-left:12px;border-left:1px solid var(--line);color:var(--muted)}
+.md blockquote{margin:0 0 1em;padding-left:14px;border-left:1px solid var(--line);color:var(--muted);max-width:var(--measure)}
 .md hr{margin:14px 0}
-.md code{font-family:var(--mono);font-size:12px;background:var(--raised);border:1px solid var(--line);padding:0 3px;border-radius:2px}
+/* A background and a border are two signals for one job, and a paragraph here carries five
+   chips. The hairline colour becomes the fill instead, and the chip gets vertical padding so
+   it sits in the line rather than filling it. */
+.md code{font-family:var(--mono);font-size:.84em;background:var(--line);border:none;padding:1.5px 5px;border-radius:5px;
+  /* A path long enough to wrap breaks the chip in two; `clone` gives each half its own
+     padding and corners, instead of one pill sliced down the middle. */
+  -webkit-box-decoration-break:clone;box-decoration-break:clone}
 /* A fenced block is a container, a header carrying the language, and the <pre> — so the frame
    belongs to the container and the <pre> is bare inside it. */
 .md [data-streamdown=code-block]{margin:0 0 10px;border:1px solid var(--line);background:var(--raised);max-width:100%;overflow:hidden}
@@ -468,8 +560,10 @@ textarea.field{resize:vertical;line-height:1.5}
 .md th,.md td{border:1px solid var(--line);padding:4px 9px;text-align:left;vertical-align:top}
 .md th{font-weight:500;color:var(--muted);font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;background:var(--raised);white-space:nowrap}
 .md img{max-width:100%}
-/* Long paths and URLs must wrap rather than widen the column. */
-.md{overflow-wrap:anywhere}
+/* Long paths and URLs must wrap rather than widen the column — but `anywhere` breaks ordinary
+   words mid-word at a line end, so it is scoped to the things that have no spaces to break at. */
+.md{overflow-wrap:break-word}
+.md code,.md a{overflow-wrap:anywhere}
 
 /* the repositories in a folder of repositories, ticked into scope */
 .reposcope{align-self:stretch;display:flex;flex-direction:column;gap:2px;border-left:1px solid var(--line);padding-left:12px}
@@ -482,3 +576,86 @@ textarea.field{resize:vertical;line-height:1.5}
 .openerror{display:flex;align-items:center;gap:12px;margin:0 20px 10px;padding:9px 14px;border:1px solid var(--line);border-left:2px solid var(--ink);border-radius:0 12px 12px 0;background:var(--raised);font-size:13px;line-height:1.45}
 .openerror .dismiss{margin-left:auto;flex:0 0 auto;color:var(--muted);font-size:16px;line-height:1;padding:0 4px}
 .openerror .dismiss:hover{color:var(--ink)}
+
+/* ---------- your agents ----------
+ *
+ * The screen an AgentProfile lives on, over the working surface rather than in place of it: the
+ * team behind it keeps running, nothing here restarts one, and closing it puts the user back
+ * exactly where they were. It is a *working* surface, so it borrows the roster's rows and the
+ * modal's fields and takes none of the creation flow's editorial treatment: no hand face, no
+ * standfirst, no numerals. `DESIGN.md` says that page works because it is the only one.
+ *
+ * Positioned inside `.vA`, which is already `position:relative`, and above the rail's drag
+ * handle so a pointer that lands on the handle's column does not resize the rail underneath. */
+/* This screen is documented as sitting *over* the working surface, and an opaque full-bleed
+   panel arriving in one frame says the opposite: it reads as the team being replaced. The sheet
+   lifts in, which is what makes "over" true: it arrives onto a ground that was already there.
+
+   The ground itself does **not** fade, and that is deliberate. Fading it was the first attempt
+   and it was wrong: a half-drawn full-bleed panel shows the running transcript through the
+   screen that is covering it, and every frame of that is a frame where the user can see rows
+   they cannot click. The sheet's worst frame is a sheet that has not arrived yet, which is
+   nothing. Entrance only, for the same reason as the modal. */
+.agentspage{position:absolute;inset:0;z-index:20;background:var(--ground);overflow:auto;display:flex;justify-content:center;padding:40px 24px 32px}
+.agentssheet{width:100%;max-width:620px;display:flex;flex-direction:column;gap:22px;align-self:flex-start;animation:entersheet 220ms var(--ease-out)}
+@keyframes entersheet{from{opacity:.3;translate:0 6px}}
+.agentshead{display:flex;align-items:center;gap:10px}
+.agentshead > div{min-width:0}
+/* One rank above a step title, because this is the page's heading rather than a section's. */
+.subhead.lg{font-size:24px;margin-top:2px}
+/* Three lines rather than two, so the blobatar sits with the name instead of centred against a
+   block of text whose height depends on whether this agent has standing instructions. */
+.rosterrow.tall{align-items:flex-start;padding:11px 12px}
+.rosterrow.tall > :first-child{margin-top:1px}
+.rosterrow .who > .sub{margin-top:1px}
+/* What the agent is told on every team it joins. Clamped: it is a paragraph the user wrote, and
+   at full height one verbose agent would push the rest of the roster off the screen. */
+.standing{font-size:12px;line-height:1.45;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.rosterrow:hover .standing{color:var(--ink)}
+/* The same hover-and-focus reveal the rail's team rows use, and for the same reason: retiring
+   somebody must not be the loudest thing on a screen whose job is "here is everybody". */
+.agentcardwrap{position:relative}
+.agentcardwrap:hover .rowacts,.agentcardwrap:focus-within .rowacts{opacity:1;pointer-events:auto}
+.agentcardwrap .rowacts{top:11px;right:11px}
+
+/* The way in, above the teams because that is the order the model reads in. A whole row rather
+   than an icon beside TEAMS: the label has to say *your agents* somewhere, or the screen is
+   something the user has to already know about. */
+.railsection{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:6px 14px 10px;color:var(--muted)}
+.railsection .mono{font-size:10px;letter-spacing:.16em}
+.railsection:hover{color:var(--ink)}
+
+/* A command in the composer's menu. Mono, because it is a literal string the user is about to
+   put in a message, and monochrome, because a command is not an agent.
+
+   Every row is exactly one line. A description arrives as whatever the skill's author wrote,
+   which is often several sentences: unconstrained, one row becomes a paragraph and the menu
+   becomes the screen. The name and the hint keep their full width because they are what the
+   user is choosing between; the description takes what is left and ellipsizes, because it is
+   there to disambiguate two names rather than to be read. */
+.suggest{max-width:min(560px,72vw)}
+.suggest [cmdk-item]{white-space:nowrap;overflow:hidden}
+.suggest .cmd{font-family:var(--mono);font-size:12px;color:var(--ink);flex:0 0 auto}
+.suggest .hint{flex:0 0 auto}
+.suggest .r{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:right}
+.suggest .suggestnote{padding:7px 10px;font-size:12px;color:var(--muted);line-height:1.45;white-space:normal}
+
+/* ---------- interaction motion, withdrawn ---------- */
+/* DESIGN.md's rule is that everything decorative sits behind `prefers-reduced-motion`, with no
+   exceptions, and the interaction transitions added above are decorative by that test: the
+   interface says everything it has to say without them.
+
+   Withdrawn rather than deleted. A cross-fade is not motion, so the opacity transitions stay and
+   go on doing their one job of removing a pop; what goes is everything that travels or grows —
+   the translates, the scales and the fold's height. Last in the file because these rules and the
+   ones they override carry the same specificity, so order is the only thing deciding them. */
+@media (prefers-reduced-motion:reduce){
+  /* The entrances keep their fade and lose their travel: same keyframes, redeclared without
+     the `translate` and `scale` the reduced-motion reader did not ask for. */
+  @keyframes enterperm{from{opacity:.3}}
+  @keyframes entersheet{from{opacity:.3}}
+  @keyframes entermodal{from{opacity:.3}}
+  .btn,.iconbtn,.swatch{transition:none}
+  .btn:active:not([disabled]),.iconbtn:active,.swatch:hover{scale:1}
+  .fold{transition:none}
+}

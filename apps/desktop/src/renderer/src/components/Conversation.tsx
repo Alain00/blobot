@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { AgentStatus } from '@blobot/core/domain';
-import type { UiAgent, UiTeam } from '../../../shared/api.js';
+import type { PermissionChoice, UiAgent, UiTeam } from '../../../shared/api.js';
 import { continuesSpeaker, foldTeamStatus, isPending, type Item, type Pane } from '../model.js';
 import { timeRule } from '../time.js';
 import { Blob } from './Blob.js';
@@ -27,13 +27,16 @@ export function Conversation({
   statuses,
   items,
   onAnswerPermission,
+  opening = false,
 }: {
   pane: Pane;
   team: UiTeam;
   agents: readonly UiAgent[];
   statuses: Record<string, AgentStatus>;
   items: readonly Item[];
-  onAnswerPermission: (requestId: string, choice: 'allow' | 'reject') => void;
+  onAnswerPermission: (requestId: string, choice: PermissionChoice) => void;
+  /** The team is still starting. Nobody has asked these agents anything yet. */
+  opening?: boolean;
 }): React.JSX.Element {
   const byId = new Map(agents.map((agent) => [agent.id, agent]));
   const focused = pane.kind === 'agent' ? byId.get(pane.agentId) : undefined;
@@ -110,7 +113,12 @@ export function Conversation({
 
           {/* Whoever is about to speak, under the last thing said. In the team pane that can be
               two agents at once, which is the claim the demo makes. */}
-          {agents
+          {/* Not while the team is starting. `starting` is a pending status because an agent
+              whose runtime is still coming up has usually just been sent something and the dots
+              are the only sign of it — but on a cold start nobody has said anything to anybody,
+              and three dots under an empty transcript claim an answer is on its way. The rail
+              and the header carry the state there. */}
+          {(opening ? [] : agents)
             .filter((agent) => pane.kind === 'team' || pane.agentId === agent.id)
             .filter((agent) => isPending(statuses[agent.id] ?? 'idle', items, agent.id))
             .map((agent) => (
@@ -236,7 +244,7 @@ const ItemView = React.memo(function ItemView({
   item: Item;
   grouped: boolean;
   teamPane: boolean;
-  onAnswerPermission: (requestId: string, choice: 'allow' | 'reject') => void;
+  onAnswerPermission: (requestId: string, choice: PermissionChoice) => void;
 } & Cast): React.JSX.Element | null {
   switch (item.kind) {
     // From you: a solid bubble on the right. There is only ever one "you", so the side is an
@@ -335,9 +343,11 @@ const ItemView = React.memo(function ItemView({
             <span>
               {item.outcome === 'allowed'
                 ? 'you allowed this once'
-                : item.outcome === 'rejected'
-                  ? 'you rejected this'
-                  : 'nobody answered, so it was cancelled'}
+                : item.outcome === 'allowed_always'
+                  ? 'you allowed this, and it stops asking'
+                  : item.outcome === 'rejected'
+                    ? 'you rejected this'
+                    : 'nobody answered, so it was cancelled'}
             </span>
           </div>
         );
@@ -351,7 +361,8 @@ const ItemView = React.memo(function ItemView({
               is about something, and the block is where a user decides what blobot is. */}
           <div className="why">
             It is asking because this reaches outside its own workspace or cannot be undone.
-            Allowing it applies to this one call.
+            Allow once covers this call. Allow always writes a rule into this agent&apos;s own
+            .claude/settings.local.json and stops asking for this one thing.
           </div>
           <div className="acts">
             <button
@@ -360,6 +371,13 @@ const ItemView = React.memo(function ItemView({
               onClick={() => onAnswerPermission(item.id, 'allow')}
             >
               allow once
+            </button>
+            <button
+              className="btn"
+              disabled={!item.canAllowAlways}
+              onClick={() => onAnswerPermission(item.id, 'allow_always')}
+            >
+              allow always
             </button>
             <button className="btn" onClick={() => onAnswerPermission(item.id, 'reject')}>
               reject

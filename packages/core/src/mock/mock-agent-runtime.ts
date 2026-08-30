@@ -220,8 +220,9 @@ export class MockAgentRuntime implements AgentRuntime {
   }
 
   /**
-   * Both runtimes offer three options and blobot surfaces two, so the mock offers the three:
-   * a mock that offers only what the UI draws would never catch the UI drawing the wrong one.
+   * Both runtimes offer three options and blobot now surfaces all three. The mock keeps
+   * offering exactly what a real bridge offers, in the same shape: a mock that offered only
+   * what the UI draws would never catch the UI drawing the wrong one.
    */
   async #askPermission(toolCallId: string, title: string): Promise<boolean> {
     const handler = this.#permissionHandler;

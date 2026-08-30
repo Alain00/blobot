@@ -288,3 +288,45 @@ Everything else this ticket decided stands: stated rather than consented to, no 
 team creation before the first agent is spawned, and exactly **Allow once** and **Reject** on
 the block itself. The asymmetry paragraph comes back the day a second runtime does, and the
 list with it.
+
+## Amendment (reopened by the author, 2026-08-29): the block offers **Allow always**
+
+The reason this ticket gave for withholding it was that `allow_always` is *"a rule the user is
+authoring with nowhere to see or revoke it"*. That was an assumption about where the rule goes,
+and it has now been measured rather than assumed.
+
+Observed against a real `claude` through the pinned bridge, with an MCP server declared in the
+workspace's own `.mcp.json` (`scratchpad/probe3.mts`, this session):
+
+- The bridge offers all three on every ordinary tool call, MCP tools included:
+  `{reject, reject_once} {allow, allow_once} {allow_always, allow_always}`.
+- Answering `allow_always` allows the call **and writes**
+  `<workspace>/.claude/settings.local.json` with `{"permissions":{"allow":["mcp__probe__blobot_ping"]}}`.
+- The next call to the same tool in the same turn raised **no second request**.
+
+So the rule has a location, in a file, in **this one agent's workspace**, and the user can read
+it and delete it. It is per agent, because an AgentWorkspace is per agent: allowing something
+for Alice says nothing about Bob. That is a narrower blast radius than the ticket feared, and it
+is a place to point at, which is what the objection actually asked for.
+
+**Decision: three answers on the block — allow once, allow always, reject.** `reject_always`
+stays unoffered; refusing forever is the same standing rule pointed the other way and nobody has
+asked for it. Neither the second nor the third button is armed, for the reason the first one
+never was.
+
+The block says where an *always* goes, in the same sentence that offers it. A standing rule the
+user cannot find is the whole objection; naming the file answers it where it is being made.
+
+`PermissionOutcome` gains `allowed_always`, because "you allowed this once" and "you allowed
+this, and it stops asking" are not the same record of what happened.
+
+### The disclosure was also wrong about MCP, and is fixed here
+
+> They also have whatever tools your own MCP servers provide, and blobot does not prompt for
+> those.
+
+That sentence survived from this ticket's original *"MCP tools are outside all of this"*, which
+the first 2026-08-29 amendment already found false under `default` mode — and it is exactly the
+sentence a user would have read while watching an agent stop on an MCP call. It now says the
+true thing: the user's own MCP tools are asked about like anything else, and the mailbox blobot
+injects is the one exception.

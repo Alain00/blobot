@@ -107,6 +107,17 @@ export interface UiSnapshot {
   /** Named so nobody mistakes the demo for real agents. */
   readonly demoMode: boolean;
   /**
+   * This team is being started and is not answering yet: its workspaces are being reconciled
+   * and a process is being spawned per agent, which on a cold start is seconds.
+   *
+   * Present so the surfaces that would otherwise lie can stop. The roster in this snapshot is
+   * read from the database rather than from a running team, so the user watches the agents they
+   * are waiting for arrive one at a time; every one of them that is not up yet reads `starting`,
+   * which is a status the vocabulary already had and nothing had ever emitted. Sending is closed
+   * while it is set, because there is no orchestrator behind these agents to send to.
+   */
+  readonly opening?: true;
+  /**
    * Why the team this launch tried to open did not open, if one did not. Present with `team`
    * undefined and `teams` non-empty, which is the shape the empty state has to tell apart
    * from a genuine first run.
@@ -117,8 +128,8 @@ export interface UiSnapshot {
 /**
  * A tool call an agent is blocked on until you answer, as the transcript draws it.
  *
- * Ticket 14: exactly two answers, inline in the transcript. Two agents can be waiting at once
- * and a modal would serialise them into whichever arrived first.
+ * Ticket 14 and its 2026-08-29 amendment: three answers, inline in the transcript. Two agents
+ * can be waiting at once and a modal would serialise them into whichever arrived first.
  */
 export interface UiPermissionRequest {
   readonly id: string;
@@ -129,10 +140,21 @@ export interface UiPermissionRequest {
   readonly title: string;
   /** False on a runtime that offers no single-use approval: the block can only reject. */
   readonly canAllow: boolean;
+  /**
+   * False on a runtime that cannot record a standing rule. On Claude Code the rule lands in
+   * `<workspace>/.claude/settings.local.json`, in this one agent's copy of the folder.
+   */
+  readonly canAllowAlways: boolean;
 }
 
-/** How a permission block ends. `cancelled` is nobody answering, which is not a rejection. */
-export type UiPermissionOutcome = 'allowed' | 'rejected' | 'cancelled';
+/**
+ * How a permission block ends. `cancelled` is nobody answering, which is not a rejection, and
+ * `allowed_always` left a rule behind where `allowed` did not.
+ */
+export type UiPermissionOutcome = 'allowed' | 'allowed_always' | 'rejected' | 'cancelled';
+
+/** The three answers the block offers, named by what they do rather than by a provider's word. */
+export type PermissionChoice = 'allow' | 'allow_always' | 'reject';
 
 /** What became of one agent's work when it left a team, or the team was deleted. */
 export interface UiAgentRemoval {
@@ -307,8 +329,11 @@ export interface BlobotApi {
   editTeam(teamId: string, profileIds: readonly string[]): Promise<TeamDeletionResult>;
   /** Removes every agent's workspace, then the team. The transcript stays in the database. */
   deleteTeam(teamId: string): Promise<TeamDeletionResult>;
-  /** Answering a permission block. `reject` is a refusal of this call, not a standing rule. */
-  answerPermission(requestId: string, choice: 'allow' | 'reject'): Promise<void>;
+  /**
+   * Answering a permission block. `reject` is a refusal of this call, not a standing rule;
+   * `allow_always` is the only one of the three that leaves anything behind.
+   */
+  answerPermission(requestId: string, choice: PermissionChoice): Promise<void>;
   /**
    * Every stream leads with the team it belongs to.
    *

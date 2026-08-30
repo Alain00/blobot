@@ -190,10 +190,15 @@ describe('the voices, after the roster stopped being passed down', () => {
       toolCallId: 'c',
       title: 'git push',
       canAllow: true,
+      canAllowAlways: true,
     };
     expect(draw([asking], { kind: 'team' })).toContain('Alice wants to run git push');
+    expect(draw([asking], { kind: 'team' })).toContain('allow always');
     expect(draw([{ ...asking, outcome: 'allowed' }], { kind: 'team' })).toContain(
       'you allowed this once',
+    );
+    expect(draw([{ ...asking, outcome: 'allowed_always' }], { kind: 'team' })).toContain(
+      'you allowed this, and it stops asking',
     );
   });
 

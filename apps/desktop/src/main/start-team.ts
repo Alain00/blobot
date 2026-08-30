@@ -24,6 +24,12 @@ export interface StartTeamOptions {
   readonly clock: Clock;
   readonly workspaces?: WorkspaceProvider;
   readonly onLog?: (line: string) => void;
+  /**
+   * One agent's runtime is up. Called once per agent, as each becomes ready rather than when
+   * the last one does, because a cold start is a process per agent and the user is entitled to
+   * watch them arrive instead of waiting on the slowest.
+   */
+  readonly onAgentReady?: (agentId: string) => void;
 }
 
 /**
@@ -123,7 +129,10 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       ],
       onStderr: (line) => log(`[bridge:${agent.id}] ${line}`),
     });
-    runtime.onLifecycleChange((lifecycle) => log(`[${agent.id}] ${lifecycle}`));
+    runtime.onLifecycleChange((lifecycle) => {
+      log(`[${agent.id}] ${lifecycle}`);
+      if (lifecycle === 'ready') options.onAgentReady?.(agent.id);
+    });
     runtimes.set(agent.id, runtime);
   }
 

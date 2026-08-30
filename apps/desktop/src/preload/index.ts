@@ -10,6 +10,7 @@ import type {
   TeamCreationResult,
   TeamOpenResult,
   TeamDeletionResult,
+  PermissionChoice,
   UiPermissionOutcome,
   UiPermissionRequest,
   UiCommand,
@@ -54,7 +55,7 @@ const api: BlobotApi = {
     ipcRenderer.invoke('blobot:editTeam', teamId, profileIds) as Promise<TeamDeletionResult>,
   deleteTeam: (teamId: string) =>
     ipcRenderer.invoke('blobot:deleteTeam', teamId) as Promise<TeamDeletionResult>,
-  answerPermission: (requestId: string, choice: 'allow' | 'reject') =>
+  answerPermission: (requestId: string, choice: PermissionChoice) =>
     ipcRenderer.invoke('blobot:answerPermission', requestId, choice) as Promise<void>,
   onEvent: (listener) =>
     subscribe('blobot:event', (_e, teamId: string, event: AgentEvent) => listener(teamId, event)),

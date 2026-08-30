@@ -1084,3 +1084,118 @@ is idle and when the pool is not holding it. Read on screen against the real dat
 is covered — the main process sends status per team from `attach`, the renderer accepts any
 team's, the row renders each state — but nothing has driven a real second team into `working`
 and watched the row change. Same reason as the delete dialog above: it needs a mouse.
+
+### Settled, 2026-08-29: the block offers **Allow always**, and MCP calls were never blocked
+
+Asked why MCP calls "are not allowed" and to add *allow always*. Both halves were answered
+against a real `claude` rather than by reading (`probe.mts`, `probe2.mts`, `probe3.mts` in this
+session's scratchpad, all three run live).
+
+**Nothing in blobot rejects an MCP call.** An MCP server declared in the workspace's `.mcp.json`
+loaded, the tool was offered, the bridge raised `session/request_permission` for it with the
+ordinary three options, answering `allow_once` ran it, and the tool returned. Injecting a server
+of our own alongside it (so `allowedTools: ['mcp__blobot']` is in play, the first amendment's
+pre-approval) changed nothing for the inherited one. What is true, and is what an MCP call
+*looks* blocked by, is ticket 14's own posture: under `session/set_mode("default")` **every**
+user MCP tool prompts, every call, and a request nobody answers is **cancelled, never allowed**,
+which reaches the agent as `Tool use aborted`. Backgrounded teams do not draw the block into the
+open transcript (they carry it in their rail row's `waiting`), so a team left alone on a
+prompting MCP tool will sit there.
+
+That is also what made *allow always* the fix rather than a feature: without it there is no
+answer that survives the next call.
+
+**Allow always ships.** Ticket 14's amendment has the measurement and the reasoning: the rule
+lands in `<workspace>/.claude/settings.local.json`, per agent, and the block names the file
+where it offers the button. `PermissionOutcome` gained `allowed_always` in core; `choicesOf`
+gained `allowAlwaysOptionId`; the option ids still never leave the main process, since the
+renderer names an intent (`PermissionChoice`) and not a provider's option.
+
+Also fixed while here: the creation disclosure still said blobot does not prompt for the user's
+own MCP servers. It has been false since the first amendment, and it was the one sentence a user
+would have read while watching an agent stop on exactly that.
+
+Still true, and still unrecorded: a permission is a runtime callback, not an `AgentEvent`, so
+`SqliteRecorder` never sees what was allowed. An *always* now leaves a trace on disk that a once
+does not, which is the first time that gap has an artifact behind it.
+
+## Settled, 2026-08-29: interaction motion, and a cold start that says so
+
+Two changes, and the second was found by shipping the first.
+
+### The stylesheet had no `transition` in it, anywhere
+
+Every hover, focus border, reveal, fold, modal and full-screen overlay changed state in one
+frame. That was not an oversight so much as an overshoot: `DESIGN.md`'s Motion section reasoned
+about *ambient* motion, which is spoken for by the blobatars, and by omission banned responsive
+motion too. Those are different budgets, and the section now says so — **ambient** loops and
+means status, **interaction** runs once because a person did something and is over before the
+eye returns to the status column.
+
+Seven places took interaction motion, each of which had failed a frequency-and-purpose gate
+before it was written: the agents sheet's arrival, the row actions' hover reveal (120ms, pointer
+devices only), the permission block's arrival, the scrim and modal, the peer message's fold
+(`interpolate-size:allow-keywords`, so `max-height` can interpolate to `max-content`), the colour
+swatch, and press feedback on `.btn`/`.iconbtn`. Rejected and worth not re-proposing: the
+composer's `@mention` menu (keyboard-initiated, 100+/day), pane and team switching, the rail's
+hover colour, the activity feed, transcript message entrances (the pending dots already bridge
+that), and the turn pips.
+
+Three things that cost a rebuild each and are worth knowing:
+
+- **Entrances are keyframes, not `@starting-style` transitions.** A transition out of a starting
+  style sits at the starting value until the element has been rendered once, and a window that
+  is not getting frames can leave it there for **seconds** — measured, not theorised: the agents
+  screen stayed blank for four. An animation that never runs leaves the element at its ordinary
+  computed style, which is arrived.
+- **They start from a dim frame, not an invisible one.** Even a keyframe holds its opening frame
+  while starved. At `.3` that is content you can read; at `0` it is a screen that looks broken.
+- **The agents screen's ground does not fade, only its sheet.** Fading an opaque full-bleed panel
+  means every starved frame shows the running transcript through the screen covering it, with
+  rows the user cannot click.
+
+`.modal` is centred with `translate`, not `transform`, so the entrance `scale` composes with the
+centring instead of scaling the -50% offset and walking the sheet sideways.
+
+Withdrawal for `prefers-reduced-motion` is one block, **last in the file**, because it and the
+rules it overrides carry the same specificity. Fades stay, travel goes.
+
+### A cold start had no feedback at all, and the launch had no window
+
+Reported by the author while the above was landing. Three things were wrong, in increasing order
+of how bad they were:
+
+1. `switchTo` awaited the whole start before telling the renderer anything, so clicking a team
+   in the rail did nothing visible for the seconds a workspace reconcile and a process per agent
+   take.
+2. The renderer had nothing to draw even if it had known, because the roster only existed once
+   the team was running.
+3. **At launch the team was started before `createWindow()`.** A cold start was spent with no
+   window at all.
+
+The fix uses a status the vocabulary already had and nothing had ever emitted. `starting` has a
+blobatar animation, a mono word and a place in the team-status fold; it had no producer.
+
+- `opening` in the main process holds the team being started and the set of agents already up.
+  `openingSnapshot` builds the snapshot from **the database** rather than from a running team:
+  the roster, the roles, the hues and the runtimes are all known the instant the user clicks, and
+  only the processes are not. The transcript comes too, because a team you are returning to had
+  a conversation.
+- `startTeam` takes `onAgentReady`, fired from the runtime's `ready` lifecycle, so agents leave
+  `starting` **one at a time** instead of all at the end. A four-agent team no longer looks
+  frozen for as long as its slowest member takes.
+- The launch team now starts *after* the window and is not awaited. The rail comes up first and
+  the team arrives into it. A launch that cannot open its team still is not a launch that fails.
+- Sending is closed while `opening` is set, in the composer *and* in the `blobot:prompt` handler:
+  `current()` is still the previous team during a switch, so a message sent then would have
+  reached the wrong team's agent. The field stays open, because the draft is worth more than the
+  wait.
+- The transcript's pending dots are suppressed while opening. `starting` is a pending status
+  because an agent whose runtime is coming up has usually just been sent something; on a cold
+  start nobody has said anything, and three dots under an empty transcript claim an answer is on
+  its way.
+
+Verified against two real Claude agents with the start artificially slowed: the rail draws
+`2 STARTING` on the team row and `STARTING` on each agent, the hairline sweeps, and send is
+closed. **The `--screenshot` review flag cannot see this on its own** — the renderer mounts after
+a real 2s start has already finished, so reviewing it means slowing `pool.start` on purpose.

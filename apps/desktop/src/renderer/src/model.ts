@@ -51,6 +51,7 @@ export type Item =
       toolCallId: string;
       title: string;
       canAllow: boolean;
+      canAllowAlways: boolean;
       /** Absent while it is still standing there. Present is a record of what you answered. */
       outcome?: UiPermissionOutcome;
     };
@@ -197,6 +198,7 @@ export function reduce(state: AppState, action: Action): AppState {
               toolCallId: request.toolCallId,
               title: request.title,
               canAllow: request.canAllow,
+              canAllowAlways: request.canAllowAlways,
             }),
           ),
         ].sort((left, right) => left.at - right.at),
@@ -231,6 +233,7 @@ export function reduce(state: AppState, action: Action): AppState {
             toolCallId: action.request.toolCallId,
             title: action.request.title,
             canAllow: action.request.canAllow,
+            canAllowAlways: action.request.canAllowAlways,
           },
         ],
       };
@@ -244,7 +247,9 @@ export function reduce(state: AppState, action: Action): AppState {
       // Allowed, the call finally starts, so its line comes back. Rejected, the runtime reports
       // a failed tool a moment later and the line leaves the conversation the usual way.
       const items = state.items.map((item) =>
-        item.kind === 'tool' && item.status === 'asking' && action.outcome === 'allowed'
+        item.kind === 'tool' &&
+        item.status === 'asking' &&
+        (action.outcome === 'allowed' || action.outcome === 'allowed_always')
           ? { ...item, status: 'running' as const }
           : item,
       );

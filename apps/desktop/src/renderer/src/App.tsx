@@ -214,6 +214,7 @@ export function App(): React.JSX.Element {
             agents={snapshot.agents}
             statuses={state.statuses}
             items={items}
+            opening={snapshot.opening === true}
             onAnswerPermission={(requestId, choice) =>
               void window.blobot.answerPermission(requestId, choice)
             }
@@ -222,6 +223,7 @@ export function App(): React.JSX.Element {
             agents={snapshot.agents}
             commands={state.commands}
             pane={pane}
+            opening={snapshot.opening === true}
             onSend={(agentId, text) => void window.blobot.prompt(agentId, text)}
           />
         </div>

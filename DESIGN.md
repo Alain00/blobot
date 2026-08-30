@@ -99,11 +99,14 @@ Other transcript rules:
   something dangerous stops until a human answers, and two agents can be stopped at once: a
   modal would serialise them into whichever arrived first. It stands where that tool's line
   would have stood, in the same gutter, wearing `.refusal`'s ink edge because it is the same
-  kind of event — something stopped, and a person is the only way past it. **Neither button is
+  kind of event — something stopped, and a person is the only way past it. **No button is
   armed**: `waiting` already spends the app's one inversion in the rail and the header, and
-  blobot has no opinion about whether the call should run, which is why it is asking. Exactly
-  two answers, **allow once** and **reject** (ticket 14), and the tool line does not print
-  `running` while nothing is running.
+  blobot has no opinion about whether the call should run, which is why it is asking. Three
+  answers, **allow once**, **allow always** and **reject** (ticket 14 and its second
+  amendment), and the tool line does not print `running` while nothing is running. The block
+  says where an *always* goes, because a standing rule the user cannot find is the reason the
+  answer was withheld in the first place: it is a line in that one agent's
+  `.claude/settings.local.json`, and no other agent's.
 - **The transcript follows its own height, not the item list.** Markdown lays out after it is
   handed its text, a code block is highlighted a frame later, and a fold opens by hundreds of
   pixels on a click — so the stick-to-bottom is a `ResizeObserver` on the column, and it lets go

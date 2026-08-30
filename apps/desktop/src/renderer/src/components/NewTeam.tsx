@@ -332,8 +332,9 @@ function Disclosure({
         agent waits for you.
       </p>
       <p>
-        They also have whatever tools your own MCP servers provide, and blobot does not prompt
-        for those.
+        They also have whatever tools your own MCP servers provide, and they are asked about
+        like anything else. The one exception is the mailbox blobot gives them to talk to each
+        other, which never asks.
       </p>
       <p>
         <b>blobot is not a sandbox.</b>

@@ -55,8 +55,11 @@ export interface PendingPermission {
  * How a permission request ended. `cancelled` is nobody answering: the team was stopped, or
  * the chosen option does not exist on this runtime. It is not the same as a rejection, and the
  * transcript says which.
+ *
+ * `allowed_always` is separate from `allowed` because it is not the same act: it leaves a
+ * standing rule behind, and the line the transcript keeps has to say so.
  */
-export type PermissionOutcome = 'allowed' | 'rejected' | 'cancelled';
+export type PermissionOutcome = 'allowed' | 'allowed_always' | 'rejected' | 'cancelled';
 
 export interface BudgetExhausted {
   readonly teamId: string;
@@ -508,9 +511,11 @@ export class Orchestrator {
     const outcome: PermissionOutcome =
       chosen === undefined
         ? 'cancelled'
-        : chosen.kind.startsWith('allow')
-          ? 'allowed'
-          : 'rejected';
+        : chosen.kind === 'allow_always'
+          ? 'allowed_always'
+          : chosen.kind === 'allow_once'
+            ? 'allowed'
+            : 'rejected';
     for (const listener of this.#permissionSettledListeners) listener(id, outcome);
   }
 

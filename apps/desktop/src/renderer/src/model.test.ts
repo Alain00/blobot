@@ -235,6 +235,7 @@ describe('a permission block', () => {
     toolCallId: 'tool_1',
     title: 'rm -rf dist',
     canAllow: true,
+    canAllowAlways: true,
   };
   const started: AgentEvent = {
     ...identity,
@@ -259,6 +260,19 @@ describe('a permission block', () => {
     expect(allowed.items).toMatchObject([
       { kind: 'tool', id: 'tool_1', status: 'running' },
       { kind: 'permission', id: 'perm_1', outcome: 'allowed' },
+    ]);
+  });
+
+  it('starts the call on an always answer too, and says the rule was left behind', () => {
+    const asked = reduce(apply([started]), { type: 'permission', request, at: 20 });
+    const allowed = reduce(asked, {
+      type: 'permissionSettled',
+      id: 'perm_1',
+      outcome: 'allowed_always',
+    });
+    expect(allowed.items).toMatchObject([
+      { kind: 'tool', id: 'tool_1', status: 'running' },
+      { kind: 'permission', id: 'perm_1', outcome: 'allowed_always' },
     ]);
   });
 
@@ -320,6 +334,7 @@ it('holds the tool line when the request arrives before the call it is about', (
       toolCallId: 'tool_1',
       title: 'rm -rf dist',
       canAllow: true,
+      canAllowAlways: true,
     },
     at: 20,
   });

@@ -38,6 +38,7 @@ import type {
   TeamCreationResult,
   TeamDeletionResult,
   UiAgentRemoval,
+  PermissionChoice,
   UiPermissionRequest,
   UiAgentProfile,
   UiRuntimeChoice,
@@ -104,6 +105,7 @@ function asUiPermission(pending: PendingPermission): UiPermissionRequest {
     toolCallId: pending.toolCallId,
     title: pending.title,
     canAllow: choicesOf(pending).allowOptionId !== undefined,
+    canAllowAlways: choicesOf(pending).allowAlwaysOptionId !== undefined,
   };
 }
 
@@ -115,7 +117,20 @@ const pool = new TeamPool<RunningTeam>({
   limit: LIVE_TEAM_LIMIT,
   start: async (team) => {
     if (store === undefined || opened === undefined) throw new Error('No database is open.');
-    const live = await startTeam({ team, store, db: opened.db, clock });
+    const live = await startTeam({
+      team,
+      store,
+      db: opened.db,
+      clock,
+      // Each agent reports itself up, and the rail redraws that one row. A cold start is a
+      // workspace reconcile and a process per agent, and reporting only at the end would make
+      // a four-agent team look frozen for as long as its slowest member takes.
+      onAgentReady: (agentId) => {
+        if (opening?.team.id !== team.id) return;
+        opening.ready.add(agentId);
+        send('blobot:team');
+      },
+    });
     attach(live);
     return live;
   },
@@ -126,6 +141,22 @@ const pool = new TeamPool<RunningTeam>({
     }
   },
 });
+
+/**
+ * The team the user is waiting for, while it is being started.
+ *
+ * `current()` still answers with the team that was on screen, which is correct — that one is
+ * still running and still the one whose transcript is drawn. But it is not what the user just
+ * clicked, and for the seconds a cold start takes it was the only thing the renderer could see.
+ * This is the other half: who they are waiting for, and which of that team's agents are up.
+ */
+let opening: { readonly team: Team; readonly ready: Set<string> } | undefined;
+
+/**
+ * The launch team's start, for the two things that have to wait for it: `--screenshot`'s
+ * autoplay, and nothing else. Resolved when there is no team to open.
+ */
+let firstStart: Promise<void> = Promise.resolve();
 
 /** The team on screen. Everything the renderer asks about is about this one. */
 function current(): RunningTeam | undefined {
@@ -193,7 +224,60 @@ function agentProfiles(): UiAgentProfile[] {
   }));
 }
 
+/**
+ * What the renderer gets while a team is being started.
+ *
+ * Read from the database, because that is where a team's roster has always lived: the names,
+ * the roles, the hues and the runtimes are all known the instant the user clicks, and only the
+ * processes are not. So the team appears immediately, wearing the faces it will have, and each
+ * agent sits at `starting` until its runtime says otherwise.
+ *
+ * The transcript comes too. A team you are returning to had a conversation, and showing it
+ * while the agents come up is more honest than an empty pane: those messages were really said.
+ */
+function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<string> }): UiSnapshot {
+  const { team, ready } = pending;
+  const records = store?.agentsOfTeam(team.id) ?? [];
+  return {
+    team: {
+      id: team.id,
+      name: team.name,
+      workspacePath: team.workspacePath,
+      turnBudget: team.turnBudget,
+    },
+    teams: teamSummaries(),
+    agents: records.map((record) => ({
+      id: record.id,
+      name: record.name,
+      role: record.role,
+      runtimeLabel: runtimeLabel(record.runtimeId),
+      // The Workspace it will be cut from. Its own AgentWorkspace does not exist yet on a first
+      // launch, and naming a path that has not been provisioned would be a claim, not a fact.
+      workspacePath: team.workspacePath,
+      ...(record.branch === undefined ? {} : { branch: record.branch }),
+      ...(record.hue === undefined ? {} : { hue: record.hue }),
+    })),
+    // The teams the pool is still holding keep reporting: one of them can be working while
+    // this one starts, and the rail draws all of them.
+    statuses: {
+      ...liveStatuses(),
+      ...Object.fromEntries(
+        records.map((record) => [record.id, ready.has(record.id) ? 'idle' : 'starting']),
+      ),
+    },
+    // Nothing has a session yet, so there is no menu to offer and no block to answer.
+    commands: {},
+    messages: store?.forTeam(team.id) ?? [],
+    answers: store?.answersOfTeam(team.id) ?? [],
+    permissions: [],
+    turnsThisPrompt: 0,
+    demoMode: false,
+    opening: true,
+  };
+}
+
 function snapshot(): UiSnapshot {
+  if (opening !== undefined) return openingSnapshot(opening);
   const team = current();
   if (team === undefined) {
     return {
@@ -317,6 +401,11 @@ function attach(team: RunningTeam): void {
  */
 async function switchTo(team: Team): Promise<TeamOpenResult> {
   if (store === undefined || opened === undefined) return { ok: false, error: 'No database is open.' };
+  // Said before the work rather than after it. A team the pool already holds is promoted in the
+  // same tick and the renderer never draws this; a cold start is seconds, and those seconds used
+  // to be a click that did nothing.
+  opening = { team, ready: new Set() };
+  send('blobot:team');
   try {
     await pool.select(team);
     openError = undefined;
@@ -324,8 +413,11 @@ async function switchTo(team: Team): Promise<TeamOpenResult> {
     // A Workspace that has been moved or deleted is the ordinary case here, and it used to
     // reach nobody: the handler rejected, the terminal got a stack trace, and the user got a
     // team that would not open for no stated reason. Whatever was on screen stays on screen.
+    opening = undefined;
+    send('blobot:team');
     return { ok: false, error: describe(error) };
   }
+  opening = undefined;
   send('blobot:team');
   return { ok: true };
 }
@@ -362,11 +454,15 @@ async function createWindow(): Promise<void> {
 
   if (autoplay) {
     // `loadFile` already resolved, so a `did-finish-load` listener attached here never fires.
+    // The wait is for the launch team, which now starts after this window rather than before it:
+    // without it a `--live-claude` autoplay would prompt whatever was live, which is nothing.
     setTimeout(() => {
-      const team = current();
-      if (team !== undefined) {
-        void team.orchestrator.promptFromUser(team.agents[0]?.id ?? '', team.autoplayPrompt);
-      }
+      void firstStart.then(() => {
+        const team = current();
+        if (team !== undefined) {
+          void team.orchestrator.promptFromUser(team.agents[0]?.id ?? '', team.autoplayPrompt);
+        }
+      });
     }, 700);
   }
 
@@ -389,6 +485,8 @@ void app.whenReady().then(async () => {
   // Dev-time path: core's migrations live in its package. Packaging will copy them next to
   // the bundle, and this is the line that changes when it does.
   const migrations = join(app.getAppPath(), '../../packages/core/migrations');
+  /** The team to open once the window is up. Undefined on a first run, which has none. */
+  let launchTeam: Team | undefined;
 
   if (demoMode) {
     // The one team whose database is thrown away, because it is the same scripted replay
@@ -402,20 +500,15 @@ void app.whenReady().then(async () => {
     // the user created rather than a thing this process happens to be holding.
     opened = openDatabase({ path: join(app.getPath('userData'), 'blobot.db'), migrationsFolder: migrations });
     store = new SqliteStore(opened.db);
-    const team = liveClaudePath === undefined ? store.listTeams()[0] : await liveTeam(liveClaudePath);
-    // A launch that cannot open the newest team is not a launch that fails: the window comes
-    // up on the rail, where the user can pick another one and read what went wrong.
-    if (team !== undefined) {
-      const first = await switchTo(team);
-      if (!first.ok) {
-        openError = `${team.name} did not open. ${first.error ?? ''}`.trim();
-        process.stderr.write(`[teams] ${openError}\n`);
-      }
-    }
+    launchTeam = liveClaudePath === undefined ? store.listTeams()[0] : await liveTeam(liveClaudePath);
   }
 
   ipcMain.handle('blobot:snapshot', () => snapshot());
   ipcMain.handle('blobot:prompt', async (_event, agentId: string, text: string) => {
+    // `current()` is still the team that was on screen while another one starts, so a message
+    // sent now would reach the wrong team's agent. The composer is closed for the same reason;
+    // this is the half that does not depend on the renderer having agreed.
+    if (opening !== undefined) return;
     await current()?.orchestrator.promptFromUser(agentId, text);
   });
   ipcMain.handle('blobot:resume', () => current()?.orchestrator.resumeAfterBudget());
@@ -586,15 +679,20 @@ void app.whenReady().then(async () => {
   });
 
   /**
-   * The answer to one permission block. Two choices reach here, and the option ids stay in this
-   * process: a renderer that could name an option could name `allow_always`.
+   * The answer to one permission block. Three choices reach here as blobot's own words, and the
+   * provider's option ids stay in this process: the renderer names an intent, not an option.
    */
-  ipcMain.handle('blobot:answerPermission', (_event, requestId: string, choice: 'allow' | 'reject') => {
+  ipcMain.handle('blobot:answerPermission', (_event, requestId: string, choice: PermissionChoice) => {
     const waiting = permissions.get(requestId);
     const pending = waiting?.orchestrator.pendingPermissions.find((entry) => entry.id === requestId);
     if (waiting === undefined || pending === undefined) return;
     const choices = choicesOf(pending);
-    const optionId = choice === 'allow' ? choices.allowOptionId : choices.rejectOptionId;
+    const optionId =
+      choice === 'allow'
+        ? choices.allowOptionId
+        : choice === 'allow_always'
+          ? choices.allowAlwaysOptionId
+          : choices.rejectOptionId;
     // `null` cancels rather than approves: a runtime that offers neither option must not have
     // one invented for it.
     waiting.orchestrator.answerPermission(requestId, optionId ?? null);
@@ -608,6 +706,26 @@ void app.whenReady().then(async () => {
   });
 
   await createWindow();
+
+  // The launch team starts *after* the window, and is deliberately not awaited. It used to be
+  // started before there was anything to draw on, so a cold start — a workspace reconcile and a
+  // process per agent — was spent with no window at all: seconds of nothing on a local app that
+  // has not so much as said hello. The rail comes up first and the team arrives into it, each
+  // agent leaving `starting` as its runtime reports itself up.
+  //
+  // A launch that cannot open the newest team is still not a launch that fails: the window is
+  // already there, on the rail, where the user can pick another one and read what went wrong.
+  const team = launchTeam;
+  if (team !== undefined) {
+    firstStart = switchTo(team).then((first) => {
+      if (first.ok) return;
+      openError = `${team.name} did not open. ${first.error ?? ''}`.trim();
+      process.stderr.write(`[teams] ${openError}\n`);
+      // `switchTo` already said the team is no longer opening; this is the reason why, which
+      // it does not know about.
+      send('blobot:team');
+    });
+  }
 });
 
 /** The `--live-claude` roster: still hardcoded, now the only shortcut left in that flag. */
