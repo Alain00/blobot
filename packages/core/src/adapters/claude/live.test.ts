@@ -25,6 +25,54 @@ function workspace(): string {
 }
 
 live('against a real claude', () => {
+  /**
+   * A tool line as the transcript will draw it: the verb blobot puts in its own column, and a
+   * title that is the target and nothing else.
+   *
+   * Both halves of this are claims about the wire and can only be tested here. The bridge
+   * titles a call `Edit notes.txt` and names the tool in `_meta.claudeCode.toolName`, so the
+   * fold read `edit  Edit notes.txt` until `withoutToolVerb`. And ACP's `diff` block is what
+   * the line counts come from — no adapter parses `rawInput` for them, which is why a second
+   * runtime that sends the block is counted for free.
+   */
+  it('gives an edit a bare target and a count of what it changed', async () => {
+    const dir = workspace();
+    writeFileSync(join(dir, 'notes.txt'), 'alpha\nbeta\ngamma\ndelta\nepsilon\n');
+    const runtime = new ClaudeAgentRuntime({
+      agentId: 'alice',
+      cwd: dir,
+      persona: 'You are Alice. Do exactly what is asked, with no commentary.',
+      trust: 'trusting',
+    });
+    await runtime.start();
+    const events: AgentEvent[] = [];
+    for await (const event of runtime.sendPrompt({
+      text: 'Using the Edit tool on notes.txt, replace the single line "beta" with three lines: "beta one", "beta two", "beta three". Change nothing else.',
+      from: 'user',
+    })) {
+      events.push(event);
+    }
+    await runtime.stop();
+
+    const edits = events.filter(
+      (event) =>
+        (event.type === 'tool_call_started' || event.type === 'tool_call_updated') &&
+        event.kind === 'edit',
+    );
+    expect(edits.length).toBeGreaterThan(0);
+    // Not one title still leading with the provider's own verb.
+    for (const edit of edits) {
+      const title = (edit as { title?: string }).title;
+      if (title === undefined) continue;
+      expect(title).not.toMatch(/^(Edit|Write|Read|Update) /);
+    }
+    // And the diff block reached the vocabulary: three lines for one.
+    const counted = events.find(
+      (event) => event.type === 'tool_call_updated' && event.changed !== undefined,
+    );
+    expect(counted).toMatchObject({ changed: { added: 3, removed: 1 } });
+  }, 300_000);
+
   it('answers a prompt, streaming deltas that assemble into one message', async () => {
     const runtime = new ClaudeAgentRuntime({
       agentId: 'alice',

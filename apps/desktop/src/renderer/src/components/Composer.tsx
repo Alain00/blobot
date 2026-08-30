@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Command, useCommandState } from 'cmdk';
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp, Paperclip } from 'lucide-react';
 import { findAgentByName } from '@blobot/core/domain';
 import type { Agent } from '@blobot/core/domain';
-import type { UiAgent, UiCommand } from '../../../shared/api.js';
+import type { UiAgent, UiAttachment, UiCommand } from '../../../shared/api.js';
 import { addressedBy, commandMenu, isAddressing } from '../model.js';
 import type { Pane } from '../model.js';
 import { Blob } from './Blob.js';
+import { Attached, sizeOf } from './Attached.js';
 
 /**
  * The recipient is an `@mention`, not a picker.
@@ -69,7 +70,7 @@ export function Composer({
    */
   lead?: string;
   /** Everybody the message is addressed to. One agent unless the user named several. */
-  onSend: (agentIds: readonly string[], text: string) => void;
+  onSend: (agentIds: readonly string[], text: string, attachmentIds: readonly string[]) => void;
   /**
    * The team is still starting. Sending is closed, because there is no session to send to yet,
    * but the field stays open: a cold start is seconds and the thing the user came to say is
@@ -82,6 +83,15 @@ export function Composer({
   const [active, setActive] = useState('');
   /** Escape closes the menu without clearing what has been typed, until the next keystroke. */
   const [dismissed, setDismissed] = useState(false);
+  /**
+   * What is going with this message. Cleared with the draft, because they are one message: a
+   * send that took the words and kept the picture would be the strangest half-state available.
+   */
+  const [attached, setAttached] = useState<readonly UiAttachment[]>([]);
+  /** Why the last file did not travel. Said in the composer, at pickup, never at send. */
+  const [refused, setRefused] = useState<string | undefined>(undefined);
+  /** A file is over the field. Drawn, because a drop target nobody can see is not one. */
+  const [over, setOver] = useState(false);
   const roster = agents as unknown as readonly Agent[];
 
   const addressed = addressedBy(draft, roster);
@@ -137,6 +147,38 @@ export function Composer({
     setDismissed(false);
   };
 
+  /**
+   * What the addressed agents will take.
+   *
+   * The intersection, not the union: a fan-out is refused whole rather than delivered to two of
+   * three, because blobot never narrows a set the user typed. With nobody addressed yet it is
+   * the first agent's answer, so the paperclip is not dead in an empty team pane.
+   */
+  const takers = recipients.length > 0 ? recipients : agents.slice(0, 1);
+  const canAttach = {
+    images: takers.length > 0 && takers.every((agent) => agent.accepts.images),
+    textFiles: takers.length > 0 && takers.every((agent) => agent.accepts.textFiles),
+  };
+
+  /** One pickup, from any of the three doors. A refusal is an answer, and it is said here. */
+  const keep = (picked: UiAttachment | { error: string } | undefined): void => {
+    if (picked === undefined) return;
+    if ('error' in picked) return setRefused(picked.error);
+    const kind = picked.kind === 'image' ? canAttach.images : canAttach.textFiles;
+    if (!kind) {
+      const refuser = takers.find((agent) =>
+        picked.kind === 'image' ? !agent.accepts.images : !agent.accepts.textFiles,
+      );
+      return setRefused(
+        picked.kind === 'image'
+          ? `${refuser?.name ?? 'this agent'} runs on a runtime that does not take images.`
+          : `${refuser?.name ?? 'this agent'} runs on a runtime that does not take text files.`,
+      );
+    }
+    setRefused(undefined);
+    setAttached((held) => [...held, picked]);
+  };
+
   const accept = (): void => {
     const command = commandSuggestions.find((it) => `cmd:${it.name}` === active);
     if (command !== undefined) return completeCommand(command);
@@ -173,8 +215,12 @@ export function Composer({
   const send = (): void => {
     const text = draft.trim();
     if (opening || recipients.length === 0 || text === '') return;
-    onSend(recipientIds, text);
+    onSend(recipientIds, text, attached.map((one) => one.id));
     setDraft('');
+    // One message, one lifetime. Keeping the picture after taking the words would be the
+    // strangest half-state available.
+    setAttached([]);
+    setRefused(undefined);
   };
 
   /**
@@ -191,8 +237,76 @@ export function Composer({
    */
   const stranded = pane.kind === 'team' && recipients.length === 0 && draft.trim() !== '' && !open;
 
+  /**
+   * A drop, from the OS. Electron 44 removed `File.path` (gone since 32), so a path comes from
+   * the preload's `webUtils` or it does not come at all — and the renderer never reads a file
+   * either way: the path goes to main, and main is where the size and the kind are decided.
+   */
+  const drop = (event: React.DragEvent): void => {
+    event.preventDefault();
+    setOver(false);
+    for (const file of Array.from(event.dataTransfer.files)) {
+      const path = window.blobot.pathOf(file);
+      if (path === undefined) continue;
+      void window.blobot.attachPath(path).then(keep);
+    }
+  };
+
+  /**
+   * A paste. The one door with no path and no filename, which is the case that started this.
+   *
+   * Only when the clipboard actually carries a file: a plain text paste is a paste into a text
+   * field and must stay one, so this does not prevent the default unless it takes the event.
+   */
+  const paste = (event: React.ClipboardEvent): void => {
+    const files = Array.from(event.clipboardData.files);
+    if (files.length === 0) return;
+    event.preventDefault();
+    for (const file of files) {
+      void file
+        .arrayBuffer()
+        .then((buffer) =>
+          window.blobot.attachBytes(
+            new Uint8Array(buffer),
+            file.type,
+            // A pasted screenshot's `name` is empty, and it is left empty rather than invented.
+            file.name === '' ? undefined : file.name,
+          ),
+        )
+        .then(keep);
+    }
+  };
+
   return (
-    <div className="composer">
+    <div
+      className={`composer${over ? ' over' : ''}`}
+      onDragOver={(event) => {
+        event.preventDefault();
+        setOver(true);
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={drop}
+    >
+      {refused !== undefined && <div className="stranded">{refused}</div>}
+      {attached.length > 0 && (
+        <div className="attached">
+          {attached.map((one) => (
+            <Attached
+              key={one.id}
+              attachment={one}
+              onRemove={() => setAttached((held) => held.filter((it) => it.id !== one.id))}
+            />
+          ))}
+          {/* What this send will cost, before it is made. blobot delivers to everybody the user
+              addressed and never narrows that set, so the multiplication is the user's to see
+              and the user's to decide about — it is not blobot's to manage. */}
+          <span className="cost">
+            {recipients.length > 1
+              ? `${sizeOf(attachedBytes(attached))} to each of ${recipients.length}`
+              : sizeOf(attachedBytes(attached))}
+          </span>
+        </div>
+      )}
       {stranded && (
         <div className="stranded">say who with @ · or give this team a lead</div>
       )}
@@ -254,6 +368,7 @@ export function Composer({
         <MentionInput
           draft={draft}
           open={open}
+          onPaste={paste}
           onChange={(text) => {
             setDraft(text);
             setDismissed(false);
@@ -299,6 +414,21 @@ export function Composer({
         </div>
         </div>
       </Command>
+      {/* The discoverable door. Paste is the one that gets used and a drop is nearly free, but
+          neither is visible, and a feature nobody can find is not one. */}
+      <button
+        className="clip"
+        disabled={opening || (!canAttach.images && !canAttach.textFiles)}
+        onClick={() => void window.blobot.chooseAttachment().then(keep)}
+        title={
+          canAttach.images || canAttach.textFiles
+            ? 'Attach a file'
+            : 'This agent takes no attachments'
+        }
+        aria-label="Attach a file"
+      >
+        <Paperclip size={16} aria-hidden />
+      </button>
       <button
         className={`send${pane.kind === 'team' && recipient !== undefined ? ' named' : ''}`}
         disabled={opening || recipients.length === 0 || draft.trim() === ''}
@@ -327,6 +457,11 @@ export function Composer({
   );
 }
 
+/** What one send puts into one agent's window. Per recipient, which is what the label says. */
+function attachedBytes(attached: readonly UiAttachment[]): number {
+  return attached.reduce((total, one) => total + one.bytes, 0);
+}
+
 /**
  * The composer's own field, inside cmdk's tree so it can read which item the arrows are on.
  * `useCommandState` is only readable from a child, which is the only reason this is a component.
@@ -340,11 +475,13 @@ function MentionInput({
   open,
   onChange,
   onKeyDown,
+  onPaste,
 }: {
   draft: string;
   open: boolean;
   onChange: (text: string) => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onPaste: (event: React.ClipboardEvent<HTMLTextAreaElement>) => void;
 }): React.JSX.Element {
   const activeId = useCommandState((state) => state.selectedItemId);
   return (
@@ -353,6 +490,7 @@ function MentionInput({
       value={draft}
       onChange={(event) => onChange(event.target.value)}
       onKeyDown={onKeyDown}
+      onPaste={onPaste}
       role="combobox"
       aria-expanded={open}
       aria-activedescendant={open ? activeId : undefined}

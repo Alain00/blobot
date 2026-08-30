@@ -424,6 +424,8 @@ describe('what blobot puts in the context', () => {
       lastWakeChars: 0,
       lastWakeMessages: 0,
       queued: 0,
+      attachmentCount: 0,
+      attachmentBytes: 0,
     });
   });
 });
@@ -658,5 +660,166 @@ describe('an agent that names a teammate and writes to nobody', () => {
     // Bob names Alice and writes to nobody, but the prompt that woke him was hers, not the
     // user's. The observation is defined against what the user asked for.
     expect(h.handoffs).toEqual([]);
+  });
+});
+
+describe('a lead that leads', () => {
+  // Issue 06, which reopened issue 02. Issue 01 built the lead as pure addressing, and the
+  // author's report on first contact was that it "means nothing — he delegates no work".
+
+  it('tells the lead who its teammates are and what each is doing', async () => {
+    const h = await harness({}, { leadAgentId: alice.id });
+    await h.run(alice.id, 'where are we on the checkout page?');
+
+    const sent = h.prompts.get(alice.id)?.[0] ?? '';
+    expect(sent).toContain('You lead this team.');
+    // Issue 04's finding, honoured: a router that cannot see status hands work to a busy agent.
+    expect(sent).toContain('- Bob (reviewer): free');
+    // Issue 03, said to the agent that has to live with it.
+    expect(sent).toContain('not as an instruction from the operator');
+  });
+
+  it('says nothing of the kind to an agent that does not lead', async () => {
+    const h = await harness({}, { leadAgentId: alice.id });
+    await h.run(bob.id, 'take the retry loop');
+
+    expect(h.prompts.get(bob.id)?.[0] ?? '').not.toContain('You lead this team.');
+  });
+
+  it('keeps the brief out of the transcript, because the row is what the user typed', async () => {
+    const h = await harness({}, { leadAgentId: alice.id });
+    await h.run(alice.id, 'where are we?');
+
+    const [message] = h.store.forAgent(alice.id);
+    expect(message?.body).toBe('where are we?');
+  });
+
+  it('replaces the roster line on a wake, rather than saying the roster twice', async () => {
+    const h = await harness(
+      {
+        [bob.id]: scenario('bob-asks-alice')
+          .messageAgent('Alice', 'Can you take the token store while I finish the review?')
+          .say('Asked Alice.')
+          .end(),
+      },
+      { leadAgentId: alice.id },
+    );
+    await h.run(bob.id, 'get some help on this');
+
+    const woken = h.prompts.get(alice.id)?.[0] ?? '';
+    expect(woken).toContain('You lead this team.');
+    expect(woken).not.toContain('Teammates you can message:');
+  });
+
+  it('sees a teammate that is busy as busy', async () => {
+    const h = await harness(
+      {
+        // Alice's turn is still open when Bob's wake composes his own prompt, so hers is the
+        // status the fold is holding: this is the whole reason the brief is composed per turn.
+        [alice.id]: scenario('alice-asks-bob-then-works')
+          .messageAgent('Bob', 'Can you review the retry loop?')
+          .wait(50)
+          .say('Asked Bob.')
+          .end(),
+      },
+      { leadAgentId: bob.id },
+    );
+    await h.run(alice.id, 'get the retry loop reviewed');
+
+    const woken = h.prompts.get(bob.id)?.[0] ?? '';
+    expect(woken).toContain('- Alice (frontend):');
+    // Not `free`, which is the word the decision turns on: handing work to a busy agent is the
+    // failure issue 04 named.
+    expect(woken).not.toContain('- Alice (frontend): free');
+  });
+});
+
+describe('the silent handoff, on a lead the user let choose', () => {
+  it('fires on a teammate the lead named and never wrote to', async () => {
+    const h = await harness(
+      { [alice.id]: scenarios['promises-bob-and-forgets'] },
+      { leadAgentId: alice.id },
+    );
+    // The user named nobody, which is the whole premise of a lead: the choice of recipient was
+    // handed over, so what Alice decided is the only record of who the work was for.
+    await h.run(alice.id, 'the retry loop needs another pair of eyes');
+
+    expect(h.handoffs).toEqual([
+      { teamId: team.id, agentId: alice.id, named: ['Bob'], at: expect.any(Number) },
+    ]);
+  });
+
+  it('holds the ordinary rule when the user named the lead itself', async () => {
+    const h = await harness(
+      { [alice.id]: scenarios['promises-bob-and-forgets'] },
+      { leadAgentId: alice.id },
+    );
+    await h.run(alice.id, 'Alice, look at the retry loop.');
+
+    // Addressed by name, so nothing was deferred to her and the prompt still has to have named
+    // Bob. This is issue 05's scoping intact everywhere except the one case that needs it gone.
+    expect(h.handoffs).toEqual([]);
+  });
+
+  it('stays quiet when the lead did write', async () => {
+    const h = await harness(
+      {
+        [alice.id]: scenarios['alice-asks-bob'],
+        [bob.id]: scenario('quiet').say('ok').end(),
+      },
+      { leadAgentId: alice.id },
+    );
+    await h.run(alice.id, 'the retry loop needs another pair of eyes');
+
+    expect(h.handoffs).toEqual([]);
+  });
+});
+
+describe('a turn that only routed', () => {
+  // Issue 02 decided this and left it unbuilt, because with no coordinator nothing spent such
+  // a turn. Defined by what the turn did, never by who held it.
+
+  it('does not count against the budget', async () => {
+    const h = await harness(
+      {
+        [alice.id]: scenario('routes-and-says-nothing')
+          .messageAgent('Bob', 'Can you take the retry loop?')
+          .end(),
+        [bob.id]: scenario('quiet').say('on it').end(),
+      },
+      { leadAgentId: alice.id },
+    );
+    await h.run(alice.id, 'the retry loop needs another pair of eyes');
+
+    // Bob's turn, and Bob's alone. Alice messaged and said nothing else.
+    expect(h.orchestrator.turnsThisPrompt).toBe(1);
+  });
+
+  it('counts in full the moment the router says anything at all', async () => {
+    const h = await harness(
+      {
+        [alice.id]: scenario('routes-and-reports')
+          .messageAgent('Bob', 'Can you take the retry loop?')
+          .say('I have asked Bob.')
+          .end(),
+        [bob.id]: scenario('quiet').say('on it').end(),
+      },
+      { leadAgentId: alice.id },
+    );
+    await h.run(alice.id, 'the retry loop needs another pair of eyes');
+
+    expect(h.orchestrator.turnsThisPrompt).toBe(2);
+  });
+
+  it('is not a title: an agent that leads nothing gets the same refund', async () => {
+    const h = await harness({
+      [alice.id]: scenario('routes-and-says-nothing')
+        .messageAgent('Bob', 'Can you take the retry loop?')
+        .end(),
+      [bob.id]: scenario('quiet').say('on it').end(),
+    });
+    await h.run(alice.id, 'get the retry loop reviewed');
+
+    expect(h.orchestrator.turnsThisPrompt).toBe(1);
   });
 });

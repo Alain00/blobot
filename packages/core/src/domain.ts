@@ -24,7 +24,15 @@ export type {
   UsageUpdated,
 } from './events.js';
 
-export type { Agent, AgentDefinition, AgentProfile, Message, Team } from './orchestrator/domain.js';
+export type {
+  Agent,
+  AgentDefinition,
+  AgentProfile,
+  Attachment,
+  Message,
+  Team,
+} from './orchestrator/domain.js';
+export type { AttachmentKind, AttachmentSupport } from './runtime.js';
 export { findAgentByName } from './orchestrator/roster.js';
 export { AgentStatusTracker, statusAfter } from './status.js';
 export type { TrustLevel } from './trust.js';

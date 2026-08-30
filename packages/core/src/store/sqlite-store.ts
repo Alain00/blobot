@@ -1,14 +1,24 @@
 import { and, asc, desc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import type { StopReason } from '../events.js';
-import type { Agent, AgentDefinition, AgentProfile, Message, Team } from '../orchestrator/domain.js';
-import type { MessageStore } from '../orchestrator/message-store.js';
+import type {
+  Agent,
+  AgentDefinition,
+  AgentProfile,
+  Attachment,
+  AttachmentContent,
+  Message,
+  Team,
+} from '../orchestrator/domain.js';
+import type { AttachmentStore, MessageStore } from '../orchestrator/message-store.js';
 import { trustLevelOf, type TrustLevel } from '../trust.js';
 import type { BlobotDatabase } from './database.js';
 import {
   agentMessages,
   agentProfiles,
   agents,
+  attachments,
   events,
+  messageAttachments,
   messages,
   sessions,
   teams,
@@ -52,7 +62,7 @@ export interface SessionRecord {
  * The SQLite implementation of the mailbox, plus the team and agent records around it.
  * Drizzle stays behind this boundary: nothing here returns an inferred row type.
  */
-export class SqliteStore implements MessageStore {
+export class SqliteStore implements MessageStore, AttachmentStore {
   readonly #db: BlobotDatabase;
 
   constructor(db: BlobotDatabase) {
@@ -406,17 +416,92 @@ export class SqliteStore implements MessageStore {
       at: message.at,
       deliveredAt: message.deliveredAt ?? null,
     }).run();
+    // The blob was written once, by `putAttachment`. This is the row that says which messages
+    // it is on, which is how one paste serves a fan-out of three.
+    (message.attachments ?? []).forEach((attachment, ordinal) => {
+      this.#db
+        .insert(messageAttachments)
+        .values({ messageId: message.id, attachmentId: attachment.id, ordinal })
+        .run();
+    });
     return message;
   }
 
+  putAttachment(content: AttachmentContent): Attachment {
+    const { data, at: _at, ...record } = content;
+    this.#db
+      .insert(attachments)
+      .values({
+        id: content.id,
+        kind: content.kind,
+        mimeType: content.mimeType,
+        name: content.name ?? null,
+        bytes: content.bytes,
+        data: Buffer.from(data),
+        at: content.at,
+      })
+      .onConflictDoNothing()
+      .run();
+    return record;
+  }
+
+  attachment(id: string): AttachmentContent | undefined {
+    const row = this.#db.select().from(attachments).where(eq(attachments.id, id)).get();
+    return row === undefined ? undefined : toAttachmentContent(row);
+  }
+
+  /**
+   * Hang each row's attachments off it, in one query for the whole page.
+   *
+   * Metadata only, never the bytes: a transcript of two hundred messages must not carry two
+   * hundred images through every snapshot. A consumer that needs the content asks for it by id.
+   */
+  #withAttachments(rows: Message[]): Message[] {
+    if (rows.length === 0) return rows;
+    const links = this.#db
+      .select({
+        messageId: messageAttachments.messageId,
+        ordinal: messageAttachments.ordinal,
+        id: attachments.id,
+        kind: attachments.kind,
+        mimeType: attachments.mimeType,
+        name: attachments.name,
+        bytes: attachments.bytes,
+      })
+      .from(messageAttachments)
+      .innerJoin(attachments, eq(attachments.id, messageAttachments.attachmentId))
+      .where(inArray(messageAttachments.messageId, rows.map((row) => row.id)))
+      .orderBy(asc(messageAttachments.ordinal))
+      .all();
+    if (links.length === 0) return rows;
+    const byMessage = new Map<string, Attachment[]>();
+    for (const link of links) {
+      const list = byMessage.get(link.messageId) ?? [];
+      list.push({
+        id: link.id,
+        kind: link.kind,
+        mimeType: link.mimeType,
+        bytes: link.bytes,
+        ...(link.name === null ? {} : { name: link.name }),
+      });
+      byMessage.set(link.messageId, list);
+    }
+    return rows.map((row) => {
+      const found = byMessage.get(row.id);
+      return found === undefined ? row : { ...row, attachments: found };
+    });
+  }
+
   undelivered(agentId: string): Message[] {
-    return this.#db
+    return this.#withAttachments(
+      this.#db
       .select()
       .from(messages)
       .where(and(eq(messages.toAgentId, agentId), isNull(messages.deliveredAt)))
       .orderBy(asc(messages.id))
       .all()
-      .map(toMessage);
+      .map(toMessage),
+    );
   }
 
   markDelivered(ids: readonly string[], at: number): void {
@@ -430,18 +515,20 @@ export class SqliteStore implements MessageStore {
 
   byId(id: string): Message | undefined {
     const row = this.#db.select().from(messages).where(eq(messages.id, id)).get();
-    return row === undefined ? undefined : toMessage(row);
+    return row === undefined ? undefined : this.#withAttachments([toMessage(row)])[0];
   }
 
   /** A conversation pane: everything this agent said or was told. */
   forAgent(agentId: string): Message[] {
-    return this.#db
+    return this.#withAttachments(
+      this.#db
       .select()
       .from(messages)
       .where(or(eq(messages.toAgentId, agentId), eq(messages.fromAgentId, agentId)))
       .orderBy(asc(messages.id))
       .all()
-      .map(toMessage);
+      .map(toMessage),
+    );
   }
 
   /**
@@ -449,13 +536,15 @@ export class SqliteStore implements MessageStore {
    * not a storage fact.
    */
   forTeam(teamId: string): Message[] {
-    return this.#db
+    return this.#withAttachments(
+      this.#db
       .select()
       .from(messages)
       .where(eq(messages.teamId, teamId))
       .orderBy(asc(messages.id))
       .all()
-      .map(toMessage);
+      .map(toMessage),
+    );
   }
 
   /**
@@ -490,17 +579,47 @@ export class SqliteStore implements MessageStore {
    * keeps 200 entries, and taking the last 200 of each independently would pair a turn ending
    * with tool calls from an hour later.
    *
-   * One thing a restored line cannot say: live, a cancelled tool that reports `completed` with
-   * an explicit `exit: null` is printed as `(exit null)` rather than trusted. The column stores
-   * a null for that *and* for every tool that never had an exit code, so a restored line that
-   * printed it would be guessing. It says the status and stops there.
+   * A restored line can say everything a live one says, since 2026-08-30. It could not before:
+   * live, a cancelled tool that reports `completed` with an explicit `exit: null` is printed as
+   * `exit null` rather than trusted, and `exit_code` stored a null for that *and* for every tool
+   * that never had an exit code — so a restored line that printed it would have been guessing,
+   * and one that stayed silent lost a cancellation. `exit_reported` separates the two, and
+   * `exit` is present here only where a code genuinely came over the wire.
+   *
+   * These rows feed two surfaces now. The activity column takes them as log, ordered by when a
+   * call finished. The transcript takes them as items, ordered by `startedAt`, which is why
+   * both times are returned rather than one.
    */
   logOfTeam(teamId: string, limit = 200): {
-    tools: { toolCallId: string; agentId: string; at: number; title: string; status: string }[];
+    /**
+     * Calls that had not finished when this was read.
+     *
+     * Apart from `tools`, because the two are different claims: `tools` is the log of what
+     * happened, and this is what was happening. The activity column takes the first and the
+     * transcript takes both, so a pane rebuilt mid-turn shows the call that is running rather
+     * than discovering it only if it happens to finish afterwards.
+     *
+     * It exists because the renderer drops every event that arrives before its first snapshot
+     * resolves — it does not yet know which team is on screen — so a call that started in that
+     * window was invisible in the stream *and* excluded here for having no `ended_at`, and a
+     * six-call turn read `ran 5`.
+     */
+    running: { toolCallId: string; agentId: string; startedAt: number; title: string; kind: string | null }[];
+    tools: {
+      toolCallId: string;
+      agentId: string;
+      at: number;
+      startedAt: number;
+      title: string;
+      status: string;
+      kind: string | null;
+      exit?: number | null;
+      changed?: { added: number; removed: number };
+    }[];
     turns: { turnId: string; agentId: string; at: number; stopReason: StopReason }[];
   } {
     const ids = this.agentsOfTeam(teamId, { includeDeleted: true }).map((agent) => agent.id);
-    if (ids.length === 0) return { tools: [], turns: [] };
+    if (ids.length === 0) return { running: [], tools: [], turns: [] };
     const tools = this.#db
       .select()
       .from(toolCalls)
@@ -514,8 +633,35 @@ export class SqliteStore implements MessageStore {
         toolCallId: row.providerToolCallId,
         agentId: row.agentId,
         at: row.endedAt ?? row.startedAt,
+        // Where the call stood in the conversation, which is not where it stood in the log.
+        // The feed is ordered by when a call finished; the transcript puts it after the line
+        // that introduced it, so a restored turn reads in the order it was written.
+        startedAt: row.startedAt,
         title: row.name,
         status: row.status,
+        kind: row.kind,
+        // Only where the runtime actually reported one. Without `exit_reported` this would
+        // hand every call a null and tell the transcript that all of them were cancelled.
+        ...(row.exitReported ? { exit: row.exitCode } : {}),
+        // Both or neither: they are written together, so a row with one is a row from before
+        // this was stored, and half a diff is not a fact worth drawing.
+        ...(row.linesAdded === null || row.linesRemoved === null
+          ? {}
+          : { changed: { added: row.linesAdded, removed: row.linesRemoved } }),
+      }));
+    const running = this.#db
+      .select()
+      .from(toolCalls)
+      .where(and(inArray(toolCalls.agentId, ids), isNull(toolCalls.endedAt)))
+      .orderBy(desc(toolCalls.startedAt))
+      .limit(limit)
+      .all()
+      .map((row) => ({
+        toolCallId: row.providerToolCallId,
+        agentId: row.agentId,
+        startedAt: row.startedAt,
+        title: row.name,
+        kind: row.kind,
       }));
     const ended = this.#db
       .select()
@@ -537,8 +683,12 @@ export class SqliteStore implements MessageStore {
       .sort((left, right) => right - left)
       .slice(0, limit)
       .at(-1);
-    if (cutoff === undefined) return { tools: [], turns: [] };
+    // A call still in flight is never windowed out. There are at most a handful, they are by
+    // definition the newest thing the team has, and the transcript needs every one of them: a
+    // fold that is missing one says the wrong number.
+    if (cutoff === undefined) return { running, tools: [], turns: [] };
     return {
+      running,
       tools: tools.filter((entry) => entry.at >= cutoff),
       turns: ended.filter((entry) => entry.at >= cutoff),
     };
@@ -642,6 +792,26 @@ function toProfileRecord(row: AgentProfileRow): AgentProfileRecord {
     ...(row.instructions === null ? {} : { instructions: row.instructions }),
     ...(row.hue === null ? {} : { hue: row.hue }),
     ...(row.deletedAt === null ? {} : { deletedAt: row.deletedAt }),
+  };
+}
+
+function toAttachmentContent(row: {
+  id: string;
+  kind: 'image' | 'text';
+  mimeType: string;
+  name: string | null;
+  bytes: number;
+  data: Buffer;
+  at: number;
+}): AttachmentContent {
+  return {
+    id: row.id,
+    kind: row.kind,
+    mimeType: row.mimeType,
+    bytes: row.bytes,
+    data: new Uint8Array(row.data),
+    at: row.at,
+    ...(row.name === null ? {} : { name: row.name }),
   };
 }
 

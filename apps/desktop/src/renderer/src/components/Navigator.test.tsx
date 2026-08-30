@@ -31,7 +31,7 @@ Element.prototype.scrollIntoView ??= function scrollIntoView(): void {};
 
 const OPEN: UiTeam = { id: 'open', name: 'portfolio', workspacePath: '/w', turnBudget: 10 };
 const OPEN_AGENTS: readonly UiAgent[] = [
-  { id: 'alice', name: 'Alice', role: 'builds the UI', runtimeLabel: 'mock', workspacePath: '/w' },
+  { id: 'alice', name: 'Alice', role: 'builds the UI', runtimeLabel: 'mock', workspacePath: '/w', accepts: { images: true, textFiles: true } },
 ];
 const TEAMS: readonly UiTeamSummary[] = [
   {

@@ -461,3 +461,70 @@ Everything else in this ticket stands, including the reopen above it: `@` is sti
 addressing gesture, an agent pane's implicit recipient is unchanged, the team pane's implicit
 recipient is still the lead when nobody is named, and the composer still says who it resolved to
 — now up to two names and a count.
+
+## Reopened a third time, 2026-08-30: "hiding a message is for the peer voice only"
+
+The third reopen, and again one sentence. *Hiding a message is for the peer voice only* was
+written against the case where the alternative was folding a whole reply, and its reason says so:
+*an agent's answer is the thing the pane exists to show*. It does not cover a caption on a tool
+call, and a long turn is mostly those.
+
+The screenshot that prompted this was one Claude turn, flat: a dozen lines of *"Now the
+interaction wrapper that every desk object shares."*, three shell one-liners wrapping across
+three lines each, and the permission sentence *"you allowed this, and it stops asking"* stamped
+on every call the rule covered. The paragraph the whole turn was leading to sat under all of it.
+Two things were wrong at once, and the second is the worse one:
+
+- The narration wins the column by weight while saying the least. A caption is a sentence in
+  sans at the body size; a call is one mono line at 11.5px. Twelve of each and the eye reads
+  twelve intentions.
+- **The transcript was keeping the narration and throwing away the work.** A finished call left
+  the items list on completion (`model.ts`, *"the in-flight line lives in the conversation and
+  leaves it when the tool finishes"*) and only the feed kept it. So what survived a turn was an
+  agent's account of what it did, and never what it did.
+
+The seam is the **step**: a caption and the calls it introduces. Settled steps fold; a run of
+them is one line saying how many calls it stands for. A finished call now stays in the
+transcript, which costs no ink because it is only ever drawn inside a fold — the default view is
+quieter than before this change, not louder.
+
+What is *outside* a block is the design, and it is enforced by the grouping rather than by a
+flag at the render site: a running or asking call, a question nobody has answered (`waiting`
+spends the app's one inversion, and a stopped agent behind a chevron is the modal problem
+wearing a chevron), a live answer, and any prose long enough to be one. Trailing prose is
+trimmed off the end, because the last thing said in a turn has no call after it.
+
+Borrowed from the pattern, deliberately: the chevron and the mono label, so the transcript has
+one disclosure gesture and not two. Refused from it: the checkmark per step, because ticket 08
+exists to say a cancelled call reports `completed` with `exit: null`; and the duration, because
+blobot cannot honestly claim one across a permission wait. The count is what a reader wants
+anyway.
+
+Two things that came with it and are independent of the fold:
+
+- **The permission tail is gone.** *"you allowed this, and it stops asking"* is a sentence about
+  a standing rule, and it was printed once per use of that rule. Where the rule goes is said in
+  the block that asks, which is the moment it is a decision. The record says `allowed always`.
+- **A call carries a verb.** `read` / `edit` / `run`, from the `ToolKind` core already receives
+  off both runtimes and the renderer used to drop, drawn in a fixed column. Nothing for an MCP
+  tool: its name is its server's, and a verb blobot invented for it would be a guess printed
+  beside three facts.
+
+The one thing the author overruled: **diff counts beside an edit may be green and red**, against
+the governing rule, on the grounds that two small signed numbers carry their meaning in the sign
+and the colour is reinforcement rather than the channel. Recorded in `DESIGN.md` as a named
+exception. Not built — no runtime's `rawOutput` is plumbed through core yet, and doing it means
+a live run against both.
+
+### The same day: the fold had to reach a transcript nobody watched happen
+
+The reopen above was built against a live turn, and a restored pane has no tool lines — so it
+grouped nothing and came back as the flat wall the fold exists to prevent, in the ordinary case
+of a relaunch or a team switch. The store had every fact needed; migration `0009` adds the one it
+did not (`exit_reported`, which separates a cancelled call's explicit `exit: null` from a call
+that never had an exit code, and without which a restored header counts its failures wrong).
+
+It also turned up a call being dropped by both the transcript and the activity column, from
+before any of this: the renderer filters streamed events by the team it is showing, and does not
+know which team that is until its first snapshot resolves. `logOfTeam().running` covers it. The
+underlying drop is recorded in `build.md` and is a change to how a team is opened.

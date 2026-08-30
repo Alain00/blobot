@@ -1,6 +1,14 @@
 import { findAgentByName } from '@blobot/core/domain';
-import type { Agent, AgentEvent, AgentStatus, Message, StopReason } from '@blobot/core/domain';
 import type {
+  Agent,
+  AgentEvent,
+  AgentStatus,
+  Message,
+  StopReason,
+  ToolKind,
+} from '@blobot/core/domain';
+import type {
+  UiAttachment,
   UiPermissionOutcome,
   UiPermissionRequest,
   UiCommand,
@@ -19,7 +27,15 @@ export type Item =
    * address several agents — the store has a row each, and the team pane draws the bubble the
    * user actually sent. See {@link itemsFor}, which is where the rows become the one bubble.
    */
-  | { kind: 'user'; id: string; at: number; agentIds: readonly string[]; text: string }
+  | {
+      kind: 'user';
+      id: string;
+      at: number;
+      agentIds: readonly string[];
+      text: string;
+      /** What went with it. Drawn in the bubble, because a message must not lose half of itself. */
+      attachments?: readonly UiAttachment[];
+    }
   | { kind: 'agent'; id: string; at: number; agentId: string; text: string; live: boolean }
   | {
       kind: 'peer';
@@ -37,6 +53,12 @@ export type Item =
       agentId: string;
       title: string;
       /**
+       * What the call is, in the four words blobot has for it. The runtimes both send this and
+       * the renderer used to drop it, so every call in the transcript was a shell string with
+       * no verb in front of it. It is the column that makes a folded run of calls scannable.
+       */
+      toolKind: ToolKind;
+      /**
        * `asking` is a call that has not started: the runtime is waiting for a human. The line
        * is not drawn in that state, because the permission block underneath it *is* the line,
        * and a tool that says `running` while nothing is running is the exact lie ticket 08
@@ -44,6 +66,12 @@ export type Item =
        */
       status: 'asking' | 'running' | 'completed' | 'failed';
       exit?: number | null;
+      /**
+       * What the edit changed, in lines. Absent is not zero, and the three ways it can be
+       * absent — nothing changed, the diff was too large to measure, the runtime sends no diff
+       * block — all draw the same nothing.
+       */
+      changed?: { added: number; removed: number };
     }
   | { kind: 'system'; id: string; at: number; agentId: string; text: string }
   /**
@@ -188,6 +216,17 @@ function oneLine(title: string): string {
   return flat.length > 80 ? `${flat.slice(0, 79)}\u2026` : flat;
 }
 
+/**
+ * The stored kind, narrowed back into the vocabulary.
+ *
+ * A row written before `kind` was stored has a null, and one written by a future runtime could
+ * carry a word this build does not know. Both become `other`, which draws no verb — the honest
+ * answer for a call blobot cannot name, and the same one an MCP tool gets.
+ */
+function asToolKind(kind: string | null): ToolKind {
+  return kind === 'read' || kind === 'edit' || kind === 'execute' ? kind : 'other';
+}
+
 export function reduce(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'snapshot':
@@ -195,7 +234,14 @@ export function reduce(state: AppState, action: Action): AppState {
       // every team switch, and a persisted transcript is only visible if it is seeded here.
       // Messages and answers are merged by time: a restored pane that showed the peer traffic
       // and not the replies would read as a conversation with half the speakers missing.
-      // Tool lines are not restored — they are what the agent is doing *now*.
+      // Tool lines are restored too, since 2026-08-30. They were not, and the transcript's
+      // fold made that visible in the worst way: with no calls in a restored turn nothing
+      // grouped, so every past turn came back as a flat wall of captions — the narration
+      // kept, the work gone, permanently rather than only until the next completion.
+      //
+      // Ordered by `startedAt`, so a call sits after the line that introduced it. The rows
+      // are the ones the activity column already had; what they gained is the kind, the
+      // start, and whether an exit code was ever reported.
       return {
         ...state,
         snapshot: action.snapshot,
@@ -235,6 +281,43 @@ export function reduce(state: AppState, action: Action): AppState {
                 text: stoppedBecause(turn.stopReason),
               }),
             ),
+          // Calls still in flight, from the store rather than from the items being replaced.
+          // The renderer drops every event that arrives before its first snapshot resolves, so
+          // a call that started in that window was never in `items` to be preserved — it is
+          // only ever recoverable from here.
+          ...action.snapshot.log.running
+            .filter((tool) => !OWN_TOOL.test(tool.title))
+            .map(
+              (tool): Item => ({
+                kind: 'tool',
+                id: tool.toolCallId,
+                at: tool.startedAt,
+                agentId: tool.agentId,
+                title: tool.title,
+                toolKind: asToolKind(tool.kind),
+                status: 'running',
+              }),
+            ),
+          ...action.snapshot.log.tools
+            // blobot's own loopback tool is not the team's work, exactly as on the live path
+            // and in the feed. Restoring it would put a call in the transcript that no agent
+            // chose to make and no user can act on.
+            .filter((tool) => !OWN_TOOL.test(tool.title))
+            .map(
+            (tool): Item => ({
+              kind: 'tool',
+              id: tool.toolCallId,
+              at: tool.startedAt,
+              agentId: tool.agentId,
+              title: tool.title,
+              toolKind: asToolKind(tool.kind),
+              // Only the two terminal words reach here: `logOfTeam` returns finished calls.
+              // Anything else would be a call claiming to be in flight in a pane that was
+              // rebuilt after it ended.
+              status: tool.status === 'failed' ? 'failed' : 'completed',
+              ...(tool.exit === undefined ? {} : { exit: tool.exit }),
+              ...(tool.changed === undefined ? {} : { changed: tool.changed }),
+            })),
           ...action.snapshot.permissions.map(
             (request): Item => ({
               kind: 'permission',
@@ -356,6 +439,7 @@ function toItem(message: Message): Item {
           at: message.at,
           agentIds: [message.toAgentId],
           text: message.body,
+          ...(message.attachments === undefined ? {} : { attachments: message.attachments }),
         }
       : {
           kind: 'peer',
@@ -423,6 +507,7 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
             at: event.at,
             agentId: event.agentId,
             title: oneLine(event.title),
+            toolKind: event.kind,
             status: asked ? 'asking' : 'running',
           },
         ],
@@ -440,18 +525,50 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
       // real one arrives as an update with no terminal status, which is why it is taken here
       // rather than only on the way out.
       const title = event.title === undefined ? existing.title : oneLine(event.title);
+      const toolKind = event.kind ?? existing.toolKind;
+      // The counts arrive mid-stream, on the update that carries the diff, and never on the
+      // terminal one — so they have to be taken on the way past rather than only on the way out.
+      const changed = event.changed ?? existing.changed;
       if (event.status !== 'completed' && event.status !== 'failed') {
-        if (title === existing.title) return state;
+        if (title === existing.title && toolKind === existing.toolKind && changed === existing.changed)
+          return state;
         const items = [...state.items];
-        items[index] = { ...existing, title };
+        items[index] = { ...existing, title, toolKind, ...(changed === undefined ? {} : { changed }) };
         return { ...state, items };
       }
-      // Tool activity is the seam: the in-flight line lives in the conversation and leaves it
-      // when the tool finishes; the completion goes to the feed. The conversation shows what
-      // the agent is doing *now*, the feed is the log.
+      // A finished call stays in the conversation now, by the author, 2026-08-30. The seam used
+      // to be that the in-flight line left the transcript on completion and only the feed kept
+      // it — so what survived a turn was the agent's narration about the work ("now the desk
+      // surface") and never the work. That reads as a list of intentions with the doing removed.
+      //
+      // It costs nothing in ink because a settled call is only ever drawn inside a fold: see
+      // `rowsOf`. The feed still takes the completion, because the feed is the log and the fold
+      // is a summary.
+      //
+      // Unless a human was asked about this one, in which case the permission item *is* this
+      // call's line and always was — it stands where the tool line would have stood and settles
+      // into the same shape. Keeping both would print every answered call twice, once as what
+      // was run and once as what you said about it.
+      const asked = state.items.some(
+        (item) => item.kind === 'permission' && item.toolCallId === event.toolCallId,
+      );
+      // Narrowed here rather than read off `event` in the callback: a property narrowing does
+      // not survive into a closure, and `status` is what the guard above just established.
+      const status = event.status;
+      const settled: Item = {
+        ...existing,
+        title,
+        toolKind,
+        status,
+        ...(event.exit === undefined ? {} : { exit: event.exit }),
+        ...(changed === undefined ? {} : { changed }),
+      };
+      const items = asked
+        ? state.items.filter((item) => item !== existing)
+        : state.items.map((item) => (item === existing ? settled : item));
       return {
         ...state,
-        items: state.items.filter((item) => item !== existing),
+        items,
         feed: pushFeed(state.feed, {
           id: `${event.toolCallId}:done`,
           at: event.at,
@@ -627,6 +744,130 @@ export function itemsFor(items: readonly Item[], pane: Pane): Item[] {
               : item.agentId === pane.agentId,
         );
   return oneBubblePerThingTyped(visible.sort((left, right) => left.at - right.at));
+}
+
+/**
+ * A run of settled work, folded into one line.
+ *
+ * A step is a caption and the calls it introduces: "Now the desk surface and the scene that ties
+ * it together." followed by an edit. A turn is a dozen of those and then an answer, and drawn
+ * flat it reads as a bulleted list of intentions — because the captions are sentences and the
+ * calls are one mono line each, so the narration wins the column by weight while saying the
+ * least. `DESIGN.md`'s hiding rule is amended for exactly this case (ticket 12, 2026-08-30): a
+ * caption on a tool call is not the answer the pane exists to show.
+ *
+ * Three things are structurally outside a block rather than flagged open inside one, so that
+ * "the live step never folds" is a property of the grouping and not a render-time exception
+ * somebody can forget:
+ *
+ * - a call that is `running` or `asking`, so what an agent is doing now is never behind a click;
+ * - a question nobody has answered, because `waiting` spends the app's one inversion and a
+ *   stopped agent behind a chevron is the modal problem wearing a chevron;
+ * - a live answer, and any prose long enough to be one.
+ *
+ * Trailing prose is trimmed off the end of a block for the same reason: the last thing said in
+ * a turn has no call after it, so it is the answer, and the answer never folds.
+ */
+export type Row =
+  | { readonly kind: 'item'; readonly at: number; readonly item: Item }
+  | {
+      readonly kind: 'steps';
+      readonly id: string;
+      readonly at: number;
+      readonly agentId: string;
+      readonly items: readonly Item[];
+    };
+
+/**
+ * Prose past this is not a caption on a call, it is something being explained, and folding it
+ * would be hiding the work. Measured against the observed shape rather than chosen: the
+ * captions a turn strings together are one short sentence, and the paragraph that closes a turn
+ * is several.
+ */
+const CAPTION = 240;
+
+/**
+ * Below this a fold costs more than it saves. One call under a chevron is a line replaced by a
+ * line, plus a click, plus the reader wondering what is in it.
+ */
+const WORTH_FOLDING = 2;
+
+/** Whose turn an item belongs to, or undefined for the voices that are nobody's. */
+function speakerOf(item: Item): string | undefined {
+  return item.kind === 'user' || item.kind === 'peer' ? undefined : item.agentId;
+}
+
+function settledWork(item: Item): boolean {
+  switch (item.kind) {
+    case 'tool':
+      return item.status === 'completed' || item.status === 'failed';
+    case 'permission':
+      return item.outcome !== undefined;
+    case 'agent':
+      return !item.live && item.text.trim().length <= CAPTION;
+    default:
+      return false;
+  }
+}
+
+/** How many calls a block actually stands for, which is what its header counts. */
+export function toolsIn(items: readonly Item[]): number {
+  return items.filter((item) => item.kind === 'tool' || item.kind === 'permission').length;
+}
+
+/**
+ * How many of them failed, counted from the status and the exit code and from nothing else.
+ * Ticket 08's trap is that a cancelled call reports `completed`, so `exit: null` counts here,
+ * and the absence of a failure is never drawn as success anywhere.
+ *
+ * A rejected or unanswered question is not counted. It did not fail, it did not run, and the
+ * header is not the place to relitigate a decision the user made — its own line inside the fold
+ * says which word applies.
+ */
+export function failuresIn(items: readonly Item[]): number {
+  return items.filter(
+    (item) => item.kind === 'tool' && (item.status === 'failed' || item.exit === null),
+  ).length;
+}
+
+/** The transcript's rows: every item as itself, except settled runs of work, which fold. */
+export function rowsOf(items: readonly Item[]): Row[] {
+  const rows: Row[] = [];
+  let index = 0;
+
+  while (index < items.length) {
+    const start = items[index] as Item;
+    const speaker = speakerOf(start);
+
+    if (speaker !== undefined && settledWork(start)) {
+      let end = index;
+      while (end < items.length) {
+        const item = items[end] as Item;
+        if (speakerOf(item) !== speaker || !settledWork(item)) break;
+        end += 1;
+      }
+      // The answer is whatever prose the run ends on, so it comes back out.
+      while (end > index && (items[end - 1] as Item).kind === 'agent') end -= 1;
+
+      const run = items.slice(index, end);
+      if (toolsIn(run) >= WORTH_FOLDING) {
+        rows.push({
+          kind: 'steps',
+          id: `steps:${(run[0] as Item).id}`,
+          at: (run[0] as Item).at,
+          agentId: speaker,
+          items: run,
+        });
+        index = end;
+        continue;
+      }
+    }
+
+    rows.push({ kind: 'item', at: start.at, item: start });
+    index += 1;
+  }
+
+  return rows;
 }
 
 /**

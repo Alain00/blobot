@@ -69,11 +69,27 @@ export type { ScenarioName } from './mock/scenarios/index.js';
 export { uuidv7 } from './ids.js';
 export type { IdFactory } from './ids.js';
 
-export type { Agent, AgentDefinition, AgentProfile, Message, Team } from './orchestrator/domain.js';
-export { composePersona, composeWakePrompt } from './orchestrator/envelope.js';
+export type {
+  Agent,
+  AgentDefinition,
+  AgentProfile,
+  Attachment,
+  AttachmentContent,
+  Message,
+  Team,
+} from './orchestrator/domain.js';
+export {
+  IMAGE_ATTACHMENT_LIMIT,
+  TEXT_ATTACHMENT_LIMIT,
+  attachmentNotSupported,
+  attachmentTooLarge,
+  formatSize,
+} from './orchestrator/bounds.js';
+export { composeLeadBrief, composePersona, composeWakePrompt } from './orchestrator/envelope.js';
+export type { TeammateView } from './orchestrator/envelope.js';
 export { findAgentByName, namesMentioned } from './orchestrator/roster.js';
 export { InMemoryMessageStore } from './orchestrator/message-store.js';
-export type { MessageStore } from './orchestrator/message-store.js';
+export type { AttachmentStore, MessageStore } from './orchestrator/message-store.js';
 export { Orchestrator } from './orchestrator/orchestrator.js';
 export type {
   BudgetExhausted,

@@ -23,6 +23,12 @@ import {
   DEFAULT_DEMO_SCRIPT,
   type DemoScriptName,
 } from './demo-team.js';
+import {
+  attachmentFromBytes,
+  attachmentFromPath,
+  dataUrlOf,
+  type PickedUp,
+} from './attachments.js';
 import { startTeam } from './start-team.js';
 import { encodeTeamIcon, suggestTeamIcon } from './team-icon.js';
 import {
@@ -50,6 +56,8 @@ import { TeamPool } from './team-pool.js';
 import type {
   EditAgentResult,
   HireResult,
+  UiAttachment,
+  UiAttachmentRefusal,
   TeamCreationResult,
   TeamDeletionResult,
   UiAgentRemoval,
@@ -71,6 +79,10 @@ const here = fileURLToPath(new URL('.', import.meta.url));
 const clock = new SystemClock();
 
 /** `--screenshot=<path>` renders a scripted turn and writes a PNG, so the UI is reviewable. */
+/** `--attach=<path>` rides along with `--autoplay`, for reviewing what an attachment looks like. */
+const autoplayAttachment = process.argv
+  .find((arg) => arg.startsWith('--attach='))
+  ?.slice('--attach='.length);
 const screenshotPath = process.argv
   .find((arg) => arg.startsWith('--screenshot='))
   ?.slice('--screenshot='.length);
@@ -370,6 +382,8 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
       workspacePath: team.workspacePath,
       ...(record.branch === undefined ? {} : { branch: record.branch }),
       ...(record.hue === undefined ? {} : { hue: record.hue }),
+      // Nothing has advertised anything yet, so the paperclip is closed with the composer.
+      accepts: { images: false, textFiles: false },
     })),
     // The teams the pool is still holding keep reporting: one of them can be working while
     // this one starts, and the rail draws all of them.
@@ -384,7 +398,7 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
     // The gauge is a persisted fact, so it is drawn while the team is still coming up: what
     // these agents were carrying when they were last awake is what they will resume with.
     usage: store?.lastUsageOfTeam(team.id) ?? {},
-    log: store?.logOfTeam(team.id) ?? { tools: [], turns: [] },
+    log: store?.logOfTeam(team.id) ?? { running: [], tools: [], turns: [] },
     // Composed but not yet sent: the personas exist, and nothing has been woken.
     injection: Object.fromEntries(
       records.map((record) => [
@@ -395,6 +409,11 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
           lastWakeChars: 0,
           lastWakeMessages: 0,
           queued: 0,
+          // Nothing has been sent, which is zero rather than absent — and unlike every other
+          // figure here, this one does not reset when the team comes back up: it counts what
+          // is in a session's history, and a resumed session still holds it.
+          attachmentCount: 0,
+          attachmentBytes: 0,
           ownToolChars: OWN_TOOL_CHARS,
         },
       ]),
@@ -418,7 +437,7 @@ function snapshot(): UiSnapshot {
       statuses: {},
       commands: {},
       usage: {},
-      log: { tools: [], turns: [] },
+      log: { running: [], tools: [], turns: [] },
       injection: {},
       messages: [],
       answers: [],
@@ -460,6 +479,7 @@ function snapshot(): UiSnapshot {
       workspacePath: agent.workspacePath,
       ...(agent.hue === undefined ? {} : { hue: agent.hue }),
       ...(team.branches[agent.id] === undefined ? {} : { branch: team.branches[agent.id] }),
+      accepts: team.orchestrator.acceptsOf(agent.id),
     })),
     statuses: liveStatuses(),
     // Read fresh rather than remembered: a team that was evicted and resumed re-advertises,
@@ -616,11 +636,25 @@ async function createWindow(): Promise<void> {
     // The wait is for the launch team, which now starts after this window rather than before it:
     // without it a `--live-claude` autoplay would prompt whatever was live, which is nothing.
     setTimeout(() => {
-      void firstStart.then(() => {
+      void firstStart.then(async () => {
         const team = current();
-        if (team !== undefined) {
-          void team.orchestrator.promptFromUser([team.agents[0]?.id ?? ''], team.autoplayPrompt);
+        if (team === undefined) return;
+        // `--attach=<path>` puts a file on the scripted prompt, so the chip and the bubble are
+        // reviewable without a human at the screen — the same reason `--screenshot` exists.
+        const picked =
+          autoplayAttachment === undefined
+            ? undefined
+            : await attachmentFromPath(autoplayAttachment, Date.now());
+        if (picked !== undefined && 'error' in picked) {
+          console.error(picked.error);
+          return;
         }
+        const kept = picked === undefined ? undefined : team.orchestrator.store.putAttachment(picked.attachment);
+        await team.orchestrator.promptFromUser(
+          [team.agents[0]?.id ?? ''],
+          team.autoplayPrompt,
+          kept === undefined ? [] : [kept.id],
+        );
       });
     }, autoplayDelayMs);
   }
@@ -671,12 +705,68 @@ void app.whenReady().then(async () => {
   }
 
   ipcMain.handle('blobot:snapshot', () => snapshot());
-  ipcMain.handle('blobot:prompt', async (_event, agentIds: readonly string[], text: string) => {
-    // `current()` is still the team that was on screen while another one starts, so a message
-    // sent now would reach the wrong team's agent. The composer is closed for the same reason;
-    // this is the half that does not depend on the renderer having agreed.
-    if (opening !== undefined) return;
-    await current()?.orchestrator.promptFromUser(agentIds, text);
+  ipcMain.handle(
+    'blobot:prompt',
+    async (
+      _event,
+      agentIds: readonly string[],
+      text: string,
+      attachmentIds: readonly string[] = [],
+    ) => {
+      // `current()` is still the team that was on screen while another one starts, so a message
+      // sent now would reach the wrong team's agent. The composer is closed for the same reason;
+      // this is the half that does not depend on the renderer having agreed.
+      if (opening !== undefined) return;
+      await current()?.orchestrator.promptFromUser(agentIds, text, attachmentIds);
+    },
+  );
+
+  /**
+   * Picking a file up. Three doors, one place that reads bytes, and the checks before the
+   * renderer ever sees the file.
+   *
+   * The attachment is stored the moment it is accepted rather than at send, because the store is
+   * where the id comes from and the id is all the composer carries. A draft that is abandoned
+   * leaves a row nothing points at, which is the same shape as a message the user never sent
+   * would be, and costs at most one file.
+   */
+  const keepAttachment = (picked: PickedUp): UiAttachment | UiAttachmentRefusal => {
+    if ('error' in picked) return picked;
+    // The running team's own store, which in demo mode is an in-memory one. There is nowhere
+    // else an attachment could be kept that the orchestrator would find it.
+    const keeper = current()?.orchestrator.store ?? store;
+    if (keeper === undefined) return { error: 'blobot has nowhere to keep that yet.' };
+    return keeper.putAttachment(picked.attachment);
+  };
+
+  ipcMain.handle('blobot:chooseAttachment', async () => {
+    const chosen = await dialog.showOpenDialog(window as BrowserWindow, {
+      properties: ['openFile'],
+      // Named rather than `*`: what blobot can send is two kinds, and a picker that offers a
+      // `.pdf` it will refuse a moment later is the trap the pickup-time check exists to avoid.
+      filters: [
+        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] },
+        { name: 'Text', extensions: ['txt', 'md', 'csv', 'json', 'log', 'ts', 'tsx', 'js', 'py'] },
+      ],
+    });
+    const path = chosen.filePaths[0];
+    if (chosen.canceled || path === undefined) return undefined;
+    return keepAttachment(await attachmentFromPath(path, Date.now()));
+  });
+
+  ipcMain.handle('blobot:attachPath', async (_event, path: string) =>
+    keepAttachment(await attachmentFromPath(path, Date.now())),
+  );
+
+  ipcMain.handle(
+    'blobot:attachBytes',
+    (_event, data: Uint8Array, mimeType: string, name?: string) =>
+      keepAttachment(attachmentFromBytes(new Uint8Array(data), mimeType, Date.now(), name)),
+  );
+
+  ipcMain.handle('blobot:attachmentUrl', (_event, id: string) => {
+    const found = (current()?.orchestrator.store ?? store)?.attachment(id);
+    return found === undefined ? undefined : dataUrlOf(found);
   });
   ipcMain.handle('blobot:resume', () => current()?.orchestrator.resumeAfterBudget());
 

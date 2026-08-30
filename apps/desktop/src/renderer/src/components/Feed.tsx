@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { UiAgent, UiInjection, UiUsage } from '../../../shared/api.js';
+import { sizeOf } from './Attached.js';
 import { Blob } from './Blob.js';
 import type { FeedEntry, Pane } from '../model.js';
 
@@ -169,6 +170,24 @@ function Sent({ id, sent }: { id: string; sent: UiInjection | undefined }): Reac
         <span>blobot's own tool</span>
         <span className="v">{estimate(sent.ownToolChars)}</span>
       </div>
+      {sent.attachmentCount > 0 && (
+        <>
+          {/* Bytes and a count, never tokens: an image's cost is a function of its pixels and
+              that function is the provider's. And it says *sent this session*, because it is
+              the only figure here that is not per-turn — an embedded attachment stays in the
+              session's history for as long as the session does. */}
+          <div className="sentrow">
+            <span>attachments</span>
+            <span className="v">
+              {sent.attachmentCount} · {sizeOf(sent.attachmentBytes)}
+            </span>
+          </div>
+          <div className="sentrow sub">
+            <span>sent this session, and still there</span>
+            <span className="v" />
+          </div>
+        </>
+      )}
       <div className="sentnote">
         estimated from what blobot sent. the count above is the runtime's own, and it includes
         tools and files blobot did not put there

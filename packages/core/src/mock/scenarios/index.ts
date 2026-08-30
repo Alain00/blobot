@@ -130,6 +130,86 @@ export const asksBeforeDeleting: Scenario = scenario('asks-before-deleting')
   .end();
 
 /**
+ * A turn that is a dozen steps and one answer.
+ *
+ * The shape every long piece of real work has and no other scenario here produced: a one-line
+ * caption, a call, a caption, a call, for as long as it takes, and then the paragraph that was
+ * the point of all of it. Drawn flat it reads as a bulleted list of intentions, because the
+ * captions are sentences and the calls are one mono line each — so the narration wins the column
+ * by weight while saying the least, and the answer at the bottom is buried under the work that
+ * led to it.
+ *
+ * It is checked in for the same reason the ragged deltas are: the transcript's fold (`rowsOf`)
+ * is built against this, and without it the first place we would meet a twelve-step turn is
+ * somebody's real repository. Observed on a real Claude session, 2026-08-30.
+ */
+export const worksThroughAList: Scenario = scenario('works-through-a-list')
+  .think('Fifteen files, and they only make sense in order.')
+  .say('Now the selection store and the interaction wrapper.')
+  .callTool('src/store/selection.ts', 'edit', {
+    rawInput: { path: 'src/store/selection.ts' },
+    durationMs: 240,
+    diff: {
+      oldText: 'export const selected = new Set<string>();\n',
+      newText: 'export const selected = new Set<string>();\nexport const hovered = signal<string | null>(null);\nexport function clear(): void {\n  selected.clear();\n}\n',
+    },
+    outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+  })
+  .say('That guard does not do what its comment claims. Fixing it with an id-matched clear.')
+  .callTool('src/store/selection.ts', 'edit', {
+    rawInput: { path: 'src/store/selection.ts' },
+    durationMs: 210,
+    diff: {
+      oldText: '  if (id) selected.clear();\n',
+      newText: '  if (selected.has(id)) selected.delete(id);\n',
+    },
+    outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+  })
+  .say('Now the interaction wrapper that every desk object shares.')
+  .callTool('src/scene/Interactive.tsx', 'edit', {
+    rawInput: { path: 'src/scene/Interactive.tsx' },
+    durationMs: 260,
+    diff: {
+      oldText: '',
+      newText: 'export function Interactive({ id, children }: Props) {\n  const set = useSelection();\n  return (\n    <group onPointerOver={() => set.hover(id)} onPointerOut={() => set.hover(null)}>\n      {children}\n    </group>\n  );\n}\n',
+    },
+    outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+  })
+  .say('Now the objects themselves. The camera is top-down, so I am shaping these to read by silhouette.')
+  .callTool('src/scene/objects.tsx', 'edit', {
+    rawInput: { path: 'src/scene/objects.tsx' },
+    durationMs: 480,
+    diff: {
+      oldText: '  <boxGeometry args={[1, 1, 1]} />\n',
+      newText: '  <boxGeometry args={[1.4, 0.06, 0.9]} />\n  <meshStandardMaterial color="#2b2b30" roughness={0.7} />\n  <Edges threshold={20} color="#3a3a42" />\n',
+    },
+    outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+  })
+  .say('A stray character slipped into the laptop material. Fixing it.')
+  .callTool('src/scene/objects.tsx', 'edit', {
+    rawInput: { path: 'src/scene/objects.tsx' },
+    durationMs: 150,
+    diff: {
+      oldText: '  roughness={0.7} />\n',
+      newText: '  roughness={0.7} />\n',
+    },
+    outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+  })
+  .say('Now wiring it into the page and building.')
+  .callTool('npx astro check 2>&1 | tail -30', 'execute', {
+    rawInput: { command: 'npx astro check 2>&1 | tail -30' },
+    durationMs: 2_400,
+    outcome: { status: 'completed', output: '0 errors\n', exit: 0 },
+  })
+  .say(
+    'Zero errors, and the build is green. The desk reads by silhouette at the top-down camera, ' +
+      'and the hover label lands on the object under the cursor rather than the last one hit. ' +
+      'The one thing I left alone is the biography copy: I do not know enough about you to write ' +
+      'it, so it is placeholders where the facts should go.',
+  )
+  .end();
+
+/**
  * The commands a session advertises once it has held a turn. Short on purpose: research
  * measured 48 entries from a real personal setup, and what that list should be allowed to
  * contain is issue 03's question, not the mock's to prejudge.
@@ -198,6 +278,7 @@ export const scenarios = {
   'runtime-dies-midturn': runtimeDiesMidturn,
   'slow-to-first-token': slowToFirstToken,
   'long-running-tool': longRunningTool,
+  'works-through-a-list': worksThroughAList,
   'asks-before-deleting': asksBeforeDeleting,
   'advertises-commands': advertisesCommands,
   'loses-commands': losesCommands,

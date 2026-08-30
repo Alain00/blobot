@@ -24,6 +24,12 @@ export interface ToolStep {
   readonly title: string;
   readonly kind: ToolKind;
   readonly rawInput?: unknown;
+  /**
+   * What the edit changed, as the two texts ACP's `diff` block carries. The mock holds the
+   * texts rather than the counts so it emits the same shape a real runtime does, and the
+   * counting is exercised rather than bypassed.
+   */
+  readonly diff?: { readonly oldText: string; readonly newText: string };
   /** How long the tool runs. A cancel landing inside this window exercises the trap. */
   readonly durationMs: number;
   readonly outcome: ToolOutcome;
@@ -69,6 +75,7 @@ export interface TextOptions {
 
 export interface CallToolOptions {
   readonly rawInput?: unknown;
+  readonly diff?: { readonly oldText: string; readonly newText: string };
   readonly durationMs?: number;
   readonly outcome?: ToolOutcome;
   /** The tool prompts first. Unattended, nobody answers and the call is cancelled. */
@@ -118,6 +125,7 @@ export class Scenario {
       outcome: options.outcome ?? { status: 'completed', exit: 0 },
       ...(options.asks === undefined ? {} : { asks: options.asks }),
       ...(options.rawInput === undefined ? {} : { rawInput: options.rawInput }),
+      ...(options.diff === undefined ? {} : { diff: options.diff }),
     };
     return this.#with({ kind: 'tool', tool });
   }

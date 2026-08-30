@@ -44,6 +44,14 @@ Consequences you will keep bumping into:
   glyphs, and the login that prompted this marks its selection with a filled circle against
   empty ones. The transcript already holds the same line, rendering markdown with no syntax
   colour at all.
+- **Content the user supplied is not blobot's to desaturate.** An image the user attaches is
+  drawn as itself, in colour, in the composer and in the transcript. This is the one place the
+  rule above yields, and it yields because the rule is about *blobot* not competing with the
+  faces: an attachment is a person's own file quoted back to them, not a signal blobot is
+  emitting, and the reason to scroll back to it is to see which one it was. Narrow on purpose.
+  It licenses no coloured chrome, no coloured chips and no coloured icons, and it leaves the
+  team icon and `RuntimeMark` exactly as they were — a vendor's logo is still greyed, because
+  that is blobot choosing to put a brand on screen. See `.scratch/composer-attachments/`.
 - **Contrast is the attention channel**, because colour is spoken for. Spend it almost never.
   There are two inversions in the whole app: `waiting` (the one state where an agent sits
   forever until a human looks) and an armed primary button.
@@ -113,9 +121,52 @@ Other transcript rules:
   unison the moment their agent starts working is the same fidget the team mark's single
   folded animation exists to avoid. The rail row, its status word and the pending dots carry
   the state instead — not the transcript's header, which carries no status at all.
-- **Hiding a message is for the peer voice only.** A message from you is yours and short; an
-  agent's answer is the thing the pane exists to show, and putting it behind a click would be
-  hiding the work.
+- **Hiding is for the peer voice and for settled steps.** A message from you is yours and
+  short; an agent's answer is the thing the pane exists to show, and putting it behind a click
+  would be hiding the work. **Amended 2026-08-30 (ticket 12):** a caption on a tool call is not
+  that answer. A long turn is a dozen of them — *"Now the desk surface and the scene that ties
+  it together."* — each introducing one call, and then the paragraph it was all leading to.
+  Drawn flat that reads as a bulleted list of intentions, because the captions are sentences and
+  the calls are one mono line each, so the narration wins the column by weight while saying the
+  least and the answer is buried under the work that produced it.
+
+  So a **step** — a caption and the calls it introduces — folds, and a run of them is one line:
+  `ran 6 tools`, plus `· 1 failed` when something did. Three things are structurally outside a
+  block rather than flagged open inside one, so that "the live step never folds" is a property
+  of the grouping (`rowsOf`) and not an exception at the render site somebody can forget: a call
+  that is running or asking, a question nobody has answered, and a live answer or any prose long
+  enough to be one. Trailing prose is trimmed off the end for the same reason — the last thing
+  said in a turn has no call after it, so it is the answer.
+
+  **The header counts calls, never seconds.** A duration is a claim about effort blobot cannot
+  make honestly across a permission wait, and the count is what a reader wants before deciding
+  whether to open it. **And there are no ticks.** The pattern this borrows from puts a checkmark
+  on every finished step; ticket 08 exists because a cancelled call reports `completed` with
+  `exit: null`, so a tick beside one is that trap asserted louder and wrong. A line that finished
+  cleanly says nothing — silence, which is not a success claim — and a line that did not says
+  what happened.
+
+  It takes `.route`'s chevron and mono label so the transcript has one disclosure gesture and
+  not two, and leaves behind the dashed edge, which is the peer voice saying *refusable, lower
+  authority* about somebody else's mail. This is the agent's own work in its own turn.
+
+  A call carries a **verb** from the four kinds core already has off both runtimes — `read`,
+  `edit`, `run`, and nothing for an MCP tool, whose name is its server's and not ours to
+  paraphrase. It is a fixed column: a ragged left edge is what stops a stack of calls reading as
+  a list, which is the whole value of the fold. **The title beside it is the target and nothing
+  else**: every runtime leads its own title with its own verb (`Edit notes.txt`), so the line
+  said the same thing twice in two registers and pushed the target out of the column. The verb
+  is taken off in the adapter, which is the only place allowed to know that `Edit` and `Write`
+  are Claude's words.
+
+  **Diff counts beside an edit (`+74 −41`) are the one place saturated colour appears off a
+  blobatar**, by the author, 2026-08-30. Two small numbers whose sign already carries the
+  meaning, so the hue reinforces a fact that is legible without it rather than being the channel
+  for it. `--added` and `--removed` are the only tokens in the stylesheet that name a colour
+  instead of a role, they are deliberately low-chroma so a blobatar still wins the eye, and
+  nothing else may use them. A zero is drawn where it was measured, because `+12 −0` is a
+  different edit from `+12 −8`; **absent is not zero** — a call that changed nothing, a diff too
+  large to measure and a runtime that sends no diff block all draw nothing.
 - **A permission block is a transcript item, not a modal.** An agent that has been asked to run
   something dangerous stops until a human answers, and two agents can be stopped at once: a
   modal would serialise them into whichever arrived first. It stands where that tool's line
@@ -150,6 +201,10 @@ Every control descends from the composer. If you are adding one, start there.
   named. Two names and a count past that (`Alice, Bob +1`): a message can address several
   agents, and a list that grows with the roster stops being readable at the width a send control
   has. Never a face — a blobatar on a button reads as the affordance rather than as an identity.
+- **The composer's draft outlives the pane it was typed in, and nobody decided that.** There is
+  one `Composer` for the whole app, so words typed at Alice are still in the field after a switch
+  to another team, addressed to a stranger. It is recorded here so it is not mistaken for a
+  design: per-team drafts are the right answer and an open ticket.
 - **A menu of several groups is one control, not several.** The agent form's *how it answers*
   is a single trigger over one menu holding a labelled group per axis (model, effort, and
   whatever else that runtime offers), because these are one decision about one agent and three

@@ -16,6 +16,7 @@ import {
   SqliteRecorder,
   SqliteStore,
   SystemClock,
+  composeLeadBrief,
   composePersona,
   openDatabase,
   scenario,
@@ -33,6 +34,10 @@ const team: Team = {
   workspacePath: '/repo',
   workspaceKind: 'git',
   turnBudget: 10,
+  // Alice leads here too, so the headless loop and the app run the same team: the lead's brief
+  // is part of the prompt Alice actually receives, and a demo that omitted it would be playing
+  // a different run from the one on screen.
+  leadAgentId: 'alice',
 };
 
 const alice: Agent = {
@@ -174,6 +179,12 @@ function describe(event: AgentEvent): string {
 }
 
 process.stdout.write(`--- Bob's persona ---\n${composePersona(bob, team, [alice, bob])}\n---\n\n`);
+// The other half of what blobot puts in a window, and the half that varies: Alice leads, so
+// every turn she holds carries this. Printed beside the persona because the two together are
+// the whole of blobot's own injection, and the gauge in the app counts exactly them.
+process.stdout.write(
+  `--- Alice's lead brief ---\n${composeLeadBrief([{ agent: bob, status: 'idle' }])}\n---\n\n`,
+);
 
 await orchestrator.start();
 await orchestrator.promptFromUser([alice.id], script.prompt);

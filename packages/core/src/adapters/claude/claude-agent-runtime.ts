@@ -8,6 +8,7 @@ import type { InjectableEvent } from '../../mock/mock-agent-runtime.js';
 import { sameCommands } from '../../commands.js';
 import type {
   AgentRuntime,
+  AttachmentSupport,
   AvailableCommand,
   PermissionHandler,
   PermissionOption,
@@ -28,6 +29,8 @@ import {
 import { offerableNames, paletteOf } from './palette.js';
 import { vouchedTools } from './permissions.js';
 import { commandsFrom, stopReasonOf, translateSessionUpdate } from '../acp/session-updates.js';
+import { withoutToolVerb } from './tool-title.js';
+import { ACCEPTS_NOTHING, acceptsOf, contentBlockOf } from '../acp/attachments.js';
 import type {
   InitializeResult,
   NewSessionResult,
@@ -205,6 +208,8 @@ export class ClaudeAgentRuntime implements AgentRuntime {
   #resumed = false;
   #commands: readonly AvailableCommand[] = [];
   #optionGroups: readonly RuntimeOptionGroup[] = [];
+  /** What this session takes attached to a prompt, read off `initialize`. */
+  #accepts: AttachmentSupport = ACCEPTS_NOTHING;
   #projectNames: ReadonlySet<string> | undefined;
 
   constructor(options: ClaudeAgentRuntimeOptions) {
@@ -286,6 +291,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
     assertAuthenticated(initialized);
 
     const wanted = this.#options.resumeSessionId;
+    this.#accepts = acceptsOf(initialized.agentCapabilities);
     const canLoad = initialized.agentCapabilities?.loadSession === true;
     const session =
       wanted === undefined || wanted === '' || !canLoad
@@ -411,7 +417,12 @@ export class ClaudeAgentRuntime implements AgentRuntime {
     try {
       const result = await connection.request<PromptResult>('session/prompt', {
         sessionId: this.#sessionId,
-        prompt: [{ type: 'text', text: prompt.text }],
+        // Attachments first, then the text: an agent does better with the thing before the
+        // question, and it is the order the user had in mind putting them together.
+        prompt: [
+          ...(prompt.attachments ?? []).map(contentBlockOf),
+          { type: 'text', text: prompt.text },
+        ],
       });
       // Turn end is the RPC *reply*, never a notification — and `for await` would discard an
       // iterator's return value, so it becomes an event here or it reaches nobody.
@@ -472,6 +483,10 @@ export class ClaudeAgentRuntime implements AgentRuntime {
     return this.#optionGroups;
   }
 
+  get accepts(): AttachmentSupport {
+    return this.#accepts;
+  }
+
   onCommandsChange(listener: (commands: readonly AvailableCommand[]) => void): Unsubscribe {
     this.#commandListeners.add(listener);
     return () => this.#commandListeners.delete(listener);
@@ -522,7 +537,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
       this.#modeId = update.currentModeId ?? this.#modeId;
       return;
     }
-    for (const event of translateSessionUpdate(update)) this.#emit(event);
+    for (const event of translateSessionUpdate(update)) this.#emit(withoutToolVerb(event, update));
   }
 
   async #onPermissionRequest(params: PermissionRequestParams): Promise<unknown> {

@@ -304,6 +304,54 @@ describe('tombstoning an agent', () => {
   });
 });
 
+/**
+ * Ticket 08's trap, carried across a restart.
+ *
+ * A cancelled call reports `completed` with an explicit `exit: null`; a call that simply has no
+ * exit code to give reports none at all. Both land in `exit_code` as a SQL NULL, so without
+ * `exit_reported` a restored transcript would have to either call every one of the second kind
+ * cancelled or lose every one of the first. The transcript's fold counts its failures off this,
+ * so losing the distinction is a header that quietly says the wrong number.
+ */
+describe('an exit code that was reported, and one that never was', () => {
+  function record(toolCallId: string, at: number, terminal: { exit?: number | null }): void {
+    const identity = { agentId: alice.id, teamId: team.id, sessionId: 's1' } as const;
+    const recorder = new SqliteRecorder(opened.db, team.id);
+    recorder.turnStarted(alice.id, at);
+    recorder.record({
+      type: 'tool_call_started',
+      toolCallId,
+      title: toolCallId,
+      kind: 'execute',
+      at,
+      ...identity,
+    });
+    recorder.record({
+      type: 'tool_call_updated',
+      toolCallId,
+      status: 'completed',
+      at: at + 1,
+      ...terminal,
+      ...identity,
+    });
+  }
+
+  it('keeps them apart, so a restored line can say `exit null` and only where it is true', () => {
+    store.startSession({ id: 's1', agentId: alice.id, personaText: 'x', startedAt: 0 });
+    // The cancelled call: `completed`, and an explicit null is the only thing that betrays it.
+    record('cancelled', 10, { exit: null });
+    // A call that finished and had no exit code to report.
+    record('no-exit', 20, {});
+    // And an ordinary success, so a zero is not mistaken for "nothing reported".
+    record('clean', 30, { exit: 0 });
+
+    const byId = new Map(store.logOfTeam(team.id).tools.map((tool) => [tool.toolCallId, tool]));
+    expect(byId.get('cancelled')).toHaveProperty('exit', null);
+    expect(byId.get('no-exit')).not.toHaveProperty('exit');
+    expect(byId.get('clean')).toHaveProperty('exit', 0);
+  });
+});
+
 describe('a tool call named before its arguments arrived', () => {
   it('keeps the refined name rather than the placeholder it was announced under', () => {
     store.startSession({ id: 's1', agentId: alice.id, personaText: 'x', startedAt: 0 });
@@ -493,7 +541,7 @@ describe('what a turn leaves behind', () => {
       turnBudget: 10,
       createdAt: 0,
     });
-    expect(store.logOfTeam('team_2')).toEqual({ tools: [], turns: [] });
+    expect(store.logOfTeam('team_2')).toEqual({ running: [], tools: [], turns: [] });
   });
 });
 
@@ -577,5 +625,82 @@ describe('the context gauge', () => {
     // empty context, and it is persisted like any other reading.
     record(alice.id, 20, 0);
     expect(store.lastUsageOfTeam(team.id)[alice.id]).toEqual({ used: 37_000, size: 200_000 });
+  });
+});
+
+describe('attachments', () => {
+  const png = {
+    id: 'att_1',
+    kind: 'image' as const,
+    mimeType: 'image/png',
+    bytes: 4,
+    data: new Uint8Array([1, 2, 3, 4]),
+    at: 5,
+  };
+
+  it('stores the bytes once and hands back the record without them', () => {
+    const record = store.putAttachment(png);
+    expect(record).toEqual({ id: 'att_1', kind: 'image', mimeType: 'image/png', bytes: 4 });
+    expect(store.attachment('att_1')?.data).toEqual(png.data);
+    expect(store.attachment('nothing')).toBeUndefined();
+  });
+
+  it('carries one blob on every message of a fan-out', () => {
+    const record = store.putAttachment(png);
+    for (const [id, agent] of [
+      ['msg_1', alice],
+      ['msg_2', bob],
+    ] as const) {
+      store.commit({
+        id,
+        teamId: team.id,
+        fromAgentId: null,
+        toAgentId: agent.id,
+        body: 'look at this',
+        at: 1,
+        attachments: [record],
+      });
+    }
+
+    // Two rows, one blob. The metadata is on each; the bytes are stored once.
+    expect(store.forAgent(alice.id)[0]?.attachments).toEqual([record]);
+    expect(store.forAgent(bob.id)[0]?.attachments).toEqual([record]);
+    expect(
+      opened.db.all<{ n: number }>(sql.raw('SELECT COUNT(*) AS n FROM attachments'))[0]?.n,
+    ).toBe(1);
+  });
+
+  it('never returns the bytes with a transcript', () => {
+    const record = store.putAttachment(png);
+    store.commit({
+      id: 'msg_1',
+      teamId: team.id,
+      fromAgentId: null,
+      toAgentId: alice.id,
+      body: 'look',
+      at: 1,
+      attachments: [record],
+    });
+    // A snapshot of two hundred messages must not carry two hundred images.
+    expect(store.forTeam(team.id)[0]?.attachments?.[0]).not.toHaveProperty('data');
+  });
+
+  it('outlives the team it was sent to, because the transcript does', () => {
+    const record = store.putAttachment(png);
+    store.commit({
+      id: 'msg_1',
+      teamId: team.id,
+      fromAgentId: null,
+      toAgentId: alice.id,
+      body: 'look',
+      at: 1,
+      attachments: [record],
+    });
+    store.tombstoneTeam(team.id, 2);
+
+    // Deleting a team tombstones it and keeps the transcript, so nothing removes these bytes.
+    // Stated rather than discovered: see `.scratch/composer-attachments/04`.
+    expect(store.attachment('att_1')).toBeDefined();
+    expect(store.forTeam(team.id)[0]?.attachments).toHaveLength(1);
   });
 });

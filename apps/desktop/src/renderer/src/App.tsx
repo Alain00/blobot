@@ -282,7 +282,9 @@ export function App(): React.JSX.Element {
               ? {}
               : { lead: snapshot.team.leadAgentId })}
             opening={snapshot.opening === true}
-            onSend={(agentIds, text) => void window.blobot.prompt(agentIds, text)}
+            onSend={(agentIds, text, attachmentIds) =>
+              void window.blobot.prompt(agentIds, text, attachmentIds)
+            }
           />
         </div>
         {feed.visible && (

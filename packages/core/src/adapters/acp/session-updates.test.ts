@@ -174,3 +174,61 @@ describe('reading the command menu', () => {
     ).toEqual([]);
   });
 });
+
+/**
+ * The diff block, from the shape a real Claude sends — captured live, 2026-08-30, and kept
+ * verbatim so a change to the counting is measured against the wire and not against a fixture
+ * somebody wrote to match the code.
+ */
+describe('what an edit changed', () => {
+  it('counts the narrow diff, which is the one that arrives mid-stream', () => {
+    const events = translateSessionUpdate({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'toolu_1',
+      title: 'Edit notes.txt',
+      kind: 'edit',
+      content: [
+        { type: 'diff', path: 'notes.txt', oldText: 'beta\n', newText: 'beta one\nbeta two\nbeta three\n' },
+      ],
+    });
+    expect(events[0]).toMatchObject({ changed: { added: 3, removed: 1 } });
+  });
+
+  it('counts the widened one the same, which is the one that arrives with the result', () => {
+    const events = translateSessionUpdate({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'toolu_1',
+      content: [
+        {
+          type: 'diff',
+          path: 'notes.txt',
+          oldText: 'alpha\nbeta\ngamma\ndelta\nepsilon',
+          newText: 'alpha\nbeta one\nbeta two\nbeta three\ngamma\ndelta\nepsilon',
+        },
+      ],
+    });
+    expect(events[0]).toMatchObject({ changed: { added: 3, removed: 1 } });
+  });
+
+  it('sums several diffs on one call, since a call may touch more than one region', () => {
+    const events = translateSessionUpdate({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'toolu_1',
+      content: [
+        { type: 'diff', oldText: 'a\n', newText: 'a1\na2\n' },
+        { type: 'diff', oldText: 'b\nc\n', newText: '' },
+      ],
+    });
+    expect(events[0]).toMatchObject({ changed: { added: 2, removed: 3 } });
+  });
+
+  it('says nothing where there is no diff block, rather than zero', () => {
+    const events = translateSessionUpdate({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'toolu_1',
+      status: 'completed',
+      content: [{ type: 'content', content: { type: 'text', text: 'done' } }],
+    });
+    expect(events[0]).not.toHaveProperty('changed');
+  });
+});

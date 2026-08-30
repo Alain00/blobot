@@ -1,6 +1,7 @@
 import type { StopReason, ToolCallStatus, ToolKind } from '../../events.js';
 import type { InjectableEvent } from '../../mock/mock-agent-runtime.js';
 import type { AvailableCommand } from '../../runtime.js';
+import { lineChange } from './line-diff.js';
 import type { ContentBlock, SessionUpdate, ToolContent } from './wire.js';
 
 /**
@@ -98,6 +99,7 @@ function toolCallUpdated(update: SessionUpdate): InjectableEvent[] {
   if (toolCallId === undefined) return [];
   const status = toolStatus(update.status);
   const output = toolOutput(update);
+  const changed = changedLines(update.content);
   return [
     {
       type: 'tool_call_updated',
@@ -107,6 +109,7 @@ function toolCallUpdated(update: SessionUpdate): InjectableEvent[] {
       ...(update.kind === undefined ? {} : { kind: toolKind(update.kind) }),
       ...(update.rawInput === undefined ? {} : { rawInput: update.rawInput }),
       ...(output === undefined ? {} : { output }),
+      ...(changed === undefined ? {} : { changed }),
       // A tool failure is not an `error`: the model sees it and the turn continues.
       ...(status === 'failed' ? { error: output ?? 'the tool failed' } : {}),
     },
@@ -177,6 +180,29 @@ export function stopReasonOf(raw: string | undefined): StopReason {
     default:
       return 'end_turn';
   }
+}
+
+/**
+ * What the `diff` blocks on one update add up to.
+ *
+ * Summed across blocks because one call may touch several regions, and taken from `content`
+ * rather than from a provider's `rawOutput`: the block is ACP's own, so a second runtime that
+ * sends it is counted without an adapter of its own knowing anything about this.
+ */
+function changedLines(content: unknown): { added: number; removed: number } | undefined {
+  if (!Array.isArray(content)) return undefined;
+  let added = 0;
+  let removed = 0;
+  let seen = false;
+  for (const entry of content as readonly ToolContent[]) {
+    if (entry.type !== 'diff') continue;
+    const change = lineChange(entry.oldText ?? '', entry.newText ?? '');
+    if (change === undefined) continue;
+    added += change.added;
+    removed += change.removed;
+    seen = true;
+  }
+  return seen ? { added, removed } : undefined;
 }
 
 function toolOutput(update: SessionUpdate): string | undefined {

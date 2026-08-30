@@ -1,4 +1,4 @@
-import { index, integer, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
+import { blob, index, integer, primaryKey, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
 /**
  * Ticket 13's eight tables. Drizzle is used as a **typed query builder, not an ORM**, and it
@@ -207,6 +207,58 @@ export const messages = sqliteTable(
   ],
 );
 
+/**
+ * An **Attachment**: bytes the user attached to a Message.
+ *
+ * A row of its own rather than a column on `messages`, because one attachment can be on several
+ * messages: a message addressed to three agents is three rows, one thing typed once, and one
+ * copy of the bytes.
+ *
+ * **The bytes are here and not on disk.** Nothing links to an attachment — the runtimes are
+ * handed the content, never a path (ADR-0004) — so a file under `userData` would buy a smaller
+ * database and add a second thing that can go missing, for bytes no agent may reach. It also
+ * cannot be walked: an asset directory is a stable, predictable place holding every attachment
+ * from every team, which is exactly what that ADR refuses to hand anybody a link into.
+ *
+ * They outlive their team. Deleting a team tombstones it and keeps the transcript, so these
+ * rows stay for as long as the messages that point at them.
+ */
+export const attachments = sqliteTable('attachments', {
+  id: text('id').primaryKey(),
+  /** `image` or `text`. The two kinds both runtimes advertise; a PDF is neither. */
+  kind: text('kind', { enum: ['image', 'text'] }).notNull(),
+  mimeType: text('mime_type').notNull(),
+  /** NULL for a pasted image, which has no filename and is not given an invented one. */
+  name: text('name'),
+  /** The original size, which is what the composer refused against and what the gauge reports. */
+  bytes: integer('bytes').notNull(),
+  data: blob('data', { mode: 'buffer' }).notNull(),
+  at: integer('at').notNull(),
+});
+
+/**
+ * Which attachments are on which message, in the order the user picked them up.
+ *
+ * The join is what lets one blob serve a fan-out. `ordinal` is kept because the order is the
+ * user's and the prompt is built from it.
+ */
+export const messageAttachments = sqliteTable(
+  'message_attachments',
+  {
+    messageId: text('message_id')
+      .notNull()
+      .references(() => messages.id),
+    attachmentId: text('attachment_id')
+      .notNull()
+      .references(() => attachments.id),
+    ordinal: integer('ordinal').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.messageId, table.attachmentId] }),
+    index('message_attachments_message').on(table.messageId),
+  ],
+);
+
 export const turns = sqliteTable(
   'turns',
   {
@@ -263,6 +315,27 @@ export const toolCalls = sqliteTable(
     arguments: text('arguments'),
     status: text('status').notNull(),
     exitCode: integer('exit_code'),
+    /**
+     * Whether the runtime reported an exit code at all, which `exit_code` alone cannot say.
+     *
+     * Ticket 08's trap is that a cancelled call reports `completed` with an explicit
+     * `exit: null`, and a `read` that finished perfectly reports no exit code whatsoever. Both
+     * land in `exit_code` as SQL NULL, so a restored line could not tell a cancelled call from
+     * an ordinary one and the transcript's fold would undercount its failures.
+     *
+     * It records what came over the wire and concludes nothing, which is the rule: the word
+     * "cancelled" is nowhere in this column, because inferring it is exactly what ticket 08
+     * says never to do.
+     */
+    exitReported: integer('exit_reported', { mode: 'boolean' }).notNull().default(false),
+    /**
+     * What an edit changed, in lines, counted from ACP's `diff` block. Two nullable columns
+     * rather than one JSON blob because they are two integers that are always read together
+     * and never queried apart, and because null here means *not measured* — a call that
+     * changed nothing, a diff too large to count, or a runtime that sends no diff block.
+     */
+    linesAdded: integer('lines_added'),
+    linesRemoved: integer('lines_removed'),
     failureReason: text('failure_reason'),
     output: text('output'),
     startedAt: integer('started_at').notNull(),

@@ -19,8 +19,8 @@ import { Feed } from './Feed.js';
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const AGENTS: readonly UiAgent[] = [
-  { id: 'alice', name: 'Alice', role: 'builds the UI', runtimeLabel: 'claude code', workspacePath: '/w' },
-  { id: 'bob', name: 'Bob', role: 'reviews it', runtimeLabel: 'opencode', workspacePath: '/w' },
+  { id: 'alice', name: 'Alice', role: 'builds the UI', runtimeLabel: 'claude code', workspacePath: '/w', accepts: { images: true, textFiles: true } },
+  { id: 'bob', name: 'Bob', role: 'reviews it', runtimeLabel: 'opencode', workspacePath: '/w', accepts: { images: true, textFiles: true } },
 ];
 
 function render(
@@ -78,6 +78,8 @@ describe('what blobot sent', () => {
     lastWakeChars: 960,
     lastWakeMessages: 3,
     queued: 0,
+    attachmentCount: 0,
+    attachmentBytes: 0,
     ownToolChars: 1_040,
   };
 
@@ -107,6 +109,27 @@ describe('what blobot sent', () => {
       "blobot's own tool~260",
     ]);
     expect(host.querySelector('.sentnote')?.textContent).toContain('estimated');
+  });
+
+  it('reports attachments in bytes, and says they are still there', () => {
+    const host = render(
+      { alice: { used: 37_000, size: 1_000_000 } },
+      { alice: { ...SENT, attachmentCount: 2, attachmentBytes: 480_000 } },
+    );
+    click(host, 0);
+    const lines = [...(host.querySelectorAll('.sentrow') ?? [])].map((row) => row.textContent);
+    // Bytes and a count, never tokens: an image's cost is a function of its pixels and that
+    // function is the provider's. And *sent this session*, because unlike every other figure
+    // here it is not per-turn — an embedded attachment stays in the session's history.
+    expect(lines).toContain('attachments2 · 480 KB');
+    expect(lines).toContain('sent this session, and still there');
+  });
+
+  it('says nothing about attachments when none were sent', () => {
+    const host = render({ alice: { used: 37_000, size: 1_000_000 } }, { alice: SENT });
+    click(host, 0);
+    const lines = [...(host.querySelectorAll('.sentrow') ?? [])].map((row) => row.textContent);
+    expect(lines.some((line) => line?.startsWith('attachments'))).toBe(false);
   });
 
   it('says nothing was sent rather than drawing zeros, for an agent never woken', () => {

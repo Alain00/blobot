@@ -42,8 +42,8 @@ vi.mock('./Markdown.js', () => ({
 const { Conversation } = await import('./Conversation.js');
 
 const AGENTS: readonly UiAgent[] = [
-  { id: 'a', name: 'Alice', role: 'builds', runtimeLabel: 'mock', workspacePath: '/w/a' },
-  { id: 'b', name: 'Bob', role: 'reviews', runtimeLabel: 'mock', workspacePath: '/w/b' },
+  { id: 'a', name: 'Alice', role: 'builds', runtimeLabel: 'mock', workspacePath: '/w/a', accepts: { images: true, textFiles: true } },
+  { id: 'b', name: 'Bob', role: 'reviews', runtimeLabel: 'mock', workspacePath: '/w/b', accepts: { images: true, textFiles: true } },
 ];
 
 /** A settled transcript of `count` messages, alternating speakers so nothing groups away. */
@@ -213,10 +213,10 @@ describe('the voices, after the roster stopped being passed down', () => {
     expect(draw([asking], { kind: 'team' })).toContain('Alice wants to run git push');
     expect(draw([asking], { kind: 'team' })).toContain('allow always');
     expect(draw([{ ...asking, outcome: 'allowed' }], { kind: 'team' })).toContain(
-      'you allowed this once',
+      'allowed once',
     );
     expect(draw([{ ...asking, outcome: 'allowed_always' }], { kind: 'team' })).toContain(
-      'you allowed this, and it stops asking',
+      'allowed always',
     );
   });
 
@@ -226,6 +226,116 @@ describe('the voices, after the roster stopped being passed down', () => {
     ];
     expect(draw(items, { kind: 'team' })).toContain('Alice · turn stopped');
     expect(draw(items, { kind: 'agent', agentId: 'a' })).not.toContain('Alice ·');
+  });
+
+  it('folds a settled run of work to one line, and opens it on a click', () => {
+    const items: Item[] = [
+      { kind: 'agent', id: 'c1', at, agentId: 'a', text: 'Now the selection store.', live: false },
+      {
+        kind: 'tool',
+        id: 't1',
+        at: at + 1,
+        agentId: 'a',
+        title: 'src/store.ts',
+        toolKind: 'edit',
+        status: 'completed',
+      },
+      {
+        kind: 'tool',
+        id: 't2',
+        at: at + 2,
+        agentId: 'a',
+        title: 'npx astro check',
+        toolKind: 'execute',
+        status: 'completed',
+      },
+      { kind: 'agent', id: 'a1', at: at + 3, agentId: 'a', text: 'Zero errors.', live: false },
+    ];
+    const open = (host: HTMLElement): void =>
+      host.querySelector<HTMLButtonElement>('.ran .route')?.click();
+
+    // Shut: the count, and the answer the run was leading to. Not the captions, not the calls.
+    const shut = draw(items, { kind: 'team' });
+    expect(shut).toContain('ran 2 tools');
+    expect(shut).toContain('Zero errors.');
+    expect(shut).not.toContain('Now the selection store.');
+    expect(shut).not.toContain('npx astro check');
+
+    // Opened: the verb column, from the kind the runtimes send and the renderer used to drop.
+    const opened = draw(items, { kind: 'team' }, undefined, open);
+    expect(opened).toContain('editsrc/store.ts');
+    expect(opened).toContain('runnpx astro check');
+    expect(opened).toContain('Now the selection store.');
+    // And no word for a call that finished the ordinary way: silence, never a success claim.
+    expect(opened).not.toContain('completed');
+  });
+
+  it('draws what an edit changed, signed, and nothing at all where it was not measured', () => {
+    const items: Item[] = [
+      {
+        kind: 'tool',
+        id: 't1',
+        at,
+        agentId: 'a',
+        title: 'src/desk.tsx',
+        toolKind: 'edit',
+        status: 'completed',
+        changed: { added: 74, removed: 41 },
+      },
+      {
+        kind: 'tool',
+        id: 't2',
+        at: at + 1,
+        agentId: 'a',
+        title: 'npm run build',
+        toolKind: 'execute',
+        status: 'completed',
+      },
+    ];
+    const opened = draw(items, { kind: 'team' }, undefined, (host) =>
+      host.querySelector<HTMLButtonElement>('.ran .route')?.click(),
+    );
+    expect(opened).toContain('+74');
+    expect(opened).toContain('\u221241');
+    // A zero is drawn where it was measured, because `+12 −0` is a different edit from `+12 −8`.
+    const zero = draw(
+      [{ ...(items[0] as Extract<Item, { kind: 'tool' }>), changed: { added: 12, removed: 0 } }, items[1] as Item],
+      { kind: 'team' },
+      undefined,
+      (host) => host.querySelector<HTMLButtonElement>('.ran .route')?.click(),
+    );
+    expect(zero).toContain('\u22120');
+  });
+
+  it('says what happened to a call that did not finish, in the header and on its line', () => {
+    const items: Item[] = [
+      {
+        kind: 'tool',
+        id: 't1',
+        at,
+        agentId: 'a',
+        title: 'npm test',
+        toolKind: 'execute',
+        status: 'failed',
+      },
+      // A cancelled call reports `completed` with a null exit, which is ticket 08's trap.
+      {
+        kind: 'tool',
+        id: 't2',
+        at: at + 1,
+        agentId: 'a',
+        title: 'npm build',
+        toolKind: 'execute',
+        status: 'completed',
+        exit: null,
+      },
+    ];
+    expect(draw(items, { kind: 'team' })).toContain('ran 2 tools · 2 failed');
+    const opened = draw(items, { kind: 'team' }, undefined, (host) =>
+      host.querySelector<HTMLButtonElement>('.ran .route')?.click(),
+    );
+    expect(opened).toContain('failed');
+    expect(opened).toContain('exit null');
   });
 
   it('stands three dots under the last thing said for an agent that has not started', () => {

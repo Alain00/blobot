@@ -91,6 +91,14 @@ export interface ToolCallUpdated extends AgentEventBase {
   readonly exit?: number | null;
   /** Present on `failed`. A tool failure is not an `error`: the turn continues. */
   readonly error?: string;
+  /**
+   * What an edit changed, in lines. blobot's own shape, counted from ACP's `diff` content
+   * block, so no consumer learns which provider produced it.
+   *
+   * Absent is not zero. A tool that changed nothing, a diff too large to measure, and a runtime
+   * that sends no diff block are all absent, and the transcript draws nothing for all three.
+   */
+  readonly changed?: { readonly added: number; readonly removed: number };
 }
 
 /**

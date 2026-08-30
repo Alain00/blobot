@@ -1,8 +1,10 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import type { AgentEvent, AgentStatus, Message } from '@blobot/core/domain';
 import type {
   BlobotApi,
   EditAgentResult,
+  UiAttachment,
+  UiAttachmentRefusal,
   HireResult,
   NewAgentSpec,
   NewTeamSpec,
@@ -30,8 +32,31 @@ import type {
  */
 const api: BlobotApi = {
   snapshot: () => ipcRenderer.invoke('blobot:snapshot') as Promise<UiSnapshot>,
-  prompt: (agentIds, text) =>
-    ipcRenderer.invoke('blobot:prompt', agentIds, text) as Promise<void>,
+  prompt: (agentIds, text, attachmentIds) =>
+    ipcRenderer.invoke('blobot:prompt', agentIds, text, attachmentIds) as Promise<void>,
+  chooseAttachment: () =>
+    ipcRenderer.invoke('blobot:chooseAttachment') as Promise<
+      UiAttachment | UiAttachmentRefusal | undefined
+    >,
+  attachPath: (path) =>
+    ipcRenderer.invoke('blobot:attachPath', path) as Promise<UiAttachment | UiAttachmentRefusal>,
+  attachBytes: (data, mimeType, name) =>
+    ipcRenderer.invoke('blobot:attachBytes', data, mimeType, name) as Promise<
+      UiAttachment | UiAttachmentRefusal
+    >,
+  attachmentUrl: (id) =>
+    ipcRenderer.invoke('blobot:attachmentUrl', id) as Promise<string | undefined>,
+  /**
+   * A dropped file's path.
+   *
+   * `File.path` was removed in Electron 32, and this is the replacement — which lives in the
+   * preload because it is the only side that has `webUtils`. It is the whole of what the
+   * renderer learns about the filesystem: a path it immediately hands back for main to read.
+   */
+  pathOf: (file) => {
+    const path = webUtils.getPathForFile(file);
+    return path === '' ? undefined : path;
+  },
   resumeAfterBudget: () => ipcRenderer.invoke('blobot:resume') as Promise<void>,
   chooseWorkspace: () =>
     ipcRenderer.invoke('blobot:chooseWorkspace') as Promise<string | undefined>,

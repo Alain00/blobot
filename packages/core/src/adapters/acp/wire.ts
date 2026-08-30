@@ -21,6 +21,18 @@ export interface AgentCapabilities {
   /** Whether `session/load` exists at all. Checked rather than assumed: a bridge without it
    *  would otherwise turn every resumed agent into a JSON-RPC error at launch. */
   readonly loadSession?: boolean;
+  /**
+   * What the agent takes in a prompt beyond the baseline. Text and `resource_link` are the
+   * baseline every agent must accept; everything here is opt-in and absent means no.
+   */
+  readonly promptCapabilities?: PromptCapabilities;
+}
+
+export interface PromptCapabilities {
+  readonly image?: boolean;
+  readonly audio?: boolean;
+  /** An embedded `resource` block: how a text file travels, since blobot never links one. */
+  readonly embeddedContext?: boolean;
 }
 
 export interface AuthMethod {
@@ -60,6 +72,12 @@ export interface SessionUpdate {
   readonly cost?: { readonly amount?: number; readonly currency?: string };
   readonly currentModeId?: string;
   readonly availableCommands?: readonly AvailableCommandWire[];
+  /**
+   * The provider's own extension block. **Only an adapter may read this** — it is where a
+   * vendor's vocabulary lives, and the shared half is the protocol's shape and nothing else.
+   * The Claude adapter uses `claudeCode.toolName` to take its own verb back off a title.
+   */
+  readonly _meta?: { readonly claudeCode?: { readonly toolName?: string } };
 }
 
 /** The menu entry as the bridge sends it. Normalized into blobot's `AvailableCommand`. */
@@ -77,6 +95,14 @@ export interface ContentBlock {
 export interface ToolContent {
   readonly type?: string;
   readonly content?: ContentBlock;
+  /**
+   * ACP's `diff` block, which a real Claude sends on every edit. It arrives twice: once with
+   * the strings the tool was called with, and again widened with surrounding context. See
+   * `line-diff.ts`, which is why both readings give the same count.
+   */
+  readonly path?: string;
+  readonly oldText?: string;
+  readonly newText?: string;
 }
 
 export interface PermissionRequestParams {

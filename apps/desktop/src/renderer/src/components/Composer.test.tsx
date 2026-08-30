@@ -27,8 +27,8 @@ globalThis.ResizeObserver ??= class {
 } as unknown as typeof ResizeObserver;
 
 const AGENTS: readonly UiAgent[] = [
-  { id: 'alice', name: 'Alice', role: 'builds', runtimeLabel: 'mock', workspacePath: '/w/a' },
-  { id: 'bob', name: 'Bob', role: 'reviews', runtimeLabel: 'mock', workspacePath: '/w/b' },
+  { id: 'alice', name: 'Alice', role: 'builds', runtimeLabel: 'mock', workspacePath: '/w/a', accepts: { images: true, textFiles: true } },
+  { id: 'bob', name: 'Bob', role: 'reviews', runtimeLabel: 'mock', workspacePath: '/w/b', accepts: { images: true, textFiles: true } },
 ];
 
 interface Drawn {

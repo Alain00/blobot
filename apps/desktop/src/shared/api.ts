@@ -1,4 +1,12 @@
-import type { AgentEvent, AgentStatus, Message, StopReason, TrustLevel } from '@blobot/core/domain';
+import type {
+  AgentEvent,
+  AgentStatus,
+  AttachmentKind,
+  AttachmentSupport,
+  Message,
+  StopReason,
+  TrustLevel,
+} from '@blobot/core/domain';
 
 /**
  * Re-exported so the renderer takes it from here with everything else it is allowed to know.
@@ -23,6 +31,14 @@ export interface UiAgent {
   readonly branch?: string;
   /** The blobatar's hue, when the user chose one. Absent means the name derives it. */
   readonly hue?: number;
+  /**
+   * What this agent's runtime takes attached to a prompt.
+   *
+   * Two booleans in blobot's own vocabulary, so the composer can refuse a file before the user
+   * writes the message and still cannot tell which provider is behind them. Both false for an
+   * agent whose team has not started: nothing has advertised anything yet.
+   */
+  readonly accepts: AttachmentSupport;
 }
 
 /**
@@ -37,6 +53,27 @@ export interface UiCommand {
   readonly description: string;
   /** What the command expects after its name, when it takes an argument at all. */
   readonly hint?: string;
+}
+
+/**
+ * An Attachment as the composer and the transcript draw it.
+ *
+ * `dataUrl` only for an image, and only when it has been fetched: a snapshot carries the record
+ * and never the bytes, so a transcript of two hundred messages is not two hundred images. The
+ * pane asks for the picture of the chip it is about to draw.
+ */
+export interface UiAttachment {
+  readonly id: string;
+  readonly kind: AttachmentKind;
+  readonly mimeType: string;
+  /** Absent for a pasted image, which has no filename and is given no invented one. */
+  readonly name?: string;
+  readonly bytes: number;
+}
+
+/** What blobot says when a file will not travel. Said at pickup, never at send. */
+export interface UiAttachmentRefusal {
+  readonly error: string;
 }
 
 export interface UiTeam {
@@ -134,16 +171,55 @@ export interface UiUsage {
  * the same code as a live one, so the two cannot drift apart.
  */
 export interface UiLog {
+  /**
+   * Calls that had not finished when the snapshot was read. The transcript draws them as the
+   * in-flight lines they are; the activity column ignores them, because a log is of what
+   * happened and these have not happened yet.
+   */
+  readonly running: readonly UiRunningTool[];
   readonly tools: readonly UiToolLog[];
   readonly turns: readonly UiTurnLog[];
 }
 
+/** A call the store knows started and has not seen end. */
+export interface UiRunningTool {
+  readonly toolCallId: string;
+  readonly agentId: string;
+  readonly startedAt: number;
+  readonly title: string;
+  readonly kind: string | null;
+}
+
+/**
+ * A finished call, as both surfaces that draw one need it.
+ *
+ * The activity column reads it as log, at `at`, which is when the call ended. The transcript
+ * rebuilds it as an item at `startedAt`, which is where it stood in the conversation — after the
+ * line that introduced it, and before the next one.
+ */
 export interface UiToolLog {
   readonly toolCallId: string;
   readonly agentId: string;
+  /** When it ended, or when it started if it never did. The feed's order. */
   readonly at: number;
+  /** When it started. The transcript's order. */
+  readonly startedAt: number;
   readonly title: string;
   readonly status: string;
+  /** `read` | `edit` | `execute` | `other`, or null for a row written before this was stored. */
+  readonly kind: string | null;
+  /**
+   * Present only where the runtime reported an exit code. Absent and null are different facts:
+   * a null is the cancelled call that reported `completed`, and absent is a call that never had
+   * an exit code to report. Ticket 08 is the whole reason they are kept apart.
+   */
+  readonly exit?: number | null;
+  /**
+   * What an edit changed, in lines. Absent is not zero: a call that changed nothing, a diff too
+   * large to measure and a runtime that sends no diff block are all absent, and all three draw
+   * nothing.
+   */
+  readonly changed?: { readonly added: number; readonly removed: number };
 }
 
 export interface UiTurnLog {
@@ -162,6 +238,16 @@ export interface UiTurnLog {
  * from these and must say that it is estimating. It must never add them to the gauge.
  */
 export interface UiInjection {
+  /**
+   * What has been attached into this session, cumulatively.
+   *
+   * Apart from every other figure here, and worded apart on screen, because it is the only one
+   * that is not per-turn: an embedded image is in that session's history for the life of the
+   * session. Bytes and a count, never tokens — an image's token cost is a function of its
+   * pixels and that function belongs to the provider.
+   */
+  readonly attachmentCount: number;
+  readonly attachmentBytes: number;
   /** The cached system prefix this agent's session was opened with. */
   readonly personaChars: number;
   /** How much of that persona is the operator's own standing instructions. */
@@ -527,8 +613,39 @@ export interface BlobotApi {
    * per named agent, each carrying the user's own words, all sharing one timestamp because they
    * were typed once. It is not a broadcast — blobot never widens a list the user did not type.
    */
-  prompt(agentIds: readonly string[], text: string): Promise<void>;
+  prompt(
+    agentIds: readonly string[],
+    text: string,
+    attachmentIds?: readonly string[],
+  ): Promise<void>;
   resumeAfterBudget(): Promise<void>;
+  /**
+   * Pick a file up: the paperclip's own dialog, a dropped path, or bytes off the clipboard.
+   *
+   * Three doors and one check. The renderer never reads a file — a path goes to main and main
+   * reads it — so the size and the kind are decided before any bytes cross. A paste is the
+   * exception by necessity, and takes the same two checks on arrival.
+   *
+   * Resolves with a refusal rather than throwing one: a file that will not travel is an answer,
+   * not a failure, and the composer says it in the field.
+   */
+  chooseAttachment(): Promise<UiAttachment | UiAttachmentRefusal | undefined>;
+  attachPath(path: string): Promise<UiAttachment | UiAttachmentRefusal>;
+  attachBytes(
+    data: Uint8Array,
+    mimeType: string,
+    name?: string,
+  ): Promise<UiAttachment | UiAttachmentRefusal>;
+  /**
+   * The picture for one chip, fetched when it is drawn.
+   *
+   * Never in the snapshot: the transcript carries records, and two hundred messages must not be
+   * two hundred images on every re-render. Undefined for a text attachment, which has no
+   * picture, and for an id nothing wrote.
+   */
+  attachmentUrl(id: string): Promise<string | undefined>;
+  /** A dropped file's path, which only the preload can produce. Undefined for a virtual file. */
+  pathOf(file: File): string | undefined;
   /** The creation flow. `chooseWorkspace` opens the OS picker; the rest take a path. */
   chooseWorkspace(): Promise<string | undefined>;
   inspectWorkspace(path: string): Promise<UiWorkspaceInspection | { error: string }>;

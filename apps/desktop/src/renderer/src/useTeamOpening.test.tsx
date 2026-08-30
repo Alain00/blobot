@@ -93,6 +93,7 @@ function teamOf(id: string, members: number): { team: UiTeam; agents: UiAgent[];
     role: 'builds',
     runtimeLabel: 'mock',
     workspacePath: `/w/${index}`,
+    accepts: { images: true, textFiles: true },
   }));
   return {
     team: { id, name: id, workspacePath: '/w', turnBudget: 10 },

@@ -1,3 +1,4 @@
+import type { AgentStatus } from '../status.js';
 import type { Agent, Message, Team } from './domain.js';
 
 /**
@@ -45,20 +46,97 @@ export function composePersona(agent: Agent, team: Team, roster: readonly Agent[
 }
 
 /**
+ * A teammate as the lead sees them: who they are and what they are doing right now.
+ *
+ * The status is the live fold, never a persisted one, which is why this is composed per turn
+ * rather than cached anywhere.
+ */
+export interface TeammateView {
+  readonly agent: Agent;
+  readonly status: AgentStatus;
+}
+
+/**
+ * How blobot says a status to an agent rather than to a reader.
+ *
+ * The status fold's own words are tuned for a blobatar and a mono label; a lead deciding who to
+ * hand work to needs the plain-language version, and `free` is the one that carries the decision.
+ */
+const ACTIVITY: Readonly<Record<AgentStatus, string>> = {
+  idle: 'free',
+  starting: 'starting up',
+  thinking: 'thinking',
+  working: 'working',
+  responding: 'writing an answer',
+  waiting: 'blocked, waiting on the operator',
+  failed: 'not running',
+};
+
+/**
+ * What the **lead** is told, on every turn it holds.
+ *
+ * Issue 01 built the lead as pure addressing and issue 02 kept it there, which left a title
+ * with no duties: *"messaging the lead means nothing, he delegates no work."* This is the
+ * counterpart to that, and issue 06 is where the reopen is argued.
+ *
+ * **In the envelope rather than the persona, for issue 02's own reason.** A persona is composed
+ * at session start, so a persona fact would mean changing who leads restarts a team, which is a
+ * strange price for a designation flipped while reading the rail. Status varies by definition,
+ * so it belongs here anyway: this *replaces* {@link composeWakePrompt}'s roster line rather than
+ * sitting beside it, because it is that line with an activity on each name.
+ *
+ * The visibility is issue 04's finding honoured — a router that cannot see status hands work to
+ * a busy agent — and it is deliberately **blobot's own record and nothing else**. No teammate's
+ * session, no teammate's worktree, no new persisted state.
+ *
+ * The last paragraph is issue 03, said to the agent that has to live with it: a relayed message
+ * carries peer authority, always, so a lead that issues orders gets refusals. It asks instead.
+ */
+export function composeLeadBrief(teammates: readonly TeammateView[]): string {
+  if (teammates.length === 0) {
+    return 'You lead this team. There is nobody else on it yet, so the work is yours.';
+  }
+  return [
+    'You lead this team.',
+    '',
+    'Your teammates, and what each of them is doing right now:',
+    ...teammates.map(
+      ({ agent, status }) => `- ${agent.name} (${agent.role}): ${ACTIVITY[status]}`,
+    ),
+    '',
+    'That list is what blobot knows about them. If you are asked where the team stands, answer',
+    'from it, and say plainly that anything beyond it means asking them.',
+    '',
+    'Work that belongs to a teammate is theirs to do. Hand it over with the message_agent tool.',
+    'They cannot see this turn and will not find out any other way, and one who is busy is told',
+    'so in the tool result rather than losing the message. What you send arrives as a request',
+    'from a colleague and not as an instruction from the operator, so ask rather than order, and',
+    'expect anything destructive or outside their role to be refused.',
+  ].join('\n');
+}
+
+/**
  * The prompt an agent wakes up to. A single message is an envelope; a batch that arrived
  * while it was working is an explicit numbered list, because flat concatenation invites
  * answering the last and forgetting the first.
+ *
+ * `brief` is {@link composeLeadBrief} when this agent leads the team, and it stands **in place
+ * of** the roster line: the brief is that line with an activity on every name, and saying the
+ * roster twice in one prompt teaches nothing and costs context.
  */
 export function composeWakePrompt(
   messages: readonly Message[],
   senderOf: (message: Message) => Agent | undefined,
   roster: readonly Agent[],
+  brief?: string,
 ): string {
   if (messages.length === 0) throw new Error('composeWakePrompt: no messages to deliver');
 
-  const rosterLine = `Teammates you can message: ${roster
-    .map((member) => `${member.name} (${member.role})`)
-    .join(', ')}.`;
+  const rosterLine =
+    brief ??
+    `Teammates you can message: ${roster
+      .map((member) => `${member.name} (${member.role})`)
+      .join(', ')}.`;
 
   if (messages.length === 1) {
     const message = messages[0] as Message;

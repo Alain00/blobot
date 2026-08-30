@@ -4,6 +4,7 @@ import type { AgentEvent } from '../events.js';
 import { uuidv7, type IdFactory } from '../ids.js';
 import type {
   AgentRuntime,
+  AttachmentSupport,
   PeerMessageAck,
   PeerMessageCall,
   PermissionOption,
@@ -19,11 +20,16 @@ import {
   PEER_CONTEXT_LIMIT,
   PEER_MESSAGE_LIMIT,
   WAKE_BATCH_LIMIT,
+  attachmentNotAccepted,
   contextTooLong,
   tooLongToSend,
 } from './bounds.js';
-import { composeWakePrompt } from './envelope.js';
-import { InMemoryMessageStore, type MessageStore } from './message-store.js';
+import { composeLeadBrief, composeWakePrompt } from './envelope.js';
+import {
+  InMemoryMessageStore,
+  type AttachmentStore,
+  type MessageStore,
+} from './message-store.js';
 
 /** What the orchestrator tells the transcript. Structural, so core never imports the store. */
 export interface TurnRecorder {
@@ -36,7 +42,7 @@ export interface OrchestratorOptions {
   readonly agents: readonly Agent[];
   /** One runtime per agent, keyed by agent id. The orchestrator never learns which provider. */
   readonly runtimes: ReadonlyMap<string, AgentRuntime>;
-  readonly store?: MessageStore;
+  readonly store?: MessageStore & AttachmentStore;
   readonly clock?: Clock;
   readonly createId?: IdFactory;
   /** Where the durable subset of the stream is written. Omit and nothing is persisted. */
@@ -95,6 +101,15 @@ interface HandoffWatch {
   readonly prompt: string;
   /** Every agent that prompt was addressed to, including the one holding this turn. */
   readonly addressed: readonly string[];
+  /**
+   * The **lead**, holding a prompt in which the user named nobody at all.
+   *
+   * It drops the *"the prompt named that teammate"* clause, which a lead breaks by definition:
+   * the whole premise of a lead is that the user named no one, so there is no name in the
+   * prompt to match against. See issue 06, which reopened issue 02 to build this, and which
+   * carries the cost of the widening on the record.
+   */
+  readonly leading: boolean;
 }
 
 export interface BudgetExhausted {
@@ -117,7 +132,7 @@ export class Orchestrator {
 
   readonly #agents: readonly Agent[];
   readonly #runtimes: ReadonlyMap<string, AgentRuntime>;
-  readonly #store: MessageStore;
+  readonly #store: MessageStore & AttachmentStore;
   readonly #clock: Clock;
   readonly #createId: IdFactory;
   readonly #recorder: TurnRecorder | undefined;
@@ -135,6 +150,14 @@ export class Orchestrator {
   readonly #messageListeners = new Set<(message: Message) => void>();
   /** The size of the last prompt the orchestrator composed for each agent, for `injectionOf`. */
   readonly #lastWake = new Map<string, { chars: number; messages: number }>();
+  /**
+   * What has been attached into each session, cumulatively.
+   *
+   * Cumulative and not per-turn, which is the whole point: an embedded image stays in the
+   * session's history for the life of the session. Every other figure under the gauge is a
+   * per-turn one, so this one has to be counted differently or it would be read as one.
+   */
+  readonly #attachmentsSent = new Map<string, { count: number; bytes: number }>();
   readonly #permissionListeners = new Set<(pending: PendingPermission) => void>();
   readonly #permissionSettledListeners = new Set<
     (id: string, outcome: PermissionOutcome) => void
@@ -152,8 +175,10 @@ export class Orchestrator {
   /**
    * Who each agent has written to during the turn it is holding right now, by sender id.
    *
-   * Only populated for a turn a user prompt started, which is the only turn a silent handoff is
-   * defined against. A session runs one turn at a time, so the agent id is key enough.
+   * Populated for every turn: the silent-handoff observation reads it on a watched turn, and
+   * the routing-turn refund reads it on any turn at all, because that exemption is defined by
+   * what a turn did rather than by what started it. A session runs one turn at a time, so the
+   * agent id is key enough.
    */
   readonly #wroteThisTurn = new Map<string, Set<string>>();
 
@@ -205,7 +230,7 @@ export class Orchestrator {
     return this.#agents;
   }
 
-  get store(): MessageStore {
+  get store(): MessageStore & AttachmentStore {
     return this.#store;
   }
 
@@ -343,10 +368,38 @@ export class Orchestrator {
    * Resolves when every turn it started has ended. Anything *those* set off keeps running —
    * see {@link settled}.
    */
-  async promptFromUser(agentIds: readonly string[], text: string): Promise<void> {
+  async promptFromUser(
+    agentIds: readonly string[],
+    text: string,
+    attachmentIds: readonly string[] = [],
+  ): Promise<void> {
     const agents = agentIds.map((agentId) => this.#requireAgent(agentId));
+    const attachments = attachmentIds.map((id) => {
+      const found = this.#store.attachment(id);
+      if (found === undefined) throw new Error(`no attachment ${id}`);
+      return found;
+    });
+    // Refused for the whole fan-out, not delivered to two of three. blobot never narrows a set
+    // the user typed, and quietly dropping one recipient is narrowing it.
+    for (const agent of agents) {
+      const accepts = this.#runtimes.get(agent.id)?.accepts;
+      for (const attachment of attachments) {
+        const ok = attachment.kind === 'image' ? accepts?.images : accepts?.textFiles;
+        if (ok !== true) throw new Error(attachmentNotAccepted(agent.name, attachment.kind));
+      }
+    }
     this.#turnsThisPrompt = 0;
     const now = this.#clock.now();
+    // The lead was the one addressed only if the user named nobody. Lexical, like every other
+    // reading blobot does of prose: a prompt that says the lead's name addressed them by name,
+    // and this turn is then an ordinary one.
+    const leadId = this.team.leadAgentId;
+    const leading =
+      leadId !== undefined &&
+      agents.length === 1 &&
+      agents[0]?.id === leadId &&
+      namesMentioned(text, this.#agents.filter((candidate) => candidate.id === leadId)).length ===
+        0;
     const dispatched = agents.map((agent) => {
       const message = this.#store.commit({
         id: this.#createId(now),
@@ -355,9 +408,21 @@ export class Orchestrator {
         toAgentId: agent.id,
         body: text,
         at: now,
+        // Metadata on every row of the fan-out; one copy of the bytes underneath. The
+        // transcript needs to draw what was sent, in every pane it appears in.
+        ...(attachments.length === 0
+          ? {}
+          : { attachments: attachments.map(({ data: _data, at: _at, ...record }) => record) }),
       });
       this.#store.markDelivered([message.id], now);
       this.#announceMessage(message);
+      if (attachments.length > 0) {
+        const sent = this.#attachmentsSent.get(agent.id) ?? { count: 0, bytes: 0 };
+        this.#attachmentsSent.set(agent.id, {
+          count: sent.count + attachments.length,
+          bytes: sent.bytes + attachments.reduce((total, one) => total + one.bytes, 0),
+        });
+      }
       return { agent, message };
     });
     // Committed for everybody before anybody starts. A turn can message a teammate mid-flight,
@@ -365,14 +430,35 @@ export class Orchestrator {
     // own words — which is the user watching their prompt arrive second.
     await Promise.all(
       dispatched.map((entry) =>
-        this.#runTurn(entry.agent, { text, from: 'user' }, entry.message.id, {
-          prompt: text,
-          // Everybody the user addressed. A co-recipient of the same fan-out is excluded from
-          // the observation below: Bob already has the user's own words, so Alice not
-          // forwarding them costs nothing and saying so would be the noise the scoping rule
-          // exists to prevent.
-          addressed: agents.map((agent) => agent.id),
-        }),
+        // The brief goes to the runtime and never into the `messages` row above: the transcript
+        // keeps what the user typed, and what blobot added to the turn is blobot's.
+        this.#runTurn(
+          entry.agent,
+          {
+            text: this.#withBrief(entry.agent.id, text),
+            from: 'user',
+            ...(attachments.length === 0
+              ? {}
+              : {
+                  attachments: attachments.map((attachment) => ({
+                    kind: attachment.kind,
+                    mimeType: attachment.mimeType,
+                    data: attachment.data,
+                    ...(attachment.name === undefined ? {} : { name: attachment.name }),
+                  })),
+                }),
+          },
+          entry.message.id,
+          {
+            prompt: text,
+            leading: leading && entry.agent.id === leadId,
+            // Everybody the user addressed. A co-recipient of the same fan-out is excluded
+            // from the observation below: Bob already has the user's own words, so Alice not
+            // forwarding them costs nothing and saying so would be the noise the scoping rule
+            // exists to prevent.
+            addressed: agents.map((agent) => agent.id),
+          },
+        ),
       ),
     );
   }
@@ -504,6 +590,7 @@ export class Orchestrator {
           ? undefined
           : this.#agents.find((candidate) => candidate.id === message.fromAgentId),
       this.#agents.filter((candidate) => candidate.id !== agentId),
+      this.#leadBrief(agentId),
     );
     this.#lastWake.set(agentId, { chars: text.length, messages: mail.length });
     await this.#runTurn(agent, { text, from: 'peer' }, mail[mail.length - 1]?.id);
@@ -523,12 +610,12 @@ export class Orchestrator {
     this.#turnsThisPrompt += 1;
     tracker.turnStarted();
     this.#recorder?.turnStarted(agent.id, this.#clock.now(), triggerMessageId);
-    if (watch !== undefined) this.#wroteThisTurn.set(agent.id, new Set());
+    // Populated for every turn, not only a watched one: the routing-turn refund below is
+    // defined by what a turn *did*, never by who did it or what started it.
+    this.#wroteThisTurn.set(agent.id, new Set());
 
     const turn = (async () => {
-      // What the agent actually said, and whether the turn got to the end of itself. Both are
-      // needed by `#observeSilentHandoff`, and neither is worth accumulating on a turn nobody
-      // is watching.
+      // What the agent actually said, and whether the turn got to the end of itself.
       let said = '';
       let endedOrdinarily = false;
       try {
@@ -537,7 +624,6 @@ export class Orchestrator {
           this.#publish(event);
           tracker.apply(event);
           this.#recorder?.record(event);
-          if (watch === undefined) continue;
           // The answer only. Thinking is not what the reader was told, and a name that appears
           // in reasoning the user never sees cannot be a handoff they are waiting on.
           if (event.type === 'agent_message_completed') said += `\n${event.text}`;
@@ -550,6 +636,7 @@ export class Orchestrator {
       if (watch !== undefined && endedOrdinarily) {
         this.#observeSilentHandoff(agent, watch, said);
       }
+      this.#refundRoutingTurn(agent.id, said);
       this.#wroteThisTurn.delete(agent.id);
       // Whatever arrived mid-turn is delivered now, as one prompt.
       await this.#wake(agent.id);
@@ -570,13 +657,61 @@ export class Orchestrator {
    * waiting. The persona is not here because the orchestrator does not compose it, and what
    * the agent carries beyond either is the runtime's, which blobot does not manage.
    */
-  injectionOf(agentId: string): { lastWakeChars: number; lastWakeMessages: number; queued: number } {
+  /**
+   * What this agent's runtime takes attached to a prompt, in blobot's own words.
+   *
+   * Surfaced so the composer can refuse a file before the user writes the message. The renderer
+   * gets two booleans and never learns which provider answered them.
+   */
+  acceptsOf(agentId: string): AttachmentSupport {
+    return this.#runtimes.get(agentId)?.accepts ?? { images: false, textFiles: false };
+  }
+
+  injectionOf(agentId: string): {
+    lastWakeChars: number;
+    lastWakeMessages: number;
+    queued: number;
+    attachmentCount: number;
+    attachmentBytes: number;
+  } {
     const wake = this.#lastWake.get(agentId);
+    const attached = this.#attachmentsSent.get(agentId);
     return {
       lastWakeChars: wake?.chars ?? 0,
       lastWakeMessages: wake?.messages ?? 0,
       queued: this.#store.undelivered(agentId).length,
+      attachmentCount: attached?.count ?? 0,
+      attachmentBytes: attached?.bytes ?? 0,
     };
+  }
+
+  /**
+   * The lead's brief, when this agent is the lead. See {@link composeLeadBrief}.
+   *
+   * Composed fresh every time because its whole content is the live status fold, and a cached
+   * brief is a lead handing work to somebody who stopped being free a minute ago.
+   */
+  #leadBrief(agentId: string): string | undefined {
+    if (this.team.leadAgentId !== agentId) return undefined;
+    return composeLeadBrief(
+      this.#agents
+        .filter((candidate) => candidate.id !== agentId)
+        .map((agent) => ({ agent, status: this.statusOf(agent.id) })),
+    );
+  }
+
+  /**
+   * The same, folded onto the end of a user prompt, which has no envelope of its own.
+   *
+   * It is recorded as an injection because it *is* one: the brief is text blobot put into the
+   * agent's window, and the gauge under the activity column exists to show exactly that. The
+   * user's own words are not counted there, because they are the user's rather than ours.
+   */
+  #withBrief(agentId: string, text: string): string {
+    const brief = this.#leadBrief(agentId);
+    if (brief === undefined) return text;
+    this.#lastWake.set(agentId, { chars: brief.length, messages: 0 });
+    return `${text}\n\n${brief}`;
   }
 
   #budgetIsSpent(): boolean {
@@ -599,6 +734,27 @@ export class Orchestrator {
   }
 
   /**
+   * A turn that only routed does not count against `turnBudget`.
+   *
+   * Decided in issue 02 and deliberately left unbuilt there, because with no coordinator nothing
+   * ever spent such a turn. Issue 06 gives the lead work to hand out, so it is built now, to
+   * that decision's own literal definition: **it messaged and said nothing else.**
+   *
+   * Defined by what the turn *did*, never by who held it. A title that bought its holder an
+   * unmetered budget would be a title that buys free work, and every agent has `message_agent`.
+   *
+   * It fires rarely by construction, since a lead that says "I have asked Bob" out loud has
+   * said something. The number to plan against is the one issue 06 states: a lead costs one
+   * extra turn per prompt, not three.
+   */
+  #refundRoutingTurn(agentId: string, said: string): void {
+    const wrote = this.#wroteThisTurn.get(agentId);
+    if (wrote === undefined || wrote.size === 0) return;
+    if (said.trim() !== '') return;
+    this.#turnsThisPrompt = Math.max(0, this.#turnsThisPrompt - 1);
+  }
+
+  /**
    * The turn is over: did she name somebody the user named, and write to nobody?
    *
    * Every clause here is a fact rather than a reading, and every one of them narrows on
@@ -608,6 +764,11 @@ export class Orchestrator {
    *
    * **Known limitation, on the record:** it cannot see a promise made about a teammate the user
    * never named. Widening it there means reading intent, and that is the line.
+   *
+   * The one exception is the lead holding a prompt that named nobody, where the user handed the
+   * choice of recipient over and the answer is therefore the only record of who the work was
+   * for. Issue 06 accepts the noise that buys — a lead saying *"Bob's branch is fine"* fires —
+   * for that scope and no wider.
    */
   #observeSilentHandoff(agent: Agent, watch: HandoffWatch, said: string): void {
     const wrote = this.#wroteThisTurn.get(agent.id) ?? new Set<string>();
@@ -617,8 +778,14 @@ export class Orchestrator {
         !watch.addressed.includes(candidate.id) &&
         !wrote.has(candidate.id),
     );
-    const named = namesMentioned(watch.prompt, teammates).filter((candidate) =>
-      namesMentioned(said, [candidate]).length > 0,
+    // The lead, on a prompt that named nobody, is the one case where the prompt cannot supply
+    // a name to match: the user deferred the choice to it, so what it decided is the only
+    // record of who the work was for. Everywhere else the prompt still has to have named them.
+    const candidates = watch.leading
+      ? teammates
+      : namesMentioned(watch.prompt, teammates);
+    const named = candidates.filter(
+      (candidate) => namesMentioned(said, [candidate]).length > 0,
     );
     if (named.length === 0) return;
 

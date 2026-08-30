@@ -224,8 +224,9 @@ up. Read it before starting work.
   rather than a provider's. `runtimeFor` in `apps/desktop/src/main/runtime-for.ts` is the one
   place a `runtime_id` becomes a class. Verified against a real `opencode` 1.18.4 at zero
   token cost: the persona is live on turn 1, and `opencode debug agent` resolves exactly the
-  rules ticket 14 wrote. `BLOBOT_LIVE_OPENCODE=1` runs the turns that cost tokens, and has not
-  been run yet.
+  rules ticket 14 wrote. `BLOBOT_LIVE_OPENCODE=1` runs the turns that cost tokens, and **all of
+  them pass** against a real `opencode` 1.18.4 (2026-08-30), including the edit-count test that
+  no OpenCode-specific code was written for.
 
 - **The model and the effort are the user's to choose**, per agent, in the hire and edit
   dialogs. Each adapter hands the UI the option groups its runtime advertises on `session/new`
@@ -278,8 +279,43 @@ up. Read it before starting work.
   because a terminal is quoted and not exempt from the governing rule. `.scratch/runtime-readiness/`
   has the decisions; `claude auth login` is the one path not run live.
 
-Next: surfacing whether an agent resumed or started fresh, and running
-`adapters/opencode/live.test.ts` against the real thing.
+- **A team's lead has duties now.** It was pure addressing: the implicit recipient of the team
+  pane, never told it leads, with nothing routed through it. So the word claimed a rank the app
+  did not implement. `composeLeadBrief` is the counterpart, composed fresh on every turn the lead
+  holds because it *is* the live status fold: who its teammates are, what each is doing, that the
+  list is the whole of what blobot knows, and that what it sends arrives as a colleague's request
+  rather than the operator's. It replaces the wake prompt's roster line rather than doubling it,
+  and never enters the `messages` row. The lead is **never a pipe** — `@bob` still lands on Bob
+  and fan-out still fans out — which is what keeps the coordinator's serialisation and single
+  point of failure from being real. Relayed authority stays capped at peer, permanently, and
+  reply routing stays refused. The silent-handoff detector drops its *"the prompt named that
+  teammate"* clause for exactly one case, a lead on a prompt that named nobody, and issue 02's
+  routing-turn budget exemption is finally built, keyed on what a turn did rather than on who
+  held it. One extra turn per prompt, not three. `.scratch/team-addressing/issues/06`, which
+  reopened issues 02 and 04 on the grounds that both were decided against the inbound arrow only.
+
+- **The composer takes an attachment**, and it is **embedded, never linked** —
+  `docs/adr/0004-attachments-are-embedded-not-linked.md`. An image or a text file, from the
+  paperclip, a paste or a drop, travelling as an ACP `image`/`resource` block. A `resource_link`
+  to the user's path, or to blobot's own store, was the cheap answer and is refused: `Read`,
+  `Glob` and `Grep` never prompt, so a path handed to an agent is an ungated read outside its
+  AgentWorkspace, and blobot's own attachment directory would be one `Glob` from every
+  attachment of every team. The price is paid honestly rather than optimised away — two ceilings
+  in `bounds.ts`, refused **at pickup** and never truncated; no resizing, because a downscaled
+  screenshot of a stack trace is a wrong line number with no visible cause; the fan-out's cost
+  stated in the composer and never narrowed on the user's behalf. One blob and N message rows;
+  the bytes are in SQLite and never on disk, because nothing links to them. The renderer never
+  reads a file: a path goes to main, which decides the size and the kind before anything
+  crosses. `AgentRuntime.accepts` is blobot's own word for what a runtime takes, so the composer
+  refuses before the user writes — and `MockAgentRuntime` is the only runtime that says no,
+  which is why the refusal path is exercised at all. **A thumbnail is drawn in colour**, the one
+  yield in DESIGN.md's governing rule and written into it: saturation is blobot's to spend on
+  blobatars, and content the user supplied is not blobot's to desaturate. Under the gauge,
+  `attachments · 2 · 480 KB · sent this session` — bytes and a count, never tokens, and worded
+  apart because it is the only figure there that is not per-turn.
+
+Next: handing a real runtime a real attachment (neither live suite has an attachment case yet),
+then surfacing whether an agent resumed or started fresh.
 `build.md`'s *Next session* has the order and the reasons.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that

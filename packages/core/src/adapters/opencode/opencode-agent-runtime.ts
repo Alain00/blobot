@@ -8,6 +8,7 @@ import { AsyncQueue } from '../../mock/async-queue.js';
 import type { InjectableEvent } from '../../mock/mock-agent-runtime.js';
 import type {
   AgentRuntime,
+  AttachmentSupport,
   AvailableCommand,
   PermissionHandler,
   PermissionOption,
@@ -20,6 +21,7 @@ import type {
 import { applyOptionChoices, optionGroupsFrom } from '../acp/config-options.js';
 import { JsonRpcConnection, type LineTransport } from '../acp/jsonrpc.js';
 import { commandsFrom, stopReasonOf, translateSessionUpdate } from '../acp/session-updates.js';
+import { ACCEPTS_NOTHING, acceptsOf, contentBlockOf } from '../acp/attachments.js';
 import type {
   InitializeResult,
   PermissionRequestParams,
@@ -135,6 +137,8 @@ export class OpencodeAgentRuntime implements AgentRuntime {
   #resumed = false;
   #commands: readonly AvailableCommand[] = [];
   #optionGroups: readonly RuntimeOptionGroup[] = [];
+  /** What this session takes attached to a prompt, read off `initialize`. */
+  #accepts: AttachmentSupport = ACCEPTS_NOTHING;
   #projectNames: ReadonlySet<string> | undefined;
 
   constructor(options: OpencodeAgentRuntimeOptions) {
@@ -219,6 +223,7 @@ export class OpencodeAgentRuntime implements AgentRuntime {
     this.#checkVersions(initialized);
 
     const wanted = this.#options.resumeSessionId;
+    this.#accepts = acceptsOf(initialized.agentCapabilities);
     const canLoad = initialized.agentCapabilities?.loadSession === true;
     const session =
       wanted === undefined || wanted === '' || !canLoad
@@ -364,7 +369,12 @@ export class OpencodeAgentRuntime implements AgentRuntime {
     try {
       const result = await connection.request<PromptResult>('session/prompt', {
         sessionId: this.#sessionId,
-        prompt: [{ type: 'text', text: prompt.text }],
+        // Attachments first, then the text: an agent does better with the thing before the
+        // question, and it is the order the user had in mind putting them together.
+        prompt: [
+          ...(prompt.attachments ?? []).map(contentBlockOf),
+          { type: 'text', text: prompt.text },
+        ],
       });
       // The turn ends on the RPC *reply*, including when it was cancelled: a cancelled prompt
       // resolves with `stopReason: "cancelled"` rather than rejecting, so a client waiting for
@@ -428,6 +438,10 @@ export class OpencodeAgentRuntime implements AgentRuntime {
   /** What this session lets the user choose, minus the group that is the persona. */
   get optionGroups(): readonly RuntimeOptionGroup[] {
     return this.#optionGroups;
+  }
+
+  get accepts(): AttachmentSupport {
+    return this.#accepts;
   }
 
   onCommandsChange(listener: (commands: readonly AvailableCommand[]) => void): Unsubscribe {

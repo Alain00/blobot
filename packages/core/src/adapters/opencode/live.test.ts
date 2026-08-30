@@ -65,6 +65,45 @@ live('against a real opencode', () => {
     expect(events.at(-1)).toMatchObject({ type: 'turn_ended', stopReason: 'end_turn' });
   }, 180_000);
 
+  /**
+   * The count of what an edit changed, from the *shared* half.
+   *
+   * This is the claim that `adapters/acp/line-diff.ts` belongs in `acp` and not in an adapter:
+   * OpenCode sends ACP's own `{type:'diff', oldText, newText}` block, exactly as the Claude
+   * bridge does, so it is counted with no OpenCode-specific code anywhere. Nothing was written
+   * for this runtime to make it work.
+   *
+   * The number is checked against OpenCode's own arithmetic rather than against ours. Its
+   * `rawOutput.metadata.filediff` carries `additions: 3, deletions: 1` for this edit, measured
+   * 2026-08-30 — so `+3 −1` is the provider agreeing with the LCS, not the LCS agreeing with a
+   * fixture somebody wrote to match it.
+   */
+  it('counts what an edit changed, with no adapter of its own to do it', async () => {
+    const dir = workspace();
+    writeFileSync(join(dir, 'notes.txt'), 'alpha\nbeta\ngamma\ndelta\nepsilon\n');
+    const runtime = new OpencodeAgentRuntime({
+      agentId: 'agent_alice',
+      agentName: 'Alice',
+      cwd: dir,
+      persona: 'You are Alice. Do exactly what is asked, with no commentary.',
+      trust: 'trusting',
+    });
+    await runtime.start();
+    const events: AgentEvent[] = [];
+    for await (const event of runtime.sendPrompt({
+      text: 'In notes.txt, replace the single line "beta" with three lines: "beta one", "beta two", "beta three". Change nothing else.',
+      from: 'user',
+    })) {
+      events.push(event);
+    }
+    await runtime.stop();
+
+    const counted = events.find(
+      (event) => event.type === 'tool_call_updated' && event.changed !== undefined,
+    );
+    expect(counted).toMatchObject({ changed: { added: 3, removed: 1 } });
+  }, 300_000);
+
   it('runs a tool in its own workspace, with the ids stable across the lifecycle', async () => {
     const runtime = new OpencodeAgentRuntime({
       agentId: 'agent_alice',

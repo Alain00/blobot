@@ -1,3 +1,4 @@
+import { lineChange } from '../adapters/acp/line-diff.js';
 import type { Clock } from '../clock.js';
 import { SystemClock } from '../clock.js';
 import type { AgentEvent, StopReason } from '../events.js';
@@ -5,6 +6,7 @@ import { assembleMessages } from '../message-assembler.js';
 import { sameCommands } from '../commands.js';
 import type {
   AgentRuntime,
+  AttachmentSupport,
   AvailableCommand,
   PeerMessageAck,
   PeerMessageHandler,
@@ -55,6 +57,15 @@ export interface MockAgentRuntimeOptions {
    * scenario's `advertises()` step fires.
    */
   readonly commands?: readonly AvailableCommand[];
+  /**
+   * What this runtime takes attached to a prompt. Defaults to both, which is what both real
+   * runtimes advertise.
+   *
+   * **Set it to refuse something.** There is no runtime on this machine that says no, which is
+   * exactly why the mock has to be the one that does: without it the composer's refusal path is
+   * never exercised until a fourth adapter arrives and somebody finds it was never wired up.
+   */
+  readonly accepts?: AttachmentSupport;
 }
 
 const CANCELLED_TOOL_OUTPUT =
@@ -78,6 +89,7 @@ export class MockAgentRuntime implements AgentRuntime {
   readonly #startupMs: number;
   readonly #spawnFailure: string | undefined;
   readonly #cancelLatencyMs: number;
+  readonly #accepts: AttachmentSupport;
   readonly #contextSize: number;
   readonly #usedPerTurn: number;
 
@@ -102,6 +114,7 @@ export class MockAgentRuntime implements AgentRuntime {
     this.#startupMs = options.startupMs ?? 250;
     this.#spawnFailure = options.spawnFailure;
     this.#cancelLatencyMs = options.cancelLatencyMs ?? 0;
+    this.#accepts = options.accepts ?? { images: true, textFiles: true };
     this.#contextSize = options.contextSize ?? 200_000;
     this.#usedPerTurn = options.usedPerTurn ?? 4_200;
     this.#commands = options.commands ?? [];
@@ -129,7 +142,15 @@ export class MockAgentRuntime implements AgentRuntime {
     this.#setLifecycle('ready');
   }
 
+  /** Every prompt this runtime was handed, so a scenario can assert what actually arrived. */
+  readonly prompts: Prompt[] = [];
+
+  get accepts(): AttachmentSupport {
+    return this.#accepts;
+  }
+
   sendPrompt(prompt: Prompt): AsyncIterable<AgentEvent> {
+    this.prompts.push(prompt);
     if (this.#lifecycle !== 'ready') {
       throw new Error(`${this.agentId}: cannot prompt a runtime that is ${this.#lifecycle}`);
     }
@@ -390,6 +411,20 @@ export class MockAgentRuntime implements AgentRuntime {
       return false;
     }
 
+    // The counts land on an update of their own, before the terminal one — which is where a
+    // real Claude puts them, and a mock that folded them into the completion would let a
+    // consumer read them only on the way out and still pass.
+    if (tool.diff !== undefined) {
+      const changed = lineChange(tool.diff.oldText, tool.diff.newText);
+      if (changed !== undefined) {
+        this.#emitTo(queue, {
+          type: 'tool_call_updated',
+          toolCallId,
+          status: 'in_progress',
+          changed,
+        });
+      }
+    }
     this.#emitTo(queue, {
       type: 'tool_call_updated',
       toolCallId,

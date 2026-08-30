@@ -115,6 +115,17 @@ export const demoScripts = {
     alice: scenarios['runs-out-of-room'],
     bob: scenarios['bob-reviews'],
   },
+  /**
+   * One turn, twelve steps, one answer. The shape a long piece of real work has, and the run
+   * the transcript's fold is reviewed against: shut, this is a caption, one mono line and a
+   * paragraph; flat, it was a bulleted list of intentions with the answer buried under it.
+   */
+  'many-steps': {
+    summary: 'Alice works through a list of edits and answers at the end',
+    prompt: 'Build the top-down desk scene and wire it into the page.',
+    alice: scenarios['works-through-a-list'],
+    bob: scenarios['bob-reviews'],
+  },
 } as const satisfies Record<string, DemoScript>;
 
 export type DemoScriptName = keyof typeof demoScripts;

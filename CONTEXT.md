@@ -44,6 +44,9 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
 ## Messaging
 
 - **Message** — something said to an Agent. Either from the user or from a peer.
+- **Attachment** — bytes the user attached to a Message: an image or a text file, embedded in
+  the Prompt and stored with the Message. Only the user attaches; a peer Message never carries
+  one. A file that is already in the Workspace is not an Attachment — the Agent opens it itself.
 - **Envelope** — the framing wrapped around a peer Message: sender, their role, their optional
   context line, and the note that a peer carries no operator authority.
 - **Standing instructions** — what is true of an AgentProfile on *every* team it is on. Folded

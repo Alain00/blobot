@@ -1,4 +1,4 @@
-import type { Message } from './domain.js';
+import type { Attachment, AttachmentContent, Message } from './domain.js';
 
 /**
  * The mailbox is a predicate, not a table: undelivered mail is `deliveredAt === undefined`.
@@ -17,9 +17,24 @@ export interface MessageStore {
   forAgent(agentId: string): Message[];
 }
 
+/**
+ * Where an Attachment's bytes live.
+ *
+ * Apart from `MessageStore` because the lifetimes differ: a message belongs to one recipient,
+ * and one attachment belongs to every message of a fan-out. `put` is called once for the file
+ * the user picked up; `commit` then carries the metadata on each row it writes.
+ */
+export interface AttachmentStore {
+  /** Store the bytes once. Returns the record without them, which is what a Message carries. */
+  putAttachment(content: AttachmentContent): Attachment;
+  /** The content, for a prompt about to be built. Undefined for an id nothing wrote. */
+  attachment(id: string): AttachmentContent | undefined;
+}
+
 /** The store the demo and the tests run on until ticket 13's SQLite lands behind this interface. */
-export class InMemoryMessageStore implements MessageStore {
+export class InMemoryMessageStore implements MessageStore, AttachmentStore {
   #messages: Message[] = [];
+  #attachments = new Map<string, AttachmentContent>();
   #byKey = new Map<string, Message>();
 
   commit(message: Message): Message {
@@ -56,5 +71,15 @@ export class InMemoryMessageStore implements MessageStore {
     return this.#messages.filter(
       (message) => message.toAgentId === agentId || message.fromAgentId === agentId,
     );
+  }
+
+  putAttachment(content: AttachmentContent): Attachment {
+    this.#attachments.set(content.id, content);
+    const { data: _data, at: _at, ...record } = content;
+    return record;
+  }
+
+  attachment(id: string): AttachmentContent | undefined {
+    return this.#attachments.get(id);
   }
 }

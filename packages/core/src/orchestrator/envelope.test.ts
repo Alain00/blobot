@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Agent, Message, Team } from './domain.js';
-import { composePersona, composeWakePrompt } from './envelope.js';
+import { composeLeadBrief, composePersona, composeWakePrompt } from './envelope.js';
 
 const team: Team = {
   id: 'team_1',
@@ -22,6 +22,14 @@ const bob: Agent = {
   name: 'Bob',
   role: 'reviewer',
   workspacePath: '/agents/bob',
+};
+
+const cara: Agent = {
+  id: 'c',
+  teamId: team.id,
+  name: 'Cara',
+  role: 'writer',
+  workspacePath: '/agents/cara',
 };
 
 function peerMessage(body: string, context?: string): Message {
@@ -106,5 +114,49 @@ describe('the wake prompt', () => {
 
   it('refuses to compose nothing', () => {
     expect(() => composeWakePrompt([], () => alice, [alice])).toThrow('no messages to deliver');
+  });
+});
+
+describe('the lead brief', () => {
+  it('names every teammate, their role and what they are doing', () => {
+    const brief = composeLeadBrief([
+      { agent: bob, status: 'working' },
+      { agent: cara, status: 'waiting' },
+    ]);
+
+    expect(brief).toContain('You lead this team.');
+    expect(brief).toContain('- Bob (reviewer): working');
+    expect(brief).toContain('- Cara (writer): blocked, waiting on the operator');
+  });
+
+  it('says free rather than idle, because free is the word the decision turns on', () => {
+    expect(composeLeadBrief([{ agent: bob, status: 'idle' }])).toContain('- Bob (reviewer): free');
+  });
+
+  it('says a relayed request is a colleague’s, so the lead asks rather than orders', () => {
+    const brief = composeLeadBrief([{ agent: bob, status: 'idle' }]);
+
+    // Issue 03 is not reopened: peer authority is permanent, and the lead is told so about
+    // itself rather than discovering it through refusals.
+    expect(brief).toContain('not as an instruction from the operator');
+    expect(brief).toContain('ask rather than order');
+  });
+
+  it('bounds what it claims to know, because it is blobot’s record and not their sessions', () => {
+    expect(composeLeadBrief([{ agent: bob, status: 'idle' }])).toContain(
+      'anything beyond it means asking them',
+    );
+  });
+
+  it('has something honest to say on a team of one', () => {
+    expect(composeLeadBrief([])).toContain('There is nobody else on it yet');
+  });
+
+  it('stands in place of the roster line on a wake, never beside it', () => {
+    const brief = composeLeadBrief([{ agent: bob, status: 'idle' }]);
+    const prompt = composeWakePrompt([peerMessage('take a look')], () => alice, [alice], brief);
+
+    expect(prompt).toContain('You lead this team.');
+    expect(prompt).not.toContain('Teammates you can message:');
   });
 });

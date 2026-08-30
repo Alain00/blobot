@@ -648,10 +648,10 @@ Restarting is cheap now that `session/load` resumes each agent where it was.
    draws its members and folds their status, and it said `STOPPED` about a live team until it
    did. See the section at the foot of this file.
 4. **Renaming a team**, which needs a decision about the branches first.
-5. **Talking to a team without naming a member**, charted 2026-08-29 at
-   `.scratch/team-addressing/`. **Answered and built**: issue 01's lead, and issue 02's
-   multi-mention in place of the coordinator, which was refused. Only issue 05 is left — see the
-   sections at the foot of this file. The author's ask is a team group chat with a
+5. ~~**Talking to a team without naming a member**~~, charted 2026-08-29 at
+   `.scratch/team-addressing/`. **Answered and built** through issue 06: issue 01's lead, issue
+   02's multi-mention in place of the coordinator, issue 05's silent-handoff detector, and then
+   issue 06, which reopened 02 and 04 and gave the lead its duties. The author's ask is a team group chat with a
    coordinator that routes messages and hands out work; the effort splits that into the
    ergonomic (a default recipient, which reopens ticket 12 on one point) and the coordinator
    itself, whose cost, single point of failure and relayed-authority question are the reason it
@@ -2582,3 +2582,291 @@ The label never leaves: the mark is a second channel onto one fact, never the on
   portal: there is no `--screen=` that opens a select. The rows themselves are unchanged markup.
 - Codex and Gemini have no probe yet, so no mark. When they land they are label-only until
   somebody fetches their marks from origin, which is deliberate.
+
+
+## The lead leads, 2026-08-30
+
+`.scratch/team-addressing/issues/06-the-lead-leads.md`, which **reopened issues 02 and 04**.
+
+Raised by the author while working with a team: *"messaging the lead of a team, today, means
+nothing. He delegates no work, and does not operate as a lead."* Accurate, and the shape 01 and
+02 left between them — 01 built the lead as pure addressing, 02 refused a coordinator and
+stripped the role on the way out, so the only behaviour behind the word was saving four
+keystrokes. This repo removed `to Alice ▾` from the composer because a control implied a surface
+that did not exist; `WHO LEADS` was the same failure in words.
+
+**The grounds for the reopen are the arrow, not the argument.** Every objection issue 02 raised
+is about work flowing *user → lead → team*. The outbound direction, a lead you ask *about* the
+team, was never weighed: it relays nobody's authority, delivers nothing, spends one turn, mutes
+nothing when it fails, and accumulates only what was sent to it. And the two jobs the author
+asked for are one build, because **the reporting half is the delegating half's eyes** — which is
+issue 04's own finding, that a router which cannot see status hands work to a busy agent.
+
+What holds:
+
+- **The lead is never a pipe.** It gets the message when the user names nobody; `@bob` still
+  lands on Bob and `@alice @bob` still fans out. That is what keeps 02's serialisation, single
+  point of failure and context ceiling from being real here.
+- **Peer authority is permanent.** Issue 03 is not reopened, and the lead is *told* this about
+  itself so it asks rather than issuing orders that will be refused. Reply routing stays refused.
+- **The brief is in the envelope, not the persona** — issue 02's own reason, since a persona is
+  composed at session start and a persona fact would mean changing who leads restarts a team.
+- **What it sees is blobot's record**, never a teammate's session or worktree. No new tool, no
+  new persisted state, no cross-workspace visibility.
+
+The pieces: `composeLeadBrief`, composed fresh per turn because it is the live status fold;
+replacing the wake prompt's roster line rather than doubling it; folded onto a user prompt but
+never into the `messages` row, and counted through `#lastWake` so the context gauge sees it.
+`HandoffWatch.leading` drops the *"the prompt named that teammate"* clause for exactly one case,
+the lead on a prompt that named nobody, and the noise that buys is accepted on the record for
+that scope only. `#refundRoutingTurn` builds the exemption issue 02 decided and left unbuilt, to
+its literal definition and keyed on what the turn did rather than who held it.
+
+**Cost per user prompt: one extra turn.** 02's "three to four" assumed reply routing.
+
+Nothing on screen changed. The headless demo team was given `leadAgentId: 'alice'` to match the
+app's, and `pnpm demo` now prints Alice's brief beside Bob's persona — the whole of blobot's own
+injection in one place.
+
+Unverified: the widening has not met a real model. If a lead saying *"Bob's branch is fine"*
+fires often in use, the scope narrows again rather than widening further.
+
+## Built, 2026-08-30: a turn's steps fold, and the transcript stops losing the work
+
+Ticket 12's third reopen, from a screenshot of one real Claude turn drawn flat: a dozen captions
+(*"Now the interaction wrapper that every desk object shares."*), three wrapping shell one-liners,
+and *"you allowed this, and it stops asking"* stamped once per call. The answer the turn was
+leading to sat under the pile.
+
+The defect underneath the noise was the seam, not the volume. **A finished call left the items
+list on completion** and only the feed kept it, so what survived a turn was an agent's account
+of the work and never the work — a list of intentions with the doing removed. The fold is what
+makes it safe to keep both.
+
+**The step is the unit**: a caption and the calls it introduces. `rowsOf` groups settled runs
+into one row, drawn shut as `ran 6 tools` (`· 1 failed` when something did). What stays outside
+a block is enforced by the grouping, not by a flag a render site can forget: a running or asking
+call, an unanswered question, a live answer, and prose over 240 characters. Trailing prose is
+trimmed, because the last thing said in a turn is the answer. A block needs two calls to be
+worth folding — one call under a chevron is a line replaced by a line plus a click.
+
+Taken from the pattern: the chevron and mono label, so the transcript has one disclosure gesture
+and not two. Refused: the per-step checkmark (ticket 08 — a cancelled call reports `completed`
+with `exit: null`, so a tick is that trap asserted louder) and the duration (not honest across a
+permission wait). A clean completion prints nothing, which is silence and not a success claim.
+
+Three smaller things came with it:
+
+- **A call carries a verb.** `read` / `edit` / `run`, from the `ToolKind` both adapters already
+  send and the renderer dropped on the floor. Fixed column, blank for an MCP tool.
+- **The permission tail is gone.** The answered line says `allowed once` / `allowed always` /
+  `rejected`. Where an *always* is written is said in the block that asks, once, at the moment
+  it is a decision.
+- **A call that went through a permission block no longer prints twice.** The permission item
+  *is* that call's line, so the tool item is dropped on settle. Found by a test, not by eye.
+
+New scenario, `works-through-a-list` (08), and the `many-steps` demo script. There was no
+checked-in run with a *sequence* of calls, which is the one shape this feature exists for, and
+without it the first twelve-step turn we met would have been in somebody's repository.
+`fold-live.test.ts` drives the real mock stream through `reduce` and `rowsOf` rather than a
+hand-built fixture — which is what caught the next item.
+
+**Known gap, pre-existing, now visible.** A `snapshot` replaces `items` and does not restore
+tool lines, so a snapshot landing mid-turn drops that turn's calls: the first review of this
+showed `ran 3 tools` on a six-call turn. It was invisible before, because calls were transient
+anyway. The fix is either a merge that keeps the open team's tool items or a recorder that
+persists them, and both are decisions this change did not make. Reproduce with
+`--demo-scenario=many-steps --autoplay-at=2000`; it does not happen at `--autoplay-at=6000`,
+where the launch snapshot lands first.
+
+**Overruled on the record:** diff counts beside an edit may be green and red, against the
+governing rule — the author's call, two small signed numbers whose sign already carries the
+meaning. Named as an exception in `DESIGN.md`. Not built: no `rawOutput` is plumbed through core,
+and doing it needs a live run against both runtimes.
+
+## Built, 2026-08-30: a restored transcript folds, and the call it used to lose
+
+The gap the section above left open, closed. A restored pane had no tool lines at all, so nothing
+in it grouped and **every past turn came back as a flat wall of captions** — permanently, not
+only until the next completion. That is the ordinary case: a relaunch, a team switch. The fold
+worked exactly where it was least needed.
+
+Everything required was already in the database. `tool_calls` has the kind, the status and the
+times, and `logOfTeam` already read it for the activity column. Three changes made it a
+transcript:
+
+- **`exit_reported`**, a new column and migration `0009`. Ticket 08's trap is that a cancelled
+  call reports `completed` with an explicit `exit: null`, while a call with no exit code to give
+  reports none — and `exit_code` stored a SQL NULL for both, so a restored line had to either
+  call every second-kind call cancelled or lose every cancellation. The column records what came
+  over the wire and concludes nothing; the word *cancelled* is not in it, because inferring it is
+  what ticket 08 forbids. The fold's header counts failures off this, so without it a restored
+  header quietly said the wrong number.
+- **`startedAt` and `kind` on the log rows.** The feed orders by when a call ended; the
+  transcript puts it after the line that introduced it. Both times travel rather than one.
+- **The snapshot rebuilds tool items**, filtering blobot's own loopback tool exactly as the live
+  path and the feed do, and taking an unknown or absent kind as `other` rather than guessing a
+  verb.
+
+**And a call was being lost outright, by both surfaces.** A six-call turn read `ran 5`, and the
+activity column was missing the same entry — which it had been missing before any of this work,
+unnoticed. The cause is in `App.tsx:97`: the renderer filters streamed events by
+`showing.current`, which is `undefined` until the first snapshot resolves, so **every event
+arriving before that is dropped**. Calls that had finished came back from the store; the one
+still in flight was excluded from `logOfTeam` for having no `ended_at` and was gone from both.
+
+Two wrong fixes were tried and backed out, and both are worth naming. Materialising the item from
+its completion fails because a terminal `tool_call_updated` carries no title — the mock omits it
+and ACP sends only changed fields. Preserving in-flight items across the snapshot fails because
+at launch the item never existed to preserve. The fix is `logOfTeam().running`: the store knows
+the call started and has not seen it end, and that is the only place it exists. Kept apart from
+`tools` because they are different claims — what happened, and what is happening — and never
+windowed out, since there are at most a handful and they are the newest thing the team has.
+
+**Unfixed, and named rather than worked around:** the renderer still drops events before its
+first snapshot. Everything else it would lose that way is restored by the snapshot itself, so the
+hole is covered rather than closed. Closing it means the stream knowing its team before the first
+round-trip, which is a change to how a team is opened and not to how one is drawn.
+
+## Built, 2026-08-30: an edit says what it changed, and stops saying its verb twice
+
+The two things the fold was missing, both answered by measuring the wire first rather than
+guessing at it. `BLOBOT_WIRE_DUMP=1` against a real `claude`, one edit, the whole `session/update`
+stream dumped — and both answers were in it.
+
+**The counts come from ACP, not from a provider.** The bridge sends
+`content: [{type:'diff', path, oldText, newText}]` on every edit, which is the protocol's own
+block, so `adapters/acp/line-diff.ts` counts them in the shared half and a second runtime that
+sends the block is counted without an adapter of its own knowing anything. No `rawInput` parsing,
+no `structuredPatch`, no vendor shape above the adapter line.
+
+It has to be a **real diff**, and this is the part a guess would have got wrong: the same edit
+arrives twice. First narrow — `beta\n` becoming three lines — then widened with surrounding
+context, where most of what is present did not change. Counting lines would make the second
+reading absurd; an LCS gives `+3 −1` for both, which is what the runtime's own patch says and
+what the tests assert. Common prefix and suffix are trimmed first, so a one-line edit inside a
+20,000-line file measures three lines and not forty million cells. Past 1,500 changed lines on
+either side it reports nothing, because a missing count is honest and a wrong one is not.
+
+**The verb was being said twice.** The bridge titles a call `Edit notes.txt`, and blobot draws
+`edit` in its own column from `ToolKind` — so a live turn read `edit  Edit src/pages/index.astro`,
+the same fact in two registers with the target pushed out of the fixed column that makes a folded
+run scannable. The mock's titles were bare paths, so this was invisible until a screenshot of a
+real turn. `adapters/claude/tool-title.ts` takes it off, in the adapter because `Edit` and `Write`
+are Claude's words, and off `_meta.claudeCode.toolName` rather than off any capitalised first
+word — so `Bash` running `Edit the config by hand` keeps every word of it.
+
+Persisted in `lines_added` / `lines_removed` (migration `0011`), so a restored fold counts what a
+live one counts. Both columns or neither: half a diff is not a fact worth drawing.
+
+The mock carries the two **texts** rather than the counts, so `works-through-a-list` exercises the
+counting instead of bypassing it, and the counts land on an update *before* the terminal one —
+which is where a real Claude puts them, and a consumer that only read the way out would show
+nothing on every edit and still pass.
+
+**Verified live**, both halves, in `adapters/claude/live.test.ts`: an edit's title carries no
+leading verb, and the diff block reaches the vocabulary as `+3 −1`. That test is the only place
+either claim can be checked, since both are claims about the wire.
+
+**Not verified:** whether OpenCode sends the `diff` block at all. If it does, it is counted with
+no further work; if it does not, its edits draw no counts, which is the same silence as a diff
+too large to measure. `BLOBOT_LIVE_OPENCODE=1` still has not been run.
+
+## Run, 2026-08-30: the OpenCode live tests, and the diff block on a second runtime
+
+`BLOBOT_LIVE_OPENCODE=1`, against a real `opencode` 1.18.4. **All six pass on the first run** —
+persona on turn 1, a tool in its own workspace with stable ids, `blobot_message_agent` found and
+called over loopback HTTP, a resume across processes keeping memory and persona and tool, a
+cancel mid-flight leaving the session usable, and the permission posture resolving to what ticket
+14 wrote. That is the whole of what `build.md` has been listing as unrun since the adapter landed.
+
+**And the diff block is not Claude's.** OpenCode sends ACP's own
+`{type:'diff', path, oldText, newText}` on an edit, so `adapters/acp/line-diff.ts` counted it with
+**no OpenCode-specific code written for it at all** — which is the argument for putting the
+counting in the shared half rather than in an adapter, now measured instead of assumed.
+
+The number is corroborated rather than asserted: OpenCode's `rawOutput.metadata.filediff` carries
+its own `additions: 3, deletions: 1` for the same edit, and the LCS says `+3 −1`. Two independent
+arithmetics agreeing. The live test asserts against that, and says so.
+
+**One difference worth knowing, not fixed.** The two runtimes title an edit differently, and
+neither needs the other's treatment:
+
+- Claude titles it `Edit notes.txt` — verb plus a **workspace-relative** path, which is why
+  `withoutToolVerb` exists.
+- OpenCode titles it `edit` while in flight and then replaces it with the path on completion,
+  **absolute and with the leading slash gone**: `tmp/blobot-oc-kAIrDZ/notes.txt`. No verb to
+  strip, so the Claude-side fix correctly does nothing here — but the line in a real OpenCode
+  transcript carries a long absolute path where Claude's carries a short relative one.
+
+Making those agree means blobot rewriting a runtime's own title against the AgentWorkspace root,
+which is a decision about how much of a provider's words we restate, not a bug fix. Left alone
+and written down.
+
+## Run, 2026-08-30: the composer takes an attachment
+
+Asked for by the author with a screenshot of the composer. Grilled to a settled tree first
+(`.scratch/composer-attachments/`, spec plus nine tickets, all resolved), then built end to end.
+`docs/adr/0004-attachments-are-embedded-not-linked.md` carries the decision that shapes the rest.
+
+**An Attachment is embedded, never linked.** ACP's baseline is text and `resource_link`, and
+`image`/`embeddedContext` are opt-in — both runtimes advertise both, which is in the checked-in
+transcripts. The cheap answer was a `resource_link` to the user's path, or to blobot's own stored
+copy. Both are refused, on a fact already in this repo: `adapters/claude/permissions.ts:35` says
+`Read`, `Glob` and `Grep` are absent from `allowedTools` **because Claude never prompts for
+them**. A path handed to an agent is read with no gate at any trust level, so neither link can be
+defended as "the user approves it". The store version is the worse of the two: one stable
+directory holding every attachment from every team, and one link into it is a `Glob` away from
+the rest.
+
+What landed:
+
+- `Prompt.attachments` and `AgentRuntime.accepts` in `runtime.ts`; `adapters/acp/attachments.ts`
+  holds `acceptsOf` and `contentBlockOf`, shared because it is the protocol's shape and not a
+  provider's — an image is an `image` block, a text file an embedded `resource`, attachments
+  first and the text after. A pasted image carries **no `uri`**: an invented `pasted-image-1.png`
+  is a filename for a file that exists nowhere under it, and the agent will repeat it back.
+- Two ceilings in `orchestrator/bounds.ts` beside the peer bounds, because they are the same
+  rule. 4 MB for an image (providers stop around five, and a prompt crosses as one stdin line,
+  base64-inflated), 50,000 characters for a text file — an order of magnitude above
+  `PEER_MESSAGE_LIMIT`, and the gap is the point: that bound stops agents dumping on each other,
+  this is the operator speaking with the operator's authority. **Refused at pickup, never at
+  send**, and never truncated.
+- `attachments` and `message_attachments` (migration `0010`). One blob, N message rows: a fan-out
+  of three is three deliveries and one copy of the bytes. Metadata rides on the Message and the
+  bytes never do, so a transcript of two hundred messages is not two hundred images.
+- The composer's paperclip, paste and drop. **The renderer never reads a file**: a path goes to
+  main (`main/attachments.ts`) and main decides the size and the kind before any bytes cross. A
+  paste is the exception by necessity and takes the same two checks. `webUtils.getPathForFile`
+  in the preload, because Electron removed `File.path` in 32 and this is 44.
+- A thumbnail, **in colour**, in the composer and the transcript. That is a `DESIGN.md`
+  amendment and it is written there: saturation is blobot's to spend on blobatars, and content
+  the user supplied is not blobot's to desaturate. Narrow — the team icon and `RuntimeMark` are
+  unchanged, and a vendor's logo is still greyed.
+- `attachments · 2 · 480 KB · sent this session` under the gauge. Bytes and a count, never
+  tokens, because an image's cost is a function of its pixels and that function is the
+  provider's. Counted cumulatively and worded apart from everything else there, since it is the
+  only figure that is **not per-turn**: an embedded attachment stays in the session's history.
+- `--attach=<path>` beside `--autoplay`, so the chip and the bubble are reviewable headlessly.
+
+**Two things found while building, both left as they are and written down.**
+
+**Attachments are kept forever.** Ticket 04 claimed they die with their team; they do not.
+`SqliteStore.tombstoneTeam` marks the row and **keeps the transcript**, which is documented,
+deliberate behaviour, so an attachment outlives the team it was sent to and nothing removes one.
+The store only grows. If that ever needs an answer the answer is a transcript retention policy,
+which is a decision about messages and not about bytes. The ticket was corrected and a store test
+asserts the behaviour rather than the old claim.
+
+**The mock is the only runtime that can say no.** Both real ones accept both kinds, so
+`MockAgentRuntime` takes an `accepts` option and the composer's refusal path is exercised against
+it. Without that the path would sit unrun until a fourth adapter arrived.
+
+**Not done, deliberately:** PDFs (embedding one is protocol-legal and there is no evidence either
+runtime does anything with it — a silent drop is worse than the gap); attaching a file that is
+already in the Workspace, which is path completion and not an attachment, and is its own effort;
+and a peer attaching anything, refused in `.scratch/composer-attachments/09`.
+
+**Not verified live.** No real runtime has been handed an attachment yet — the adapters' halves
+are covered by unit tests over the block shapes, and `BLOBOT_LIVE_CLAUDE=1` / `BLOBOT_LIVE_OPENCODE=1`
+have no attachment case. That is the first thing to run next.

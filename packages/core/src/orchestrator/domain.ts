@@ -3,6 +3,7 @@
  * behind the same shapes.
  */
 
+import type { AttachmentKind } from '../runtime.js';
 import type { TrustLevel } from '../trust.js';
 
 export interface Team {
@@ -126,4 +127,37 @@ export interface Message {
   readonly idempotencyKey?: string;
   readonly at: number;
   readonly deliveredAt?: number;
+  /**
+   * What the user attached. Never present on a peer message: only the user attaches, and the
+   * `message_agent` tool has nowhere to put one.
+   *
+   * Metadata only — the bytes live in the attachment store and are fetched by id, so a
+   * transcript of two hundred messages does not carry two hundred images through every
+   * snapshot.
+   */
+  readonly attachments?: readonly Attachment[];
+}
+
+/**
+ * An **Attachment**: bytes the user attached to a Message.
+ *
+ * This is the record of one, not its content. One Attachment can be on several Messages — a
+ * message addressed to three agents is three rows and one attachment — so it has an identity of
+ * its own rather than being a field on a row.
+ */
+export interface Attachment {
+  readonly id: string;
+  readonly kind: AttachmentKind;
+  readonly mimeType: string;
+  /** The file's own name. A pasted image has none, and blobot does not invent one. */
+  readonly name?: string;
+  /** The size of the original bytes, which is what the composer and the gauge report. */
+  readonly bytes: number;
+}
+
+/** An Attachment with its content, as the store holds it and the runtime is handed it. */
+export interface AttachmentContent extends Attachment {
+  readonly data: Uint8Array;
+  /** When the bytes were stored. A fact about the blob, not about any message carrying it. */
+  readonly at: number;
 }

@@ -156,3 +156,27 @@ turns rather than a reset each), and six on the composer. Seen on screen: the de
 both agents, drawn as one bubble tagged `TO ALICE, BOB`.
 
 Not built, by decision: the free routing turn, and issue 05's detection.
+
+## Reopened, 2026-08-30: the lead delegates after all
+
+Raised by the author, working with a team: the lead this effort left behind *"means nothing — he
+delegates no work, and does not operate as a lead."* Charted at issue 06.
+
+**The grounds are the arrow, not the argument.** Every objection above is about work flowing
+*user → lead → team*. The outbound direction — a lead you ask *about* the team — was never
+weighed here, and it relays nobody's authority, delivers nothing, spends one turn, mutes nothing
+when it fails, and accumulates only what was sent to it.
+
+What survives untouched, and constrains issue 06 rather than blocking it:
+
+- **Peer authority is permanent.** Issue 03 is not reopened. The lead is told this about itself
+  so it asks rather than orders.
+- **No reply routing**, no dedicated coordinator agent, no change to fan-out.
+- **The lead is never a pipe.** `@bob` still lands on Bob. That is what keeps the serialisation,
+  the single point of failure and the context ceiling from being real here.
+- **The routing-turn exemption this ticket decided and left unbuilt** is what issue 06 builds,
+  to the literal definition recorded above.
+
+What does change: *"The lead stays pure addressing. No persona line, no envelope change"* is now
+false in its second half. The lead fact travels in the **envelope**, which is what this ticket's
+own reason asked for — a persona fact would mean changing who leads restarts a team.

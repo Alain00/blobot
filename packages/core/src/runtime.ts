@@ -5,6 +5,55 @@ export interface Prompt {
   readonly text: string;
   /** Who is speaking. A peer message is not a user instruction — see ticket 06. */
   readonly from: 'user' | 'peer';
+  /**
+   * What the user attached, embedded rather than linked. Never present when `from` is `peer`:
+   * only the user attaches — `.scratch/composer-attachments/09`.
+   *
+   * The bytes travel because a path would not: an agent reading a path outside its
+   * AgentWorkspace is a read blobot cannot gate, since `Read` never prompts. See
+   * `docs/adr/0004-attachments-are-embedded-not-linked.md`.
+   */
+  readonly attachments?: readonly PromptAttachment[];
+}
+
+/**
+ * One attachment on its way to a runtime.
+ *
+ * `data` and not a path, and raw bytes rather than base64: the encoding is the wire's business
+ * and belongs to the adapter that speaks it.
+ */
+export interface PromptAttachment {
+  readonly kind: AttachmentKind;
+  readonly mimeType: string;
+  /**
+   * The file's own name, when it had one. **A pasted image has none**, and blobot does not
+   * invent one: a made-up `pasted-image-1.png` is a filename in an agent's context for a file
+   * that exists nowhere under it, and the agent will repeat it back.
+   */
+  readonly name?: string;
+  readonly data: Uint8Array;
+}
+
+/**
+ * The two kinds blobot carries, which are the two the runtimes advertise support for.
+ *
+ * A PDF is neither, deliberately: embedding one is protocol-legal and there is no evidence
+ * either runtime does anything with it, so it would be dropped in silence. See
+ * `.scratch/composer-attachments/03`.
+ */
+export type AttachmentKind = 'image' | 'text';
+
+/**
+ * What a runtime will take, in blobot's own words.
+ *
+ * Derived by each adapter from whatever its protocol says — `promptCapabilities` on both of
+ * today's — so that the composer can refuse a file *before* the user writes the message, and
+ * still cannot tell which provider is behind an agent. The same shape as `TrustLevel`: blobot's
+ * vocabulary, translated at the far end.
+ */
+export interface AttachmentSupport {
+  readonly images: boolean;
+  readonly textFiles: boolean;
 }
 
 /**
@@ -167,6 +216,15 @@ export interface AgentRuntime {
    * An identical re-advertisement, which OpenCode sends after every prompt, notifies nobody.
    */
   onCommandsChange(listener: (commands: readonly AvailableCommand[]) => void): Unsubscribe;
+
+  /**
+   * What this runtime will accept attached to a prompt.
+   *
+   * Read after `start()`, from the capabilities the provider advertised. Before then it is the
+   * conservative answer — nothing — because a composer that offers a paperclip against a
+   * runtime that has not said yes is offering a refusal.
+   */
+  readonly accepts: AttachmentSupport;
 
   /**
    * What this runtime lets the user choose, as it advertised it on this session.

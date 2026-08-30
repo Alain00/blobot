@@ -111,7 +111,13 @@ export class SqliteRecorder implements TurnRecorder {
             // command lands on a later update. Persisting only the first one means a restored
             // activity column says something the live one never said.
             ...(event.title === undefined ? {} : { name: event.title }),
-            ...(event.exit === undefined ? {} : { exitCode: event.exit }),
+            // Both halves, always together: the code, and the fact that one was reported.
+            // `exit_code` alone cannot separate a cancelled call's explicit null from a call
+            // that never had an exit code, and the transcript needs that separation.
+            ...(event.exit === undefined ? {} : { exitCode: event.exit, exitReported: true }),
+            ...(event.changed === undefined
+              ? {}
+              : { linesAdded: event.changed.added, linesRemoved: event.changed.removed }),
             ...(event.error === undefined ? {} : { failureReason: event.error }),
             ...(event.output === undefined ? {} : { output: event.output }),
             ...(terminal ? { endedAt: event.at } : {}),

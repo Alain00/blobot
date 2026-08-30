@@ -1,0 +1,1 @@
+ALTER TABLE `tool_calls` ADD `exit_reported` integer DEFAULT false NOT NULL;

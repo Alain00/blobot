@@ -29,7 +29,7 @@ Element.prototype.scrollIntoView ??= function scrollIntoView(): void {};
 
 const OPEN: UiTeam = { id: 'open', name: 'portfolio', workspacePath: '/w', turnBudget: 10 };
 const OPEN_AGENTS: readonly UiAgent[] = [
-  { id: 'alice', name: 'Alice', role: 'builds', runtimeLabel: 'mock', workspacePath: '/w/a' },
+  { id: 'alice', name: 'Alice', role: 'builds', runtimeLabel: 'mock', workspacePath: '/w/a', accepts: { images: true, textFiles: true } },
 ];
 
 /** The team on screen, plus one the pool may or may not be holding. Two rows, one of each. */

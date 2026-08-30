@@ -66,3 +66,60 @@ export function contextTooLong(length: number, limit = PEER_CONTEXT_LIMIT): stri
     'anything longer belongs in the message itself, in the short version.'
   );
 }
+
+/**
+ * An attached image, in bytes of the original file.
+ *
+ * Two constraints meet at roughly this number. Providers stop accepting a single image somewhere
+ * around five megabytes, and a prompt crosses the wire as **one line** — `child.stdin.write`,
+ * with the return value ignored — inflated about a third by base64 on the way.
+ *
+ * blobot does not resize its way under the line. Silently downscaling a screenshot of a stack
+ * trace to save tokens is a wrong line number with no visible cause; see ADR-0004.
+ */
+export const IMAGE_ATTACHMENT_LIMIT = 4_000_000;
+
+/**
+ * An attached text file, in characters.
+ *
+ * An order of magnitude above `PEER_MESSAGE_LIMIT`, and that gap is the decision. The peer bound
+ * exists to stop agents handing each other transcripts; this is the operator speaking with the
+ * operator's own authority, and a file they chose to send is not a context dump.
+ */
+export const TEXT_ATTACHMENT_LIMIT = 50_000;
+
+/**
+ * Why a file was refused, addressed to the person who picked it up.
+ *
+ * Said at the moment of attaching rather than at send, which is the difference between a rule
+ * and a trap: nobody writes a paragraph against a file that was never going to travel. It names
+ * the size and the limit, because a refusal that does not carry the fix is a wall.
+ *
+ * Never a truncation. Half a text file with no marker is the failure `tooLongToSend` was written
+ * against, and it is worse here, where the other half was a thing the user could see.
+ */
+export function attachmentTooLarge(name: string, bytes: number, limit: number): string {
+  return (
+    `${name} is ${formatSize(bytes)} and the limit is ${formatSize(limit)}. ` +
+    'blobot sends the file as it is, so a smaller one is the only way through.'
+  );
+}
+
+/** What blobot cannot send at all, said by kind rather than by extension. */
+export function attachmentNotSupported(name: string): string {
+  return `${name} is not an image or a text file, and blobot can only send those two.`;
+}
+
+/** What this agent's runtime will not take, said without naming the runtime. */
+export function attachmentNotAccepted(agentName: string, kind: 'image' | 'text'): string {
+  return kind === 'image'
+    ? `${agentName} runs on a runtime that does not take images.`
+    : `${agentName} runs on a runtime that does not take text files.`;
+}
+
+/** Sizes as a person says them. Kept here so every surface says a size the same way. */
+export function formatSize(bytes: number): string {
+  if (bytes < 1_000) return `${bytes} B`;
+  if (bytes < 1_000_000) return `${Math.round(bytes / 1_000)} KB`;
+  return `${(bytes / 1_000_000).toFixed(1)} MB`;
+}

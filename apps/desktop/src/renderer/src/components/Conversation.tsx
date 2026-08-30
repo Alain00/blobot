@@ -1,9 +1,19 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import type { AgentStatus } from '@blobot/core/domain';
-import type { PermissionChoice, UiAgent } from '../../../shared/api.js';
-import { continuesSpeaker, isPending, type Item, type Pane } from '../model.js';
+import type { AgentStatus, ToolKind } from '@blobot/core/domain';
+import type { PermissionChoice, UiAgent, UiPermissionOutcome } from '../../../shared/api.js';
+import {
+  continuesSpeaker,
+  failuresIn,
+  isPending,
+  rowsOf,
+  toolsIn,
+  type Item,
+  type Pane,
+  type Row,
+} from '../model.js';
 import { timeRule } from '../time.js';
+import { Attached } from './Attached.js';
 import { Blob } from './Blob.js';
 import { Markdown } from './Markdown.js';
 
@@ -35,6 +45,7 @@ export function Conversation({
   const focused = pane.kind === 'agent' ? byId.get(pane.agentId) : undefined;
   const stream = useStickToBottom();
   const answer = useLatest(onAnswerPermission);
+  const rows = rowsOf(items);
 
   // The pane's own chrome only: App owns the column, so the composer sits under this in the
   // same flex container.
@@ -81,21 +92,27 @@ export function Conversation({
           stops at a measure a paragraph can be read at, centred in whatever is left. */}
       <div className="stream" ref={stream}>
         <div className="col">
-          {items.map((item, index) => {
-            const previous = items[index - 1];
-            const rule = timeRule(item.at, previous?.at);
+          {rows.map((row, index) => {
+            // A fold is *inside* a turn, so what the row after it groups against is the last
+            // item the fold swallowed, not the fold. Otherwise every block would reopen the
+            // turn under it and one answer would wear its name three times.
+            const previous = lastItemOf(rows[index - 1]);
+            const rule = timeRule(row.at, previous?.at);
             // A rule reopens the turn: after "Yesterday" the reader needs the name again.
-            const grouped = rule === undefined && continuesSpeaker(item, previous);
             return (
-              <React.Fragment key={item.id}>
+              <React.Fragment key={row.kind === 'steps' ? row.id : row.item.id}>
                 {rule !== undefined && <div className="timerule">{rule}</div>}
-                <ItemView
-                  item={item}
-                  grouped={grouped}
-                  teamPane={pane.kind === 'team'}
-                  onAnswerPermission={answer}
-                  {...castOf(item, pane, byId, statuses)}
-                />
+                {row.kind === 'steps' ? (
+                  <Steps row={row} teamPane={pane.kind === 'team'} />
+                ) : (
+                  <ItemView
+                    item={row.item}
+                    grouped={rule === undefined && continuesSpeaker(row.item, previous)}
+                    teamPane={pane.kind === 'team'}
+                    onAnswerPermission={answer}
+                    {...castOf(row.item, pane, byId, statuses)}
+                  />
+                )}
               </React.Fragment>
             );
           })}
@@ -207,6 +224,142 @@ function castOf(
   }
 }
 
+/** The item a row ends on, which is what the next row groups and times itself against. */
+function lastItemOf(row: Row | undefined): Item | undefined {
+  if (row === undefined) return undefined;
+  return row.kind === 'steps' ? row.items.at(-1) : row.item;
+}
+
+/**
+ * A run of settled work, shut.
+ *
+ * Shut is the default and the point. Flat, a turn of a dozen captions and a dozen calls buries
+ * the answer it was all leading to, and the reader scrolls past the one paragraph they wanted.
+ * `rowsOf` has already guaranteed there is nothing live in here, so nothing is being hidden
+ * that anybody is waiting on.
+ *
+ * The header counts calls, not seconds. A duration would be a claim about effort blobot cannot
+ * make honestly across a permission wait, and the count is the thing a reader wants before
+ * deciding whether to open it.
+ *
+ * No ticks. The pattern this borrows from puts a checkmark on every finished step, and ticket
+ * 08 exists because a cancelled call reports `completed` with `exit: null` — a tick beside one
+ * is the mock's whole point, asserted louder and wrong. A line that finished cleanly says
+ * nothing, a line that did not says what happened.
+ *
+ * It borrows `.route`'s chevron and mono label outright rather than inventing a second
+ * disclosure, but not the dashed edge: dashed is the peer voice saying "refusable, lower
+ * authority", and this is the agent's own work in its own turn.
+ */
+function Steps({ row, teamPane }: { row: Extract<Row, { kind: 'steps' }>; teamPane: boolean }): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+  const calls = toolsIn(row.items);
+  const failed = failuresIn(row.items);
+
+  return (
+    <div className="ran">
+      <button className="route" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <ChevronDown size={12} className={open ? '' : 'shut'} aria-hidden />
+        <span className="lbl">
+          ran {calls} {calls === 1 ? 'tool' : 'tools'}
+          {failed > 0 && ` · ${failed} failed`}
+        </span>
+      </button>
+      {open && (
+        <div className="did">
+          {row.items.map((item) => {
+            // `rowsOf` admits three kinds and no others; the guard is here so the narrowing is
+            // the compiler's rather than a comment's.
+            if (item.kind === 'agent')
+              return (
+                <div className="said" key={item.id}>
+                  {item.text}
+                </div>
+              );
+            if (item.kind === 'tool' || item.kind === 'permission')
+              return <ToolLine key={item.id} item={item} />;
+            return null;
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * One call: what it was, what it was to, and what happened only when what happened is worth a
+ * word.
+ *
+ * The verb comes from the four kinds core already carries off both runtimes. The renderer used
+ * to drop them and print the title alone, so a fold would have been thirty shell strings in a
+ * stack with nothing to scan down. It is a fixed column, blank for `other`, because a ragged
+ * left edge is the reason a list of calls stops being a list.
+ *
+ * Nothing prints for an ordinary completion. That is silence, not a success claim: `failed` is
+ * a status and `exit: null` is a cancelled call wearing `completed`, and both of those speak.
+ */
+function ToolLine({ item }: { item: Extract<Item, { kind: 'tool' | 'permission' }> }): React.JSX.Element {
+  const said = item.kind === 'permission' ? outcomeWord(item.outcome) : toolSaid(item);
+  const changed = item.kind === 'permission' ? undefined : item.changed;
+  return (
+    <div className="tool">
+      <span className="v">{item.kind === 'permission' ? '' : VERB[item.toolKind]}</span>
+      <span className="k">{item.title}</span>
+      {/* The app's one saturated thing that is not a blobatar, by the author, 2026-08-30. Two
+          small signed numbers whose sign already carries the meaning, so the colour reinforces
+          a fact that is legible without it. A zero on either side is drawn, because `+12 −0` is
+          a different edit from `+12 −8` and silence there would read as the second. */}
+      {changed !== undefined && (
+        <span className="diff">
+          <span className="add">+{changed.added}</span>
+          <span className="del">&minus;{changed.removed}</span>
+        </span>
+      )}
+      {said !== undefined && <span>{said}</span>}
+    </div>
+  );
+}
+
+/** blobot's own four words for a call, in the register the rest of the mono labels use. */
+const VERB: Record<ToolKind, string> = {
+  read: 'read',
+  edit: 'edit',
+  execute: 'run',
+  // An MCP tool is whatever its server called it, and a verb blobot invented for it would be a
+  // guess printed in the same column as three facts.
+  other: '',
+};
+
+function toolSaid(item: Extract<Item, { kind: 'tool' }>): string | undefined {
+  if (item.exit === null) return 'exit null';
+  if (item.status === 'failed') return 'failed';
+  if (item.status === 'running') return 'running';
+  return undefined;
+}
+
+/**
+ * What you said, and only that.
+ *
+ * It used to read "you allowed this, and it stops asking" on every call the rule covered — a
+ * sentence about a standing rule, stamped once per use of it, three times in one turn in the
+ * screenshot that prompted this. Where the rule goes is said in the block that asks, which is
+ * the moment it is a decision. Here it is a record.
+ */
+function outcomeWord(outcome: UiPermissionOutcome | undefined): string | undefined {
+  switch (outcome) {
+    case 'allowed':
+      return 'allowed once';
+    case 'allowed_always':
+      return 'allowed always';
+    case 'rejected':
+      return 'rejected';
+    case 'cancelled':
+      return 'nobody answered, so it was cancelled';
+    default:
+      return undefined;
+  }
+}
+
 /**
  * Memoized, because `applyEvent` hands the pane a new `items` array on every streamed token and
  * an unmemoized child means every message in the history re-renders, and re-parses its markdown,
@@ -239,6 +392,16 @@ const ItemView = React.memo(function ItemView({
     case 'user':
       return (
         <div className="msg user">
+          {/* Inside the bubble and above the words, which is the order they were put together
+              in: here is the thing, and here is what I am asking about it. The same order the
+              prompt goes to the runtime in. */}
+          {item.attachments !== undefined && item.attachments.length > 0 && (
+            <div className="attached">
+              {item.attachments.map((attachment) => (
+                <Attached key={attachment.id} attachment={attachment} />
+              ))}
+            </div>
+          )}
           <div className="bubble">{item.text}</div>
           {/* Only where a message could have gone somewhere else. In an agent's pane the
               recipient is the pane. */}
@@ -295,13 +458,9 @@ const ItemView = React.memo(function ItemView({
     case 'tool':
       // Asked about but not started: the permission block below it is this call's line.
       if (item.status === 'asking') return null;
-      return (
-        <div className="tool">
-          <span className="k">{item.title}</span>
-          <span>{item.status === 'running' ? 'running' : item.status}</span>
-          {item.exit === null && <span>exit null</span>}
-        </div>
-      );
+      // A settled call reaching here rather than a fold is one `rowsOf` found alone, which is
+      // the case a fold costs more than it saves. Same line either way.
+      return <ToolLine item={item} />;
 
     /*
      * Ticket 14's permission block: the agent has stopped, and it will stay stopped until this
@@ -317,22 +476,7 @@ const ItemView = React.memo(function ItemView({
      * which is the entire reason it is asking.
      */
     case 'permission':
-      if (item.outcome !== undefined) {
-        return (
-          <div className="tool">
-            <span className="k">{item.title}</span>
-            <span>
-              {item.outcome === 'allowed'
-                ? 'you allowed this once'
-                : item.outcome === 'allowed_always'
-                  ? 'you allowed this, and it stops asking'
-                  : item.outcome === 'rejected'
-                    ? 'you rejected this'
-                    : 'nobody answered, so it was cancelled'}
-            </span>
-          </div>
-        );
-      }
+      if (item.outcome !== undefined) return <ToolLine item={item} />;
       return (
         <div className="perm">
           <div className="ask">

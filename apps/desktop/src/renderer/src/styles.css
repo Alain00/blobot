@@ -10,6 +10,12 @@
 
 :root{
   --ground:#0a0a0b; --raised:#131315; --ink:#fafaf8; --muted:#8a8a93; --line:#232327;
+  /* The one saturated pair that is not a blobatar, and the only two tokens in this file that
+     name a colour rather than a role. DESIGN.md carries the exception and the reason: an
+     edit's line counts, where the sign already says which is which and the hue reinforces it.
+     Deliberately low-chroma — a blobatar at full saturation must still win the eye, or the
+     governing rule has been broken rather than bent. Nothing else may use them. */
+  --added:#6f9c72; --removed:#b8756a;
   --sans:"Geist",ui-sans-serif,system-ui,sans-serif;
   --mono:"Geist Mono",ui-monospace,monospace;
   /* The display face of the one page that is read rather than worked in. It was already here
@@ -315,6 +321,34 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    the placeholder stops saying the moment the first key is pressed. */
 .composer .send.named{width:auto;padding:0 9px 0 13px;border-radius:16px;gap:7px}
 .composer .send .to{font-family:var(--mono);font-size:11px;letter-spacing:.02em}
+/* The paperclip: the discoverable door, since paste and drop are invisible. `.iconbtn`'s
+   dimensions without its class, because it sits inside the pill and not in the chrome. */
+.composer .clip{flex:0 0 auto;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:0;background:none;color:var(--muted);border-radius:50%}
+.composer .clip:hover:not([disabled]){color:var(--ink)}
+.composer .clip[disabled]{opacity:.35;cursor:not-allowed}
+/* A drop target nobody can see is not one. The border it already has, moved to `--muted`:
+   the same change focus makes, because it means the same thing — this field is about to take
+   what you are doing. */
+.composer.over .pill{border-color:var(--muted)}
+
+/* What is going with the message, above the field, in the same 900px column. */
+.attached{width:100%;max-width:900px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.msg.user .attached{max-width:none;justify-content:flex-end}
+/* A chip is `.field`'s ground and radius at a smaller scale: everything lifted here is. */
+.chip{display:inline-flex;align-items:center;gap:7px;background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:4px 8px;max-width:260px}
+.chip .cname{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip .csize{font-family:var(--mono);font-size:10px;color:var(--muted);flex:0 0 auto}
+/* An image is drawn as itself, in colour. DESIGN.md's one yield: saturation is blobot's to
+   spend and it spends it on blobatars, but a file the user attached is their own content
+   quoted back, and the reason to scroll back to it is to see which one it was. */
+.chip.pic{padding:4px 8px 4px 4px}
+.chip img{width:34px;height:34px;object-fit:cover;border-radius:9px;display:block}
+.chip .shim{width:34px;height:34px;border-radius:9px;background:var(--line);display:block}
+.chip .cx{border:0;background:none;color:var(--muted);display:inline-flex;padding:2px;border-radius:50%;flex:0 0 auto}
+.chip .cx:hover{color:var(--ink)}
+/* What this send costs, said and not managed. blobot delivers to everybody addressed and never
+   narrows that set, so the multiplication is the user's to see and the user's to decide about. */
+.attached .cost{font-family:var(--mono);font-size:10px;color:var(--muted);margin-left:2px}
 
 /* the address is the @mention — there is no recipient picker */
 /* 5px of padding, so one line of text sits centred against the 32px send beside it, and the
@@ -457,6 +491,34 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 @keyframes dot{0%,70%,100%{opacity:.28;transform:translateY(0)}35%{opacity:1;transform:translateY(-2px)}}
 @media (prefers-reduced-motion:reduce){.msg.pending .dots i{animation:none;opacity:.6}}
 .tool{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;gap:8px;align-items:baseline;margin-left:40px}
+/* The verb is a fixed column, blank for a tool blobot has no word for. A ragged left edge is
+   the reason a stack of calls stops reading as a list, which is the whole value of the fold. */
+.tool .v{flex:0 0 34px;color:var(--muted)}
+.tool .k{min-width:0;overflow-wrap:anywhere}
+/* The one exception to the governing rule, taken deliberately (DESIGN.md, ticket 12). Held
+   well below the blobatars' chroma so the rail still wins the eye: these are two glyphs of
+   reinforcement on a fact the sign already carries, not a third status channel. */
+.tool .diff{display:inline-flex;gap:6px;flex:0 0 auto;font-variant-numeric:tabular-nums}
+.tool .diff .add{color:var(--added)}
+.tool .diff .del{color:var(--removed)}
+
+/* A folded run of settled work. It takes `.route`'s chevron and mono label so the transcript
+   has one disclosure gesture and not two, and leaves behind the dashed edge, which is the peer
+   voice saying "refusable" about somebody else's mail. This is the agent's own turn. */
+.ran{margin-left:40px;padding:2px 0}
+.ran .route{display:flex;align-items:center;gap:7px;text-align:left;color:var(--muted)}
+.ran .route:hover .lbl{color:var(--ink)}
+.ran .route svg{flex:0 0 auto;transition:rotate 180ms var(--ease-out)}
+.ran .route svg.shut{rotate:-90deg}
+.ran .route .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);transition:color 120ms}
+/* Opened, the calls sit on the fold's own left edge rather than the transcript's gutter, so a
+   dozen of them read as one thing that was opened and not as a dozen new items in the column. */
+.ran .did{margin:7px 0 4px 5px;padding-left:13px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:5px;animation:enterpeer 200ms var(--ease-out)}
+.ran .did .tool{margin-left:0}
+/* A caption is prose, so it stays sans, but it is prose that was folded away for being small:
+   at the transcript's own size it would outweigh the calls it is a caption on all over again. */
+.ran .did .said{font-size:12.5px;color:var(--muted);line-height:1.5}
+@media (prefers-reduced-motion:reduce){.ran .route svg{transition:none}.ran .did{animation:none}}
 /* Ticket 14's permission block. It stands where the in-flight tool line would have stood, in
    the same gutter, because it is the same thing at a moment when it cannot proceed.
    It carries an ink edge, which is `.refusal`'s device rather than a new one: the two are the

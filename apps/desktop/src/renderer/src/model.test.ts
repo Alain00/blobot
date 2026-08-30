@@ -1,18 +1,23 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentEvent, Message } from '@blobot/core/domain';
+import type { UiAgentMessage, UiLog } from '../../shared/api.js';
 import {
   addressedBy,
   continuesSpeaker,
+  failuresIn,
   initialState,
   isPending,
   lastLineOf,
   itemsFor,
   commandMenu,
   reduce,
+  rowsOf,
   slashPartial,
   stoppedBecause,
+  toolsIn,
   type AppState,
   type Item,
+  type Row,
 } from './model.js';
 
 const identity = { agentId: 'alice', sessionId: 'session_alice' } as const;
@@ -45,7 +50,7 @@ describe('a snapshot', () => {
     statuses: {},
     commands: {},
     usage: {},
-    log: { tools: [], turns: [] },
+    log: { running: [], tools: [], turns: [] },
     injection: {},
     messages: [peerMessage],
     answers: [{ id: 'a1', agentId: 'bob', text: 'on it', at: 20 }],
@@ -60,11 +65,14 @@ describe('a snapshot', () => {
       snapshot: {
         ...snapshot,
         log: {
+          running: [],
           tools: [
             {
               toolCallId: 'call_1',
               agentId: 'alice',
               at: 10,
+              startedAt: 9,
+              kind: 'other',
               title: 'mcp__blobot__message_agent',
               status: 'completed',
             },
@@ -72,6 +80,8 @@ describe('a snapshot', () => {
               toolCallId: 'call_2',
               agentId: 'alice',
               at: 11,
+              startedAt: 10,
+              kind: 'execute',
               title: 'git log\n  --oneline',
               status: 'completed',
             },
@@ -114,7 +124,7 @@ describe('the conversation model', () => {
     expect(state.items[0]).toMatchObject({ kind: 'agent', text: 'Hello there', live: false });
   });
 
-  it('keeps an in-flight tool in the conversation and moves its completion to the feed', () => {
+  it('keeps a call in the conversation once it finishes, and logs it to the feed as well', () => {
     const running = apply([
       {
         type: 'tool_call_started',
@@ -137,7 +147,11 @@ describe('the conversation model', () => {
         ...identity,
       },
     });
-    expect(done.items.filter((item) => item.kind === 'tool')).toHaveLength(0);
+    // It used to leave the transcript here, which is why a turn's narration survived and the
+    // work it narrated did not. It stays, settled, and `rowsOf` folds it out of the way.
+    expect(done.items.filter((item) => item.kind === 'tool')).toMatchObject([
+      { id: 'call_1', status: 'completed', toolKind: 'read' },
+    ]);
     expect(done.feed[0]?.text).toContain('read src/auth.ts');
   });
 
@@ -411,7 +425,7 @@ describe('a permission block', () => {
         statuses: {},
         commands: {},
         usage: {},
-        log: { tools: [], turns: [] },
+        log: { running: [], tools: [], turns: [] },
         injection: {},
         messages: [],
         answers: [],
@@ -650,7 +664,7 @@ describe('the context gauge', () => {
         statuses: {},
         commands: {},
         usage: { alice: { used: 37_000, size: 1_000_000 } },
-        log: { tools: [], turns: [] },
+        log: { running: [], tools: [], turns: [] },
         injection: {},
         messages: [],
         answers: [],
@@ -705,10 +719,7 @@ describe('a turn that ended early', () => {
 });
 
 describe('the activity column, after a team switch', () => {
-  const snapshot = (log: {
-    tools: { toolCallId: string; agentId: string; at: number; title: string; status: string }[];
-    turns: { turnId: string; agentId: string; at: number; stopReason: 'end_turn' | 'max_tokens' }[];
-  }): AppState =>
+  const snapshot = (log: UiLog): AppState =>
     reduce(initialState, {
       type: 'snapshot',
       snapshot: {
@@ -730,8 +741,17 @@ describe('the activity column, after a team switch', () => {
 
   it('comes back with the team, newest first, instead of emptying', () => {
     const state = snapshot({
+      running: [],
       tools: [
-        { toolCallId: 'call_1', agentId: 'alice', at: 10, title: 'read src/auth.ts', status: 'completed' },
+        {
+          toolCallId: 'call_1',
+          agentId: 'alice',
+          at: 10,
+          startedAt: 9,
+          kind: 'read',
+          title: 'read src/auth.ts',
+          status: 'completed',
+        },
       ],
       turns: [{ turnId: 'turn_1', agentId: 'alice', at: 20, stopReason: 'end_turn' }],
     });
@@ -743,8 +763,17 @@ describe('the activity column, after a team switch', () => {
 
   it('is keyed the way a live line is, so the same call is not logged twice', () => {
     const state = snapshot({
+      running: [],
       tools: [
-        { toolCallId: 'call_1', agentId: 'alice', at: 10, title: 'read src/auth.ts', status: 'completed' },
+        {
+          toolCallId: 'call_1',
+          agentId: 'alice',
+          at: 10,
+          startedAt: 9,
+          kind: 'read',
+          title: 'read src/auth.ts',
+          status: 'completed',
+        },
       ],
       turns: [],
     });
@@ -755,6 +784,7 @@ describe('the activity column, after a team switch', () => {
     // An answer that stopped mid-sentence and came back without its reason read as an answer
     // that finished.
     const state = snapshot({
+      running: [],
       tools: [],
       turns: [{ turnId: 'turn_1', agentId: 'alice', at: 20, stopReason: 'max_tokens' }],
     });
@@ -766,9 +796,311 @@ describe('the activity column, after a team switch', () => {
 
   it('leaves an ordinary ending out of the transcript, as the live path does', () => {
     const state = snapshot({
+      running: [],
       tools: [],
       turns: [{ turnId: 'turn_1', agentId: 'alice', at: 20, stopReason: 'end_turn' }],
     });
     expect(state.items).toEqual([]);
+  });
+});
+
+/**
+ * The fold's seam. Everything here is about what stays *out* of a block: the grouping is how
+ * "the live step never folds" is guaranteed, so each of these is a rule that would otherwise
+ * have to be remembered at the render site.
+ */
+describe('folding a run of settled work', () => {
+  const at = (n: number): number => 1_000 + n;
+  const caption = (id: string, text: string, live = false): Item => ({
+    kind: 'agent',
+    id,
+    at: at(Number(id)),
+    agentId: 'alice',
+    text,
+    live,
+  });
+  const call = (
+    id: string,
+    status: 'running' | 'completed' | 'failed' = 'completed',
+  ): Item => ({
+    kind: 'tool',
+    id,
+    at: at(Number(id)),
+    agentId: 'alice',
+    title: `npm run ${id}`,
+    toolKind: 'execute',
+    status,
+  });
+
+  it('folds captions and the calls they introduce into one row', () => {
+    const rows = rowsOf([
+      caption('1', 'Now the selection store.'),
+      call('2'),
+      caption('3', 'Now the interaction wrapper.'),
+      call('4'),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.kind).toBe('steps');
+    expect(toolsIn((rows[0] as Extract<Row, { kind: 'steps' }>).items)).toBe(2);
+  });
+
+  it('leaves the answer out of the block, because the answer never folds', () => {
+    const answer = caption('5', 'Zero errors. Build passes.');
+    const rows = rowsOf([caption('1', 'Now the store.'), call('2'), call('3'), answer]);
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toMatchObject({ kind: 'item', item: { id: '5' } });
+  });
+
+  it('never folds a call that is still running, so what is happening now is never hidden', () => {
+    const rows = rowsOf([call('1'), call('2'), call('3', 'running')]);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.kind).toBe('steps');
+    expect(rows[1]).toMatchObject({ kind: 'item', item: { id: '3', status: 'running' } });
+  });
+
+  it('never folds a question nobody has answered', () => {
+    const asking: Item = {
+      kind: 'permission',
+      id: 'perm_1',
+      at: at(3),
+      agentId: 'alice',
+      toolCallId: 'tool_1',
+      title: 'rm -rf dist',
+      canAllow: true,
+      canAllowAlways: true,
+    };
+    const rows = rowsOf([call('1'), call('2'), asking]);
+    expect(rows).toHaveLength(2);
+    expect(rows[1]).toMatchObject({ kind: 'item', item: { id: 'perm_1' } });
+  });
+
+  it('never folds a live answer, or prose long enough to be one', () => {
+    const essay = caption('3', 'x'.repeat(400));
+    const rows = rowsOf([call('1'), call('2'), essay, call('4'), call('5')]);
+    expect(rows.map((row) => row.kind)).toEqual(['steps', 'item', 'steps']);
+  });
+
+  it('leaves a lone call alone, where a fold costs more than it saves', () => {
+    const rows = rowsOf([caption('1', 'Now the store.'), call('2')]);
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'item']);
+  });
+
+  it('does not fold two agents into one block', () => {
+    const bob: Item = { ...(call('3') as Extract<Item, { kind: 'tool' }>), agentId: 'bob' };
+    const rows = rowsOf([call('1'), call('2'), bob, { ...bob, id: '4' }]);
+    expect(rows.map((row) => row.kind)).toEqual(['steps', 'steps']);
+    expect((rows[1] as Extract<Row, { kind: 'steps' }>).agentId).toBe('bob');
+  });
+
+  it('counts a cancelled call as failed, because it reports completed with a null exit', () => {
+    const cancelled: Item = { ...(call('2') as Extract<Item, { kind: 'tool' }>), exit: null };
+    expect(failuresIn([call('1'), cancelled])).toBe(1);
+  });
+
+  it('does not count a rejection as a failure: it did not fail, it did not run', () => {
+    const rejected: Item = {
+      kind: 'permission',
+      id: 'perm_1',
+      at: at(2),
+      agentId: 'alice',
+      toolCallId: 'tool_1',
+      title: 'rm -rf dist',
+      canAllow: true,
+      canAllowAlways: true,
+      outcome: 'rejected',
+    };
+    expect(failuresIn([call('1'), rejected])).toBe(0);
+  });
+});
+
+/**
+ * The fold, on a transcript nobody watched happen.
+ *
+ * A restored pane is the ordinary case — a relaunch, a team switch — and until 2026-08-30 it had
+ * no tool lines at all, so nothing in it grouped and every past turn came back as a flat wall of
+ * captions. That is the shape the fold was built to fix, arriving by the door the fold could not
+ * see.
+ */
+describe('a restored transcript', () => {
+  const call = (
+    id: string,
+    startedAt: number,
+    rest: Partial<UiLog['tools'][number]> = {},
+  ): UiLog['tools'][number] => ({
+    toolCallId: id,
+    agentId: 'alice',
+    at: startedAt + 1,
+    startedAt,
+    kind: 'execute',
+    title: `npm run ${id}`,
+    status: 'completed',
+    ...rest,
+  });
+
+  const restored = (tools: UiLog['tools'][number][], answers: UiAgentMessage[]): AppState =>
+    reduce(initialState, {
+      type: 'snapshot',
+      snapshot: {
+        team: { id: 'team', name: 'checkout', workspacePath: '/repo', turnBudget: 10 },
+        teams: [],
+        agents: [],
+        statuses: {},
+        commands: {},
+        usage: {},
+        log: { running: [], tools, turns: [] },
+        injection: {},
+        messages: [],
+        answers,
+        permissions: [],
+        turnsThisPrompt: 0,
+        demoMode: false,
+      },
+    });
+
+  it('folds, because the calls come back with the captions', () => {
+    const state = restored(
+      [call('a', 2), call('b', 4)],
+      [
+        { id: 'm1', agentId: 'alice', at: 1, text: 'Now the store.' },
+        { id: 'm2', agentId: 'alice', at: 3, text: 'Now the wrapper.' },
+        { id: 'm3', agentId: 'alice', at: 9, text: 'Zero errors, and the build is green.' },
+      ],
+    );
+    const rows = rowsOf(itemsFor(state.items, { kind: 'agent', agentId: 'alice' }));
+    expect(rows.map((row) => row.kind)).toEqual(['steps', 'item']);
+    expect(toolsIn((rows[0] as Extract<Row, { kind: 'steps' }>).items)).toBe(2);
+    // Ordered by when each call started, so it sits under the line that introduced it.
+    expect((rows[0] as Extract<Row, { kind: 'steps' }>).items.map((item) => item.id)).toEqual([
+      'm1',
+      'a',
+      'm2',
+      'b',
+    ]);
+  });
+
+  it('says `exit null` only where a runtime reported one, and counts that as a failure', () => {
+    const state = restored(
+      // The cancelled call: `completed`, betrayed only by the explicit null.
+      [call('a', 2, { exit: null }), call('b', 4)],
+      [],
+    );
+    const tools = state.items.filter((item) => item.kind === 'tool');
+    expect(tools).toMatchObject([{ id: 'a', exit: null }, { id: 'b' }]);
+    expect(tools[1]).not.toHaveProperty('exit');
+    expect(failuresIn(state.items)).toBe(1);
+  });
+
+  it('leaves blobot\'s own tool out, exactly as the live path and the feed do', () => {
+    const state = restored([call('a', 2, { title: 'mcp__blobot__message_agent' }), call('b', 4)], []);
+    expect(state.items.filter((item) => item.kind === 'tool')).toMatchObject([{ id: 'b' }]);
+  });
+
+  it('takes a kind it does not know as `other`, rather than guessing a verb', () => {
+    const state = restored([call('a', 2, { kind: null }), call('b', 4, { kind: 'summarize' })], []);
+    expect(state.items.filter((item) => item.kind === 'tool')).toMatchObject([
+      { id: 'a', toolKind: 'other' },
+      { id: 'b', toolKind: 'other' },
+    ]);
+  });
+});
+
+it('brings back a call that was in flight when the snapshot was read, and lets it finish', () => {
+  // The renderer drops every event arriving before its first snapshot resolves, because until
+  // then it does not know which team is on screen. So a call that started in that window was
+  // never in `items`: the only place it exists is the store, which has its start and not its
+  // end. Without this it was lost by both paths and a six-call turn read `ran 5`.
+  const after = reduce(initialState, {
+    type: 'snapshot',
+    snapshot: {
+      team: { id: 'team', name: 'checkout', workspacePath: '/repo', turnBudget: 10 },
+      teams: [],
+      agents: [
+        { id: 'alice', name: 'Alice', role: 'builds', runtimeLabel: 'mock', workspacePath: '/w', accepts: { images: true, textFiles: true } },
+      ],
+      statuses: {},
+      commands: {},
+      usage: {},
+      log: {
+        running: [
+          {
+            toolCallId: 'call_3',
+            agentId: 'alice',
+            startedAt: 5,
+            title: 'src/scene/Interactive.tsx',
+            kind: 'edit',
+          },
+        ],
+        tools: [],
+        turns: [],
+      },
+      injection: {},
+      messages: [],
+      answers: [],
+      permissions: [],
+      turnsThisPrompt: 0,
+      demoMode: false,
+    },
+  });
+  expect(after.items).toMatchObject([
+    { kind: 'tool', id: 'call_3', status: 'running', toolKind: 'edit' },
+  ]);
+
+  const done = reduce(after, {
+    type: 'event',
+    event: {
+      type: 'tool_call_updated',
+      toolCallId: 'call_3',
+      status: 'completed',
+      exit: 0,
+      at: 6,
+      agentId: 'alice',
+      sessionId: 's',
+    },
+  });
+  expect(done.items).toMatchObject([{ kind: 'tool', id: 'call_3', status: 'completed' }]);
+  // And the completion reaches the activity column, which it could not when the item was gone.
+  expect(done.feed[0]?.text).toContain('src/scene/Interactive.tsx');
+});
+
+describe('what an edit changed, on its way to the line', () => {
+  const identity = { agentId: 'alice', sessionId: 's' } as const;
+  const started = {
+    type: 'tool_call_started' as const,
+    toolCallId: 'c1',
+    title: 'src/desk.tsx',
+    kind: 'edit' as const,
+    at: 1,
+    ...identity,
+  };
+
+  it('takes the counts off the update that carries them, not the terminal one', () => {
+    // A real Claude sends the diff mid-stream and the completion bare, so a reducer that only
+    // read the way out would show nothing on every edit and still pass a naive test.
+    const withDiff = reduce(apply([started]), {
+      type: 'event',
+      event: {
+        type: 'tool_call_updated',
+        toolCallId: 'c1',
+        status: 'in_progress',
+        changed: { added: 74, removed: 41 },
+        at: 2,
+        ...identity,
+      },
+    });
+    const done = reduce(withDiff, {
+      type: 'event',
+      event: { type: 'tool_call_updated', toolCallId: 'c1', status: 'completed', exit: 0, at: 3, ...identity },
+    });
+    expect(done.items).toMatchObject([
+      { kind: 'tool', id: 'c1', status: 'completed', changed: { added: 74, removed: 41 } },
+    ]);
+  });
+
+  it('leaves a call that changed nothing without counts, which is not the same as zero', () => {
+    const done = reduce(apply([started]), {
+      type: 'event',
+      event: { type: 'tool_call_updated', toolCallId: 'c1', status: 'completed', exit: 0, at: 3, ...identity },
+    });
+    expect(done.items[0]).not.toHaveProperty('changed');
   });
 });
