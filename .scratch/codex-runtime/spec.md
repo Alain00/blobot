@@ -65,7 +65,7 @@ the no-credential-storage rule forbids outright. Ticket 04.
 ## Tickets
 
 - `01` Is the persona an environment variable? (research) **Resolved 2026-08-30: yes, `CODEX_CONFIG.developer_instructions`, and it survives a resume and a compaction.** `research/01-codex-persona.md`.
-- `02` Trust, approval and a sandbox that the other runtimes do not have.
+- `02` Trust, approval and a sandbox that the other runtimes do not have. **Resolved 2026-08-30: one mode, `INITIAL_AGENT_MODE=read-only`, at every trust level; the bridge's default mode writes to `~` without asking.** `research/02-trust-and-the-sandbox.md`.
 - `03` A second pinned bridge, and the part of `stdio-bridge.ts` that was never Claude's. **Resolved 2026-08-30**: `adapters/acp/npm-bridge.ts`, and the codex-acp pin is in both manifests.
 - `04` Detection, `codex login`, and the auth method blobot must not take.
 - `05` The adapter itself. Blocked by all four.

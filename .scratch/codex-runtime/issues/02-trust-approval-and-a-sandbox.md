@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: resolved
 
 # Trust, approval, and a sandbox the other runtimes do not have
 
@@ -62,3 +62,54 @@ decides itself, so approval and sandbox come out and the other three stay. A use
 One thing to verify while there: whether the posture can travel through `CODEX_CONFIG` (ticket 01,
 step 3) or whether it needs `INITIAL_AGENT_MODE` plus `session/set_mode`. Both are per process,
 so either is acceptable; which one it is decides where the code goes.
+
+## Answer
+
+Grilled against a real Codex, 2026-08-30, and the expected answer survives in one half and is
+refuted in the other. Measurements and transcripts:
+[`research/02-trust-and-the-sandbox.md`](../research/02-trust-and-the-sandbox.md). The mapping is
+`packages/core/src/adapters/codex/permissions.ts`.
+
+**Confirmed: `sandbox_mode` is not a trust level, it is a constant.** One mode on every agent,
+implementing ticket 10 rather than ticket 14.
+
+**Refuted: `approval_policy` is not the trust level.** It is *inert*. `approval_policy: "never"`
+and `sandbox_mode: "danger-full-access"` set together through `CODEX_CONFIG`, under
+`INITIAL_AGENT_MODE=read-only`, changed nothing at all -- the home-directory write still asked
+and the rejection still held. The mode preset wins over the config, so the posture is an
+environment variable on the spawn, beside `NO_BROWSER`, and blobot writes none of those config
+keys: a value that does nothing is a claim the next reader will believe.
+
+**Refuted: `careful` to `read-only` is not a broken agent.** `read-only` does not mean what it is
+called. An agent in it created files, edited files and ran commands inside its workspace with no
+prompt at all, and asked only when the work left the workspace or reached the network. Codex's own
+name for the mode is "Ask for approval" and its description is exact. It is ticket 14's posture
+arrived at from the other end, with a kernel behind it instead of a promise.
+
+**The result nobody asked for, and the important one: the bridge's default mode is below blobot's
+floor.** With `INITIAL_AGENT_MODE` unset a session runs as `agent`, and an agent in that mode
+wrote a file into the **user's home directory without asking once**. Ticket 03's spawn now sets
+the variable at every trust level and the caller cannot unset it, because an unset posture is not
+a neutral default here.
+
+**So all three trust words answer `read-only`, and that is a finding rather than an oversight.**
+Three modes exist, one is under the floor, one is over the ceiling, and exactly one is left. The
+closed list that asks at every level on the other two runtimes -- `rm`, `sudo`, `chmod`, `chown`,
+`ssh`, `scp`, `docker`, `git push`, `git remote` -- **cannot be expressed on Codex at all**:
+`chmod 777` inside the workspace ran without a prompt, because Codex's axis is where the work
+lands and whether it reaches the network, not what the command is called. This ticket asked for
+that to be stated rather than dropped, and `CODEX_EXPRESSES_TRUST = false` states it in code.
+
+Faking the difference by answering permission requests on blobot's own side was considered and is
+refused. The request does carry `rawInput.command`, but every command arrives as
+`/usr/bin/zsh -lc "<the real command>"`, so vouching by prefix would be prefix-matching the inside
+of a shell string -- which is exactly why `bash` and `sh` are absent from Claude's allowlist.
+
+`allow_always` arrives in two spellings here, `accept_execpolicy_amendment` and
+`allow_for_session`; both are dropped as ticket 14 already drops the kind. The picker subtracts
+`mode` and keeps `model`, `reasoning_effort`, `fast-mode` and `collaboration_mode`.
+
+**Left open for ticket 05**: the trust picker will show three words that do nothing on a Codex
+agent. The renderer cannot know which runtime it is looking at, so the answer has the shape
+`AgentRuntime.accepts` already has -- a runtime states in blobot's own vocabulary what it can
+express, and the dialog names the decision without knowing whose it is.

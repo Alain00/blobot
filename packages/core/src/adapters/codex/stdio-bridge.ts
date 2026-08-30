@@ -5,6 +5,8 @@ import {
   type NpmBridgeSpec,
 } from '../acp/npm-bridge.js';
 import type { LineTransport } from '../acp/jsonrpc.js';
+import { DEFAULT_TRUST, type TrustLevel } from '../../trust.js';
+import { codexPostureEnv } from './permissions.js';
 
 /** The one version this adapter is written against. Exact-pinned, checked loudly, as Claude's is. */
 export const CODEX_BRIDGE_VERSION = '1.7.0';
@@ -39,6 +41,9 @@ export interface SpawnCodexBridgeOptions {
   readonly codexExecutable?: string;
   readonly env?: Readonly<Record<string, string>>;
   readonly onStderr?: (line: string) => void;
+  /** How much of the agent's own work blobot vouches for. On this runtime it is one mode id,
+   *  and the same one at every level: see `permissions.ts`. */
+  readonly trust?: TrustLevel;
 }
 
 export type SpawnCodexBridge = (options: SpawnCodexBridgeOptions) => LineTransport;
@@ -57,6 +62,10 @@ export const spawnCodexBridge: SpawnCodexBridge = (options) =>
       // not set: the bridge's stderr already reaches `onStderr`, and a log directory is a pile
       // of files on the user's disk that nothing in blobot would ever clean up or show.
       ...options.env,
+      // Last, because the posture is not the caller's to unset. Leaving `INITIAL_AGENT_MODE`
+      // off is not a neutral default: the bridge's own default mode wrote a file into the
+      // user's home directory without asking once (ticket 02).
+      ...codexPostureEnv(options.trust ?? DEFAULT_TRUST),
     },
     ...(options.onStderr === undefined ? {} : { onStderr: options.onStderr }),
   });
