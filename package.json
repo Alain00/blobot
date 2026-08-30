@@ -19,7 +19,8 @@
     "onlyBuiltDependencies": [
       "esbuild",
       "electron",
-      "better-sqlite3"
+      "better-sqlite3",
+      "node-pty"
     ]
   }
 }

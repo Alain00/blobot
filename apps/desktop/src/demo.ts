@@ -6,6 +6,11 @@
  *   pnpm demo
  */
 import {
+  demoScripts,
+  DEFAULT_DEMO_SCRIPT,
+  type DemoScriptName,
+} from './main/demo-team.js';
+import {
   MockAgentRuntime,
   Orchestrator,
   SqliteRecorder,
@@ -45,6 +50,27 @@ const bob: Agent = {
   workspacePath: '/repo/.agents/bob',
 };
 
+/**
+ * `--scenario=<name>` picks the same run the app's `--demo-scenario` picks, off the same table:
+ * a headless read of the run you are about to look at is the faster loop, and the two front
+ * ends disagreeing about what `forgotten-handoff` means would make it a useless one.
+ */
+const scriptName = ((): DemoScriptName => {
+  const asked = process.argv
+    .find((arg) => arg.startsWith('--scenario='))
+    ?.slice('--scenario='.length);
+  if (asked === undefined) return DEFAULT_DEMO_SCRIPT;
+  if (asked in demoScripts) return asked as DemoScriptName;
+  const listing = Object.entries(demoScripts)
+    .map(([name, entry]) => `  ${name.padEnd(20)}${entry.summary}`)
+    .join('\n');
+  process.stderr.write(
+    `${asked === '?' ? '' : `no demo scenario '${asked}'\n`}demo scenarios:\n${listing}\n`,
+  );
+  process.exit(asked === '?' ? 0 : 1);
+})();
+const script = demoScripts[scriptName];
+
 const clock = new SystemClock();
 const started = clock.now();
 let orchestrator: Orchestrator;
@@ -61,7 +87,7 @@ const runtimes = new Map<string, AgentRuntime>([
       agentId: alice.id,
       clock,
       peerMessageHandler: (call) => orchestrator.handleMessageAgent(call),
-      script: [scenarios['alice-asks-bob'], scenario('after').say('Good catch, fixing.').end()],
+      script: script.alice,
     }),
   ],
   [
@@ -70,7 +96,7 @@ const runtimes = new Map<string, AgentRuntime>([
       agentId: bob.id,
       clock,
       peerMessageHandler: (call) => orchestrator.handleMessageAgent(call),
-      script: scenarios['bob-reviews'],
+      script: script.bob,
     }),
   ],
 ]);
@@ -110,6 +136,11 @@ orchestrator.onStatusChange((agentId, status: AgentStatus) => {
 orchestrator.onBudgetExhausted((exhausted) => {
   write(clock.now(), 'team ', `budget    ${exhausted.turnsUsed}/${exhausted.turnBudget} · continue?`);
 });
+// Silent on this script, because Alice does call the tool. It is listened for anyway: the run
+// is what proves the observation stays quiet on a team that is working properly.
+orchestrator.onSilentHandoff((observed) => {
+  write(observed.at, name(observed.agentId), `handoff   named ${observed.named.join(', ')} · no message sent`);
+});
 
 function write(at: number, who: string, line: string): void {
   process.stdout.write(`${String(at - started).padStart(6, ' ')}ms ${who} ${line}\n`);
@@ -145,7 +176,7 @@ function describe(event: AgentEvent): string {
 process.stdout.write(`--- Bob's persona ---\n${composePersona(bob, team, [alice, bob])}\n---\n\n`);
 
 await orchestrator.start();
-await orchestrator.promptFromUser([alice.id], 'Get the session refresh reviewed before we ship.');
+await orchestrator.promptFromUser([alice.id], script.prompt);
 await orchestrator.settled();
 
 process.stdout.write(`\n${orchestrator.turnsThisPrompt} agent turns from one user prompt.\n`);

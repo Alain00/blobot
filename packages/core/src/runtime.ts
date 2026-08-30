@@ -77,6 +77,39 @@ export interface AvailableCommand {
   readonly hint?: string;
 }
 
+/**
+ * One thing a runtime lets the user choose about how it answers: a model, a reasoning effort,
+ * a fast mode. Provider-agnostic on purpose — **the UI renders whatever groups it is handed
+ * and knows none of their names**, because the day it special-cases `effort` is the day it
+ * knows which provider an agent is.
+ *
+ * Both runtimes advertise these on `session/new`, which is why the shape is theirs rather than
+ * ours: `{id, label, choices}` is what came back off the wire, filtered by the adapter to the
+ * groups blobot is willing to hand over. What blobot withholds is the groups it owns itself —
+ * Claude's permission `mode` is ticket 14's and OpenCode's is the persona.
+ */
+export interface RuntimeOptionGroup {
+  /** The provider's own id: `model`, `effort`, `fast`. Stored, and sent back verbatim. */
+  readonly id: string;
+  readonly label: string;
+  readonly choices: readonly RuntimeOptionChoice[];
+  /** What the session is set to now. */
+  readonly current?: string;
+}
+
+export interface RuntimeOptionChoice {
+  readonly value: string;
+  readonly label: string;
+  /**
+   * What the runtime does when blobot says nothing, which is what "no choice stored" means.
+   * Exactly one choice per group carries it, read off the session before anything is applied.
+   */
+  readonly isDefault?: boolean;
+}
+
+/** A user's choices, keyed by group id. An absent key is the runtime's own default. */
+export type RuntimeOptionChoices = Readonly<Record<string, string>>;
+
 export type Unsubscribe = () => void;
 
 /**
@@ -134,4 +167,13 @@ export interface AgentRuntime {
    * An identical re-advertisement, which OpenCode sends after every prompt, notifies nobody.
    */
   onCommandsChange(listener: (commands: readonly AvailableCommand[]) => void): Unsubscribe;
+
+  /**
+   * What this runtime lets the user choose, as it advertised it on this session.
+   *
+   * Empty until `start()`, and empty for a runtime that offers nothing — which is a real
+   * answer and not a loading state. Read at session creation rather than asked for, because
+   * both providers volunteer it and neither has a method for the question.
+   */
+  readonly optionGroups: readonly RuntimeOptionGroup[];
 }

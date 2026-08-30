@@ -1,4 +1,11 @@
-import type { AgentEvent, AgentStatus, Message } from '@blobot/core/domain';
+import type { AgentEvent, AgentStatus, Message, StopReason, TrustLevel } from '@blobot/core/domain';
+
+/**
+ * Re-exported so the renderer takes it from here with everything else it is allowed to know.
+ * The three words are blobot's own, so this is not the provider vocabulary the UI is barred
+ * from: no component learns which runtime is behind them or what either one does with them.
+ */
+export type { TrustLevel };
 
 /**
  * What the renderer is allowed to know about an agent.
@@ -36,6 +43,12 @@ export interface UiTeam {
   readonly id: string;
   readonly name: string;
   readonly workspacePath: string;
+  /**
+   * The team's icon as a `data:` URL, when it has one. A label on the folder its mark already
+   * is, never a replacement for it: the faces still say who is on the team, and this says
+   * which project they are in.
+   */
+  readonly icon?: string;
   readonly turnBudget: number;
   /**
    * The team's **lead**: who the team pane addresses when the user names nobody.
@@ -80,6 +93,8 @@ export interface UiTeamSummary {
    * count is `members.length` and the mark is the members.
    */
   readonly members: readonly UiTeamMember[];
+  /** The team's icon as a `data:` URL, when it has one. Drawn on the folder's front panel. */
+  readonly icon?: string;
   /**
    * Who leads it, as a profile id — which is what the roster dialog is a set of ticks on.
    * Absent on a team formed before leads existed, and on one whose lead has left.
@@ -95,6 +110,75 @@ export interface UiAgentMessage {
   readonly agentId: string;
   readonly text: string;
   readonly at: number;
+}
+
+/**
+ * How full an agent's context is, as the runtime reports it.
+ *
+ * Occupancy, not billing: `used` and `size` are tokens in this session's window, and `size`
+ * differs by runtime, which is why the pane draws both numbers and not only a percentage.
+ * `costUsd` is a running total that only one runtime sends and nothing draws yet.
+ */
+export interface UiUsage {
+  readonly used: number;
+  readonly size: number;
+  readonly costUsd?: number;
+}
+
+/**
+ * The team's log as it was persisted: finished tool calls and finished turns.
+ *
+ * The activity column is built from live events, so it emptied on every snapshot while the
+ * transcript beside it came back in full. These are the rows that put it back, and they carry
+ * what happened rather than the line that was drawn: the pane formats a restored entry through
+ * the same code as a live one, so the two cannot drift apart.
+ */
+export interface UiLog {
+  readonly tools: readonly UiToolLog[];
+  readonly turns: readonly UiTurnLog[];
+}
+
+export interface UiToolLog {
+  readonly toolCallId: string;
+  readonly agentId: string;
+  readonly at: number;
+  readonly title: string;
+  readonly status: string;
+}
+
+export interface UiTurnLog {
+  readonly turnId: string;
+  readonly agentId: string;
+  readonly at: number;
+  readonly stopReason: StopReason;
+}
+
+/**
+ * What blobot itself put into an agent's turn, in characters, which is the only unit it can be
+ * exact about.
+ *
+ * Kept apart from `UiUsage` on purpose: the gauge is the runtime's own count of a window blobot
+ * does not manage, and this is blobot's own contribution to it. The pane may estimate tokens
+ * from these and must say that it is estimating. It must never add them to the gauge.
+ */
+export interface UiInjection {
+  /** The cached system prefix this agent's session was opened with. */
+  readonly personaChars: number;
+  /** How much of that persona is the operator's own standing instructions. */
+  readonly instructionsChars: number;
+  /** The last prompt the orchestrator composed: envelopes, the roster line, the numbering. */
+  readonly lastWakeChars: number;
+  readonly lastWakeMessages: number;
+  /** Mail that has not been delivered yet, and will arrive as the next wake prompt. */
+  readonly queued: number;
+  /**
+   * blobot's own `message_agent` tool definition, which is sent on every turn.
+   *
+   * The only tool blobot adds. Every other tool in an agent's list came from the runtime or
+   * from an MCP server the user configured, and blobot cannot see either: an agent's tool list
+   * is not advertised to the client the way its commands are.
+   */
+  readonly ownToolChars: number;
 }
 
 export interface UiSnapshot {
@@ -113,6 +197,15 @@ export interface UiSnapshot {
   readonly statuses: Record<string, AgentStatus>;
   /** Per agent, because each has its own session and two teammates can offer different menus. */
   readonly commands: Record<string, readonly UiCommand[]>;
+  /**
+   * The last context reading each agent reported, so the gauge survives a relaunch and a team
+   * switch. An agent that has never reported is absent, which is not the same as zero.
+   */
+  readonly usage: Record<string, UiUsage>;
+  /** What the activity column showed before this snapshot, from the rows that recorded it. */
+  readonly log: UiLog;
+  /** What blobot put into each agent's turn, for the breakdown under the gauge. */
+  readonly injection: Record<string, UiInjection>;
   readonly messages: readonly Message[];
   /** The team's own words, so a restart shows a conversation rather than half of one. */
   readonly answers: readonly UiAgentMessage[];
@@ -184,6 +277,19 @@ export interface TeamDeletionResult {
   readonly error?: string;
   /** Said plainly rather than swallowed: a kept branch is work nobody else will mention. */
   readonly removals?: readonly UiAgentRemoval[];
+  /** What a full clean recovered, in bytes. Absent unless one was asked for. */
+  readonly freedBytes?: number;
+}
+
+/**
+ * What a full clean of a team would recover, measured now.
+ *
+ * Bytes rather than a formatted string, so the renderer decides how a size is spoken in the
+ * same place it decides everything else a person reads.
+ */
+export interface UiTeamDiskUsage {
+  readonly bytes: number;
+  readonly agents: readonly { readonly agentName: string; readonly bytes: number }[];
 }
 
 /**
@@ -201,6 +307,66 @@ export interface UiRuntimeChoice {
   readonly supported: boolean;
   readonly detail: string;
   readonly version?: string;
+  /**
+   * What blobot can offer to do about this state, which is at most one thing and is often
+   * nothing. A `ready` runtime offers none: a door labelled *sign in* beside a runtime that
+   * works reads as blobot doubting the answer it just gave.
+   */
+  readonly remedies: readonly UiRuntimeRemedy[];
+}
+
+/**
+ * A way out of a readiness state, as the picker offers it.
+ *
+ * The renderer sends back `runtimeId` and `kind` and nothing else. **The command line itself
+ * never travels in this direction**: it is looked up in core's table on the way back, so no
+ * string a user could reach becomes part of an argv. `shown` is here to be read, not to be run.
+ */
+export interface UiRuntimeRemedy {
+  readonly kind: 'sign_in' | 'install';
+  /** The command in full, as a person reads it. The install confirm shows it before running. */
+  readonly shown: string;
+  /** One line saying what is about to happen. */
+  readonly note: string;
+}
+
+/** How a watched remedy ended, and what the machine says about that runtime now. */
+export interface RuntimeStepOutcome {
+  /** The pane this is about. A pane that has been replaced ignores what it hears. */
+  readonly stepId: string;
+  readonly runtimeId: string;
+  readonly kind: 'sign_in' | 'install';
+  readonly exitCode: number;
+  /** Detection asked again, after the fact. The only honest way to say whether it worked. */
+  readonly runtime?: UiRuntimeChoice;
+}
+
+/**
+ * What one runtime lets the user choose, as the agent form draws it.
+ *
+ * Every string here comes off the runtime and is sent back verbatim. The renderer draws the
+ * groups it is handed, in the order it is handed them, and knows the meaning of none of
+ * them — `effort` is a Claude word, and a component that recognised it would know which
+ * provider it was rendering.
+ */
+export interface UiRuntimeOptions {
+  readonly runtimeId: string;
+  readonly groups: readonly UiRuntimeOptionGroup[];
+  /** Why the runtime could not be asked. Not installed and not signed in both land here. */
+  readonly error?: string;
+}
+
+export interface UiRuntimeOptionGroup {
+  readonly id: string;
+  readonly label: string;
+  readonly choices: readonly UiRuntimeOptionChoice[];
+}
+
+export interface UiRuntimeOptionChoice {
+  readonly value: string;
+  readonly label: string;
+  /** What the runtime does when nothing is chosen, which is what choosing nothing means. */
+  readonly isDefault?: boolean;
 }
 
 /** One repository inside a Workspace that is not itself one, as the scope picker draws it. */
@@ -250,6 +416,16 @@ export interface UiAgentProfile {
   readonly instructions?: string;
   /** The blobatar's hue, when the user chose one. Absent means the name derives it. */
   readonly hue?: number;
+  /** What it is set to among its runtime's options, so the edit form opens on the truth. */
+  readonly runtimeOptions?: Readonly<Record<string, string>>;
+  /**
+   * How much of its own work blobot vouches for. Absent is `normal`.
+   *
+   * The one thing on this interface that is neither a provider's word nor a label to print:
+   * these three are blobot's own vocabulary, so the renderer is allowed to read them and to
+   * write the sentence explaining each. Nothing here knows what either runtime does with it.
+   */
+  readonly trust?: TrustLevel;
   /** The teams it is currently on, by name. Empty for an agent nobody has put to work yet. */
   readonly teams: readonly string[];
 }
@@ -262,6 +438,15 @@ export interface NewAgentSpec {
   readonly instructions?: string;
   /** 0 to 359. Omitted when the user kept the face the name gave it. */
   readonly hue?: number;
+  /**
+   * What the user chose among the options the runtime advertises, keyed by the provider's own
+   * group id. An absent key is the runtime's default, and an empty map is a form where the
+   * user chose nothing, which is the same thing said by a picker rather than by silence.
+   */
+  readonly runtimeOptions?: Readonly<Record<string, string>>;
+  /** Which of the three the user picked. Absent is `normal`, and is what a form nobody
+   *  touched sends, so an agent hired without a thought about this is where it always was. */
+  readonly trust?: TrustLevel;
 }
 
 export interface NewTeamSpec {
@@ -274,6 +459,8 @@ export interface NewTeamSpec {
   readonly leadProfileId?: string;
   /** `nested` only: the repositories the user ticked. Omitted means every one of them. */
   readonly repoPaths?: readonly string[];
+  /** The icon the user accepted or chose, as a `data:` URL. Omitted means faces alone. */
+  readonly icon?: string;
 }
 
 /**
@@ -283,6 +470,18 @@ export interface NewTeamSpec {
 export interface TeamOpenResult {
   readonly ok: boolean;
   readonly error?: string;
+}
+
+/**
+ * An icon on offer, and where it came from.
+ *
+ * `from` is not decoration. An icon that appeared out of nowhere and is subtly wrong is worse
+ * than no icon at all, because nothing on screen explains it — so the flow shows the file it
+ * found and the user can turn it down.
+ */
+export interface UiTeamIcon {
+  readonly dataUrl: string;
+  readonly from: string;
 }
 
 /** A refusal a flow renders in place, rather than an exception it throws away. */
@@ -334,9 +533,25 @@ export interface BlobotApi {
   chooseWorkspace(): Promise<string | undefined>;
   inspectWorkspace(path: string): Promise<UiWorkspaceInspection | { error: string }>;
   initializeWorkspace(path: string): Promise<UiWorkspaceInspection | { error: string }>;
+  /**
+   * Make this team a folder of its own under `~/blobot`, as a git repository with one commit.
+   * The other door out of the first step, for a user with no repository in mind.
+   */
+  prepareWorkspace(name: string): Promise<UiWorkspaceInspection | { error: string }>;
+  /** Whatever image the project at this path already uses for itself, or nothing. */
+  suggestTeamIcon(path: string): Promise<UiTeamIcon | undefined>;
+  /** The OS file picker, for an icon of the user's own. `undefined` if they cancelled. */
+  chooseTeamIcon(): Promise<UiTeamIcon | { error: string } | undefined>;
+  /** Give a team an icon or take it off. Changes nothing else and restarts nothing. */
+  setTeamIcon(teamId: string, icon: string | undefined): Promise<void>;
   detectRuntimes(): Promise<readonly UiRuntimeChoice[]>;
   /** Every agent the user has hired, with the teams each is currently on. */
   listAgents(): Promise<readonly UiAgentProfile[]>;
+  /**
+   * What a runtime lets an agent be set to. Asked of the runtime itself, which means starting
+   * it: a second or two, a scratch directory, and no model turn.
+   */
+  describeRuntimeOptions(runtimeId: string): Promise<UiRuntimeOptions>;
   hireAgent(spec: NewAgentSpec): Promise<HireResult>;
   /**
    * Restate an agent's definition. The whole of it, not a patch: this is what the agent is now.
@@ -355,13 +570,56 @@ export interface BlobotApi {
     profileIds: readonly string[],
     leadProfileId?: string,
   ): Promise<TeamDeletionResult>;
-  /** Removes every agent's workspace, then the team. The transcript stays in the database. */
-  deleteTeam(teamId: string): Promise<TeamDeletionResult>;
+  /**
+   * Removes every agent's workspace, then the team. The transcript stays in the database.
+   *
+   * `clean` is the **full clean**: every workspace deleted whatever it holds, unmerged branches
+   * and copies included. It is the one call in this API that destroys work nothing can give
+   * back, so it is never a default and the dialog that sets it has shown the size first.
+   */
+  deleteTeam(teamId: string, clean?: boolean): Promise<TeamDeletionResult>;
+  /** How much disk this team's workspaces are holding, for the delete dialog to price a clean. */
+  teamDiskUsage(teamId: string): Promise<UiTeamDiskUsage>;
   /**
    * Answering a permission block. `reject` is a refusal of this call, not a standing rule;
    * `allow_always` is the only one of the three that leaves anything behind.
    */
   answerPermission(requestId: string, choice: PermissionChoice): Promise<void>;
+  /**
+   * Run a runtime's own sign-in, or its vendor's own installer, on a real terminal the user
+   * watches and types into.
+   *
+   * Only the two ids travel: the argv is core's, looked up on the far side. The keystrokes go
+   * straight through, and blobot reads none of them, which is how a login happens here without
+   * a credential ever being in this process.
+   */
+  startRuntimeStep(
+    /**
+     * The pane's own id, minted where the pane is. It names one visit and carries no authority:
+     * the command still comes from core's table. It exists because the pane is a React effect
+     * and React runs effects twice in development, so a cleanup and a start are in flight at the
+     * same time and only an id can say which session each of them meant.
+     */
+    stepId: string,
+    runtimeId: string,
+    kind: 'sign_in' | 'install',
+  ): Promise<{ readonly ok: boolean; readonly error?: string }>;
+  /**
+   * Open a link in the user's own browser. `http` and `https` only, checked on the far side.
+   *
+   * It exists for the terminal, where a login prints a URL to visit and a person should be able
+   * to click it rather than retype it by hand.
+   */
+  openLink(url: string): Promise<void>;
+  /** A keypress in the pane. Never inspected, never logged. */
+  sendRuntimeStepInput(stepId: string, data: string): Promise<void>;
+  /** The pane measured itself. A terminal that is not told its size wraps its first line. */
+  resizeRuntimeStep(stepId: string, cols: number, rows: number): Promise<void>;
+  /** The pane closed. Ends that session, and does nothing if another one has since started. */
+  closeRuntimeStep(stepId: string): Promise<void>;
+  onRuntimeStepData(listener: (stepId: string, data: string) => void): () => void;
+  /** It ended, and here is what the machine says about that runtime now. */
+  onRuntimeStepExit(listener: (outcome: RuntimeStepOutcome) => void): () => void;
   /**
    * Every stream leads with the team it belongs to.
    *
@@ -377,6 +635,14 @@ export interface BlobotApi {
   ): () => void;
   onMessage(listener: (teamId: string, message: Message) => void): () => void;
   onBudget(listener: (teamId: string, turnsUsed: number, turnBudget: number) => void): () => void;
+  /**
+   * An agent named a teammate you named, and wrote to nobody. An observation, never a repair:
+   * there is no channel back and no button, because the message she did not send is not ours
+   * to compose.
+   */
+  onSilentHandoff(
+    listener: (teamId: string, agentId: string, named: readonly string[], at: number) => void,
+  ): () => void;
   onTurns(listener: (teamId: string, turnsThisPrompt: number) => void): () => void;
   /** An agent is blocked on you. Ticket 14's block, drawn where the turn stopped. */
   onPermission(listener: (teamId: string, request: UiPermissionRequest) => void): () => void;

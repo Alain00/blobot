@@ -172,6 +172,26 @@ describe('a plain folder: a copy per agent', () => {
     expect(outcome).toMatchObject({ detail: expect.stringContaining(workspace.path) });
     expect(existsSync(workspace.path)).toBe(true);
   });
+
+  /**
+   * The one place blobot deletes a copy. It is not a change of mind about the rule above: a
+   * full clean is chosen by name with the size on it, which is the opposite of a dialog people
+   * click through, and without it the copies accumulate with nothing ever mentioning them.
+   */
+  it('deletes the copy and its marker on a full clean, and prices it first', async () => {
+    const folder = scratch('notes');
+    writeFileSync(join(folder, 'notes.md'), 'x'.repeat(20_000));
+    const workspaces = provider();
+    const workspace = await workspaces.provision(request(folder));
+
+    expect(await workspaces.measure(request(folder))).toBeGreaterThanOrEqual(20_000);
+    expect(await workspaces.purge(request(folder))).toEqual({ work: 'discarded' });
+    expect(existsSync(workspace.path)).toBe(false);
+    expect(await workspaces.measure(request(folder))).toBe(0);
+    // The marker went with it, so the same agent starts again rather than reporting the copy
+    // it no longer has as lost work.
+    expect(await workspaces.reconcile(request(folder))).toEqual({ state: 'absent' });
+  });
 });
 
 describe('a Workspace that is gone', () => {
@@ -289,6 +309,21 @@ describe('a folder of repositories: the mirrored tree', () => {
     const folder = codeFolder();
     await expect(provider().initialize(folder)).rejects.toBeInstanceOf(WorkspaceError);
     expect(existsSync(join(folder, '.git'))).toBe(false);
+  });
+
+  it('takes every branch and the tree itself on a full clean', async () => {
+    const folder = codeFolder();
+    const workspaces = provider();
+    const workspace = await workspaces.provision(request(folder, { repos: ['storefront', 'api'] }));
+    git(join(workspace.path, 'api'), 'commit', '--allow-empty', '-m', 'work the user is done with');
+
+    expect(await workspaces.measure(request(folder, { repos: ['storefront', 'api'] }))).toBeGreaterThan(0);
+    const outcome = await workspaces.purge(request(folder, { repos: ['storefront', 'api'] }));
+
+    expect(outcome).toEqual({ work: 'discarded' });
+    expect(existsSync(workspace.path)).toBe(false);
+    expect(git(join(folder, 'api'), 'branch', '--list', 'blobot/checkout/alice').trim()).toBe('');
+    expect(git(join(folder, 'storefront'), 'branch', '--list', 'blobot/checkout/alice').trim()).toBe('');
   });
 
   it('applies the -d versus -D rule per repository when an agent is deleted', async () => {

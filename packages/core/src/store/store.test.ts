@@ -59,7 +59,13 @@ describe('the schema', () => {
         .all<{ name: string }>(sql.raw(`SELECT name FROM pragma_table_info('${table}')`))
         .map((row) => row.name);
 
-    // Runtime config is typed columns, and the TS schema is the allowlist.
+    // Runtime config is typed columns, and the TS schema is the allowlist. `runtime_options`
+    // is the one free-form column, and it is not a hole in this rule: every value in it was
+    // read back out of the runtime's own advertised option list a moment before it was
+    // written, so the set of things it can hold is the provider's menu, not the user's
+    // keyboard. Adding a column here is a decision to be made on purpose, which is what this
+    // test is for. `trust` is the second decision it caught: three words of blobot's own
+    // vocabulary, NULL meaning `normal`, and no runtime has ever advertised it.
     expect(columnsOf('agents').sort()).toEqual(
       [
         'branch',
@@ -74,7 +80,9 @@ describe('the schema', () => {
         'profile_id',
         'role',
         'runtime_id',
+        'runtime_options',
         'team_id',
+        'trust',
         'workspace_path',
       ].sort(),
     );
@@ -91,11 +99,54 @@ describe('the schema', () => {
         'name',
         'role',
         'runtime_id',
+        'runtime_options',
+        'trust',
       ].sort(),
     );
     for (const table of ['agents', 'agent_profiles']) {
       expect(columnsOf(table).join(' ')).not.toMatch(/key|token|secret|config|env/i);
     }
+  });
+
+  it('keeps the runtime options as one column, and an empty choice as no column at all', () => {
+    store.createAgent({
+      id: 'agent_options',
+      teamId: team.id,
+      name: 'Mara',
+      role: 'marketing',
+      runtimeId: 'claude-code',
+      runtimeOptions: { model: 'sonnet', effort: 'high' },
+      workspacePath: '/tmp/mara',
+      createdAt: 0,
+    });
+    store.createAgent({
+      id: 'agent_defaults',
+      teamId: team.id,
+      name: 'Nils',
+      role: 'design',
+      runtimeId: 'claude-code',
+      runtimeOptions: {},
+      workspacePath: '/tmp/nils',
+      createdAt: 0,
+    });
+
+    const rows = store.agentsOfTeam(team.id);
+    expect(rows.find((row) => row.id === 'agent_options')?.runtimeOptions).toEqual({
+      model: 'sonnet',
+      effort: 'high',
+    });
+    // "The user chose nothing" has one spelling in the database, not two.
+    expect(rows.find((row) => row.id === 'agent_defaults')?.runtimeOptions).toBeUndefined();
+  });
+
+  it('reads a runtime option column it cannot understand as no options', () => {
+    // The one column here holding a shape the *provider* decides. A row written by a later
+    // version, or by hand, has to degrade to "no choices" rather than to a failed launch.
+    opened.db.run(sql.raw("UPDATE agents SET runtime_options = 'not json' WHERE id = 'alice'"));
+    expect(store.agentsOfTeam(team.id).find((row) => row.id === 'alice')?.runtimeOptions).toBeUndefined();
+
+    opened.db.run(sql.raw(`UPDATE agents SET runtime_options = '{"model":7}' WHERE id = 'alice'`));
+    expect(store.agentsOfTeam(team.id).find((row) => row.id === 'alice')?.runtimeOptions).toBeUndefined();
   });
 
   it('enforces the name uniqueness that branch names depend on', () => {
@@ -142,6 +193,29 @@ describe('reading teams back', () => {
   it('finds a team by id and returns the turn budget it was created with', () => {
     expect(store.teamById('team_1')?.turnBudget).toBe(10);
     expect(store.teamById('missing')).toBeUndefined();
+  });
+
+  it('keeps a team icon as the image itself, and lets it be taken off again', () => {
+    const icon = 'data:image/png;base64,iVBORw0KGgo=';
+    store.createTeam({
+      id: 'team_3',
+      name: 'portfolio',
+      workspacePath: '/portfolio',
+      workspaceKind: 'git',
+      icon,
+      turnBudget: 4,
+      createdAt: 20,
+    });
+
+    // Inlined rather than a path: the folder an icon was found in is a thing the user can move,
+    // and a team whose mark vanished with its folder would be a bug the rail has to report.
+    expect(store.teamById('team_3')?.icon).toBe(icon);
+
+    // Absent is the resting state, not a missing value: a team with no icon is drawn from its
+    // members, which is what every team looked like before this column existed.
+    store.setTeamIcon('team_3', undefined);
+    expect(store.teamById('team_3')?.icon).toBeUndefined();
+    expect(store.teamById('team_1')?.icon).toBeUndefined();
   });
 });
 
@@ -227,6 +301,42 @@ describe('tombstoning an agent', () => {
     expect(store.forAgent(alice.id)[0]?.fromAgentId).toBe(bob.id);
     expect(store.agentsOfTeam(team.id).map((agent) => agent.id)).toEqual([alice.id]);
     expect(store.agentsOfTeam(team.id, { includeDeleted: true })).toHaveLength(2);
+  });
+});
+
+describe('a tool call named before its arguments arrived', () => {
+  it('keeps the refined name rather than the placeholder it was announced under', () => {
+    store.startSession({ id: 's1', agentId: alice.id, personaText: 'x', startedAt: 0 });
+    const recorder = new SqliteRecorder(opened.db, team.id);
+    recorder.turnStarted(alice.id, 1);
+    const identity = { agentId: alice.id, teamId: team.id, sessionId: 's1' } as const;
+    // What the Claude bridge emits for a bash call whose input is still streaming.
+    recorder.record({
+      type: 'tool_call_started',
+      toolCallId: 'call_1',
+      title: 'Terminal',
+      kind: 'execute',
+      at: 2,
+      ...identity,
+    });
+    recorder.record({
+      type: 'tool_call_updated',
+      toolCallId: 'call_1',
+      status: 'in_progress',
+      title: 'git log --oneline -5',
+      at: 3,
+      ...identity,
+    });
+    recorder.record({
+      type: 'tool_call_updated',
+      toolCallId: 'call_1',
+      status: 'completed',
+      at: 4,
+      ...identity,
+    });
+
+    const log = store.logOfTeam(team.id);
+    expect(log.tools.map((tool) => tool.title)).toEqual(['git log --oneline -5']);
   });
 });
 
@@ -348,6 +458,43 @@ describe('what a turn leaves behind', () => {
     const trigger = store.byId(bobsTurn?.trigger_message_id ?? '');
     expect(trigger?.fromAgentId).toBe(alice.id);
   });
+
+  it('logs what the activity column showed, from the rows that recorded it', async () => {
+    await runDemoTurn();
+    const log = store.logOfTeam(team.id);
+    expect(log.tools.map((tool) => `${tool.title} ${tool.status}`).sort()).toEqual([
+      'blobot_message_agent completed',
+      'read src/auth.ts completed',
+    ]);
+    expect(log.turns).toHaveLength(2);
+    expect(log.turns.every((turn) => turn.stopReason === 'end_turn')).toBe(true);
+  });
+
+  it('windows both halves together, so a turn ending never outlives its tool calls', async () => {
+    await runDemoTurn();
+    const bounded = store.logOfTeam(team.id, 2);
+    const kept = [...bounded.tools, ...bounded.turns].map((entry) => entry.at);
+    const oldestKept = Math.min(...kept);
+    const whole = store.logOfTeam(team.id);
+    const dropped = [...whole.tools, ...whole.turns]
+      .map((entry) => entry.at)
+      .filter((at) => !kept.includes(at));
+    // Everything left out is older than everything kept, on both halves. Taking the last N of
+    // each independently would have paired a turn ending with tool calls from another hour.
+    expect(dropped.every((at) => at <= oldestKept)).toBe(true);
+  });
+
+  it('says nothing for a team that has never run', () => {
+    store.createTeam({
+      id: 'team_2',
+      name: 'quiet',
+      workspacePath: '/repo',
+      workspaceKind: 'git',
+      turnBudget: 10,
+      createdAt: 0,
+    });
+    expect(store.logOfTeam('team_2')).toEqual({ tools: [], turns: [] });
+  });
 });
 
 describe('deleting a team', () => {
@@ -383,5 +530,52 @@ describe('deleting a team', () => {
     const dead = store.listTeams({ includeDeleted: true })[0];
     expect(dead?.deletedAt).toBe(10);
     expect(dead?.name).toBe(`demo · deleted · ${team.id}`);
+  });
+});
+
+describe('the context gauge', () => {
+  const record = (agentId: string, at: number, used: number, size = 200_000): void => {
+    new SqliteRecorder(opened.db, team.id).record({
+      type: 'usage_updated',
+      agentId,
+      sessionId: `session_${agentId}`,
+      at,
+      used,
+      size,
+    });
+  };
+
+  beforeEach(() => {
+    for (const agent of [alice, bob]) {
+      store.startSession({
+        id: `session_${agent.id}`,
+        agentId: agent.id,
+        personaText: 'you are an agent',
+        startedAt: 0,
+      });
+    }
+  });
+
+  it('answers with each agent\'s last reading, so a switch back does not blank the gauge', () => {
+    record(alice.id, 10, 4_000);
+    record(alice.id, 20, 37_000, 1_000_000);
+    record(bob.id, 15, 148_000);
+    expect(store.lastUsageOfTeam(team.id)).toEqual({
+      [alice.id]: { used: 37_000, size: 1_000_000 },
+      [bob.id]: { used: 148_000, size: 200_000 },
+    });
+  });
+
+  it('leaves out an agent that has never reported, rather than calling it empty', () => {
+    record(alice.id, 10, 4_000);
+    expect(Object.keys(store.lastUsageOfTeam(team.id))).toEqual([alice.id]);
+  });
+
+  it('skips the zero a cancelled turn leaves behind, and keeps the reading before it', () => {
+    record(alice.id, 10, 37_000);
+    // Both runtimes report `used: 0` when a turn is cancelled. It is a gauge reset, not an
+    // empty context, and it is persisted like any other reading.
+    record(alice.id, 20, 0);
+    expect(store.lastUsageOfTeam(team.id)[alice.id]).toEqual({ used: 37_000, size: 200_000 });
   });
 });

@@ -3,6 +3,8 @@
  * behind the same shapes.
  */
 
+import type { TrustLevel } from '../trust.js';
+
 export interface Team {
   readonly id: string;
   /** Load-bearing: the branch is `blobot/<team>/<agent>`. */
@@ -19,6 +21,12 @@ export interface Team {
    * them", so an old team still comes back.
    */
   readonly workspaceRepos?: readonly string[];
+  /**
+   * The team's icon as a `data:` URL, when it has one. Absent is the ordinary case: a team is
+   * drawn as a folder with its members' faces in it, and the icon is a label on that folder,
+   * never a replacement for it.
+   */
+  readonly icon?: string;
   /** Total agent turns per user prompt, before the team halts and asks. */
   readonly turnBudget: number;
   /**
@@ -58,7 +66,24 @@ export interface AgentDefinition {
   /** Which runtime this agent runs on. Read by whatever constructs a runtime; never by the UI. */
   readonly runtimeId: string;
   readonly executablePath?: string;
-  readonly model?: string;
+  /**
+   * What this agent was set to among the options its runtime advertises, keyed by the
+   * provider's own group id: `{model: 'sonnet', effort: 'high'}`.
+   *
+   * Opaque here on purpose. Nothing in core, and nothing in the UI, may know that `effort` is
+   * a Claude word and `model` is spelled `openai/gpt-5.4` on the other one — the adapter
+   * advertises the groups and the adapter applies them. An absent key is the runtime's own
+   * default, which is why not choosing stores nothing rather than storing a word for it.
+   */
+  readonly runtimeOptions?: Readonly<Record<string, string>>;
+  /**
+   * How much of the agent's own work blobot vouches for before its runtime starts asking.
+   *
+   * Blobot's own vocabulary rather than a provider's, which is why it sits beside
+   * `runtimeOptions` instead of inside it: both adapters answer to the same three words and
+   * neither runtime has ever advertised them. Absent is `normal`. See `trust.ts`.
+   */
+  readonly trust?: TrustLevel;
   /** Standing instructions, folded into every persona composed for it. */
   readonly instructions?: string;
   /**

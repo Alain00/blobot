@@ -4,8 +4,10 @@ import type {
   NewTeamSpec,
   UiAgentProfile,
   UiRuntimeChoice,
+  UiTeamIcon,
   UiWorkspaceInspection,
 } from '../../../shared/api.js';
+import { IconPick } from './IconPick.js';
 import { HireAgent } from './AgentForm.js';
 import { Blob } from './Blob.js';
 import { LeadPicker } from './Lead.js';
@@ -55,6 +57,14 @@ export function NewTeam({
   const [lead, setLead] = useState<string | undefined>();
   /** `nested` only: the repositories in scope. Every one found is ticked by default. */
   const [repos, setRepos] = useState<readonly string[]>([]);
+  /**
+   * The team's icon, and where it came from.
+   *
+   * Held together because the second is what makes the first honest: an icon detected in a
+   * folder is *offered*, with the file it was found in named next to it, and the user can take
+   * it off. A mark that appeared out of nowhere and is subtly wrong is worse than no mark.
+   */
+  const [icon, setIcon] = useState<UiTeamIcon | undefined>();
   const [error, setError] = useState<string | undefined>();
   /** Inspecting a big folder takes seconds, and a screen that does not say so looks broken. */
   const [reading, setReading] = useState(false);
@@ -65,10 +75,15 @@ export function NewTeam({
     setRoster(await window.blobot.listAgents());
   }, []);
 
-  useEffect(() => {
+  /** Ask the machine again. `detectRuntimes` re-detects, so signing one in redraws the picker. */
+  const rescan = useCallback((): void => {
     void window.blobot.detectRuntimes().then(setRuntimes);
+  }, []);
+
+  useEffect(() => {
+    rescan();
     void reloadRoster();
-  }, [reloadRoster]);
+  }, [reloadRoster, rescan]);
 
   /**
    * The chosen path lands on screen *first*, and the inspection fills in behind it.
@@ -95,9 +110,50 @@ export function NewTeam({
       setInspection(result);
       setRepos(result.repos.map((repo) => repo.path));
       setPath(result.path);
+      // Offered as soon as the folder is known, because most projects have already answered
+      // the question this asks. A folder with nothing in it to find leaves the team drawn from
+      // its members, which is what every team looked like before icons existed.
+      setIcon(await window.blobot.suggestTeamIcon(result.path));
     } finally {
       setReading(false);
     }
+  };
+
+  /**
+   * The other door out of this step: no folder in mind, so blobot makes one.
+   *
+   * It needs the name, which is why the name is the step above this one. What comes back is an
+   * ordinary git Workspace with one empty commit, so nothing downstream knows the difference
+   * between a folder the user found and one blobot made.
+   */
+  const prepare = async (): Promise<void> => {
+    setError(undefined);
+    setInspection(undefined);
+    setReading(true);
+    try {
+      const result = await window.blobot.prepareWorkspace(name.trim());
+      if ('error' in result) {
+        setError(result.error);
+        return;
+      }
+      setInspection(result);
+      setRepos([]);
+      setPath(result.path);
+      setIcon(undefined);
+    } finally {
+      setReading(false);
+    }
+  };
+
+  /** An icon of the user's own, which replaces whatever was detected and says so. */
+  const chooseIcon = async (): Promise<void> => {
+    const result = await window.blobot.chooseTeamIcon();
+    if (result === undefined) return;
+    if ('error' in result) {
+      setError(result.error);
+      return;
+    }
+    setIcon(result);
   };
 
   const choose = async (): Promise<void> => {
@@ -129,6 +185,7 @@ export function NewTeam({
       profileIds: chosen,
       ...(leading === undefined ? {} : { leadProfileId: leading }),
       ...(inspection?.kind === 'nested' ? { repoPaths: repos } : {}),
+      ...(icon === undefined ? {} : { icon: icon.dataUrl }),
     };
     const result = await window.blobot.createTeam(spec);
     setBusy(false);
@@ -155,13 +212,52 @@ export function NewTeam({
           )}
         </header>
 
-        <Step n="01" title="The folder they work in">
+        {/* The name comes first now, and the reason is the button below it: a folder blobot
+            makes for a team is named after the team, so the team has to be named before that
+            door is open. Picking a folder still fills this in when it is empty, so the user who
+            has a repository in mind loses nothing by the swap. */}
+        <Step n="01" title="What the team is called">
+          <input
+            className="field"
+            value={name}
+            placeholder="checkout"
+            onChange={(event) => setName(event.target.value)}
+          />
+          {/* Load-bearing rather than cosmetic: the branch is `blobot/<team>/<agent>`. */}
+          <div className="note muted">
+            Becomes half of each agent&apos;s branch name, so it has to be unique.
+          </div>
+        </Step>
+
+        <Step n="02" title="The folder they work in">
           <div className="row">
             <button className="btn" onClick={() => void choose()}>
               choose a folder…
             </button>
+            {/* The second door. Disabled without a name rather than hidden, because the thing
+                it is waiting for is the step directly above it and a button that is not there
+                teaches nobody that this way exists. */}
+            <button
+              className="btn"
+              disabled={name.trim() === '' || reading}
+              onClick={() => void prepare()}
+              title={
+                name.trim() === ''
+                  ? 'Name the team first, and blobot names the folder after it'
+                  : 'Make a folder for this team under ~/blobot'
+              }
+            >
+              make one for me
+            </button>
             <span className="pathline mono">{path === '' ? 'nothing chosen yet' : path}</span>
           </div>
+          {path === '' && (
+            <div className="note muted">
+              No folder in mind? blobot makes one under <span className="mono">~/blobot</span>,
+              named after the team, as a git repository with one commit, so the agents get
+              branches and diffs like anywhere else.
+            </div>
+          )}
           {reading && (
             <div className="note mono muted">looking through this folder for repositories…</div>
           )}
@@ -181,20 +277,16 @@ export function NewTeam({
               }
             />
           )}
+          {inspection !== undefined && (
+            <IconPick
+              agents={roster.filter((agent) => chosen.includes(agent.id))}
+              {...(icon === undefined ? {} : { icon })}
+              onChoose={() => void chooseIcon()}
+              onClear={() => setIcon(undefined)}
+            />
+          )}
         </Step>
 
-        <Step n="02" title="What the team is called">
-          <input
-            className="field"
-            value={name}
-            placeholder="checkout"
-            onChange={(event) => setName(event.target.value)}
-          />
-          {/* Load-bearing rather than cosmetic: the branch is `blobot/<team>/<agent>`. */}
-          <div className="note muted">
-            Becomes half of each agent&apos;s branch name, so it has to be unique.
-          </div>
-        </Step>
 
         <Step
           n="03"
@@ -288,6 +380,7 @@ export function NewTeam({
       {hiring && (
         <HireAgent
           runtimes={runtimes}
+          onRuntimesChanged={rescan}
           onClose={() => setHiring(false)}
           onHired={async (profileId) => {
             await reloadRoster();
@@ -309,6 +402,17 @@ export function NewTeam({
  * actually arranged (each runtime is set to prompt) rather than naming commands it can only name
  * on some runtimes. See the 2026-08-29 amendment on ticket 14, which took a list of OpenCode's
  * out of this copy.
+ *
+ * The failure it must not make twice is the opposite one. Until ticket 14's 2026-08-30
+ * amendment this paragraph said the runtime decided what counts "not a list blobot wrote", and
+ * the paragraph above promised edits inside the copy never ask. Both were true of an OpenCode
+ * agent and false of a Claude one, in the same product, on the same screen. blobot writes a list
+ * for each runtime now, so the copy says so without naming what is on it.
+ *
+ * It names the three levels and does not offer them. The control is on the agent, because an
+ * AgentWorkspace is per agent and a team-wide switch would imply trusting Alice says something
+ * about Bob. What this paragraph owes the reader is knowing the choice exists and where it
+ * lives, which is one sentence, on the screen where the consequence is being taken on.
  */
 function Disclosure({
   agents,
@@ -337,14 +441,14 @@ function Disclosure({
     <section className="disclosure">
       <h2 className="subhead">Before you create this team</h2>
       <p>
-        {who} {get} {copy} of <b>{where}</b>. Inside that copy they can read, edit and run
-        commands without asking you.
+        {who} {get} {copy} of <b>{where}</b>. Inside that copy they read, edit and run commands,
+        and how much of that they do without asking you is set on each agent: careful, normal or
+        trusting, on the agent itself, where you hired it.
       </p>
       <p>
-        They ask before things that reach outside that copy or cannot be undone. blobot sets each
-        agent&apos;s runtime to prompt, and it is the runtime that decides what counts, not a
-        list blobot wrote. When you are asked, the question appears in the conversation and the
-        agent waits for you.
+        Everything blobot has not vouched for, they ask about. It sets each agent&apos;s runtime
+        to prompt, at every level, and the question appears in the conversation with the agent
+        waiting for you.
       </p>
       <p>
         They also have whatever tools your own MCP servers provide, and they are asked about

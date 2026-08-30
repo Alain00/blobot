@@ -14,7 +14,14 @@ import type {
 import type { AvailableCommand } from '../runtime.js';
 import { AgentStatusTracker, type AgentStatus } from '../status.js';
 import type { Agent, Message, Team } from './domain.js';
-import { findAgentByName } from './roster.js';
+import { findAgentByName, namesMentioned } from './roster.js';
+import {
+  PEER_CONTEXT_LIMIT,
+  PEER_MESSAGE_LIMIT,
+  WAKE_BATCH_LIMIT,
+  contextTooLong,
+  tooLongToSend,
+} from './bounds.js';
 import { composeWakePrompt } from './envelope.js';
 import { InMemoryMessageStore, type MessageStore } from './message-store.js';
 
@@ -61,6 +68,35 @@ export interface PendingPermission {
  */
 export type PermissionOutcome = 'allowed' | 'allowed_always' | 'rejected' | 'cancelled';
 
+/**
+ * An agent named a teammate the user had just named, and wrote to nobody.
+ *
+ * The failure this is written against was observed live: asked to get Bob on the API side,
+ * Alice answers *"I'll ask Bob to review it"*, never calls `message_agent`, and the transcript
+ * looks perfectly healthy. Ticket 05's *ack means committed* covers the message that was sent;
+ * nothing covered the message that was never attempted.
+ *
+ * **blobot surfaces this and never repairs it.** There is no button that sends the message for
+ * her: composing the message she did not send would be blobot deciding what it should have
+ * said, which is inference, and blobot provides none. See
+ * `.scratch/team-addressing/issues/05-mock-a-coordinator-that-forgets-to-route.md`.
+ */
+export interface SilentHandoff {
+  readonly teamId: string;
+  /** Who spoke. */
+  readonly agentId: string;
+  /** The teammates they named and never wrote to, in roster order. */
+  readonly named: readonly string[];
+  readonly at: number;
+}
+
+/** What `#runTurn` needs to remember about the user's prompt to observe a silent handoff. */
+interface HandoffWatch {
+  readonly prompt: string;
+  /** Every agent that prompt was addressed to, including the one holding this turn. */
+  readonly addressed: readonly string[];
+}
+
 export interface BudgetExhausted {
   readonly teamId: string;
   readonly turnsUsed: number;
@@ -95,7 +131,10 @@ export class Orchestrator {
     (agentId: string, commands: readonly AvailableCommand[]) => void
   >();
   readonly #budgetListeners = new Set<(exhausted: BudgetExhausted) => void>();
+  readonly #silentHandoffListeners = new Set<(observed: SilentHandoff) => void>();
   readonly #messageListeners = new Set<(message: Message) => void>();
+  /** The size of the last prompt the orchestrator composed for each agent, for `injectionOf`. */
+  readonly #lastWake = new Map<string, { chars: number; messages: number }>();
   readonly #permissionListeners = new Set<(pending: PendingPermission) => void>();
   readonly #permissionSettledListeners = new Set<
     (id: string, outcome: PermissionOutcome) => void
@@ -110,6 +149,13 @@ export class Orchestrator {
     { readonly pending: PendingPermission; readonly resolve: (optionId: string | null) => void }
   >();
   readonly #subscriptions: Unsubscribe[] = [];
+  /**
+   * Who each agent has written to during the turn it is holding right now, by sender id.
+   *
+   * Only populated for a turn a user prompt started, which is the only turn a silent handoff is
+   * defined against. A session runs one turn at a time, so the agent id is key enough.
+   */
+  readonly #wroteThisTurn = new Map<string, Set<string>>();
 
   /** The budget is per *user prompt*: it is the thing that bounds cost when agents ping-pong. */
   #turnsThisPrompt = 0;
@@ -242,6 +288,12 @@ export class Orchestrator {
     return () => this.#budgetListeners.delete(listener);
   }
 
+  /** An agent named a teammate the user named, and messaged nobody. See {@link SilentHandoff}. */
+  onSilentHandoff(listener: (observed: SilentHandoff) => void): Unsubscribe {
+    this.#silentHandoffListeners.add(listener);
+    return () => this.#silentHandoffListeners.delete(listener);
+  }
+
   dispose(): void {
     for (const unsubscribe of this.#subscriptions) unsubscribe();
     // A request nobody will ever answer now: the window is closing or the team is being
@@ -313,7 +365,14 @@ export class Orchestrator {
     // own words — which is the user watching their prompt arrive second.
     await Promise.all(
       dispatched.map((entry) =>
-        this.#runTurn(entry.agent, { text, from: 'user' }, entry.message.id),
+        this.#runTurn(entry.agent, { text, from: 'user' }, entry.message.id, {
+          prompt: text,
+          // Everybody the user addressed. A co-recipient of the same fan-out is excluded from
+          // the observation below: Bob already has the user's own words, so Alice not
+          // forwarding them costs nothing and saying so would be the noise the scoping rule
+          // exists to prevent.
+          addressed: agents.map((agent) => agent.id),
+        }),
       ),
     );
   }
@@ -331,6 +390,15 @@ export class Orchestrator {
   async handleMessageAgent(call: PeerMessageCall): Promise<PeerMessageAck> {
     const sender = this.#requireAgent(call.from);
     const recipient = this.#resolveRecipient(call.agent, sender);
+    // Before the commit, because a message that is refused must not exist: it is not in the
+    // transcript, the recipient is not woken, and the sender reads why as a tool failure and
+    // gets to write the short version. This is where "always compact context" is enforced.
+    if (call.message.length > PEER_MESSAGE_LIMIT) {
+      throw new Error(tooLongToSend(call.message.length));
+    }
+    if (call.context !== undefined && call.context.length > PEER_CONTEXT_LIMIT) {
+      throw new Error(contextTooLong(call.context.length));
+    }
 
     const now = this.#clock.now();
     const message = this.#store.commit({
@@ -345,6 +413,9 @@ export class Orchestrator {
     });
 
     this.#announceMessage(message);
+    // Whether she wrote at all is the whole of the silent-handoff observation, so it is counted
+    // here, where the message is committed, rather than inferred from the transcript later.
+    this.#wroteThisTurn.get(sender.id)?.add(recipient.id);
 
     // Ack means committed. Only now is it safe to tell the sender the message exists.
     // The peer message is announced by the orchestrator, never by an adapter, so the UI can
@@ -413,15 +484,19 @@ export class Orchestrator {
       return;
     }
 
-    const mail = this.#store.undelivered(agentId);
-    if (mail.length === 0) return;
+    const waiting = this.#store.undelivered(agentId);
+    if (waiting.length === 0) return;
 
+    // One prompt for the batch, not one prompt per message: delivering one and requeuing the
+    // rest doubles turn count against a budget of ten. Bounded all the same, because past a
+    // handful a numbered list stops being a prompt and becomes a context dump with numbers on
+    // it. The overflow stays in the mailbox and `#runTurn` wakes this agent again when the
+    // turn ends, which is the path a mid-turn arrival already takes.
+    const mail = waiting.slice(0, WAKE_BATCH_LIMIT);
     this.#store.markDelivered(
       mail.map((message) => message.id),
       this.#clock.now(),
     );
-    // The whole queue as one prompt, not one prompt per message: delivering one and re-queuing
-    // the rest doubles turn count against a budget of ten.
     const text = composeWakePrompt(
       mail,
       (message) =>
@@ -430,10 +505,16 @@ export class Orchestrator {
           : this.#agents.find((candidate) => candidate.id === message.fromAgentId),
       this.#agents.filter((candidate) => candidate.id !== agentId),
     );
+    this.#lastWake.set(agentId, { chars: text.length, messages: mail.length });
     await this.#runTurn(agent, { text, from: 'peer' }, mail[mail.length - 1]?.id);
   }
 
-  async #runTurn(agent: Agent, prompt: Prompt, triggerMessageId?: string): Promise<void> {
+  async #runTurn(
+    agent: Agent,
+    prompt: Prompt,
+    triggerMessageId?: string,
+    watch?: HandoffWatch,
+  ): Promise<void> {
     const runtime = this.#runtimes.get(agent.id);
     const tracker = this.#trackers.get(agent.id);
     if (runtime === undefined || tracker === undefined) return;
@@ -442,18 +523,34 @@ export class Orchestrator {
     this.#turnsThisPrompt += 1;
     tracker.turnStarted();
     this.#recorder?.turnStarted(agent.id, this.#clock.now(), triggerMessageId);
+    if (watch !== undefined) this.#wroteThisTurn.set(agent.id, new Set());
 
     const turn = (async () => {
+      // What the agent actually said, and whether the turn got to the end of itself. Both are
+      // needed by `#observeSilentHandoff`, and neither is worth accumulating on a turn nobody
+      // is watching.
+      let said = '';
+      let endedOrdinarily = false;
       try {
         for await (const event of runtime.sendPrompt(prompt)) {
           // Publish first, fold second: a consumer sees the event, then the status it caused.
           this.#publish(event);
           tracker.apply(event);
           this.#recorder?.record(event);
+          if (watch === undefined) continue;
+          // The answer only. Thinking is not what the reader was told, and a name that appears
+          // in reasoning the user never sees cannot be a handoff they are waiting on.
+          if (event.type === 'agent_message_completed') said += `\n${event.text}`;
+          if (event.type === 'turn_ended') endedOrdinarily = event.stopReason === 'end_turn';
+          if (event.type === 'error') endedOrdinarily = false;
         }
       } finally {
         this.#busy.delete(agent.id);
       }
+      if (watch !== undefined && endedOrdinarily) {
+        this.#observeSilentHandoff(agent, watch, said);
+      }
+      this.#wroteThisTurn.delete(agent.id);
       // Whatever arrived mid-turn is delivered now, as one prompt.
       await this.#wake(agent.id);
     })();
@@ -464,6 +561,22 @@ export class Orchestrator {
     } finally {
       this.#inFlight.delete(turn);
     }
+  }
+
+  /**
+   * What blobot itself put into this agent's turn, for the surface that shows it.
+   *
+   * Only the parts that are ours: the prompt the orchestrator composed and the mail still
+   * waiting. The persona is not here because the orchestrator does not compose it, and what
+   * the agent carries beyond either is the runtime's, which blobot does not manage.
+   */
+  injectionOf(agentId: string): { lastWakeChars: number; lastWakeMessages: number; queued: number } {
+    const wake = this.#lastWake.get(agentId);
+    return {
+      lastWakeChars: wake?.chars ?? 0,
+      lastWakeMessages: wake?.messages ?? 0,
+      queued: this.#store.undelivered(agentId).length,
+    };
   }
 
   #budgetIsSpent(): boolean {
@@ -483,6 +596,39 @@ export class Orchestrator {
         pending,
       });
     }
+  }
+
+  /**
+   * The turn is over: did she name somebody the user named, and write to nobody?
+   *
+   * Every clause here is a fact rather than a reading, and every one of them narrows on
+   * purpose — an unscoped version fires on shop talk (*"Bob's branch is fine"* names Bob and
+   * promises nothing), and a warning that fires on shop talk is a warning nobody reads, which
+   * is worse than silence.
+   *
+   * **Known limitation, on the record:** it cannot see a promise made about a teammate the user
+   * never named. Widening it there means reading intent, and that is the line.
+   */
+  #observeSilentHandoff(agent: Agent, watch: HandoffWatch, said: string): void {
+    const wrote = this.#wroteThisTurn.get(agent.id) ?? new Set<string>();
+    const teammates = this.#agents.filter(
+      (candidate) =>
+        candidate.id !== agent.id &&
+        !watch.addressed.includes(candidate.id) &&
+        !wrote.has(candidate.id),
+    );
+    const named = namesMentioned(watch.prompt, teammates).filter((candidate) =>
+      namesMentioned(said, [candidate]).length > 0,
+    );
+    if (named.length === 0) return;
+
+    const observed: SilentHandoff = {
+      teamId: this.team.id,
+      agentId: agent.id,
+      named: named.map((candidate) => candidate.name),
+      at: this.#clock.now(),
+    };
+    for (const listener of this.#silentHandoffListeners) listener(observed);
   }
 
   #announceMessage(message: Message): void {

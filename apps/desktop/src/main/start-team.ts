@@ -1,5 +1,4 @@
 import {
-  ClaudeAgentRuntime,
   workspaceProviderFor,
   Orchestrator,
   PeerMessageServer,
@@ -8,6 +7,7 @@ import {
   composePersona,
   uuidv7,
   type Agent,
+  type AgentRecord,
   type AgentRuntime,
   type BlobotDatabase,
   type Clock,
@@ -16,6 +16,8 @@ import {
 } from '@blobot/core';
 import type { RunningTeam } from './running-team.js';
 import { runtimeLabel } from './runtime-labels.js';
+import { runtimeFor } from './runtime-for.js';
+import { knownRuntimes } from './known-runtimes.js';
 
 export interface StartTeamOptions {
   readonly team: Team;
@@ -53,6 +55,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
   const workspaces = options.workspaces ?? workspaceProviderFor(team.workspaceKind);
 
   const records = store.agentsOfTeam(team.id);
+  await refuseMissingRuntimes(records);
   const inspection = await workspaces.inspect(team.workspacePath);
   if (inspection.dirty) {
     // The ticket 06 trap: the user's uncommitted work is in no agent's workspace, so agents
@@ -112,13 +115,24 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     // The whole difference between a relaunch and a resume. Undefined on a first launch, and
     // a session the provider has forgotten is not fatal: the adapter falls back to a new one.
     const resumeSessionId = store.lastProviderSessionOf(agent.id);
-    const runtime = new ClaudeAgentRuntime({
+    // The one branch on a provider in the whole app, and it produces an `AgentRuntime`:
+    // nothing below this line knows which runtime an agent is.
+    const runtime = runtimeFor({
+      runtimeId: record.runtimeId,
       agentId: agent.id,
+      agentName: agent.name,
       cwd: agent.workspacePath,
       persona: personas.get(agent.id) ?? '',
       ...(resumeSessionId === undefined ? {} : { resumeSessionId }),
-      // Ticket 07: the user's own binary, never the bridge's bundled copy.
-      ...(record.executablePath === undefined ? {} : { claudeExecutable: record.executablePath }),
+      // Ticket 07: the user's own binary, never a bundled copy.
+      ...(record.executablePath === undefined ? {} : { executablePath: record.executablePath }),
+      // What this agent was set to when it was hired or last edited. A team takes it at its
+      // next start, which is this line.
+      ...(record.runtimeOptions === undefined ? {} : { options: record.runtimeOptions }),
+      // Taken at start for the same reason as the options above, and more strictly: a posture
+      // is a `session/new` parameter on one runtime and a child's environment on the other, so
+      // it cannot change under a live process even in principle.
+      ...(record.trust === undefined ? {} : { trust: record.trust }),
       mcpServers: [
         {
           type: 'http',
@@ -127,7 +141,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
           headers: [{ name: 'Authorization', value: `Bearer ${endpoint.token}` }],
         },
       ],
-      onStderr: (line) => log(`[bridge:${agent.id}] ${line}`),
+      onStderr: (line) => log(`[runtime:${agent.id}] ${line}`),
     });
     runtime.onLifecycleChange((lifecycle) => {
       log(`[${agent.id}] ${lifecycle}`);
@@ -192,4 +206,33 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       await mcp.stop();
     },
   };
+}
+
+/**
+ * Refuse a launch that has nothing to spawn, in the words the picker used.
+ *
+ * This is **not** ticket 11's gate. That ticket refuses to let detection stand between the user
+ * and *trying*, and it is right: every auth probe answers "is a credential present", so a
+ * signed-out runtime is still allowed to start and say so itself. `not_installed` is the one
+ * state that is not a guess. There is no binary, the spawn is going to fail, and the only
+ * question is whether the user reads `spawn opencode ENOENT` or reads which runtime is missing
+ * and whose agent needs it.
+ *
+ * Detection is the memo, not a fresh probe: a team is started often, the answer is a second and
+ * a half, and the surfaces that *show* readiness are the ones that ask again.
+ */
+async function refuseMissingRuntimes(records: readonly AgentRecord[]): Promise<void> {
+  const detections = await knownRuntimes();
+  const missing = new Map<string, string[]>();
+  for (const record of records) {
+    const detection = detections.find((entry) => entry.runtimeId === record.runtimeId);
+    if (detection?.readiness !== 'not_installed') continue;
+    missing.set(detection.label, [...(missing.get(detection.label) ?? []), record.name]);
+  }
+  if (missing.size === 0) return;
+  const said = [...missing].map(([label, names]) => `${label} (${names.join(', ')})`);
+  throw new Error(
+    `${said.join(' and ')} is not installed on this machine. Install it from the runtime ` +
+      'picker on the agents screen, or give the agent a runtime you have.',
+  );
 }

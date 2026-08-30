@@ -159,10 +159,6 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* When it last spoke, and the line it spoke. The preview takes the width and truncates; the
    status word beside it never does, because a half-printed state is worse than none. */
 .agentrow .when{font-family:var(--mono);font-size:10px;color:var(--muted);flex:0 0 auto}
-/* The lead. Quiet on purpose: it is a standing fact about the team, not an event, and the row
-   it sits on is already the loudest thing about that agent. */
-.agentrow .lead{font-size:9px;letter-spacing:.09em;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 3px;line-height:13px;flex:0 0 auto}
-.agentrow:hover .lead,.agentrow.sel .lead{color:var(--ink)}
 .agentrow .preview{color:var(--muted);font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .agentrow .sub .stat{flex:0 0 auto}
 .agentrow:hover .preview,.agentrow:hover .role{color:var(--ink)}
@@ -199,6 +195,20 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    group to tell them apart from, and the rule under the group already closes it. Flush left
    also puts every blobatar on one column, where the team's mark is the wider one. */
 .teamgroup{border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:6px}
+/* The open team's group is **not** pinned. It was, briefly: sticky against both edges of the
+   scrollport, so that the rows you actually click could not leave the column. It was reverted by
+   the author the same day — a group that floats over the teams above and below it is a second
+   surface in a column whose whole job is to be one list, and the overlap reads as the open team
+   sitting on top of the others rather than among them.
+
+   What the group gets instead is one line further down: it is scrolled into view when the team
+   changes. Nothing covers anything, and finding a team you cannot see is the navigator's job,
+   which is why that exists. */
+/* The open team's roster. Nothing but a box to animate the height of, and deliberately *not*
+   clipped: its rows are painted where they will end up from the first frame, so a face flying
+   up to the folder is not cut off on its way out of a box that is still short. What covers the
+   overlap while the teams below slide away is the rows' own fade. */
+.roster{overflow:visible}
 /* Editing and deleting a team, on the row it is about. Hidden until the row is hovered or
    something inside it takes focus: the rail is a list of teams to work in, and a delete button
    sitting on every row at rest would be the loudest thing in a column whose job is quiet.
@@ -236,6 +246,16 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* The rest of the team, labelled on the front panel where a folder carries its label. Inside
    the panel, not under it: hanging below the mark it read as a detached footnote. */
 .mark .more{position:absolute;right:7%;bottom:20%;font-size:9px;line-height:1;color:var(--muted)}
+/* The team's own icon, on the folder's front panel where a folder carries its label.
+   `TeamMark` owns where it sits and how big it is; this is what it looks like.
+
+   Greyed, and that is the design decision rather than a taste: the blobatars are the only
+   saturated thing on screen, and a column of teams wearing full-colour favicons would put the
+   loudest thing in the rail on the chrome instead of on the faces. Grayscale rather than a
+   silhouette mask, because luminance is most of what makes a logo recognisable at 7px and a
+   flat silhouette of one is usually a blob. `contain`, so a wordmark is letterboxed rather
+   than cropped into initials nobody chose. */
+.mark .teamicon{position:absolute;object-fit:contain;opacity:.92;filter:grayscale(1)}
 /* In a folder the container is the body that moves and the faces are cargo, so the seven status
    animations come off the blobs and onto the mark. Same keyframes, same durations: this is where
    they are applied, not a second vocabulary. */
@@ -246,6 +266,13 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .mark.folder.b-responding{animation:nod 1.15s ease-in-out infinite}
 .mark.folder.b-starting{animation:fadein 1.4s ease-in-out infinite;opacity:.55}
 .mark.folder.b-waiting{animation:jolt 2.2s ease-in-out infinite}
+/* The navigator's door. A field's box — the raised ground and the 12px radius every lifted
+   surface in this app uses — because that is the shape a person looks for when they want to
+   type a name, even though this one opens a layer rather than taking the keystrokes itself.
+   The shortcut sits at the end in mono and muted: it is teaching the key, not competing with
+   the word. */
+.railfind{display:flex;align-items:center;gap:8px;width:calc(100% - 12px);margin:0 6px 4px;padding:7px 9px;border-radius:12px;background:var(--raised);color:var(--muted);text-align:left;font-size:13px}
+.railfind:hover{color:var(--ink)}
 .railadd{color:var(--muted)}
 .railadd:hover{color:var(--ink)}
 .raillabel{padding:12px 14px 6px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -254,8 +281,10 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* One mono row of the facts the rail does not carry. It was a two-line block with a blobatar,
    a bold name, a role and a status word, all of which the selected rail row is already saying
    larger and to the left of it. */
-.convhead{flex:0 0 auto;display:flex;align-items:center;padding:9px 20px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--muted);min-width:0}
+.convhead{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:6px 16px 6px 20px;min-height:37px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--muted);min-width:0}
 .convhead .where{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* The window's controls, at the end of the only row of chrome above the transcript. */
+.convhead .chrome{margin-left:auto;display:flex;align-items:center;gap:14px;flex:0 0 auto}
 .stream{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:20px 20px 28px;display:flex;flex-direction:column}
 /* The transcript is a column, not a left margin. It fills the pane up to a measure a paragraph
    can still be read at and centres in whatever is left, so a wide window widens the reading
@@ -271,10 +300,10 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* Said only when the field has words in it and nowhere to send them, which is the one moment
    the placeholder that used to say it is gone. Names both exits and promotes nobody. */
 .stranded{width:100%;max-width:900px;padding-left:16px;font-family:var(--mono);font-size:11px;color:var(--muted)}
-.pill{width:100%;max-width:900px;display:flex;gap:10px;align-items:center;background:var(--raised);border:1px solid var(--line);border-radius:22px;padding:8px 8px 8px 16px}
+/* Bottom-aligned, because the field grows upward as it wraps: the send stays where the hand
+   left it and the last line typed is the one beside it. */
+.pill{width:100%;max-width:900px;display:flex;gap:10px;align-items:flex-end;background:var(--raised);border:1px solid var(--line);border-radius:22px;padding:8px 8px 8px 16px}
 .pill:focus-within{border-color:var(--muted)}
-.composer input{flex:1;background:transparent;border:none;color:var(--ink);font:inherit;outline:none}
-.composer input::placeholder{color:var(--muted)}
 .send{border:1px solid var(--line);padding:4px 10px;font-family:var(--mono);font-size:11px;display:inline-flex;align-items:center;gap:6px}
 .send[disabled]{opacity:.35;cursor:not-allowed}
 /* Send is the page's primary action and it shared the grey of every secondary button. Once it
@@ -288,9 +317,19 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .composer .send .to{font-family:var(--mono);font-size:11px;letter-spacing:.02em}
 
 /* the address is the @mention — there is no recipient picker */
-.mentionwrap{position:relative;flex:1;min-width:0}
-.mentionwrap input{position:relative;width:100%;background:transparent;border:none;outline:none;font:inherit;color:transparent;caret-color:var(--ink)}
-.hl{position:absolute;inset:0;pointer-events:none;white-space:pre;overflow:hidden;font:inherit;color:var(--ink)}
+/* 5px of padding, so one line of text sits centred against the 32px send beside it, and the
+   pill is the height it always was until a second line arrives. */
+.mentionwrap{position:relative;flex:1;min-width:0;padding:5px 0}
+/* Six lines, then it scrolls — and both layers scroll, because both are in here. Past that the
+   composer would be eating the transcript it is being written under. */
+.scroll{max-height:126px;overflow-y:auto;overscroll-behavior:contain}
+/* The layer with the height. `.hl` is in the flow and wraps, `.mirror` is whatever `.hl` came
+   out to be, and the textarea is laid over the whole of it — which is why the field grows
+   without a single measurement. The two must wrap identically: same font, same width, no
+   padding or border on either, and `break-word` because that is what a textarea does. */
+.mirror{position:relative}
+.mentionwrap textarea{position:absolute;inset:0;display:block;width:100%;height:100%;resize:none;overflow:hidden;padding:0;background:transparent;border:none;outline:none;font:inherit;line-height:inherit;color:transparent;caret-color:var(--ink);white-space:pre-wrap;overflow-wrap:break-word}
+.hl{pointer-events:none;white-space:pre-wrap;overflow-wrap:break-word;font:inherit;color:var(--ink)}
 .hl .ph{color:var(--muted)}
 .hl .m{color:var(--ink);font-weight:500;box-shadow:inset 0 -1px 0 var(--ink)}
 .hl .m.ref{box-shadow:none}
@@ -313,8 +352,49 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .fev{display:flex;gap:8px;padding:5px 14px;font-family:var(--mono);font-size:11px;color:var(--muted);align-items:baseline}
 .fev .t{opacity:.5;flex:0 0 auto}
 .fev .who{color:var(--ink);flex:0 0 auto}
+/* A tool is named after its command, and a command runs to six lines of `&&`. Two lines is
+   what the log can spend on one entry; the model has already flattened and cut it, this is the
+   guard for a long unbroken token. */
+.fev .what{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .fev.hi{background:var(--raised)}
 .feedempty{padding:2px 14px;font-family:var(--mono);font-size:10.5px;line-height:1.5;color:var(--muted);opacity:.6}
+/* The context gauge, at the head of the activity column. Occupancy is a value, so it is mono
+   and monochrome: no bar, no fill, and nothing that turns a colour as it grows. The runtimes
+   report it at different moments (one during a turn, one only at the end of it), so nothing
+   here may move or otherwise claim to be live. */
+.ctx{padding:0 0 10px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.ctxhead{padding:0 14px 6px}
+/* Inset like a rail row, not run to the column's edges: `margin:0 6px` with `8px` of padding
+   puts the text on the same 14px as the log below while the highlight stops short of the rule.
+   A band that touched both edges read as a section of the column rather than as one row in it,
+   which is the same reason the rail's rows are inset. */
+.ctxrow{display:flex;gap:8px;padding:3px 8px;margin:0 6px;width:calc(100% - 12px);font-family:var(--mono);font-size:11px;color:var(--muted);align-items:center;text-align:left;cursor:pointer;border-radius:8px}
+.ctxrow:hover,.ctxrow[aria-expanded='true']{background:var(--raised)}
+/* The open row and its panel are one block. Held apart, the highlighted row read as the thing
+   selected and the panel below it as something else that happened to be there. */
+.ctxrow[aria-expanded='true']{border-radius:8px 8px 0 0}
+.ctxrow[aria-expanded='true'] + .sent{background:var(--raised);border-radius:0 0 8px 8px}
+/* What blobot put in there, opened in place under its own row. It does not float over the
+   log: nothing in a column covers anything else in it, and a panel over the activity would
+   read as sitting on top of it rather than belonging to the row it came from. */
+/* Indented to the row's name, not to its edge, so the panel reads as hanging off the row it
+   opened from. Tight top and bottom: the block already sits inside the gauge's own padding and
+   the column's rule, and a roomy panel put three separate gaps between the last line here and
+   the first line of the log. */
+.sent{padding:1px 8px 5px 30px;margin:0 6px;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.sentrow{display:flex;justify-content:space-between;gap:8px;padding:1px 0}
+.sentrow.sub{opacity:.62;padding-left:10px}
+.sentrow .v{color:var(--ink)}
+/* The numbers above are ours and estimated; the gauge is the runtime's and exact. The note is
+   not decoration: without it the two read as one measurement. It is the only child when
+   nothing has been sent, and then it needs no gap above it. */
+.sentnote{padding-top:4px;opacity:.6;line-height:1.45}
+.sentnote:first-child{padding-top:0}
+.ctxrow .who{color:var(--ink)}
+/* The numbers push right and the percent lands on one edge, so two agents read as a column
+   of occupancies rather than as two sentences of different lengths. */
+.ctxrow .n{margin-left:auto}
+.ctxrow .p{flex:0 0 auto;width:34px;text-align:right;color:var(--ink)}
 
 /* ---------- messages ---------- */
 .msg{display:flex;gap:12px}
@@ -509,6 +589,10 @@ textarea.field{resize:vertical;line-height:1.5}
 .leadface.on .nm{color:var(--ink)}
 .rosterrow:disabled:hover{background:none}
 
+/* the team's icon, previewed as the mark it will become rather than as a thumbnail */
+.iconpick{margin-top:14px}
+.iconpick .row{align-items:center;gap:12px}
+.iconpick .note{max-width:34ch}
 /* the repositories in a folder of repositories, ticked into scope */
 .reposcope{display:flex;flex-direction:column;gap:6px}
 .reposcope .fieldlabel{margin-bottom:2px}
@@ -567,7 +651,7 @@ textarea.field{resize:vertical;line-height:1.5}
 /* A listbox, not a native select: this platform paints its own light, which would put the
    brightest thing on the page on a dropdown. */
 .selecttrigger{display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer}
-.selecttrigger > span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.selecttrigger > .selectvalue{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .selecttrigger[data-state=open]{border-color:var(--muted)}
 .selecttrigger svg{color:var(--muted);flex:0 0 auto}
 .selectmenu{background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:5px;min-width:var(--radix-select-trigger-width);box-shadow:0 20px 60px rgba(0,0,0,.65);z-index:62}
@@ -575,6 +659,50 @@ textarea.field{resize:vertical;line-height:1.5}
 .selectitem[data-highlighted]{background:var(--ground)}
 .selectitem[data-disabled]{color:var(--muted);cursor:default}
 .selecttick{margin-left:auto;display:flex;color:var(--muted)}
+/* The runtime's own mark, greyed. It is the team icon's rule in a second place: a vendor's logo
+   is allowed on screen at `--muted` and never in colour, so it sits at the same value as the
+   Lucide glyph beside it and stays out of the one channel the blobatars own. `flex:0 0 auto`
+   because it is a fixed square that a long label must not squeeze, and the svg fills the span
+   so the two marks are normalised to one optical box. See `RuntimeMark.tsx`. */
+.runtimemark{flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+/* What an agent may do without asking. Three rows, each a word over the sentence that says what
+   the word costs: this is the one control here whose vocabulary is blobot's own, so it is also
+   the one that has to explain itself. The row is two lines, so the tick cannot sit on the
+   baseline of a flex row like it does in every other menu. The menu takes the trigger's width
+   like every other select, so the sentence wraps at the width of the field it belongs to. */
+.trustitem{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:2px 10px;padding:8px 10px}
+.trustitem .selecttick{grid-column:2;grid-row:1;margin-left:0}
+.trustsays{grid-column:1/-1;font-size:12px;color:var(--muted);line-height:1.45}
+/* The runtime's own options: one menu holding several groups, so the model and the effort read
+   as one decision about one agent rather than as three unrelated settings stacked in a form.
+   It borrows `.selectmenu` and `.selectitem` outright — a second menu that looked like a
+   different menu would be saying the two are different kinds of thing. What is added is the
+   group: a mono label, a hairline between groups, and the badge that says which choice is what
+   the runtime does when blobot stores nothing. */
+.optionsmenu{min-width:256px;max-width:340px;max-height:min(60vh,420px);overflow:hidden;display:flex}
+.optionslabel{display:block;font-size:10px;letter-spacing:.09em;color:var(--muted);padding:8px 10px 4px}
+.optionsrule{height:1px;background:var(--line);margin:6px 4px}
+.optionsname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.optionsbadge{font-size:9.5px;letter-spacing:.06em;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:1px 5px}
+/* The field a long menu grows (see `RuntimeOptions.tsx`): cmdk's DOM again, because a menu you
+   type into is a combobox and Radix has no primitive for one. It is the navigator's input at a
+   smaller size and in the same vocabulary, with the count sitting where the navigator puts a
+   row's second fact, so a list cut from forty to three says so without being counted.
+
+   The list scrolls, not the menu: the field has to stay reachable after the scroll, and the
+   whole point of it is a list too long to reach the top of again. */
+.optionscommand{display:flex;flex-direction:column;min-width:0;flex:1}
+.optionsfilter{display:flex;align-items:center;gap:8px;padding:0 10px;margin:-5px -5px 4px;border-bottom:1px solid var(--line)}
+.optionsmenu [cmdk-input]{flex:1;min-width:0;background:transparent;border:0;outline:none;padding:10px 0;font-size:13px;color:var(--ink)}
+.optionsmenu [cmdk-input]::placeholder{color:var(--muted)}
+.optionscount{flex:0 0 auto;font-size:10px;color:var(--muted)}
+.optionsmenu [cmdk-list]{flex:1;min-width:0;overflow:auto}
+.optionsmenu [cmdk-list-sizer]{display:flex;flex-direction:column}
+/* cmdk sets `data-selected` from the arrow keys *and* from pointer move, out of one piece of
+   state, which is the whole reason the list is cmdk's: Radix would have moved real focus onto
+   the row under the pointer and taken the field away mid-word. */
+.optionsmenu .selectitem[data-selected='true']{background:var(--ground)}
+.optionsmenu [cmdk-empty]{padding:12px 10px;font-size:13px;color:var(--muted)}
 
 
 /* ---------- markdown in the transcript ----------
@@ -648,7 +776,7 @@ textarea.field{resize:vertical;line-height:1.5}
 
 /* A team that would not open. A line the user can read and dismiss, not a dialog to clear:
    whatever was on screen is still there and still correct. */
-.openerror{display:flex;align-items:center;gap:12px;margin:0 20px 10px;padding:9px 14px;border:1px solid var(--line);border-left:2px solid var(--ink);border-radius:0 12px 12px 0;background:var(--raised);font-size:13px;line-height:1.45}
+.openerror{display:flex;align-items:center;gap:12px;margin:10px 20px;padding:9px 14px;border:1px solid var(--line);border-left:2px solid var(--ink);border-radius:0 12px 12px 0;background:var(--raised);font-size:13px;line-height:1.45}
 .openerror .dismiss{margin-left:auto;flex:0 0 auto;color:var(--muted);font-size:16px;line-height:1;padding:0 4px}
 .openerror .dismiss:hover{color:var(--ink)}
 
@@ -714,6 +842,66 @@ textarea.field{resize:vertical;line-height:1.5}
 .suggest .hint{flex:0 0 auto}
 .suggest .r{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:right}
 .suggest .suggestnote{padding:7px 10px;font-size:12px;color:var(--muted);line-height:1.45;white-space:normal}
+
+/* ---------- the navigator (ctrl+k) ---------- */
+/* A layer, not a bar. The scrim is the same weight as the modal's, because this covers the
+   working surface for the same length of time — the second it takes to answer — and a lighter
+   one would leave the rail competing with the list that is standing in for it.
+
+   High in the stack on purpose: it is how you leave whatever layer you are on, including *your
+   agents*. */
+.navscrim{position:absolute;inset:0;z-index:40;display:flex;justify-content:center;padding:14vh 24px 24px;background:rgba(0,0,0,.66);animation:enterscrim 150ms var(--ease-out)}
+.navsheet{width:100%;max-width:520px;align-self:flex-start;background:var(--raised);border:1px solid var(--line);border-radius:12px;box-shadow:0 30px 90px rgba(0,0,0,.7);overflow:hidden;animation:entersheet 220ms var(--ease-out)}
+/* cmdk's own DOM again, and the same rules the composer's menu uses, because this is the same
+   object at a different size: a list where the pointer and the arrow keys highlight one row. */
+.navsheet [cmdk-input]{width:100%;background:transparent;border:0;outline:none;padding:13px 16px;font-size:14px;color:var(--ink);border-bottom:1px solid var(--line)}
+.navsheet [cmdk-input]::placeholder{color:var(--muted)}
+.navsheet [cmdk-list]{max-height:min(380px,46vh);overflow:auto;padding:6px}
+.navsheet [cmdk-group-heading]{padding:9px 10px 4px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--muted)}
+.navsheet [cmdk-item]{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;font-size:13px;cursor:pointer}
+.navsheet [cmdk-item][data-selected='true']{background:var(--ground)}
+.navsheet [cmdk-item][data-disabled='true']{opacity:.45;cursor:default}
+/* The second fact about a row — which team, or which folder — takes the width and truncates.
+   A path is the one thing here that is routinely longer than the sheet. */
+.navsheet .r{margin-left:auto;padding-left:12px;min-width:0;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navsheet .cmd{font-family:var(--mono);font-size:12px;color:var(--ink)}
+.navsheet [cmdk-empty]{padding:14px 12px;font-size:13px;color:var(--muted)}
+
+/* ---------- a runtime's own sign-in and install, on a terminal ----------
+ * blobot runs the CLI's own login here and reads none of what passes through, so the surface's
+ * whole job is to be a terminal that does not look like a second application. It borrows the
+ * modal it sits in wholesale and adds three rules.
+ */
+/* Wider than a form, because what is inside is measured in columns rather than in fields: at
+   the form's 560px a login's own output wraps, and a wrapped TUI reads as a broken one. Not
+   full width either. A terminal that fills the window is claiming to be the app. */
+/* Tighter than a form modal, and for the same reason it has no header: the terminal is the
+   content, so the sheet is a frame around it rather than a page with something on it. */
+.termmodal{width:min(820px,calc(100vw - 48px));padding:16px;gap:14px}
+/* The command itself, read rather than typed. Ink because it is the sentence being agreed to,
+   and it is the one place in a dialog where a literal string outranks the prose around it. */
+.termcommand{color:var(--ink);font-size:12px;word-break:break-all;margin:0}
+/* A lifted surface like every other one in this app, at `.field`'s 12px. The height is fixed
+   rather than grown to fit: a pane that resized with its own output would reflow the dialog
+   under the hands of somebody typing into it. */
+/* No border of its own: the sheet around it is already a frame, and with the header gone the
+   two of them read as a box inside a box. The raised ground is what separates it. */
+.term{background:var(--raised);border-radius:12px;padding:10px 12px;height:340px;overflow:hidden}
+.term .xterm{height:100%}
+/* xterm paints its own viewport from the theme it was handed; the ground is the `.term` box's,
+   so the two do not disagree by a shade at the rounded corners. */
+.term .xterm-viewport{background:transparent!important}
+/* A button on a line of secondary text, which is the one place `.btn`'s 13px would outweigh the
+   sentence it belongs to. Only the size changes: a second button shape would say these are a
+   different kind of action. */
+.btn.tiny{padding:3px 12px;font-size:12px}
+/* The dialog's name, for a screen reader and for nothing else. The terminal is the dialog: the
+   program inside it opens by saying who it is, so a title printed above that was blobot talking
+   over something already speaking. Radix still requires the element to exist. */
+.offscreen{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+/* A URL the program printed. xterm underlines it on hover by itself; this is the pointer that
+   says it is worth hovering. */
+.term .xterm-screen a{cursor:pointer}
 
 /* ---------- interaction motion, withdrawn ---------- */
 /* DESIGN.md's rule is that everything decorative sits behind `prefers-reduced-motion`, with no

@@ -4,6 +4,7 @@ import { Agents } from './components/Agents.js';
 import { Composer } from './components/Composer.js';
 import { Conversation } from './components/Conversation.js';
 import { Feed } from './components/Feed.js';
+import { Navigator } from './components/Navigator.js';
 import { NewTeam } from './components/NewTeam.js';
 import { Rail } from './components/Rail.js';
 import { DeleteTeam, EditTeam } from './components/TeamEdits.js';
@@ -24,7 +25,13 @@ export function App(): React.JSX.Element {
   // surface a screenshot cannot click its way to, and now one of its steps decides who leads.
   const [creating, setCreating] = useState(opened.get('screen') === 'new-team');
   /** *Your agents*, over the working surface. Not a modal: it is a place, not a decision. */
-  const [browsingAgents, setBrowsingAgents] = useState(opened.get('screen') === 'agents');
+  // `--screen=hire` is the same place with its one dialog open, because the runtime picker and
+  // what it now offers to do about a runtime live in there and nowhere a screenshot can reach.
+  const [browsingAgents, setBrowsingAgents] = useState(
+    opened.get('screen') === 'agents' || opened.get('screen') === 'hire',
+  );
+  /** The navigator, on ctrl+k. `--screen=find` opens it for a screenshot. */
+  const [finding, setFinding] = useState(opened.get('screen') === 'find');
   /** The team a modal is about, and which one. Never the team on screen by implication. */
   const [editing, setEditing] = useState<string | undefined>(undefined);
   const [deleting, setDeleting] = useState<string | undefined>(undefined);
@@ -46,13 +53,43 @@ export function App(): React.JSX.Element {
   // Resetting the pane belongs to a team *change*: the agent it was showing belongs to the
   // team that just went away. On the first snapshot it threw away `--pane=<agentId>`, which is
   // how a screenshot reviews a pane nobody is there to click into.
+  /**
+   * The agent the navigator asked for on a team that was not open yet.
+   *
+   * Switching teams resets the pane, because the agent it was showing belongs to the team that
+   * just went away — so a navigator that set the pane itself would be overwritten a moment
+   * later by the snapshot. It leaves the wish here instead, and the reset honours it once the
+   * roster it names has actually arrived.
+   */
+  const wanted = useRef<string | undefined>(undefined);
+
   const refresh = useCallback((resetPane = false) => {
     void window.blobot.snapshot().then((snapshot) => {
       showing.current = snapshot.team?.id;
       setOpenError(snapshot.openError);
       dispatch({ type: 'snapshot', snapshot });
-      if (resetPane) setPane({ kind: 'team' });
+      if (!resetPane) return;
+      const want = wanted.current;
+      wanted.current = undefined;
+      setPane(
+        want !== undefined && snapshot.agents.some((agent) => agent.id === want)
+          ? { kind: 'agent', agentId: want }
+          : { kind: 'team' },
+      );
     });
+  }, []);
+
+  // One key for the navigator, and the same one the rest of the desktop uses for "find the
+  // thing by name". It is a window listener because the composer holds focus almost all the
+  // time and this must not be a control you first have to click away from.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key.toLowerCase() !== 'k' || !(event.ctrlKey || event.metaKey)) return;
+      event.preventDefault();
+      setFinding((open) => !open);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   useEffect(() => {
@@ -82,6 +119,9 @@ export function App(): React.JSX.Element {
       window.blobot.onBudget((teamId, used, budget) => {
         if (mine(teamId)) dispatch({ type: 'budget', used, budget });
       }),
+      window.blobot.onSilentHandoff((teamId, agentId, named, at) => {
+        if (mine(teamId)) dispatch({ type: 'silentHandoff', agentId, named, at });
+      }),
       // A backgrounded team can be blocked on the user too. It is not drawn into this
       // transcript — that is what the team filter is for — and the rail says `waiting` on it
       // the moment it is opened, because status comes with the snapshot.
@@ -100,13 +140,28 @@ export function App(): React.JSX.Element {
     };
   }, [refresh]);
 
+  /** Open a team, and optionally land on one of its agents once its roster arrives. */
+  const openTeam = useCallback((teamId: string, agentId?: string) => {
+    setOpenError(undefined);
+    wanted.current = agentId;
+    void window.blobot.selectTeam(teamId).then((result) => {
+      if (result.ok) return;
+      wanted.current = undefined;
+      setOpenError(result.error);
+    });
+  }, []);
+
   const items = useMemo(() => itemsFor(state.items, pane), [state.items, pane]);
   const snapshot = state.snapshot;
   if (snapshot === undefined) return <div className="app" />;
   // Looked up rather than copied into state: a team that has just been deleted must not stay
   // on screen inside a modal that is about it.
   const editingTeam = snapshot.teams.find((row) => row.id === editing);
-  const deletingTeam = snapshot.teams.find((row) => row.id === deleting);
+  // `--screen=delete-team` opens it on the team that is showing, so the dialog that prices a
+  // full clean is reviewable by a screenshot. The id is not known until the snapshot arrives.
+  const deletingTeam =
+    snapshot.teams.find((row) => row.id === deleting) ??
+    (opened.get('screen') === 'delete-team' ? snapshot.teams[0] : undefined);
 
   // The genuine empty state: a first launch, before any team exists.
   if (snapshot.team === undefined || creating) {
@@ -130,46 +185,12 @@ export function App(): React.JSX.Element {
     );
   }
 
+  // The open team, narrowed once. The callbacks below run after this render and cannot lean on
+  // the early return above.
+  const team = snapshot.team;
+
   return (
     <div className="app">
-      <div className="topbar">
-        <span className="wordmark">blobot</span>
-        <span className="crumb">
-          <b>{snapshot.team.name}</b> · {snapshot.team.workspacePath}
-        </span>
-        {snapshot.demoMode && <span className="badge">DEMO</span>}
-        <span className="spacer" />
-        {state.budget !== undefined && (
-          <button className="send" onClick={() => void window.blobot.resumeAfterBudget()}>
-            turn budget spent · continue
-          </button>
-        )}
-        <button
-          className="paneltoggle"
-          onClick={feed.toggle}
-          title={feed.visible ? 'Hide activity' : 'Show activity'}
-          aria-label={feed.visible ? 'Hide activity' : 'Show activity'}
-          aria-pressed={feed.visible}
-        >
-          {feed.visible ? (
-            <PanelRightClose size={16} aria-hidden />
-          ) : (
-            <PanelRight size={16} aria-hidden />
-          )}
-        </button>
-        <span className="budget">
-          <span className="mono muted">TURNS</span>
-          <span className="pips">
-            {Array.from({ length: snapshot.team.turnBudget }, (_, index) => (
-              <span
-                key={index}
-                className={`pip${index < state.turnsThisPrompt ? ' on' : ''}`}
-              />
-            ))}
-          </span>
-        </span>
-      </div>
-
       {/* Above the panes rather than inside them: the team on screen is still the one that
           was there, and nothing in it is wrong. What failed was the click. */}
       {openError !== undefined && (
@@ -194,15 +215,14 @@ export function App(): React.JSX.Element {
           items={state.items}
           pane={pane}
           onSelect={setPane}
+          // Not gated on having several teams, unlike the rest of the rail's chrome: a door
+          // that appears once you have eight teams is a door nobody finds. Demo mode has it
+          // too, where it switches panes and cannot switch teams.
+          onFind={() => setFinding(true)}
           {...(snapshot.demoMode
             ? {}
             : {
-                onSelectTeam: (teamId: string) => {
-                  setOpenError(undefined);
-                  void window.blobot.selectTeam(teamId).then((result) => {
-                    if (!result.ok) setOpenError(result.error);
-                  });
-                },
+                onSelectTeam: (teamId: string) => openTeam(teamId),
                 onNewTeam: () => setCreating(true),
                 onOpenAgents: () => setBrowsingAgents(true),
                 onEditTeam: (teamId: string) => setEditing(teamId),
@@ -216,8 +236,42 @@ export function App(): React.JSX.Element {
             statuses={state.statuses}
             items={items}
             opening={snapshot.opening === true}
+            workspacePath={snapshot.team.workspacePath}
             onAnswerPermission={(requestId, choice) =>
               void window.blobot.answerPermission(requestId, choice)
+            }
+            chrome={
+              <>
+                {snapshot.demoMode && <span className="badge">DEMO</span>}
+                {state.budget !== undefined && (
+                  <button className="send" onClick={() => void window.blobot.resumeAfterBudget()}>
+                    turn budget spent · continue
+                  </button>
+                )}
+                <button
+                  className="paneltoggle"
+                  onClick={feed.toggle}
+                  title={feed.visible ? 'Hide activity' : 'Show activity'}
+                  aria-label={feed.visible ? 'Hide activity' : 'Show activity'}
+                  aria-pressed={feed.visible}
+                >
+                  {feed.visible ? (
+                    <PanelRightClose size={16} aria-hidden />
+                  ) : (
+                    <PanelRight size={16} aria-hidden />
+                  )}
+                </button>
+                {/* The budget is per prompt and the pips fill as the team spends it, so it
+                    belongs above the transcript it is being spent in. */}
+                <span className="budget">
+                  <span className="mono muted">TURNS</span>
+                  <span className="pips">
+                    {Array.from({ length: snapshot.team.turnBudget }, (_, index) => (
+                      <span key={index} className={`pip${index < state.turnsThisPrompt ? ' on' : ''}`} />
+                    ))}
+                  </span>
+                </span>
+              </>
             }
           />
           <Composer
@@ -231,7 +285,15 @@ export function App(): React.JSX.Element {
             onSend={(agentIds, text) => void window.blobot.prompt(agentIds, text)}
           />
         </div>
-        {feed.visible && <Feed entries={state.feed} agents={snapshot.agents} pane={pane} />}
+        {feed.visible && (
+          <Feed
+            entries={state.feed}
+            agents={snapshot.agents}
+            usage={state.usage}
+            injection={state.injection}
+            pane={pane}
+          />
+        )}
         {editingTeam !== undefined && (
           <EditTeam
             team={editingTeam}
@@ -244,12 +306,51 @@ export function App(): React.JSX.Element {
         {/* Over the panes rather than in place of them: the team behind it keeps running, and
             an edit here is about agents rather than about what is on screen. Nothing it does
             restarts a team, so nothing behind it has to be torn down. */}
-        {browsingAgents && <Agents onClose={() => setBrowsingAgents(false)} />}
+        {browsingAgents && (
+          <Agents
+            onClose={() => setBrowsingAgents(false)}
+            hiringAtOnce={opened.get('screen') === 'hire'}
+          />
+        )}
         {deletingTeam !== undefined && (
           <DeleteTeam
             team={deletingTeam}
             onClose={() => setDeleting(undefined)}
             onDeleted={() => refresh(true)}
+          />
+        )}
+        {/* Over every other layer, because it is how you leave the one you are on. It is the
+            only surface in the app that is not a place: it opens on a key, answers, and goes. */}
+        {finding && (
+          <Navigator
+            team={team}
+            teams={snapshot.teams}
+            agents={snapshot.agents}
+            onClose={() => setFinding(false)}
+            onSelectAgent={(teamId, agentId) => {
+              setFinding(false);
+              setBrowsingAgents(false);
+              if (teamId === team.id) setPane({ kind: 'agent', agentId });
+              else openTeam(teamId, agentId);
+            }}
+            {...(snapshot.demoMode
+              ? {}
+              : {
+                  onSelectTeam: (teamId: string) => {
+                    setFinding(false);
+                    setBrowsingAgents(false);
+                    if (teamId === team.id) setPane({ kind: 'team' });
+                    else openTeam(teamId);
+                  },
+                  onOpenAgents: () => {
+                    setFinding(false);
+                    setBrowsingAgents(true);
+                  },
+                  onNewTeam: () => {
+                    setFinding(false);
+                    setCreating(true);
+                  },
+                })}
           />
         )}
         <div

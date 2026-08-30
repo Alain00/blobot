@@ -5,10 +5,15 @@ import { Check, ChevronDown, Shuffle, X } from 'lucide-react';
 import type {
   EditAgentResult,
   NewAgentSpec,
+  TrustLevel,
   UiAgentProfile,
   UiRuntimeChoice,
 } from '../../../shared/api.js';
 import { Blob } from './Blob.js';
+import { RuntimeMark } from './RuntimeMark.js';
+import { RuntimeOptions } from './RuntimeOptions.js';
+import { TrustPick } from './TrustPick.js';
+import { RuntimeSetup } from './RuntimeSetup.js';
 
 /**
  * An agent's definition, on its own, in a dialog: hiring one, and restating one that exists.
@@ -56,8 +61,13 @@ function AgentFields({
   setRuntimeId,
   hue,
   setHue,
+  runtimeOptions,
+  setRuntimeOptions,
+  trust,
+  setTrust,
   /** The name's face until there is a name. An edit always has one; hiring does not yet. */
   seedFallback,
+  onRuntimesChanged,
 }: {
   runtimes: readonly UiRuntimeChoice[];
   name: string;
@@ -70,9 +80,24 @@ function AgentFields({
   setRuntimeId: (value: string) => void;
   hue: number | undefined;
   setHue: (value: number | undefined) => void;
+  runtimeOptions: Readonly<Record<string, string>>;
+  setRuntimeOptions: (value: Readonly<Record<string, string>>) => void;
+  trust: TrustLevel;
+  setTrust: (value: TrustLevel) => void;
   seedFallback: string;
+  /** The machine changed under the picker: a runtime was signed in to, or installed. */
+  onRuntimesChanged?: () => void;
 }): React.JSX.Element {
   const runtime = runtimes.find((entry) => entry.runtimeId === runtimeId);
+  /**
+   * The way out of the state the line below reports, when there is one.
+   *
+   * At most one, and often none: core decides what a state is worth offering, and a runtime
+   * that is `ready` offers nothing. The renderer draws the button and sends back the two ids
+   * it was given; it never learns what command that runs.
+   */
+  const remedy = runtime?.remedies[0];
+  const [fixing, setFixing] = useState(false);
   // The preview is seeded by the name being typed, so the face changes as the agent is named.
   // Before there is a name there is still a blobatar: an empty seed is a valid one, and a blank
   // square here would read as a broken image rather than as "nothing yet".
@@ -139,7 +164,8 @@ function AgentFields({
           </span>
           <Select.Root value={runtimeId} onValueChange={setRuntimeId}>
             <Select.Trigger className="field selecttrigger" aria-labelledby="runtimelabel">
-              <Select.Value />
+              <RuntimeMark runtimeId={runtimeId} />
+              <Select.Value className="selectvalue" />
               <Select.Icon>
                 <ChevronDown size={14} aria-hidden />
               </Select.Icon>
@@ -156,6 +182,7 @@ function AgentFields({
                       disabled={!entry.supported}
                       className="selectitem"
                     >
+                      <RuntimeMark runtimeId={entry.runtimeId} />
                       <Select.ItemText>
                         {entry.label}
                         {entry.supported ? '' : ' (no adapter yet)'}
@@ -173,8 +200,45 @@ function AgentFields({
             <span className="note mono muted">
               {READINESS_WORD[runtime.readiness]}
               {runtime.version === undefined ? '' : ` · ${runtime.version}`} · {runtime.detail}
+              {/* Beside the state rather than under it, because it is the answer to that
+                  sentence. Still not a gate: the runtime stays pickable while it says this,
+                  which is ticket 11's rule and the reason this is a button and not a block. */}
+              {remedy !== undefined && (
+                <button className="btn tiny" onClick={() => setFixing(true)}>
+                  {remedy.kind === 'install' ? 'install it' : 'sign in'}
+                </button>
+              )}
             </span>
           )}
+          {fixing && runtime !== undefined && remedy !== undefined && (
+            <RuntimeSetup
+              runtime={runtime}
+              remedy={remedy}
+              onClose={() => setFixing(false)}
+              // Asked again on the way out, so the line above says what the machine holds now
+              // rather than what it held when this dialog opened.
+              onSettled={() => onRuntimesChanged?.()}
+            />
+          )}
+        </div>
+        {/* Under the runtime and not beside it, because what there is to choose is a fact
+            about the runtime above: change that picker and this is a different control. The
+            label is the one line blobot writes here, since the groups name themselves. */}
+        <div className="labelled">
+          <span className="fieldlabel mono">HOW IT ANSWERS</span>
+          <RuntimeOptions
+            runtimeId={runtimeId}
+            value={runtimeOptions}
+            onChange={setRuntimeOptions}
+          />
+        </div>
+        {/* Under *how it answers* because it is the other half of the same question about the
+            same agent: that one is what it says, this one is what it does. Not in the creation
+            flow, and not on the team: an AgentWorkspace is per agent, so trusting Alice has
+            never said anything about Bob and the control should not imply it does. */}
+        <div className="labelled">
+          <span className="fieldlabel mono">WHAT IT CAN DO WITHOUT ASKING</span>
+          <TrustPick value={trust} onChange={setTrust} />
         </div>
         <label className="labelled">
           <span className="fieldlabel mono">STANDING INSTRUCTIONS</span>
@@ -202,10 +266,12 @@ export function HireAgent({
   runtimes,
   onClose,
   onHired,
+  onRuntimesChanged,
 }: {
   runtimes: readonly UiRuntimeChoice[];
   onClose: () => void;
   onHired: (profileId: string) => Promise<void> | void;
+  onRuntimesChanged?: () => void;
 }): React.JSX.Element {
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
@@ -213,6 +279,10 @@ export function HireAgent({
   const [runtimeId, setRuntimeId] = useState('');
   /** Undefined means the name decides, which is the default and stays the default. */
   const [hue, setHue] = useState<number | undefined>();
+  /** Empty means the runtime's own defaults, which is what storing nothing means. */
+  const [runtimeOptions, setRuntimeOptions] = useState<Readonly<Record<string, string>>>({});
+  /** Where an agent nobody has thought about this for starts, and where most will stay. */
+  const [trust, setTrust] = useState<TrustLevel>('normal');
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
 
@@ -221,7 +291,9 @@ export function HireAgent({
 
   const hire = async (): Promise<void> => {
     setBusy(true);
-    const result = await window.blobot.hireAgent(specOf({ name, role, instructions, hue }, selected));
+    const result = await window.blobot.hireAgent(
+      specOf({ name, role, instructions, hue, runtimeOptions, trust }, selected),
+    );
     setBusy(false);
     if (!result.ok || result.profileId === undefined) {
       setError(result.error ?? 'The agent could not be hired.');
@@ -257,7 +329,12 @@ export function HireAgent({
             setRuntimeId={setRuntimeId}
             hue={hue}
             setHue={setHue}
+            runtimeOptions={runtimeOptions}
+            setRuntimeOptions={setRuntimeOptions}
+            trust={trust}
+            setTrust={setTrust}
             seedFallback="new agent"
+            {...(onRuntimesChanged === undefined ? {} : { onRuntimesChanged })}
           />
 
           {error !== undefined && <div className="refusal">{error}</div>}
@@ -297,17 +374,23 @@ export function EditAgent({
   runtimes,
   onClose,
   onSaved,
+  onRuntimesChanged,
 }: {
   agent: UiAgentProfile;
   runtimes: readonly UiRuntimeChoice[];
   onClose: () => void;
   onSaved: () => Promise<void> | void;
+  onRuntimesChanged?: () => void;
 }): React.JSX.Element {
   const [name, setName] = useState(agent.name);
   const [role, setRole] = useState(agent.role);
   const [instructions, setInstructions] = useState(agent.instructions ?? '');
   const [runtimeId, setRuntimeId] = useState(agent.runtimeId);
   const [hue, setHue] = useState<number | undefined>(agent.hue);
+  const [runtimeOptions, setRuntimeOptions] = useState<Readonly<Record<string, string>>>(
+    agent.runtimeOptions ?? {},
+  );
+  const [trust, setTrust] = useState<TrustLevel>(agent.trust ?? 'normal');
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   /** What the save actually did, once it has done it. Kept open to be read. */
@@ -320,13 +403,15 @@ export function EditAgent({
     runtimeChanged ||
     role.trim() !== agent.role ||
     instructions.trim() !== (agent.instructions ?? '') ||
-    hue !== agent.hue;
+    hue !== agent.hue ||
+    !sameOptions(runtimeOptions, agent.runtimeOptions ?? {}) ||
+    trust !== (agent.trust ?? 'normal');
 
   const save = async (): Promise<void> => {
     setBusy(true);
     const edit = await window.blobot.editAgent(
       agent.id,
-      specOf({ name, role, instructions, hue }, runtimeId),
+      specOf({ name, role, instructions, hue, runtimeOptions, trust }, runtimeId),
     );
     setBusy(false);
     if (!edit.ok) {
@@ -379,7 +464,12 @@ export function EditAgent({
                 setRuntimeId={setRuntimeId}
                 hue={hue}
                 setHue={setHue}
+                runtimeOptions={runtimeOptions}
+                setRuntimeOptions={setRuntimeOptions}
+                trust={trust}
+                setTrust={setTrust}
                 seedFallback={agent.name}
+                {...(onRuntimesChanged === undefined ? {} : { onRuntimesChanged })}
               />
 
               <WhereItLands
@@ -432,8 +522,8 @@ function WhereItLands({
   return (
     <div className="note">
       <span className="muted">
-        The role, the standing instructions and the face reach <b>{on}</b> the next time{' '}
-        {teams.length === 1 ? 'it starts' : 'each starts'}.
+        The role, the standing instructions, the face and how it answers reach <b>{on}</b> the
+        next time {teams.length === 1 ? 'it starts' : 'each starts'}.
       </span>
       {renamedTo !== undefined && (
         <span className="muted">
@@ -541,7 +631,14 @@ export function RetireAgent({
 
 /** The form's four fields as the main process wants them. Trimming is this side's job. */
 function specOf(
-  form: { name: string; role: string; instructions: string; hue: number | undefined },
+  form: {
+    name: string;
+    role: string;
+    instructions: string;
+    hue: number | undefined;
+    runtimeOptions: Readonly<Record<string, string>>;
+    trust: TrustLevel;
+  },
   runtimeId: string,
 ): NewAgentSpec {
   return {
@@ -550,5 +647,20 @@ function specOf(
     runtimeId,
     ...(form.instructions.trim() === '' ? {} : { instructions: form.instructions.trim() }),
     ...(form.hue === undefined ? {} : { hue: form.hue }),
+    // Always sent, even empty: an edit restates the definition, so a picker cleared back to
+    // the runtime's defaults has to be able to say so.
+    runtimeOptions: form.runtimeOptions,
+    // `normal` is sent rather than omitted, for the same reason: an agent lowered back from
+    // `trusting` has to be able to say `normal` and not merely stop saying `trusting`.
+    trust: form.trust,
   };
+}
+
+/** Whether two sets of choices say the same thing, so `save` stays armed only on a change. */
+function sameOptions(
+  left: Readonly<Record<string, string>>,
+  right: Readonly<Record<string, string>>,
+): boolean {
+  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+  return [...keys].every((key) => left[key] === right[key]);
 }

@@ -23,6 +23,16 @@ export const teams = sqliteTable('teams', {
   // JSON, because it is a list the app reads whole and never queries into — and a join table
   // for a handful of relative paths per team would be a schema nobody thanks you for.
   workspaceRepos: text('workspace_repos'),
+  /**
+   * The team's icon, as a `data:` URL, or NULL for a team drawn from its members alone.
+   *
+   * Inlined rather than a path to a file, and that is the decision worth stating: an icon
+   * detected in a Workspace lives in a folder the user can move, rename or delete, and a team
+   * whose mark vanished with its folder would be the same bug the launch reconcile exists to
+   * report. It is a downscaled PNG of at most a few kilobytes — small enough that a column
+   * costs less than an asset directory with its own lifecycle to get wrong.
+   */
+  icon: text('icon'),
   turnBudget: integer('turn_budget').notNull().default(10),
   /**
    * The team's **lead**: the agent the team pane addresses when the user names nobody.
@@ -64,6 +74,28 @@ export const agentProfiles = sqliteTable('agent_profiles', {
   role: text('role').notNull(),
   runtimeId: text('runtime_id').notNull(),
   executablePath: text('executable_path'),
+  /**
+   * What the user chose among the options the runtime advertises, as JSON keyed by the
+   * provider's own group id: `{"model":"sonnet","effort":"high"}`.
+   *
+   * One opaque column rather than a column per axis, because the axes belong to the provider:
+   * the Claude bridge offers three and OpenCode offers one, and a schema that names `effort`
+   * would be blobot deciding which runtimes may exist. An absent key is the runtime's default.
+   *
+   * It supersedes the `model` column below, which shipped with the schema and was never once
+   * written: a per-axis column cannot hold an axis the next runtime invents.
+   */
+  runtimeOptions: text('runtime_options'),
+  /**
+   * How much of this agent's own work blobot vouches for: `careful`, `normal` or `trusting`.
+   *
+   * Its own column rather than a key in `runtime_options`, because that column holds the
+   * *provider's* vocabulary and this is blobot's own: both adapters answer to it, and neither
+   * runtime has ever advertised it. NULL is `normal`, so every agent hired before this column
+   * keeps the posture it was already running under. See `trust.ts`.
+   */
+  trust: text('trust'),
+  /** Dead since 2026-08-30, kept because dropping a column is a table rebuild for no gain. */
   model: text('model'),
   /** Standing instructions, folded into the persona. Never a credential. */
   instructions: text('instructions'),
@@ -117,6 +149,11 @@ export const agents = sqliteTable(
     runtimeId: text('runtime_id').notNull(),
     /** Ticket 07 pins CLAUDE_CODE_EXECUTABLE to the user's own binary. */
     executablePath: text('executable_path'),
+    /** Copied from the profile at team creation, like the name and the face. See ADR-0002. */
+    runtimeOptions: text('runtime_options'),
+    /** Copied the same way, and restated by an edit the same way. NULL is `normal`. */
+    trust: text('trust'),
+    /** Dead since 2026-08-30, superseded by `runtime_options`. Never written. */
     model: text('model'),
     workspacePath: text('workspace_path').notNull(),
     /** NULL when the Workspace is not a git repository. */

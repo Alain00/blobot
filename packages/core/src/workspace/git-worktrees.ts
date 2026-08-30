@@ -5,6 +5,7 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
 import { inspectWorkspace } from './inspect.js';
+import { directorySize } from './size.js';
 import {
   branchNameFor,
   refSlug,
@@ -109,6 +110,25 @@ export class GitWorktreeWorkspaces implements WorkspaceProvider {
     return this.removeWorktree(request.workspacePath, workspace.path, branch);
   }
 
+  /**
+   * The same removal, with the branch deleted whatever is on it: `-D` rather than `-d`.
+   *
+   * Only ever reached from a full clean the user asked for by name and by size. `remove` keeps
+   * a branch that still holds commits and that stays the default; this is the door out for the
+   * team whose work is finished and whose disk is not.
+   */
+  async purge(request: ProvisionRequest): Promise<RemovalOutcome> {
+    const workspace = this.workspaceFor(request);
+    const branch = branchNameFor(request.teamName, request.agentName);
+    return this.purgeWorktree(request.workspacePath, workspace.path, branch);
+  }
+
+  /** What the worktree and its branch are holding. The directory, since the branch's objects
+   *  live in the user's own repository and are not blobot's to count. */
+  async measure(request: ProvisionRequest): Promise<number> {
+    return directorySize(this.workspaceFor(request).path);
+  }
+
   /** Where an agent's workspace and branch live. Pure: no git, no filesystem. */
   workspaceFor(request: ProvisionRequest): AgentWorkspace {
     return {
@@ -197,6 +217,22 @@ export class GitWorktreeWorkspaces implements WorkspaceProvider {
       work: 'kept',
       detail: `${branch} has unmerged commits and was kept; delete it with 'git branch -D ${branch}'`,
     };
+  }
+
+  /** `removeWorktree`, with `git branch -D`. Public for the same reason the others are: the
+   *  `nested` provider does this per repository and must not grow a second copy of it. */
+  async purgeWorktree(repoPath: string, targetPath: string, branch: string): Promise<RemovalOutcome> {
+    if (existsSync(targetPath)) {
+      await this.#git(repoPath, ['worktree', 'remove', '--force', targetPath]);
+    }
+    await this.#git(repoPath, ['worktree', 'prune']);
+    await rm(targetPath, { recursive: true, force: true });
+
+    // `-D` after `-d`, so a branch that was already merged is deleted by the gentle command and
+    // the forceful one is only ever run on a branch that really did still hold something.
+    if (await this.#succeeds(repoPath, ['branch', '-d', branch])) return { work: 'discarded' };
+    await this.#succeeds(repoPath, ['branch', '-D', branch]);
+    return { work: 'discarded' };
   }
 
   // ------------------------------------------------------------------ git

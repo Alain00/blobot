@@ -106,6 +106,11 @@ export class SqliteRecorder implements TurnRecorder {
           .update(toolCalls)
           .set({
             status: event.status,
+            // The name a call is announced under is provisional: the runtime names it before
+            // the arguments have finished streaming, so bash arrives as `Terminal` and the
+            // command lands on a later update. Persisting only the first one means a restored
+            // activity column says something the live one never said.
+            ...(event.title === undefined ? {} : { name: event.title }),
             ...(event.exit === undefined ? {} : { exitCode: event.exit }),
             ...(event.error === undefined ? {} : { failureReason: event.error }),
             ...(event.output === undefined ? {} : { output: event.output }),

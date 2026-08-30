@@ -1,8 +1,20 @@
-import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import type { StopReason } from '../events.js';
 import type { Agent, AgentDefinition, AgentProfile, Message, Team } from '../orchestrator/domain.js';
 import type { MessageStore } from '../orchestrator/message-store.js';
+import { trustLevelOf, type TrustLevel } from '../trust.js';
 import type { BlobotDatabase } from './database.js';
-import { agentMessages, agentProfiles, agents, messages, sessions, teams } from './schema.js';
+import {
+  agentMessages,
+  agentProfiles,
+  agents,
+  events,
+  messages,
+  sessions,
+  teams,
+  toolCalls,
+  turns,
+} from './schema.js';
 
 /**
  * Runtime config, as ticket 13 stores it: typed columns and nothing else. There is no JSON
@@ -17,7 +29,10 @@ export interface AgentProfileRecord extends AgentProfile {
 export interface AgentRecord extends Agent {
   readonly runtimeId: string;
   readonly executablePath?: string;
-  readonly model?: string;
+  /** The user's choices among what the runtime advertises. JSON in the column, a map here. */
+  readonly runtimeOptions?: Readonly<Record<string, string>>;
+  /** How much of its own work blobot vouches for. Absent is `normal`. See `trust.ts`. */
+  readonly trust?: TrustLevel;
   /** NULL when the Workspace is not a git repository. */
   readonly branch?: string;
   readonly createdAt: number;
@@ -54,6 +69,7 @@ export class SqliteStore implements MessageStore {
       workspaceKind: team.workspaceKind,
       workspaceRepos:
         team.workspaceRepos === undefined ? null : JSON.stringify(team.workspaceRepos),
+      icon: team.icon ?? null,
       turnBudget: team.turnBudget,
       leadAgentId: team.leadAgentId ?? null,
       createdAt: team.createdAt,
@@ -102,11 +118,28 @@ export class SqliteStore implements MessageStore {
         ...(row.workspaceRepos === null
           ? {}
           : { workspaceRepos: JSON.parse(row.workspaceRepos) as string[] }),
+        ...(row.icon === null ? {} : { icon: row.icon }),
         turnBudget: row.turnBudget,
         ...(row.leadAgentId === null ? {} : { leadAgentId: row.leadAgentId }),
         createdAt: row.createdAt,
         ...(row.deletedAt === null ? {} : { deletedAt: row.deletedAt }),
       }));
+  }
+
+  /**
+   * Give a team an icon, or take it off.
+   *
+   * Its own method for the same reason `setTeamLead` is one: it is a change to a team that
+   * already exists, made from a dialog that changes nothing else, and it restarts nothing.
+   * `undefined` is a real value — a team with no icon is drawn from its members, which is the
+   * resting state and not a missing one.
+   */
+  setTeamIcon(teamId: string, icon: string | undefined): void {
+    this.#db
+      .update(teams)
+      .set({ icon: icon ?? null })
+      .where(eq(teams.id, teamId))
+      .run();
   }
 
   teamById(teamId: string): Team | undefined {
@@ -154,7 +187,8 @@ export class SqliteStore implements MessageStore {
       role: profile.role,
       runtimeId: profile.runtimeId,
       executablePath: profile.executablePath ?? null,
-      model: profile.model ?? null,
+      runtimeOptions: encodeOptions(profile.runtimeOptions),
+      trust: profile.trust ?? null,
       instructions: profile.instructions ?? null,
       hue: profile.hue ?? null,
       createdAt: profile.createdAt,
@@ -212,6 +246,8 @@ export class SqliteStore implements MessageStore {
         role: definition.role,
         runtimeId: definition.runtimeId,
         executablePath: definition.executablePath ?? null,
+        runtimeOptions: encodeOptions(definition.runtimeOptions),
+        trust: definition.trust ?? null,
         instructions: definition.instructions ?? null,
         hue: definition.hue ?? null,
       })
@@ -230,7 +266,13 @@ export class SqliteStore implements MessageStore {
    */
   restateAgent(
     agentId: string,
-    stated: { readonly role: string; readonly instructions?: string; readonly hue?: number },
+    stated: {
+      readonly role: string;
+      readonly instructions?: string;
+      readonly hue?: number;
+      readonly runtimeOptions?: Readonly<Record<string, string>>;
+      readonly trust?: TrustLevel;
+    },
   ): void {
     this.#db
       .update(agents)
@@ -238,6 +280,13 @@ export class SqliteStore implements MessageStore {
         role: stated.role,
         instructions: stated.instructions ?? null,
         hue: stated.hue ?? null,
+        // Like the role: restated on every team, taken at that team's next start. The session
+        // in flight keeps what it was launched with, because that is what it was launched with.
+        runtimeOptions: encodeOptions(stated.runtimeOptions),
+        // Same rule, and the one with teeth: `allowedTools` is a `session/new` parameter and
+        // OpenCode's posture is an env var on the child, so neither can change under a live
+        // process. A raised or lowered level is a fact about the next launch.
+        trust: stated.trust ?? null,
       })
       .where(eq(agents.id, agentId))
       .run();
@@ -264,7 +313,8 @@ export class SqliteStore implements MessageStore {
       hue: agent.hue ?? null,
       runtimeId: agent.runtimeId,
       executablePath: agent.executablePath ?? null,
-      model: agent.model ?? null,
+      runtimeOptions: encodeOptions(agent.runtimeOptions),
+      trust: agent.trust ?? null,
       workspacePath: agent.workspacePath,
       branch: agent.branch ?? null,
       createdAt: agent.createdAt,
@@ -304,6 +354,21 @@ export class SqliteStore implements MessageStore {
       .orderBy(desc(sessions.startedAt), desc(sessions.id))
       .get();
     return row?.providerSessionId ?? undefined;
+  }
+
+  /**
+   * The persona this agent's most recent session was opened with.
+   *
+   * Persisted rather than recomposed: what the running agent actually carries is the text it
+   * was given, and an edit to its definition does not reach a session that is already open.
+   */
+  lastPersonaOf(agentId: string): string | undefined {
+    return this.#db
+      .select({ personaText: sessions.personaText })
+      .from(sessions)
+      .where(eq(sessions.agentId, agentId))
+      .orderBy(desc(sessions.startedAt), desc(sessions.id))
+      .get()?.personaText;
   }
 
   startSession(session: SessionRecord): SessionRecord {
@@ -413,6 +478,114 @@ export class SqliteStore implements MessageStore {
   }
 
   /**
+   * The team's log, for the activity column: finished tool calls and finished turns.
+   *
+   * The column is rebuilt from live events only, so before this it emptied on every snapshot —
+   * a team switch, and anything else that re-snapshots — while the transcript beside it came
+   * back in full. The rows were in the database the whole time. Unusual endings are here for a
+   * second reason: `turn stopped · …` is drawn in the *transcript*, and a switch away and back
+   * used to leave an answer that stopped mid-sentence looking like an answer that finished.
+   *
+   * Bounded, and by time across both halves rather than by count on each: the activity column
+   * keeps 200 entries, and taking the last 200 of each independently would pair a turn ending
+   * with tool calls from an hour later.
+   *
+   * One thing a restored line cannot say: live, a cancelled tool that reports `completed` with
+   * an explicit `exit: null` is printed as `(exit null)` rather than trusted. The column stores
+   * a null for that *and* for every tool that never had an exit code, so a restored line that
+   * printed it would be guessing. It says the status and stops there.
+   */
+  logOfTeam(teamId: string, limit = 200): {
+    tools: { toolCallId: string; agentId: string; at: number; title: string; status: string }[];
+    turns: { turnId: string; agentId: string; at: number; stopReason: StopReason }[];
+  } {
+    const ids = this.agentsOfTeam(teamId, { includeDeleted: true }).map((agent) => agent.id);
+    if (ids.length === 0) return { tools: [], turns: [] };
+    const tools = this.#db
+      .select()
+      .from(toolCalls)
+      .where(and(inArray(toolCalls.agentId, ids), isNotNull(toolCalls.endedAt)))
+      .orderBy(desc(toolCalls.endedAt))
+      .limit(limit)
+      .all()
+      .map((row) => ({
+        // The provider's id, not the row's: it is what the live line is keyed by, so a
+        // restored entry and a live one for the same call are the same entry.
+        toolCallId: row.providerToolCallId,
+        agentId: row.agentId,
+        at: row.endedAt ?? row.startedAt,
+        title: row.name,
+        status: row.status,
+      }));
+    const ended = this.#db
+      .select()
+      .from(turns)
+      .where(and(inArray(turns.agentId, ids), isNotNull(turns.endedAt), isNotNull(turns.stopReason)))
+      .orderBy(desc(turns.endedAt))
+      .limit(limit)
+      .all()
+      .map((row) => ({
+        turnId: row.id,
+        agentId: row.agentId,
+        at: row.endedAt ?? row.startedAt,
+        stopReason: (row.stopReason ?? 'end_turn') as StopReason,
+      }));
+    // One window over both halves, so the column reads as one log and not as two lists that
+    // happen to be adjacent.
+    const cutoff = [...tools, ...ended]
+      .map((entry) => entry.at)
+      .sort((left, right) => right - left)
+      .slice(0, limit)
+      .at(-1);
+    if (cutoff === undefined) return { tools: [], turns: [] };
+    return {
+      tools: tools.filter((entry) => entry.at >= cutoff),
+      turns: ended.filter((entry) => entry.at >= cutoff),
+    };
+  }
+
+  /**
+   * The last context reading each of this team's agents reported, so a relaunch or a team
+   * switch does not blank the gauge.
+   *
+   * One query per agent rather than one for the team: an agent that has been quiet all week
+   * still has a real occupancy, and a single bounded scan of the team's events would drop it
+   * behind a talkative teammate's. Agents that have never reported are absent from the map,
+   * which is the honest answer and is not the same as zero.
+   */
+  lastUsageOfTeam(teamId: string): Record<string, { used: number; size: number; costUsd?: number }> {
+    const usage: Record<string, { used: number; size: number; costUsd?: number }> = {};
+    for (const agent of this.agentsOfTeam(teamId, { includeDeleted: true })) {
+      // A handful of rows rather than one, because the reading a cancelled turn leaves behind
+      // is `used: 0` and is persisted like any other: a stored zero is a gauge reset, not an
+      // empty context, so the last *real* reading is what the pane wants back.
+      const rows = this.#db
+        .select({ payload: events.payload })
+        .from(events)
+        .where(and(eq(events.agentId, agent.id), eq(events.kind, 'usage_updated')))
+        .orderBy(desc(events.at), desc(events.id))
+        .limit(8)
+        .all();
+      for (const row of rows) {
+        const payload = JSON.parse(row.payload) as {
+          used?: number;
+          size?: number;
+          costUsd?: number;
+        };
+        if (typeof payload.used !== 'number' || typeof payload.size !== 'number') continue;
+        if (payload.used === 0) continue;
+        usage[agent.id] = {
+          used: payload.used,
+          size: payload.size,
+          ...(payload.costUsd === undefined ? {} : { costUsd: payload.costUsd }),
+        };
+        break;
+      }
+    }
+    return usage;
+  }
+
+  /**
    * When this team last said anything: the latest of a user or peer message and an agent's own
    * words. The rail draws it on a stopped team, which otherwise carries no reason to prefer one
    * over another. Undefined for a team that has never held a turn.
@@ -464,7 +637,8 @@ function toProfileRecord(row: AgentProfileRow): AgentProfileRecord {
     runtimeId: row.runtimeId,
     createdAt: row.createdAt,
     ...(row.executablePath === null ? {} : { executablePath: row.executablePath }),
-    ...(row.model === null ? {} : { model: row.model }),
+    ...optionsOf(row.runtimeOptions),
+    ...(row.trust === null ? {} : { trust: trustLevelOf(row.trust) }),
     ...(row.instructions === null ? {} : { instructions: row.instructions }),
     ...(row.hue === null ? {} : { hue: row.hue }),
     ...(row.deletedAt === null ? {} : { deletedAt: row.deletedAt }),
@@ -498,8 +672,37 @@ function toAgentRecord(row: AgentRow): AgentRecord {
     ...(row.instructions === null ? {} : { instructions: row.instructions }),
     ...(row.hue === null ? {} : { hue: row.hue }),
     ...(row.executablePath === null ? {} : { executablePath: row.executablePath }),
-    ...(row.model === null ? {} : { model: row.model }),
+    ...optionsOf(row.runtimeOptions),
+    ...(row.trust === null ? {} : { trust: trustLevelOf(row.trust) }),
     ...(row.branch === null ? {} : { branch: row.branch }),
     ...(row.deletedAt === null ? {} : { deletedAt: row.deletedAt }),
   };
+}
+
+/**
+ * The runtime option choices, in and out of one JSON column.
+ *
+ * An empty map is stored as NULL rather than as `{}`, so "the user chose nothing" has one
+ * spelling in the database instead of two. Reading is defensive because the column is the one
+ * place in this schema holding a shape the *provider* decides: a row written by a future
+ * version, or by hand, must degrade to no choices rather than to a crash at launch.
+ */
+function encodeOptions(options: Readonly<Record<string, string>> | undefined): string | null {
+  if (options === undefined || Object.keys(options).length === 0) return null;
+  return JSON.stringify(options);
+}
+
+function optionsOf(raw: string | null): { runtimeOptions?: Record<string, string> } {
+  if (raw === null || raw === '') return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return {};
+    const options: Record<string, string> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (typeof value === 'string') options[key] = value;
+    }
+    return Object.keys(options).length === 0 ? {} : { runtimeOptions: options };
+  } catch {
+    return {};
+  }
 }

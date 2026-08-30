@@ -1,10 +1,13 @@
 import { findAgentByName } from '@blobot/core/domain';
-import type { Agent, AgentEvent, AgentStatus, Message } from '@blobot/core/domain';
+import type { Agent, AgentEvent, AgentStatus, Message, StopReason } from '@blobot/core/domain';
 import type {
   UiPermissionOutcome,
   UiPermissionRequest,
   UiCommand,
+  UiInjection,
+  UiLog,
   UiSnapshot,
+  UiUsage,
 } from '../../shared/api.js';
 
 /** What a conversation pane is showing: one agent's session, or the whole team's stream. */
@@ -133,6 +136,10 @@ export interface AppState {
   items: Item[];
   feed: FeedEntry[];
   budget: { used: number; budget: number } | undefined;
+  /** How full each agent's context is, by agent id. Absent means it has never reported. */
+  usage: Record<string, UiUsage>;
+  /** What blobot itself put into each agent's turn. Snapshot-only: nothing streams it. */
+  injection: Record<string, UiInjection>;
 }
 
 export type Action =
@@ -142,6 +149,7 @@ export type Action =
   | { type: 'commands'; agentId: string; commands: readonly UiCommand[] }
   | { type: 'message'; message: Message }
   | { type: 'budget'; used: number; budget: number }
+  | { type: 'silentHandoff'; agentId: string; named: readonly string[]; at: number }
   | { type: 'turns'; turnsThisPrompt: number }
   | { type: 'permission'; request: UiPermissionRequest; at: number }
   | { type: 'permissionSettled'; id: string; outcome: UiPermissionOutcome };
@@ -154,6 +162,8 @@ export const initialState: AppState = {
   items: [],
   feed: [],
   budget: undefined,
+  usage: {},
+  injection: {},
 };
 
 /**
@@ -163,6 +173,20 @@ export const initialState: AppState = {
  * for the adapter to tag its own tool so the UI never has to know a name at all.
  */
 const OWN_TOOL = /(^|_)message_agent$/;
+
+/**
+ * A tool's title, on one line.
+ *
+ * A runtime names a bash call after its command, and a command can be a hundred characters of
+ * `&&` across six lines. Rendered as it arrives it is fifteen rows of the activity column for
+ * one entry, which buries every other entry in the log. The log's job is to say what happened,
+ * not to reproduce it: the whole command was never readable in a column this narrow, and the
+ * transcript is where the agent explains what it ran.
+ */
+function oneLine(title: string): string {
+  const flat = title.replace(/\s+/gu, ' ').trim();
+  return flat.length > 80 ? `${flat.slice(0, 79)}\u2026` : flat;
+}
 
 export function reduce(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -180,6 +204,8 @@ export function reduce(state: AppState, action: Action): AppState {
         // forgets a team the pool has since unloaded, which is the correct thing to forget.
         statuses: { ...action.snapshot.statuses },
         commands: { ...action.snapshot.commands },
+        usage: { ...action.snapshot.usage },
+        injection: { ...action.snapshot.injection },
         turnsThisPrompt: action.snapshot.turnsThisPrompt,
         items: [
           ...action.snapshot.messages.map(toItem),
@@ -195,6 +221,20 @@ export function reduce(state: AppState, action: Action): AppState {
           ),
           // A question nobody has answered is still being asked, so it comes back with the
           // pane. It sorts to the end because that is where the turn is standing.
+          // A turn that stopped for an unusual reason is *conversation*, not log, so it has to
+          // come back with the transcript: an answer that stopped mid-sentence and comes back
+          // without its reason reads as an answer that finished.
+          ...action.snapshot.log.turns
+            .filter((turn) => turn.stopReason !== 'end_turn')
+            .map(
+              (turn): Item => ({
+                kind: 'system',
+                id: `${turn.turnId}:${turn.agentId}:${turn.at}:stopped`,
+                at: turn.at,
+                agentId: turn.agentId,
+                text: stoppedBecause(turn.stopReason),
+              }),
+            ),
           ...action.snapshot.permissions.map(
             (request): Item => ({
               kind: 'permission',
@@ -208,7 +248,11 @@ export function reduce(state: AppState, action: Action): AppState {
             }),
           ),
         ].sort((left, right) => left.at - right.at),
-        feed: [],
+        // Rebuilt from the same rows, through the same formatting as a live line. The column
+        // used to empty on every snapshot while the transcript beside it came back in full,
+        // which is what a team switch looked like: the log of what the team had done was gone
+        // and nothing said it was only unloaded.
+        feed: restoreFeed(action.snapshot.log),
         budget: undefined,
       };
     case 'turns':
@@ -221,6 +265,27 @@ export function reduce(state: AppState, action: Action): AppState {
       return { ...state, commands: { ...state.commands, [action.agentId]: action.commands } };
     case 'budget':
       return { ...state, budget: { used: action.used, budget: action.budget } };
+    case 'silentHandoff': {
+      // A transcript line rather than a banner, because it is about one turn and it belongs
+      // where that turn ended. It states two facts and offers nothing: no button sends the
+      // message for her, because composing the message she did not send is inference, and the
+      // wording is an observation rather than an accusation.
+      const id = `${action.agentId}:${action.at}:silent-handoff`;
+      if (state.items.some((item) => item.id === id)) return state;
+      return {
+        ...state,
+        items: [
+          ...state.items,
+          {
+            kind: 'system',
+            id,
+            at: action.at,
+            agentId: action.agentId,
+            text: `named ${listNames(action.named)} · no message sent`,
+          },
+        ],
+      };
+    }
     case 'permission': {
       if (state.items.some((item) => item.id === action.request.id)) return state;
       return {
@@ -269,6 +334,12 @@ export function reduce(state: AppState, action: Action): AppState {
     case 'event':
       return applyEvent(state, action.event);
   }
+}
+
+/** `Bob`, `Bob and Carol`, `Bob, Carol and Dave`. Prose, because the line is read as a sentence. */
+function listNames(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1] as string}`;
 }
 
 function applyMessage(state: AppState, message: Message): AppState {
@@ -351,19 +422,30 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
             id: event.toolCallId,
             at: event.at,
             agentId: event.agentId,
-            title: event.title,
+            title: oneLine(event.title),
             status: asked ? 'asking' : 'running',
           },
         ],
       };
     }
     case 'tool_call_updated': {
-      if (event.status !== 'completed' && event.status !== 'failed') return state;
       const index = state.items.findIndex(
         (item) => item.kind === 'tool' && item.id === event.toolCallId,
       );
       if (index < 0) return state;
       const existing = state.items[index] as Extract<Item, { kind: 'tool' }>;
+      // A tool call is announced before its arguments have finished streaming, so the first
+      // title is whatever the runtime can say without them — `Terminal` for a bash call that
+      // has no command yet, `Edit` for an edit with no path. The refinement that carries the
+      // real one arrives as an update with no terminal status, which is why it is taken here
+      // rather than only on the way out.
+      const title = event.title === undefined ? existing.title : oneLine(event.title);
+      if (event.status !== 'completed' && event.status !== 'failed') {
+        if (title === existing.title) return state;
+        const items = [...state.items];
+        items[index] = { ...existing, title };
+        return { ...state, items };
+      }
       // Tool activity is the seam: the in-flight line lives in the conversation and leaves it
       // when the tool finishes; the completion goes to the feed. The conversation shows what
       // the agent is doing *now*, the feed is the log.
@@ -376,7 +458,7 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
           agentId: event.agentId,
           // A cancelled tool reports `completed` with `exit: null`, so the exit code is
           // printed rather than trusted.
-          text: `${existing.title} ${event.status}${event.exit === null ? ' (exit null)' : ''}`,
+          text: `${title} ${event.status}${event.exit === null ? ' (exit null)' : ''}`,
         }),
       };
     }
@@ -396,7 +478,7 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
                 id: `${event.turnId}:${event.agentId}:${event.at}:stopped`,
                 at: event.at,
                 agentId: event.agentId,
-                text: `turn stopped · ${event.stopReason.replace(/_/g, ' ')}`,
+                text: stoppedBecause(event.stopReason),
               },
             ]
           : state.items,
@@ -430,13 +512,89 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
           emphasis: true,
         }),
       };
-    // Thinking has no pane of its own yet, usage has no gauge yet, and the peer message is
-    // rendered from its record rather than from this announcement.
-    case 'agent_thought_delta':
     case 'usage_updated':
+      // `used: 0` is the gauge reset a cancelled turn leaves behind, observed on both runtimes
+      // and reproduced by the mock. Taking it would zero the gauge every time the user stops an
+      // agent, so a zero never overwrites a reading: it can only be the first one, where it is
+      // an agent that has genuinely said nothing yet.
+      if (event.used === 0 && state.usage[event.agentId] !== undefined) return state;
+      return {
+        ...state,
+        usage: {
+          ...state.usage,
+          [event.agentId]: {
+            used: event.used,
+            size: event.size,
+            ...(event.costUsd === undefined ? {} : { costUsd: event.costUsd }),
+          },
+        },
+      };
+    // Thinking has no pane of its own yet, and the peer message is rendered from its record
+    // rather than from this announcement.
+    case 'agent_thought_delta':
     case 'agent_message_sent':
       return state;
   }
+}
+
+/**
+ * Why a turn stopped, in the transcript's own words rather than in the protocol's.
+ *
+ * The stop reason already reached the pane, but it reached it as `max tokens`, which names a
+ * mechanism and not a consequence. The one this exists for is exactly that: a turn that stopped
+ * because the agent had no room left reads to a user as an agent that got worse for no reason,
+ * and that is the shape of a bug report nobody can act on.
+ *
+ * It says what happened and nothing about what to do next. blobot does not manage the agent's
+ * context: the CLI behind the adapter owns compaction, `/compact` is in the composer's palette,
+ * and a line in the transcript that started recommending it would be blobot managing a context
+ * it has said it does not manage.
+ */
+export function stoppedBecause(stopReason: StopReason): string {
+  switch (stopReason) {
+    case 'max_tokens':
+      return 'turn stopped · the context window is full';
+    case 'max_turn_requests':
+      return 'turn stopped · the runtime hit its own request limit';
+    case 'refusal':
+      return 'turn stopped · declined to answer';
+    case 'cancelled':
+      return 'turn stopped · cancelled';
+    // `end_turn` never reaches here: an ordinary ending is log, not conversation.
+    case 'end_turn':
+      return 'turn ended';
+  }
+}
+
+/**
+ * The activity column, from the persisted log. Newest first and capped like the live one, so a
+ * restored column and a column that was watched all along are the same column.
+ */
+function restoreFeed(log: UiLog): FeedEntry[] {
+  const tools = log.tools
+    // The live column hides blobot's own tool, so the restored one has to as well. The row is
+    // in the store on purpose — a peer message is a real MCP call and the transcript records
+    // it — but a column that gains an entry the moment a team is switched back to is not the
+    // same column the user was watching.
+    .filter((tool) => !OWN_TOOL.test(tool.title))
+    .map(
+      (tool): FeedEntry => ({
+        id: `${tool.toolCallId}:done`,
+        at: tool.at,
+        agentId: tool.agentId,
+        text: `${oneLine(tool.title)} ${tool.status}`,
+      }),
+    );
+  const turns = log.turns.map(
+    (turn): FeedEntry => ({
+      id: `${turn.turnId}:${turn.agentId}:${turn.at}`,
+      at: turn.at,
+      agentId: turn.agentId,
+      text: `turn ended · ${turn.stopReason}`,
+      emphasis: turn.stopReason !== 'end_turn',
+    }),
+  );
+  return [...tools, ...turns].sort((left, right) => right.at - left.at).slice(0, 200);
 }
 
 function pushFeed(feed: FeedEntry[], entry: FeedEntry): FeedEntry[] {

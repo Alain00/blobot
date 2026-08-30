@@ -37,6 +37,13 @@ Consequences you will keep bumping into:
   the composer's mention menu, and a turn in the transcript; it takes one off the conversation
   header, off the send button, and off the far end of a peer route that the pane you are in
   already is. Where the rule takes a face away, the name stays.
+- **A terminal is quoted, not exempt.** The one surface that embeds another program's output
+  (a runtime's own sign-in) hands xterm a monochrome sixteen-colour palette, so a vendor's
+  greens and cyans do not become the only saturated thing on screen that is not a blobatar.
+  Nothing legible is lost: a terminal carries structure in bold, dim, inverse and its own
+  glyphs, and the login that prompted this marks its selection with a filled circle against
+  empty ones. The transcript already holds the same line, rendering markdown with no syntax
+  colour at all.
 - **Contrast is the attention channel**, because colour is spoken for. Spend it almost never.
   There are two inversions in the whole app: `waiting` (the one state where an agent sits
   forever until a human looks) and an armed primary button.
@@ -143,6 +150,29 @@ Every control descends from the composer. If you are adding one, start there.
   named. Two names and a count past that (`Alice, Bob +1`): a message can address several
   agents, and a list that grows with the roster stops being readable at the width a send control
   has. Never a face — a blobatar on a button reads as the affordance rather than as an identity.
+- **A menu of several groups is one control, not several.** The agent form's *how it answers*
+  is a single trigger over one menu holding a labelled group per axis (model, effort, and
+  whatever else that runtime offers), because these are one decision about one agent and three
+  stacked selects would read as three unrelated settings. The trigger says the resolved answer
+  (`Opus (1M context) · Medium`), not the stored one, so a control nobody has touched still
+  says what will happen. It borrows `.selectmenu` and `.selectitem` outright: a second menu
+  that looked like a different menu would be claiming the two are different kinds of thing.
+  What the group adds is a mono label, a hairline between groups, and a `default` badge on the
+  choice that is what happens when blobot stores nothing.
+- **A menu longer than a dozen rows grows a field.** A runtime is free to advertise forty
+  models, and past about a dozen rows a menu stops being something you scan. The field sits at
+  the top of that same menu, above a hairline, with the count beside it (`3 of 47` once a word
+  has been typed), and it narrows every group at once: it matches the label and the value
+  together, because `GPT-5.4` is what the menu says and `openai/gpt-5.4` is what the changelog
+  said. A group the query empties disappears rather than standing as a heading over nothing.
+  **Under the threshold there is no field**, and the query dies with the menu: this narrows what
+  is already on screen, so it is not the second search bar the navigator's rule refuses. The
+  menu opens on the row the agent is already set to, since on a list that long it is the first
+  thing anyone looks for.
+- **The groups are named by the runtime, never by us.** The component is handed
+  `{id, label, choices}` and draws them in the order it got them. It has no list of provider
+  words in it, which is what lets one runtime offer three groups and another one with no branch
+  anywhere in the renderer.
 - Selection in a list is the raised ground alone. No left rule: a row that lifts and brightens
   is already saying it twice. The row is **inset and rounded** at `.field`'s 12px, like every
   other lifted surface here — a full-bleed square block is the one shape this app does not have,
@@ -158,10 +188,20 @@ Every control descends from the composer. If you are adding one, start there.
 **Lucide** (`lucide-react`), 13 to 17px, `--muted` at rest, `strokeWidth` default. No other icon
 set, no inline SVG paths pasted into components, no emoji in the interface.
 
+**One exception: a runtime's own mark**, in `RuntimeMark.tsx`, which is the only module allowed
+to hold a vendor path. It is the team icon's rule applied a second time — a logo may be on
+screen **greyed, never coloured, and never in place of the name**. A runtime is a product whose
+face people already know, and `Claude Code` and `OpenCode` are two labels that begin the same
+way in a list that grows to four; the mark is what the eye lands on before it reads either. The
+label always stays beside it, so the mark is a second channel onto one fact and never the only
+one. An id with no mark draws nothing: there is no placeholder, exactly as a team without an
+icon is not a team missing one. Marks come from the vendor's own origin at one `currentColor`,
+normalised to a 24-unit box so they weigh the same as each other and as a Lucide glyph.
+
 ## Primitives
 
-**Radix for behaviour, never for looks.** `@radix-ui/react-dialog` and `@radix-ui/react-select`
-are in use. Take a primitive when you need the half nobody screenshots: a focus trap, focus
+**Radix for behaviour, never for looks.** `@radix-ui/react-dialog`, `@radix-ui/react-select` and
+`@radix-ui/react-dropdown-menu` are in use. Take a primitive when you need the half nobody screenshots: a focus trap, focus
 returned to the trigger, `aria-modal`, a listbox with arrow keys and type-ahead. Style every
 pixel yourself from the tokens above.
 
@@ -172,6 +212,12 @@ menu instead, so there is nothing to take. cmdk is unstyled and its rule is the 
 behaviour only. Do not use its `Command.Input` — it hardcodes `spellCheck={false}` and
 `aria-expanded={true}` after spreading your props, and a message field is prose that is usually
 not showing a menu. Keep the input, take the list.
+
+The same division holds where a Radix menu has to be typed into: **Radix keeps the popover, cmdk
+takes the list** (the runtime options menu, once it is long enough for a field). Focus has to be
+moved into the field from `onOpenAutoFocus`, not later from an effect: these menus open inside a
+dialog, and focus arriving after both layers have settled reads to the dialog's focus scope as
+focus escaping, which shuts the menu.
 
 **No shadcn, no Tailwind.** Considered and declined 2026-08-29: the design system already
 exists, so shadcn's value would have been defaults we override to nothing, plus a build step.
@@ -208,16 +254,24 @@ are narrow:
   state the reason for.
 - **`transform` and `opacity` only**, and prefer the individual `scale` and `translate`
   properties: they compose with a `transform` a rule is already using for layout instead of
-  overwriting it.
+  overwriting it. The one `height` in the app is the opening roster below, and it is there
+  because what has to move is everything *beneath* that box, which nothing but its height can
+  move.
 - **Nothing that carries meaning of its own.** It smooths a change the interface was making
   anyway. If a user has to see the animation to understand what happened, the animation is
   doing a job that belongs to a word.
 - **Nothing on the paths that are walked all day.** Not the composer's `@mention` menu, not
   pane switching, not the rail's hover colour, not the activity feed. Frequency is the
   disqualifier, not taste: a hundred small delays a day is a slow app.
-- **One exception, and it is the only one: the faces leaving the folder when a team opens.**
-  This clause used to name team switching too, and it was written when a team row was a static
-  cluster of faces and switching was a pure data swap, where any motion would have been
+- **One exception, and it is the only one: a team opening.** The roster's box grows from
+  nothing so the teams below slide out of the way instead of being shoved down between two
+  frames; each row's text fades in, which is what covers the overlap while that happens; and the
+  faces travel out of the folder into their rows. Three moving parts, one gesture, one duration.
+  **A face that was peeking does not fade in and a face the folder only counted does** — the
+  travel reads as travel only if the face is continuous with the one that was there a frame ago,
+  and past the third there was no face to be continuous with.
+  The clause above used to name team switching too, and it was written when a team row was a
+  static cluster of faces and switching was a pure data swap, where any motion would have been
   decoration on a frequent path. A row is a folder now, and the shut and open states are
   structurally different things: cargo in a container, or a list of rows. The travel is what
   makes them one object rather than two pictures. It is admitted on terms rather than by
@@ -243,7 +297,9 @@ Both budgets answer to the same withdrawal rule:
   (Code comments and this file are not product copy.)
 - **Never the word "authenticated".** Detection observes whether a credential is present, which
   is a different claim. The four honest states are `ready`, `needs sign-in`, `not installed`,
-  `status unknown`.
+  `status unknown`. **This survives a sign-in blobot itself ran**: a login that exits cleanly is
+  not a login that worked, so the screen that ran it closes on those same four words rather than
+  saying *signed in*.
 - **A refusal is not a dialog.** Say what is wrong where the user can act on it, in a sentence,
   with the fix in it. `.refusal` is an ink rule and a line of text.
 - Terse where a line is shared: `32m`, `3h`, `yesterday`. `ago` is the word that gets the line
@@ -274,26 +330,47 @@ One flat file, one flat namespace, no build step between it and the DOM.
   front is a pocket flared wider at the top than the bottom, which is the ordinary open-folder
   shape and the only treatment tried that could not be read as a folder that is merely
   *emptied* — and emptied already has a meaning in this column, the dashed ghost of a team with
-  nobody on it. An
+  nobody on it.
+  A team may also carry an **icon**, and it goes **on the folder as a sticker** — lower-left,
+  over the front panel's bottom edge, greyed — never in place of the mark. The faces answer
+  *who is on this team*; an icon answers *which project is this*, which is a different question
+  and the one a column of similarly named teams is worst at. Replacing the mark with it would
+  answer the second by deleting the first, along with the folded status the folder is the body
+  of, and would put a saturated thing on screen that is not a blobatar. Greyed rather than
+  silhouetted, because luminance is most of what makes a logo readable at that size and a flat
+  silhouette of one is usually a blob. Straddling the folder's edge rather than contained inside
+  it, because the front panel at a rail row's 34px is about ten pixels tall and an icon fitted
+  into that reads as a smudge on the chrome. A team without an icon is not a team missing one:
+  there is no placeholder. An
   agent row is a blobatar, a name, the last thing that agent said, and when. The role shows only
   until it has said something. `idle` is not printed: it is the resting state of a quiet app.
   **A team row and an agent row are the same box**, down to the padding: they sit in one column,
   and a team row standing taller made the rail read as two lists stacked rather than one.
-- **The lead is named on the row it is about.** A mono `LEAD` beside that agent's name in the
-  rail — the one row in the column the composer will write to when the user names nobody. It is
-  a standing fact about the team rather than an event, so unlike the role it does not go once the
-  agent has spoken, and it is a word rather than an inversion, because the two inversions are
-  spent (`waiting`, and an armed primary button).
+- **The lead is named on the team's row, not on the agent's.** `led by Alice`, under the team
+  name, where the running team's member count used to be — because who leads is a fact about
+  *the team* and not about the agent: the same agent leads one team and not another, which is
+  why it cannot live on an agent's definition either. The agent rows say nothing about it. It is
+  **named rather than drawn**, by the blobatar rule above: a face appears where you are
+  identifying among agents or choosing one, and this is a single agent being mentioned.
 - **A team keeps its place in the rail when you open it.** The column's order is the store's, and
   it does not depend on what you last clicked: a user reaching for the team they were on a minute
-  ago must find it where they left it. The running team is drawn from the conversation rather
+  ago must find it where they left it. With a dozen teams that place can be below the fold, and
+  the group is **scrolled into view** when the team changes — never pinned there. Pinning it was
+  tried and rejected: **nothing in this column covers anything else in it.** A group stuck to the
+  edge of the scrollport floats over the teams above and below, and the rail is one list, so the
+  overlap reads as the open team sitting on top of the others rather than among them. The running team is drawn from the conversation rather
   than from its summary row, and that substitution happens **in place**. Editing and
   deleting a team live on the team's own row as icon buttons, revealed on hover **and on
   `:focus-within`** — hover-only would put both out of reach of the keyboard — because a delete
   button sitting on every row at rest would be the loudest thing in a column whose job is quiet.
 - **The transcript** — the three voices above, in a centred column, under **one mono hairline
   row** carrying only what the rail does not: the agent's role, its runtime and where it is
-  working. No face, no bold name, no status word, and no posture line up there — a sentence
+  working, and on the team pane the folder every agent is cut from. **It is the only chrome above
+  the working surface.** A strip used to run across the top of the window saying the team's name
+  and its path; the name was what the selected rail row was already saying, so it went, and the
+  controls it held — the DEMO badge, the turn pips, the activity toggle — sit at the end of this
+  row instead. There is no application menubar either: every command blobot has is on the surface
+  it belongs to. No face, no bold name, no status word, and no posture line up there — a sentence
   printed over every pane all day is not read, and the creation flow's disclosure is where the
   posture is said. The selected rail row is a few
   pixels to the left already saying all three, larger, so a header that repeated them was a
@@ -307,7 +384,12 @@ One flat file, one flat namespace, no build step between it and the DOM.
   set to prompt; it does not name commands, because blobot can only name them on some runtimes. A display line in the hand face, a
   standfirst, numbered steps. It is read once, start to finish, before anything exists, which is
   a different job from every other surface. Do not spread this treatment; it works because it is
-  the only one.
+  the only one. **The name is step 01 and the folder is step 02**, because the folder step now
+  has a second door — *make one for me*, which puts a git repository with one empty commit under
+  `~/blobot` and names it after the team, so the team has to be named before that door is open.
+  The picker still fills the name in when it is empty, so nothing is lost by the swap. A user
+  who has never seen this app should not have to go and find a repository before they can watch
+  two agents talk.
 - **Your agents** — every AgentProfile the user has hired, over the working surface rather than
   in place of it: the team behind it keeps running, and nothing on this screen restarts one. A
   row is a face, a name, a role, the runtime and the teams it is on, with its standing
@@ -316,6 +398,44 @@ One flat file, one flat namespace, no build step between it and the DOM.
   **working** surface and takes none of the creation flow's editorial treatment: no hand face, no
   standfirst, no numerals. Reached from a row above TEAMS in the rail, because that is the order
   the model reads in.
+- **The navigator** — find a team or an agent by name, on `ctrl+k` / `cmd+k`, and from a
+  **Search row at the top of the rail** wearing that shortcut. The row is a *button drawn as a
+  field*, never a second input: there is one search in this app and it lives in the navigator, so
+  a field here would either duplicate it or drift from it. It is not gated on having several
+  teams — a door that appears once you have eight of them is a door nobody finds. A layer over
+  everything, including *your agents*, because it is how you leave whatever layer you are on: it
+  opens on a key, answers, and goes. **Not a search bar in the chrome** — a field standing above
+  the working surface all day is paid for on every screen and used on few of them, and the strip
+  it would go in was removed for being a second copy of the rail. The rail stays the place you
+  *scan*; this is the place you *ask*, which is what scanning stops being able to answer at eight
+  or nine rows. It lists agents (the open team's first, the rest carrying their team's name,
+  since the same person on two teams is two agents), then teams, then the two places. **Names
+  only.** It does not search what agents said: that needs an addressable message and somewhere to
+  scroll to, and returning message hits without them would be promising a feature that does not
+  exist.
+- **Signing in to a runtime, and installing one** — a modal over the runtime picker that **is**
+  a terminal. It is here because the four honest states above had no door out of them: the
+  picker said *not installed* and the reader went to find the vendor's documentation. blobot
+  runs **the runtime's own `auth login`**, or **the vendor's own published install command**, and
+  watches.
+  **The dialog has no header.** It had one, and an eyebrow, a title in the hand face, the command
+  and a line of prose, all above a program that opens by announcing itself: `┌ Add credential`,
+  then what it wants. That was blobot talking over something already speaking. The title survives
+  for a screen reader only. What is left is the terminal, a `--raised` box at `.field`'s radius
+  with no border of its own, fixed in height so it cannot reflow under the hands of somebody
+  typing into it, monochrome by the rule above, and one labelled button.
+  The exception is the **install confirm**, which still quotes the command in mono above the
+  note: it is the sentence being agreed to, and it is the one thing the terminal cannot say for
+  itself, because it has not run yet. Signing in has no confirm, since one of these puts software
+  on the machine and the other starts a program already on it.
+  A URL the program prints is **clickable** and opens in the user's own browser (`http` and
+  `https` only, checked in the main process, because that text came out of another program's
+  stdout). Selection is xterm's own and **`ctrl+shift+c` copies it**, never `ctrl+c`: in a
+  terminal that is how you interrupt what is running, and taking it would be taking a key away
+  from the program. **Escape and a click outside belong to the terminal** while a command is
+  running, for the same reason; the way out is a button that says `stop and close`. None of
+  it is a gate: the runtime stays pickable while it says *not installed*, which is ticket 11's
+  rule and the reason this is a button beside a sentence rather than a block in front of one.
 - **Modals** — for things that outlive the screen that opened them. Hiring an agent is a modal
   because the agent exists afterwards whether or not the team is created. A step of a flow is
   not a modal.

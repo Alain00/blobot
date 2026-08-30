@@ -1,35 +1,50 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
 import { writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  MESSAGE_AGENT_TOOL,
   SqliteStore,
   SystemClock,
   WorkspaceError,
-  detectRuntimes,
   openDatabase,
+  remediesFor,
+  remedyFor,
   type AgentStatus,
   type OpenedDatabase,
   type PendingPermission,
+  type RemedyKind,
+  type RuntimeDetection,
   type Team,
 } from '@blobot/core';
-import { createDemoTeam } from './demo-team.js';
+import {
+  createDemoTeam,
+  demoScripts,
+  DEFAULT_DEMO_SCRIPT,
+  type DemoScriptName,
+} from './demo-team.js';
 import { startTeam } from './start-team.js';
+import { encodeTeamIcon, suggestTeamIcon } from './team-icon.js';
 import {
   TeamCreationError,
   createTeam,
   deleteTeam,
+  measureTeam,
   editAgentProfile,
   editTeamRoster,
   hireAgent,
   initializeWorkspace,
   inspectWorkspace,
+  prepareWorkspace,
   type AgentRemoval,
   type NewAgentSpec,
   type NewTeamSpec,
 } from './team-store.js';
 import { choicesOf } from './permission-choices.js';
 import { runtimeLabel } from './runtime-labels.js';
+import { describeRuntimeOptions, rememberRuntimeOptionsIn } from './runtime-options.js';
+import { knownRuntime, knownRuntimes, refreshKnownRuntimes } from './known-runtimes.js';
+import { resizeStep, startStep, stopStep, writeStep } from './runtime-step.js';
 import { isWorking, type RunningTeam } from './running-team.js';
 import { TeamPool } from './team-pool.js';
 import type {
@@ -42,8 +57,12 @@ import type {
   UiPermissionRequest,
   UiAgentProfile,
   UiRuntimeChoice,
+  UiRuntimeOptions,
+  RuntimeStepOutcome,
   TeamOpenResult,
   UiSnapshot,
+  UiTeamIcon,
+  UiTeamDiskUsage,
   UiTeamSummary,
   UiWorkspaceInspection,
 } from '../shared/api.js';
@@ -63,6 +82,39 @@ const autoplay =
 
 /** `--demo` is the scripted team on mock runtimes; it is not the first-run default. */
 const demoMode = process.argv.includes('--demo');
+
+/**
+ * `--demo-scenario=<name>` picks which run the demo team plays. A name rather than a scenario
+ * id: a script and the prompt that makes it legible are one thing, and picking a scenario
+ * without its prompt is how you get a run that looks broken. `--demo-scenario=?` lists them.
+ *
+ * An unknown name is refused rather than quietly defaulted. A typo that silently plays the
+ * usual run is a person concluding the thing they came to see does not work.
+ */
+const demoScriptName = ((): DemoScriptName => {
+  const asked = process.argv
+    .find((arg) => arg.startsWith('--demo-scenario='))
+    ?.slice('--demo-scenario='.length);
+  if (asked === undefined) return DEFAULT_DEMO_SCRIPT;
+  if (asked in demoScripts) return asked as DemoScriptName;
+  const listing = Object.entries(demoScripts)
+    .map(([name, script]) => `  ${name.padEnd(20)}${script.summary}`)
+    .join('\n');
+  if (asked !== '?' && asked !== '') process.stderr.write(`no demo scenario '${asked}'\n`);
+  process.stderr.write(`demo scenarios:\n${listing}\n`);
+  process.exit(asked === '?' || asked === '' ? 0 : 1);
+})();
+
+/**
+ * How long after the window loads the autoplay prompt is sent. Seven hundred milliseconds is
+ * right on a warm machine and wrong on a cold one: a renderer that paints after the turn has
+ * already ended misses the whole stream, and the snapshot behind it restores only what was
+ * persisted — no activity feed, no system lines. Raise it and a screenshot sees the live run.
+ */
+const autoplayDelayMs = Number(
+  process.argv.find((arg) => arg.startsWith('--autoplay-at='))?.slice('--autoplay-at='.length) ??
+    700,
+);
 
 /**
  * `--live-claude=<dir>` is now a shortcut through the product path rather than beside it: it
@@ -107,6 +159,48 @@ function asUiPermission(pending: PendingPermission): UiPermissionRequest {
     canAllow: choicesOf(pending).allowOptionId !== undefined,
     canAllowAlways: choicesOf(pending).allowAlwaysOptionId !== undefined,
   };
+}
+
+/**
+ * One detected runtime as the picker draws it, remedies included.
+ *
+ * The remedies are computed here rather than stored with the detection, because they are a
+ * fact about *this* platform and this binary at this moment: the same `needs sign-in` offers a
+ * login where the binary was found and nothing at all where it was not.
+ */
+function asUiRuntime(detection: RuntimeDetection): UiRuntimeChoice {
+  return {
+    runtimeId: detection.runtimeId,
+    label: detection.label,
+    readiness: detection.readiness,
+    supported: detection.supported,
+    detail: detection.detail,
+    ...(detection.version === undefined ? {} : { version: detection.version }),
+    remedies: remediesFor(detection).map((remedy) => ({
+      kind: remedy.kind,
+      shown: remedy.shown,
+      note: remedy.note,
+    })),
+  };
+}
+
+/**
+ * What the pane asked to run, or nothing if it did not arrive in a shape blobot understands.
+ *
+ * The renderer is trusted with *which* remedy, never with the command: `kind` is checked against
+ * the two words core will answer to, and everything else is looked up on this side. It is also
+ * the one place a version skew between the window and the preload bridge under it can be
+ * recognised rather than misread as a question about a runtime nobody asked about.
+ */
+function asStepRequest(
+  request: unknown,
+): { stepId: string; runtimeId: string; kind: RemedyKind } | undefined {
+  if (typeof request !== 'object' || request === null) return undefined;
+  const { stepId, runtimeId, kind } = request as Record<string, unknown>;
+  if (typeof stepId !== 'string' || stepId === '') return undefined;
+  if (typeof runtimeId !== 'string' || runtimeId === '') return undefined;
+  if (kind !== 'sign_in' && kind !== 'install') return undefined;
+  return { stepId, runtimeId, kind };
 }
 
 /**
@@ -163,6 +257,13 @@ function current(): RunningTeam | undefined {
   return demo ?? pool.active;
 }
 
+/**
+ * The size of the one tool blobot adds, measured rather than typed: this definition is on the
+ * wire to every agent on every turn. What an agent's *other* tools cost is not knowable here,
+ * because a tool list is not advertised to the client the way a command list is.
+ */
+const OWN_TOOL_CHARS = JSON.stringify(MESSAGE_AGENT_TOOL).length;
+
 function teamSummaries(): UiTeamSummary[] {
   if (store === undefined) return [];
   return store.listTeams().map((team) => {
@@ -175,6 +276,7 @@ function teamSummaries(): UiTeamSummary[] {
       name: team.name,
       workspacePath: team.workspacePath,
       workspaceKind: team.workspaceKind,
+      ...(team.icon === undefined ? {} : { icon: team.icon }),
       // The members rather than a count of them: the rail draws every team as its faces, and
       // a face is seeded by the agent's name. Same query the count came from.
       members: (store?.agentsOfTeam(team.id) ?? []).map((agent) => ({
@@ -223,6 +325,8 @@ function agentProfiles(): UiAgentProfile[] {
     runtimeLabel: runtimeLabel(profile.runtimeId),
     ...(profile.instructions === undefined ? {} : { instructions: profile.instructions }),
     ...(profile.hue === undefined ? {} : { hue: profile.hue }),
+    ...(profile.runtimeOptions === undefined ? {} : { runtimeOptions: profile.runtimeOptions }),
+    ...(profile.trust === undefined ? {} : { trust: profile.trust }),
     teams: store
       ? store
           .membershipsOf(profile.id)
@@ -251,6 +355,7 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
       id: team.id,
       name: team.name,
       workspacePath: team.workspacePath,
+      ...(team.icon === undefined ? {} : { icon: team.icon }),
       turnBudget: team.turnBudget,
       ...(team.leadAgentId === undefined ? {} : { leadAgentId: team.leadAgentId }),
     },
@@ -276,6 +381,24 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
     },
     // Nothing has a session yet, so there is no menu to offer and no block to answer.
     commands: {},
+    // The gauge is a persisted fact, so it is drawn while the team is still coming up: what
+    // these agents were carrying when they were last awake is what they will resume with.
+    usage: store?.lastUsageOfTeam(team.id) ?? {},
+    log: store?.logOfTeam(team.id) ?? { tools: [], turns: [] },
+    // Composed but not yet sent: the personas exist, and nothing has been woken.
+    injection: Object.fromEntries(
+      records.map((record) => [
+        record.id,
+        {
+          personaChars: store?.lastPersonaOf(record.id)?.length ?? 0,
+          instructionsChars: record.instructions?.length ?? 0,
+          lastWakeChars: 0,
+          lastWakeMessages: 0,
+          queued: 0,
+          ownToolChars: OWN_TOOL_CHARS,
+        },
+      ]),
+    ),
     messages: store?.forTeam(team.id) ?? [],
     answers: store?.answersOfTeam(team.id) ?? [],
     permissions: [],
@@ -294,6 +417,9 @@ function snapshot(): UiSnapshot {
       agents: [],
       statuses: {},
       commands: {},
+      usage: {},
+      log: { tools: [], turns: [] },
+      injection: {},
       messages: [],
       answers: [],
       permissions: [],
@@ -307,6 +433,7 @@ function snapshot(): UiSnapshot {
       id: team.team.id,
       name: team.team.name,
       workspacePath: team.team.workspacePath,
+      ...(team.team.icon === undefined ? {} : { icon: team.team.icon }),
       turnBudget: team.team.turnBudget,
       ...(team.team.leadAgentId === undefined ? {} : { leadAgentId: team.team.leadAgentId }),
     },
@@ -339,6 +466,19 @@ function snapshot(): UiSnapshot {
     // and a menu kept across that would describe a session that no longer exists.
     commands: Object.fromEntries(
       team.agents.map((agent) => [agent.id, team.orchestrator.commandsOf(agent.id)]),
+    ),
+    usage: team.store.lastUsageOfTeam(team.team.id),
+    log: team.store.logOfTeam(team.team.id),
+    injection: Object.fromEntries(
+      team.agents.map((agent) => [
+        agent.id,
+        {
+          personaChars: team.store.lastPersonaOf(agent.id)?.length ?? 0,
+          instructionsChars: agent.instructions?.length ?? 0,
+          ...team.orchestrator.injectionOf(agent.id),
+          ownToolChars: OWN_TOOL_CHARS,
+        },
+      ]),
     ),
     messages: team.store.forTeam(team.team.id),
     answers: team.store.answersOfTeam(team.team.id),
@@ -398,6 +538,9 @@ function attach(team: RunningTeam): void {
   orchestrator.onMessage((message) => send('blobot:message', teamId, message));
   orchestrator.onBudgetExhausted((exhausted) =>
     send('blobot:budget', teamId, exhausted.turnsUsed, exhausted.turnBudget),
+  );
+  orchestrator.onSilentHandoff((observed) =>
+    send('blobot:silent-handoff', teamId, observed.agentId, observed.named, observed.at),
   );
 }
 
@@ -462,6 +605,12 @@ async function createWindow(): Promise<void> {
     });
   }
 
+  // Detection, started behind the window rather than in front of the first dialog. It costs a
+  // second and a half of somebody else's processes, it is the same answer for the whole launch,
+  // and every surface that hires, edits or picks a runtime waits on it. Nothing awaits this: if
+  // a dialog opens first it joins the same promise.
+  void knownRuntimes().catch(() => undefined);
+
   if (autoplay) {
     // `loadFile` already resolved, so a `did-finish-load` listener attached here never fires.
     // The wait is for the launch team, which now starts after this window rather than before it:
@@ -473,7 +622,7 @@ async function createWindow(): Promise<void> {
           void team.orchestrator.promptFromUser([team.agents[0]?.id ?? ''], team.autoplayPrompt);
         }
       });
-    }, 700);
+    }, autoplayDelayMs);
   }
 
   const screenshotDelay = Number(
@@ -492,6 +641,11 @@ async function createWindow(): Promise<void> {
 }
 
 void app.whenReady().then(async () => {
+  // No native menubar. Every command blobot has is on the surface it belongs to, so the
+  // default File/Edit/View/Window strip was four menus of things this app does not do,
+  // drawn above a window whose own chrome is the interface.
+  Menu.setApplicationMenu(null);
+
   // Dev-time path: core's migrations live in its package. Packaging will copy them next to
   // the bundle, and this is the line that changes when it does.
   const migrations = join(app.getAppPath(), '../../packages/core/migrations');
@@ -503,12 +657,15 @@ void app.whenReady().then(async () => {
     // every time and stacking it would only grow a transcript nobody reads twice.
     // The demo is one team and stays one team: it never reaches the pool, because there is
     // nothing to switch to and its database is thrown away.
-    demo = await createDemoTeam(':memory:', migrations);
+    demo = await createDemoTeam(':memory:', migrations, demoScriptName);
     attach(demo);
   } else {
     // Everything else lives in one file under `userData`, which is what makes a team a thing
     // the user created rather than a thing this process happens to be holding.
     opened = openDatabase({ path: join(app.getPath('userData'), 'blobot.db'), migrationsFolder: migrations });
+    // Beside the database, and for the same reason: what a runtime offers is worth knowing
+    // before the CLI has been spawned, so the hire dialog draws its picker instead of waiting.
+    rememberRuntimeOptionsIn(join(app.getPath('userData'), 'runtime-options.json'));
     store = new SqliteStore(opened.db);
     launchTeam = liveClaudePath === undefined ? store.listTeams()[0] : await liveTeam(liveClaudePath);
   }
@@ -540,27 +697,179 @@ void app.whenReady().then(async () => {
   ipcMain.handle('blobot:initializeWorkspace', (_event, path: string) =>
     reportInspection(() => initializeWorkspace(path)),
   );
+  ipcMain.handle('blobot:prepareWorkspace', (_event, name: string) =>
+    reportInspection(() => prepareWorkspace(name)),
+  );
+  ipcMain.handle('blobot:suggestTeamIcon', (_event, path: string) => suggestTeamIcon(path));
+  /**
+   * An icon of the user's own.
+   *
+   * The filter is the raster-only rule at the one place a user could otherwise walk around it.
+   * A file that gets past it and still will not decode is reported rather than swallowed: the
+   * user picked that file deliberately, so silence would read as the picker having failed.
+   */
+  ipcMain.handle('blobot:chooseTeamIcon', async (): Promise<UiTeamIcon | { error: string } | undefined> => {
+    const options = {
+      title: 'Choose an icon',
+      properties: ['openFile'] as const,
+      filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }],
+    };
+    const result =
+      window === undefined
+        ? await dialog.showOpenDialog({ ...options, properties: [...options.properties] })
+        : await dialog.showOpenDialog(window, { ...options, properties: [...options.properties] });
+    const chosen = result.canceled ? undefined : result.filePaths[0];
+    if (chosen === undefined) return undefined;
+    const dataUrl = encodeTeamIcon(chosen);
+    return dataUrl === undefined
+      ? { error: 'That file could not be read as an image.' }
+      : { dataUrl, from: basename(chosen) };
+  });
+  /**
+   * An icon on a team that already exists. It restarts nothing: the mark is drawn by the rail
+   * out of the snapshot, so writing the row and pushing a snapshot is the whole change.
+   */
+  ipcMain.handle('blobot:setTeamIcon', (_event, teamId: string, icon: string | undefined) => {
+    store?.setTeamIcon(teamId, icon);
+    send('blobot:team');
+  });
   ipcMain.handle('blobot:detectRuntimes', async (): Promise<UiRuntimeChoice[]> => {
-    const detections = await detectRuntimes();
-    return detections.map((detection) => ({
-      runtimeId: detection.runtimeId,
-      label: detection.label,
-      readiness: detection.readiness,
-      supported: detection.supported,
-      detail: detection.detail,
-      ...(detection.version === undefined ? {} : { version: detection.version }),
-    }));
+    // The one caller that asks the machine again, because it is the one drawing the answer:
+    // installing a CLI and coming back is when readiness changes. Everything else reuses this.
+    const detections = await refreshKnownRuntimes();
+    return detections.map(asUiRuntime);
+  });
+  /**
+   * Run the runtime's own login, or its vendor's own installer, on a terminal.
+   *
+   * The renderer sends three ids and no command: which pane is asking, and what for. The argv is looked up here from core's table
+   * against detection as it stands right now, which is also what keeps a stale renderer from
+   * asking to sign in to something that is no longer installed.
+   */
+  ipcMain.handle(
+    'blobot:startRuntimeStep',
+    async (_event, request: unknown): Promise<{ ok: boolean; error?: string }> => {
+      // One object rather than three positional strings, and checked before it is used. Three
+      // strings in a row are a shape a *stale bridge* can still satisfy: a preload from before
+      // `stepId` existed sent (runtimeId, kind), which arrived here as a step id of `opencode`
+      // and a runtime id of `sign_in`, and the honest-looking answer was "blobot does not know
+      // that runtime". A preload only reloads when the app restarts, so this is reachable
+      // whenever the window is newer than the bridge under it.
+      const ask = asStepRequest(request);
+      if (ask === undefined) {
+        return {
+          ok: false,
+          error:
+            'blobot could not read that request. The window is running a newer version than the ' +
+            'app under it, so quitting blobot and starting it again will fix this.',
+        };
+      }
+      const { stepId, runtimeId, kind } = ask;
+      const detection = await knownRuntime(runtimeId);
+      if (detection === undefined) {
+        return { ok: false, error: `blobot does not know a runtime called ${runtimeId}.` };
+      }
+      const remedy = remedyFor(detection, kind);
+      if (remedy === undefined) {
+        return { ok: false, error: `There is nothing blobot can run for ${detection.label} here.` };
+      }
+      startStep(stepId, remedy, {
+        onData: (data) => send('blobot:runtime-step-data', stepId, data),
+        onExit: (exitCode) => {
+          void (async (): Promise<void> => {
+            // Asked again rather than assumed. An installer can exit 0 having put the binary
+            // somewhere nothing finds, and a login can be abandoned in the browser with the
+            // command still exiting cleanly: the exit code says the command ended, and only
+            // detection says what the machine holds now.
+            const after = (await refreshKnownRuntimes()).find(
+              (entry) => entry.runtimeId === runtimeId,
+            );
+            const outcome: RuntimeStepOutcome = {
+              stepId,
+              runtimeId,
+              kind,
+              exitCode,
+              ...(after === undefined ? {} : { runtime: asUiRuntime(after) }),
+            };
+            send('blobot:runtime-step-exit', outcome);
+          })();
+        },
+      });
+      return { ok: true };
+    },
+  );
+  /**
+   * A link the user clicked in the terminal, opened in their own browser.
+   *
+   * **Only `http` and `https`.** The text came out of another program's stdout, and handing an
+   * arbitrary scheme to the OS is handing that program a way to launch things: `file:` opens a
+   * folder, and on some desktops a registered scheme opens an application with an argument.
+   * A login printing a URL to visit is the whole of the need here.
+   */
+  ipcMain.handle('blobot:openLink', (_event, url: unknown) => {
+    if (typeof url !== 'string') return;
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      return;
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return;
+    void shell.openExternal(parsed.toString());
+  });
+  ipcMain.handle('blobot:runtimeStepInput', (_event, stepId: string, data: string) => {
+    writeStep(stepId, data);
+  });
+  ipcMain.handle(
+    'blobot:runtimeStepResize',
+    (_event, stepId: string, cols: number, rows: number) => {
+      resizeStep(stepId, cols, rows);
+    },
+  );
+  // Named, so a pane whose cleanup lands after another pane has started its own kills nothing.
+  ipcMain.handle('blobot:closeRuntimeStep', (_event, stepId: string) => {
+    stopStep(stepId);
   });
   ipcMain.handle('blobot:listAgents', (): UiAgentProfile[] => agentProfiles());
+  /**
+   * Ask a runtime what it lets an agent be set to.
+   *
+   * It starts the runtime, so it is slow by the standards of an IPC call and instant by the
+   * standards of the thing it replaces, which was nothing. The executable comes from detection
+   * for the same reason it does when hiring: ticket 07 pins the user's own binary.
+   */
+  ipcMain.handle(
+    'blobot:describeRuntimeOptions',
+    async (_event, runtimeId: string): Promise<UiRuntimeOptions> => {
+      const detection = await knownRuntime(runtimeId);
+      // The version is a cache key, not decoration: an upgraded binary is when a model list
+      // moves, and it is the one thing that makes a remembered answer worth throwing away.
+      const probe = await describeRuntimeOptions(
+        runtimeId,
+        detection?.executablePath,
+        detection?.version,
+      );
+      return {
+        runtimeId,
+        groups: probe.groups.map((group) => ({
+          id: group.id,
+          label: group.label,
+          choices: group.choices.map((choice) => ({
+            value: choice.value,
+            label: choice.label,
+            ...(choice.isDefault === true ? { isDefault: true } : {}),
+          })),
+        })),
+        ...(probe.error === undefined ? {} : { error: probe.error }),
+      };
+    },
+  );
   ipcMain.handle('blobot:hireAgent', async (_event, spec: NewAgentSpec): Promise<HireResult> => {
     if (store === undefined) return { ok: false, error: 'No database is open.' };
     try {
       // The executable is resolved here rather than in the renderer: ticket 07 pins the
       // user's own binary, and that resolution is detection's job, not the UI's.
-      const detected = await detectRuntimes();
-      const executablePath = detected.find(
-        (detection) => detection.runtimeId === spec.runtimeId,
-      )?.executablePath;
+      const executablePath = (await knownRuntime(spec.runtimeId))?.executablePath;
       const profile = hireAgent(
         { ...spec, ...(executablePath === undefined ? {} : { executablePath }) },
         { store, clock },
@@ -586,10 +895,7 @@ void app.whenReady().then(async () => {
       try {
         // Resolved here for the same reason hiring resolves it here: pinning the user's own
         // binary is detection's job, and a changed runtime means a different binary.
-        const detected = await detectRuntimes();
-        const executablePath = detected.find(
-          (detection) => detection.runtimeId === spec.runtimeId,
-        )?.executablePath;
+        const executablePath = (await knownRuntime(spec.runtimeId))?.executablePath;
         const edit = editAgentProfile(
           profileId,
           { ...spec, ...(executablePath === undefined ? {} : { executablePath }) },
@@ -671,12 +977,26 @@ void app.whenReady().then(async () => {
    * flow when there is none, because a rail with a hole where the open team was is not a state
    * the user asked for.
    */
-  ipcMain.handle('blobot:deleteTeam', async (_event, teamId: string): Promise<TeamDeletionResult> => {
+  /**
+   * What a full clean would recover. Read while the dialog is open, because the number is what
+   * makes the option answerable: nobody can decide about "delete the workspaces too" without it.
+   */
+  ipcMain.handle('blobot:teamDiskUsage', async (_event, teamId: string): Promise<UiTeamDiskUsage> => {
+    if (store === undefined) return { bytes: 0, agents: [] };
+    try {
+      return await measureTeam(teamId, { store, clock });
+    } catch {
+      // A team blobot cannot measure is offered nothing rather than a wrong figure.
+      return { bytes: 0, agents: [] };
+    }
+  });
+
+  ipcMain.handle('blobot:deleteTeam', async (_event, teamId: string, clean = false): Promise<TeamDeletionResult> => {
     if (store === undefined) return { ok: false, error: 'No database is open.' };
     const wasActive = pool.active?.team.id === teamId;
     await pool.release(teamId);
     try {
-      const deletion = await deleteTeam(teamId, { store, clock });
+      const deletion = await deleteTeam(teamId, { store, clock }, { clean: clean === true });
       if (wasActive) {
         openError = undefined;
         const next = store.listTeams()[0];
@@ -685,7 +1005,11 @@ void app.whenReady().then(async () => {
           if (!opened.ok) openError = `${next.name} did not open. ${opened.error ?? ''}`.trim();
         }
       }
-      return { ok: true, removals: deletion.removals.map(asUiRemoval) };
+      return {
+        ok: true,
+        removals: deletion.removals.map(asUiRemoval),
+        ...(deletion.freedBytes === undefined ? {} : { freedBytes: deletion.freedBytes }),
+      };
     } catch (error) {
       return { ok: false, error: describe(error) };
     } finally {
@@ -749,7 +1073,7 @@ async function liveTeam(workspacePath: string): Promise<Team | undefined> {
   const name = basename(workspacePath);
   const existing = store.teamByName(name);
   if (existing !== undefined) return existing;
-  const claude = (await detectRuntimes()).find((runtime) => runtime.runtimeId === 'claude-code');
+  const claude = await knownRuntime('claude-code');
   const profileIds = [
     { name: 'Alice', role: 'frontend' },
     { name: 'Bob', role: 'backend' },
@@ -794,6 +1118,8 @@ function describe(error: unknown): string {
 }
 
 app.on('window-all-closed', () => {
+  // A login nobody is watching any more is a process holding a terminal open forever.
+  stopStep();
   void pool.closeAll();
   void demo?.close();
   opened?.close();

@@ -79,6 +79,8 @@ for the idea and the reason this effort exists rather than a rejection note.
   coordinator rather than a consequence of it.
 - `04-a-coordinator-cannot-see-who-is-free.md` — **closed with 02: the ack is the answer.**
 - `05-mock-a-coordinator-that-forgets-to-route.md` — the observed trap, per ticket 08's thesis.
-  **Unblocked and reframed**: the trap is a peer's and exists today.
+  **Reframed and resolved 2026-08-30**: the trap is a peer's and exists today. The scenario is
+  checked in and blobot says `named Bob · no message sent` under the turn, never repairing it.
 
-Order: 01 shipped alone. 02 answered and closed 03 and 04 with it; 05 is the only open one.
+Order: 01 shipped alone. 02 answered and closed 03 and 04 with it; 05 shipped last.
+**The effort is finished.**

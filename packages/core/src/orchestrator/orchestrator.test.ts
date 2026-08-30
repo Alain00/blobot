@@ -5,9 +5,10 @@ import { MockAgentRuntime, type ScenarioScript } from '../mock/mock-agent-runtim
 import { Scenario, scenario } from '../mock/scenario.js';
 import { scenarios } from '../mock/scenarios/index.js';
 import type { AgentRuntime } from '../runtime.js';
+import { PEER_CONTEXT_LIMIT, PEER_MESSAGE_LIMIT, WAKE_BATCH_LIMIT } from './bounds.js';
 import type { Agent, Team } from './domain.js';
 import { InMemoryMessageStore } from './message-store.js';
-import { Orchestrator, type BudgetExhausted } from './orchestrator.js';
+import { Orchestrator, type BudgetExhausted, type SilentHandoff } from './orchestrator.js';
 
 const team: Team = {
   id: 'team_1',
@@ -39,6 +40,7 @@ interface Harness {
   events: AgentEvent[];
   prompts: Map<string, string[]>;
   budget: BudgetExhausted[];
+  handoffs: SilentHandoff[];
   run(agentId: string, text: string): Promise<void>;
 }
 
@@ -88,6 +90,8 @@ async function harness(
   orchestrator.onEvent((event) => events.push(event));
   const budget: BudgetExhausted[] = [];
   orchestrator.onBudgetExhausted((exhausted) => budget.push(exhausted));
+  const handoffs: SilentHandoff[] = [];
+  orchestrator.onSilentHandoff((observed) => handoffs.push(observed));
 
   const starting = orchestrator.start();
   await clock.runAll();
@@ -100,6 +104,7 @@ async function harness(
     events,
     prompts,
     budget,
+    handoffs,
     async run(agentId, text) {
       const done = orchestrator.promptFromUser([agentId], text);
       await clock.runAll();
@@ -333,6 +338,96 @@ describe('the mailbox', () => {
   });
 });
 
+describe('what blobot puts in the context', () => {
+  it('refuses a message that is a transcript rather than a summary', async () => {
+    const h = await harness({});
+    await expect(
+      h.orchestrator.handleMessageAgent({
+        from: alice.id,
+        agent: 'Bob',
+        message: 'x'.repeat(PEER_MESSAGE_LIMIT + 1),
+        idempotencyKey: 'k-long',
+      }),
+    ).rejects.toThrow(/limit is 4,000.*short version/s);
+    // Refused means it does not exist: no row, and nobody woken. The sender reads the error as
+    // a tool failure and gets to write the short version.
+    expect(h.store.undelivered(bob.id)).toHaveLength(0);
+    expect(h.prompts.get(bob.id)).toBeUndefined();
+  });
+
+  it('refuses a context line that is not a line', async () => {
+    const h = await harness({});
+    await expect(
+      h.orchestrator.handleMessageAgent({
+        from: alice.id,
+        agent: 'Bob',
+        message: 'have a look',
+        context: 'y'.repeat(PEER_CONTEXT_LIMIT + 1),
+        idempotencyKey: 'k-context',
+      }),
+    ).rejects.toThrow(/one line about what you are working on/);
+  });
+
+  it('takes a message at exactly the limit, because a bound is not a suggestion', async () => {
+    const h = await harness({});
+    const ack = await h.orchestrator.handleMessageAgent({
+      from: alice.id,
+      agent: 'Bob',
+      message: 'x'.repeat(PEER_MESSAGE_LIMIT),
+      idempotencyKey: 'k-exact',
+    });
+    expect(ack.delivered).toBe(true);
+  });
+
+  it('wakes with a bounded batch and keeps the rest in the mailbox', async () => {
+    const h = await harness({ [bob.id]: scenario('slow').wait(5_000).say('done').end() });
+    for (let index = 0; index < WAKE_BATCH_LIMIT + 3; index += 1) {
+      await h.orchestrator.handleMessageAgent({
+        from: alice.id,
+        agent: 'Bob',
+        message: `thing ${index}`,
+        idempotencyKey: `k${index}`,
+      });
+    }
+    await h.clock.runAll();
+    await h.orchestrator.settled();
+
+    const woken = h.prompts.get(bob.id) ?? [];
+    // The first message started a turn; the seven that arrived during it are delivered five
+    // and then two, oldest first, rather than as one numbered list of seven.
+    const batches = woken.slice(1);
+    expect(batches[0]).toContain(`${WAKE_BATCH_LIMIT}. From Alice`);
+    expect(batches[0]).not.toContain(`${WAKE_BATCH_LIMIT + 1}. From Alice`);
+    expect(batches.join('\n')).toContain('thing 7');
+    // Nothing is dropped and nothing is left waiting: `#runTurn` wakes the agent again when
+    // the turn ends, which is the path a mid-turn arrival already takes.
+    expect(h.orchestrator.mailbox(bob.id)).toHaveLength(0);
+  });
+
+  it('reports what it sent, for the breakdown under the gauge', async () => {
+    const h = await harness({});
+    await h.orchestrator.handleMessageAgent({
+      from: alice.id,
+      agent: 'Bob',
+      message: 'have a look',
+      idempotencyKey: 'k-sent',
+    });
+    await h.clock.runAll();
+    await h.orchestrator.settled();
+
+    const sent = h.orchestrator.injectionOf(bob.id);
+    expect(sent.lastWakeMessages).toBe(1);
+    expect(sent.lastWakeChars).toBeGreaterThan('have a look'.length);
+    expect(sent.queued).toBe(0);
+    // An agent nobody has written to has been sent nothing, which is zero rather than absent.
+    expect(h.orchestrator.injectionOf(alice.id)).toEqual({
+      lastWakeChars: 0,
+      lastWakeMessages: 0,
+      queued: 0,
+    });
+  });
+});
+
 describe('the turn budget', () => {
   const pingPong = (target: string): Scenario =>
     scenario('ping-pong')
@@ -489,5 +584,79 @@ describe('a tool call that asks first', () => {
 
     expect(settled).toEqual(['cancelled']);
     expect(h.orchestrator.pendingPermissions).toHaveLength(0);
+  });
+});
+
+/**
+ * `.scratch/team-addressing/issues/05-mock-a-coordinator-that-forgets-to-route.md`. Every case
+ * here is a scoping decision: the observation is worth having only if it stays quiet on
+ * everything that is not the failure.
+ */
+describe('an agent that names a teammate and writes to nobody', () => {
+  it('says so when the user named them and the message never went', async () => {
+    const h = await harness({ [alice.id]: scenarios['promises-bob-and-forgets'] });
+    await h.run(alice.id, 'Get Bob to look at the retry loop.');
+
+    expect(h.handoffs).toEqual([
+      { teamId: team.id, agentId: alice.id, named: ['Bob'], at: expect.any(Number) },
+    ]);
+  });
+
+  it('stays quiet when the message did go', async () => {
+    const h = await harness({
+      [alice.id]: scenarios['alice-asks-bob'],
+      [bob.id]: scenario('quiet').say('ok').end(),
+    });
+    await h.run(alice.id, 'Get Bob to look at the retry loop.');
+
+    expect(h.handoffs).toEqual([]);
+  });
+
+  it('stays quiet on shop talk the user never asked for', async () => {
+    const h = await harness({ [alice.id]: scenarios['promises-bob-and-forgets'] });
+    await h.run(alice.id, 'Look at the retry loop.');
+
+    // Alice names Bob, and the user did not. A warning that fires here is a warning nobody
+    // reads: she is talking about a teammate, which is not a handoff anybody is waiting on.
+    expect(h.handoffs).toEqual([]);
+  });
+
+  it('stays quiet about an agent the user addressed directly', async () => {
+    const h = await harness({
+      [alice.id]: scenarios['promises-bob-and-forgets'],
+      [bob.id]: scenario('quiet').say('on it').end(),
+    });
+    const done = h.orchestrator.promptFromUser([alice.id, bob.id], 'Bob, take the retry loop.');
+    await h.clock.runAll();
+    await h.orchestrator.settled();
+    await done;
+
+    // Bob has the user's own words already. Nothing was lost by Alice not forwarding them.
+    expect(h.handoffs).toEqual([]);
+  });
+
+  it('stays quiet on a turn that did not get to the end of itself', async () => {
+    const h = await harness({
+      [alice.id]: scenario('refuses-to-hand-off')
+        .say('I will not ask Bob to force-push on my say-so.')
+        .end('refusal'),
+    });
+    await h.run(alice.id, 'Get Bob to force-push it.');
+
+    // The turn stopped, and the transcript already says so. An absence inside a turn that never
+    // finished is not a promise anybody broke.
+    expect(h.handoffs).toEqual([]);
+  });
+
+  it('never fires on a turn a peer started', async () => {
+    const h = await harness({
+      [alice.id]: scenarios['alice-asks-bob'],
+      [bob.id]: scenario('bob-mentions-alice').say('Alice is right about the backoff.').end(),
+    });
+    await h.run(alice.id, 'Get Bob to look at the retry loop.');
+
+    // Bob names Alice and writes to nobody, but the prompt that woke him was hers, not the
+    // user's. The observation is defined against what the user asked for.
+    expect(h.handoffs).toEqual([]);
   });
 });

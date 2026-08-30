@@ -27,4 +27,7 @@ export type {
 export type { Agent, AgentDefinition, AgentProfile, Message, Team } from './orchestrator/domain.js';
 export { findAgentByName } from './orchestrator/roster.js';
 export { AgentStatusTracker, statusAfter } from './status.js';
+export type { TrustLevel } from './trust.js';
+export { DEFAULT_TRUST, trustLevelOf } from './trust.js';
+
 export type { AgentStatus } from './status.js';

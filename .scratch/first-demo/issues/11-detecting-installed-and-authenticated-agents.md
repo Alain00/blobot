@@ -76,3 +76,35 @@ Nothing here was tested on macOS or Windows — the GUI-PATH cascade and Homebre
 real Mac before shipping.
 
 Full findings: `../research/11-agent-detection.md`
+
+## Amendment, 2026-08-30: the OpenCode probe's output is drawn in a box
+
+The finding above records that `opencode auth list` always exits 0, so stdout must be parsed,
+and that `NO_COLOR=1` does not suppress its escapes. Both still hold. What it did not record is
+the **shape** of that stdout, and the implementation read it by section name:
+
+```
+┌  Credentials ~/.local/share/opencode/auth.json
+│
+●  GitHub Copilot oauth
+│
+└  4 credentials
+```
+
+Every line is prefixed by a box-drawing glyph, so a heading test anchored at `^credentials`
+matched nothing and `parseOpencodeAuthList` returned **false for every input it was ever given**.
+
+It went unnoticed because it **failed closed**, and a false negative here is indistinguishable
+from the truth on a machine that is genuinely signed out — which is what the machine it was
+written on was. It surfaced only once blobot could run the login itself: the author signed in to
+OpenCode through the new terminal, the login said `Done`, and detection still said *no credential
+on this machine*. A wrong answer that agrees with you until the moment it matters.
+
+Fixed by stripping the frame (box drawing and the entry bullets) before reading anything, and by
+reading the closing `N credentials` as an answer in its own right, so a shape nobody anticipated
+reads as "not understood" rather than as "signed out". The test now carries the real bytes,
+copied from the terminal rather than written from this document.
+
+**The rule this suggests for the other probes**: a parser over a human-facing CLI's output should
+be pinned by a captured sample, not by prose about it. `claude auth status` is JSON with an exit
+code contract and is not exposed this way.

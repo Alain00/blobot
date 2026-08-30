@@ -1,4 +1,5 @@
 import type { Clock } from '../../clock.js';
+import { DEFAULT_TRUST, type TrustLevel } from '../../trust.js';
 import { SystemClock } from '../../clock.js';
 import type { AgentEvent } from '../../events.js';
 import { assembleMessages } from '../../message-assembler.js';
@@ -12,9 +13,12 @@ import type {
   PermissionOption,
   Prompt,
   RuntimeLifecycle,
+  RuntimeOptionChoices,
+  RuntimeOptionGroup,
   Unsubscribe,
 } from '../../runtime.js';
-import { JsonRpcConnection, type LineTransport } from './jsonrpc.js';
+import { applyOptionChoices, optionGroupsFrom } from '../acp/config-options.js';
+import { JsonRpcConnection, type LineTransport } from '../acp/jsonrpc.js';
 import {
   BRIDGE_PACKAGE,
   BRIDGE_VERSION,
@@ -22,14 +26,15 @@ import {
   type SpawnBridge,
 } from './stdio-bridge.js';
 import { offerableNames, paletteOf } from './palette.js';
-import { commandsFrom, stopReasonOf, translateSessionUpdate } from './translate.js';
+import { vouchedTools } from './permissions.js';
+import { commandsFrom, stopReasonOf, translateSessionUpdate } from '../acp/session-updates.js';
 import type {
   InitializeResult,
   NewSessionResult,
   PermissionRequestParams,
   PromptResult,
   SessionNotification,
-} from './wire.js';
+} from '../acp/wire.js';
 
 const PROTOCOL_VERSION = 1;
 
@@ -41,6 +46,18 @@ const PROTOCOL_VERSION = 1;
  * See ticket 14.
  */
 const PERMISSION_MODE = 'default';
+
+/**
+ * Which advertised option groups blobot hands to the user.
+ *
+ * The bridge advertises five. Two are withheld and both for the same reason: they are not
+ * settings, they are decisions blobot has already made. `mode` is ticket 14's permission
+ * posture, and offering it would put `bypassPermissions` in a dropdown. `agent` picks a
+ * different persona, and the persona is composed by core out of a Team and a roster.
+ *
+ * Measured on the pinned bridge, 2026-08-30: `model` (5), `effort` (6), `fast` (on/off).
+ */
+const SURFACED_OPTIONS = ['model', 'effort', 'fast'];
 
 /**
  * Claude Code ships its own inter-session messaging — `SendMessage` and `ListAgents`, which
@@ -84,18 +101,25 @@ const SHADOWING_TOOLS = ['SendMessage', 'ListAgents'];
 const SETTING_SCOPES = ['user', 'project', 'local'];
 
 /**
- * The servers blobot injects are pre-approved, by name, as `mcp__<server>`.
+ * Everything this session is allowed to do without asking: blobot's posture, plus its mailbox.
  *
- * Ticket 14 assumed MCP tools ride an ungated path — true of OpenCode, and true of the `auto`
- * mode research 02 happened to observe. It is **not** true of the `default` mode that same
- * ticket forces on us: Claude prompts for `mcp__blobot__message_agent` like any other tool,
- * and an unattended Alice messaging Bob then stalls on a permission request nobody answers.
+ * The servers blobot injects are pre-approved by name, as `mcp__<server>`. Ticket 14 assumed MCP
+ * tools ride an ungated path — true of OpenCode, and true of the `auto` mode research 02 happened
+ * to observe. It is **not** true of the `default` mode that same ticket forces on us: Claude
+ * prompts for `mcp__blobot__message_agent` like any other tool, and an unattended Alice messaging
+ * Bob then stalls on a permission request nobody answers.
  *
- * This pre-approves only what blobot itself passed in `session/new.mcpServers` — never the
- * user's own inherited servers, which keep prompting exactly as ticket 14 describes.
+ * Only what blobot itself passed in `session/new.mcpServers` — never the user's own inherited
+ * servers, which keep prompting exactly as ticket 14 describes.
+ *
+ * `vouchedTools` is the rest of the posture, and it arrives by the same route because that route
+ * is the only one the bridge does not discard. See `permissions.ts` and ticket 14's 2026-08-30
+ * amendment: without it `default` mode prompted on every edit inside the agent's own worktree.
+ * The mailbox is added whatever the trust level, including `careful`, where the vouched list is
+ * empty: an agent that had to ask permission to answer its teammate would not be careful.
  */
-function preApprovedTools(servers: readonly McpServerConfig[]): string[] {
-  return servers.map((server) => `mcp__${server.name}`);
+function preApprovedTools(servers: readonly McpServerConfig[], trust: TrustLevel): string[] {
+  return [...vouchedTools(trust), ...servers.map((server) => `mcp__${server.name}`)];
 }
 
 /**
@@ -131,8 +155,18 @@ export interface ClaudeAgentRuntimeOptions {
    * an error: the runtime falls back to a new one, which is exactly where it was before.
    */
   readonly resumeSessionId?: string;
-  readonly model?: string;
+  /**
+   * The user's own choices among what this runtime advertises, keyed by the provider's group
+   * id. Applied after the session exists: `_meta.claudeCode.options.model` is accepted and
+   * then **ignored** — measured, asking for `sonnet` and getting `opus[1m]` back.
+   */
+  readonly options?: RuntimeOptionChoices;
   readonly mcpServers?: readonly McpServerConfig[];
+  /**
+   * How much of this agent's own work blobot vouches for. Absent is `normal`, which is what
+   * every agent ran as before the level was a choice. See `trust.ts`.
+   */
+  readonly trust?: TrustLevel;
   readonly clock?: Clock;
   /** The user's own `claude`. Defaults to `CLAUDE_CODE_EXECUTABLE`, then `PATH`. */
   readonly claudeExecutable?: string;
@@ -170,6 +204,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
   #replaying = false;
   #resumed = false;
   #commands: readonly AvailableCommand[] = [];
+  #optionGroups: readonly RuntimeOptionGroup[] = [];
   #projectNames: ReadonlySet<string> | undefined;
 
   constructor(options: ClaudeAgentRuntimeOptions) {
@@ -190,6 +225,12 @@ export class ClaudeAgentRuntime implements AgentRuntime {
   /** The mode the bridge says it is in. `default`, or this adapter has a bug worth seeing. */
   get permissionMode(): string | undefined {
     return this.#modeId;
+  }
+
+  /** What this session was launched vouching for. Fixed for its life: `allowedTools` is a
+   *  `session/new` parameter, so a changed level reaches an agent at its next start. */
+  get trust(): TrustLevel {
+    return this.#options.trust ?? DEFAULT_TRUST;
   }
 
   /** Whether the agent came back with its memory. False after a fallback to a new session,
@@ -256,6 +297,14 @@ export class ClaudeAgentRuntime implements AgentRuntime {
     this.#sessionId = session.sessionId;
     this.#modeId = session.modes?.currentModeId;
     await this.#applyPermissionMode();
+    this.#optionGroups = optionGroupsFrom(session.configOptions, SURFACED_OPTIONS);
+    this.#optionGroups = await applyOptionChoices(
+      connection,
+      this.#sessionId,
+      this.#options.options ?? {},
+      this.#optionGroups,
+      (line) => this.#options.onStderr?.(line),
+    );
   }
 
   #newSession(connection: JsonRpcConnection): Promise<NewSessionResult> {
@@ -312,8 +361,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
           options: {
             disallowedTools: SHADOWING_TOOLS,
             settingSources: SETTING_SCOPES,
-            allowedTools: preApprovedTools(this.#options.mcpServers ?? []),
-            ...(this.#options.model === undefined ? {} : { model: this.#options.model }),
+            allowedTools: preApprovedTools(this.#options.mcpServers ?? [], this.trust),
           },
         },
       },
@@ -417,6 +465,11 @@ export class ClaudeAgentRuntime implements AgentRuntime {
 
   get availableCommands(): readonly AvailableCommand[] {
     return this.#commands;
+  }
+
+  /** What this session lets the user choose, minus the two groups blobot decides itself. */
+  get optionGroups(): readonly RuntimeOptionGroup[] {
+    return this.#optionGroups;
   }
 
   onCommandsChange(listener: (commands: readonly AvailableCommand[]) => void): Unsubscribe {

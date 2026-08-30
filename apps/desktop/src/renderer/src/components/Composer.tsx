@@ -235,12 +235,21 @@ export function Composer({
             {note !== undefined && <div className="suggestnote">{note}</div>}
           </Command.List>
         )}
+        {/* The field grows with the words. The highlight layer is the one in the flow, so its
+            wrapped height is the field's height, and the textarea lies over it at exactly that
+            size — no measuring, no resize observer, nothing to fall out of step. Past six lines
+            this box scrolls and they scroll together, because they are both inside it. */}
+        <div className="scroll">
+        <div className="mirror">
         <div className="hl" aria-hidden>
           {draft === '' ? (
             <span className="ph">{placeholder}</span>
           ) : (
             highlight(draft, roster)
           )}
+          {/* A line ending in a newline has no line box of its own to be tall. This gives it
+              one, so the caret on the empty last line is over text and not over the border. */}
+          {'\u200b'}
         </div>
         <MentionInput
           draft={draft}
@@ -268,12 +277,27 @@ export function Composer({
               if (event.key === 'Enter' || event.key === 'ArrowDown' || event.key === 'ArrowUp')
                 return;
             }
+            // Enter sends, shift+Enter opens a line. The field is prose and a paragraph of it
+            // is an ordinary thing to write, but Enter is the send this app has always had.
+            //
+            // The two keys leave by different doors. Send *prevents*, which is how the input
+            // claims a key from cmdk. A new line has to be left to the browser instead, and
+            // cmdk's root takes Enter whether or not shift is down and whether or not a menu is
+            // showing — so this one *stops* rather than prevents: cmdk never sees the event, and
+            // the textarea does what a textarea does. Preventing here typed `first linesecond
+            // line`, found with real key events through the running app.
             if (event.key === 'Enter') {
+              if (event.shiftKey) {
+                event.stopPropagation();
+                return;
+              }
               event.preventDefault();
               send();
             }
           }}
         />
+        </div>
+        </div>
       </Command>
       <button
         className={`send${pane.kind === 'team' && recipient !== undefined ? ' named' : ''}`}
@@ -304,8 +328,12 @@ export function Composer({
 }
 
 /**
- * The composer's own input, inside cmdk's tree so it can read which item the arrows are on.
+ * The composer's own field, inside cmdk's tree so it can read which item the arrows are on.
  * `useCommandState` is only readable from a child, which is the only reason this is a component.
+ *
+ * A textarea rather than an input, because a message to an agent is a paragraph often enough:
+ * an input cannot wrap, so a long prompt scrolled sideways out of sight while it was written.
+ * It carries no height of its own — the highlight layer under it is what has the height.
  */
 function MentionInput({
   draft,
@@ -316,11 +344,12 @@ function MentionInput({
   draft: string;
   open: boolean;
   onChange: (text: string) => void;
-  onKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+  onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
 }): React.JSX.Element {
   const activeId = useCommandState((state) => state.selectedItemId);
   return (
-    <input
+    <textarea
+      rows={1}
       value={draft}
       onChange={(event) => onChange(event.target.value)}
       onKeyDown={onKeyDown}

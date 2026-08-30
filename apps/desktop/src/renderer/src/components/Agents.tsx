@@ -20,10 +20,17 @@ import { Blob } from './Blob.js';
  * focus, the same rule the rail's team rows follow and for the same reason: a screen whose job
  * is "here is everybody" must not have a delete button as its loudest thing at rest.
  */
-export function Agents({ onClose }: { onClose: () => void }): React.JSX.Element {
+export function Agents({
+  onClose,
+  hiringAtOnce,
+}: {
+  onClose: () => void;
+  /** `--screen=hire` only: the dialog a screenshot cannot click its way to. */
+  hiringAtOnce?: boolean;
+}): React.JSX.Element {
   const [roster, setRoster] = useState<readonly UiAgentProfile[]>([]);
   const [runtimes, setRuntimes] = useState<readonly UiRuntimeChoice[]>([]);
-  const [hiring, setHiring] = useState(false);
+  const [hiring, setHiring] = useState(hiringAtOnce === true);
   /** Which agent a dialog is about, by id rather than by value: the row it came from is about
    *  to be replaced by a reloaded one, and a copy held here would go stale on save. */
   const [editing, setEditing] = useState<string | undefined>();
@@ -33,10 +40,15 @@ export function Agents({ onClose }: { onClose: () => void }): React.JSX.Element 
     setRoster(await window.blobot.listAgents());
   }, []);
 
-  useEffect(() => {
+  /** Ask the machine again. `detectRuntimes` re-detects, so signing one in redraws the picker. */
+  const rescan = useCallback((): void => {
     void window.blobot.detectRuntimes().then(setRuntimes);
+  }, []);
+
+  useEffect(() => {
+    rescan();
     void reload();
-  }, [reload]);
+  }, [reload, rescan]);
 
   const editingAgent = roster.find((agent) => agent.id === editing);
   const retiringAgent = roster.find((agent) => agent.id === retiring);
@@ -134,6 +146,7 @@ export function Agents({ onClose }: { onClose: () => void }): React.JSX.Element 
       {hiring && (
         <HireAgent
           runtimes={runtimes}
+          onRuntimesChanged={rescan}
           onClose={() => setHiring(false)}
           onHired={async () => {
             await reload();
@@ -145,6 +158,7 @@ export function Agents({ onClose }: { onClose: () => void }): React.JSX.Element 
         <EditAgent
           agent={editingAgent}
           runtimes={runtimes}
+          onRuntimesChanged={rescan}
           onClose={() => setEditing(undefined)}
           onSaved={reload}
         />

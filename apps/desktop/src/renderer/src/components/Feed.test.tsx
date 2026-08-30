@@ -1,0 +1,117 @@
+/**
+ * @vitest-environment jsdom
+ *
+ * The context gauge at the head of the activity column.
+ *
+ * The claims worth holding are the ones a screenshot would not catch: that both numbers are
+ * drawn and not only the percent, because the two runtimes' windows differ by five times and a
+ * bare `4%` next to a bare `74%` invites a comparison that is not true; that an agent which has
+ * never reported is absent rather than empty; and that the block disappears entirely when
+ * nobody has reported, rather than leaving a header over nothing.
+ */
+import React from 'react';
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
+import { describe, expect, it } from 'vitest';
+import type { UiAgent, UiInjection } from '../../../shared/api.js';
+import { Feed } from './Feed.js';
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+const AGENTS: readonly UiAgent[] = [
+  { id: 'alice', name: 'Alice', role: 'builds the UI', runtimeLabel: 'claude code', workspacePath: '/w' },
+  { id: 'bob', name: 'Bob', role: 'reviews it', runtimeLabel: 'opencode', workspacePath: '/w' },
+];
+
+function render(
+  usage: Record<string, { used: number; size: number }>,
+  injection: Record<string, UiInjection> = {},
+): HTMLElement {
+  const host = document.createElement('div');
+  document.body.append(host);
+  act(() => {
+    createRoot(host).render(
+      <Feed
+        entries={[]}
+        agents={AGENTS}
+        usage={usage}
+        injection={injection}
+        pane={{ kind: 'team' }}
+      />,
+    );
+  });
+  return host;
+}
+
+function click(host: HTMLElement, index: number): void {
+  const row = host.querySelectorAll('.ctxrow')[index] as HTMLButtonElement;
+  act(() => row.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+}
+
+const rows = (host: HTMLElement): string[] =>
+  [...host.querySelectorAll('.ctxrow')].map((row) => row.textContent ?? '');
+
+describe('the context gauge', () => {
+  it('draws both numbers and the percent, so two different windows can be read together', () => {
+    const host = render({
+      alice: { used: 37_000, size: 1_000_000 },
+      bob: { used: 148_000, size: 200_000 },
+    });
+    expect(rows(host)).toEqual(['Alice37k/1m3%', 'Bob148k/200k74%']);
+  });
+
+  it('leaves out an agent that has never reported', () => {
+    expect(rows(render({ bob: { used: 148_000, size: 200_000 } }))).toEqual(['Bob148k/200k74%']);
+  });
+
+  it('says nothing at all when nobody has reported', () => {
+    const host = render({});
+    expect(host.querySelector('.ctx')).toBeNull();
+    expect(host.querySelector('.feed')).not.toBeNull();
+  });
+});
+
+describe('what blobot sent', () => {
+  const SENT: UiInjection = {
+    personaChars: 1_840,
+    instructionsChars: 420,
+    lastWakeChars: 960,
+    lastWakeMessages: 3,
+    queued: 0,
+    ownToolChars: 1_040,
+  };
+
+  it('opens under the row that was clicked, and closes again', () => {
+    const host = render({ alice: { used: 37_000, size: 1_000_000 } }, { alice: SENT });
+    expect(host.querySelector('.sent')).toBeNull();
+    click(host, 0);
+    expect(host.querySelector('.sent')).not.toBeNull();
+    click(host, 0);
+    expect(host.querySelector('.sent')).toBeNull();
+  });
+
+  it('estimates, and says that it is estimating', () => {
+    const host = render({ alice: { used: 37_000, size: 1_000_000 } }, { alice: SENT });
+    click(host, 0);
+    const lines = [...(host.querySelectorAll('.sentrow') ?? [])].map((row) => row.textContent);
+    // Four characters to a token, with the tilde saying so. The gauge above is the runtime's
+    // own count and these are never added to it.
+    expect(lines).toEqual([
+      'persona~460',
+      'your standing instructions~105',
+      'last wake prompt~240',
+      '3 messages',
+      'queued0',
+      // The only tool blobot adds, measured from the definition on the wire. What an agent's
+      // other tools cost is not knowable here, and the note says the gauge includes them.
+      "blobot's own tool~260",
+    ]);
+    expect(host.querySelector('.sentnote')?.textContent).toContain('estimated');
+  });
+
+  it('says nothing was sent rather than drawing zeros, for an agent never woken', () => {
+    const host = render({ alice: { used: 4_000, size: 200_000 } }, {});
+    click(host, 0);
+    expect(host.querySelector('.sentnote')?.textContent).toContain('not been woken');
+  });
+});

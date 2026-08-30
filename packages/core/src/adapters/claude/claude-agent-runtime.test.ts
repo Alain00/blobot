@@ -20,6 +20,10 @@ function tick(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
 }
 
+interface SessionParams {
+  readonly _meta: { readonly claudeCode: { readonly options: { readonly allowedTools: string[] } } };
+}
+
 interface Started {
   readonly runtime: ClaudeAgentRuntime;
   readonly bridge: FakeBridge;
@@ -67,6 +71,48 @@ describe('starting', () => {
     // unattended teammate. Ticket 14.
     expect(setMode.modeId).toBe('default');
     expect(runtime.permissionMode).toBe('default');
+  });
+
+  it('vouches for editing and ordinary commands, so `default` mode stops asking about them', async () => {
+    // Ticket 14, 2026-08-30: `default` prompts on every Edit and Write whatever the path, so
+    // without this an agent stopped to ask permission to write a file in its own worktree.
+    const { bridge } = await started();
+    const options = (bridge.received[1]?.params as SessionParams)._meta.claudeCode.options;
+
+    expect(options.allowedTools).toContain('Edit');
+    expect(options.allowedTools).toContain('Write');
+    expect(options.allowedTools).toContain('Bash(npm test:*)');
+    expect(options.allowedTools).toContain('Bash(git commit:*)');
+  });
+
+  it('vouches for nothing that reaches the network, changes permissions or publishes', async () => {
+    const { bridge } = await started();
+    const options = (bridge.received[1]?.params as SessionParams)._meta.claudeCode.options;
+
+    // The list is closed, so this is the whole of the check: a prefix that is not here is a
+    // prompt the user still gets. `git` bare would swallow `git push`, which is why it is absent.
+    for (const forbidden of ['rm', 'sudo', 'chmod', 'chown', 'curl', 'wget', 'ssh', 'scp',
+      'docker', 'git push', 'git remote', 'gh', 'npm install', 'npx', 'pnpm add', 'yarn add',
+      'bun add', 'git']) {
+      expect(options.allowedTools).not.toContain(`Bash(${forbidden}:*)`);
+    }
+  });
+
+  it('keeps pre-approving the mailbox blobot injected, beside the posture', async () => {
+    const bridge = new FakeBridge();
+    const runtime = new ClaudeAgentRuntime({
+      agentId: 'bob',
+      cwd: '/tmp/blobot/bob',
+      claudeExecutable: '/usr/bin/true',
+      mcpServers: [{ type: 'http', name: 'blobot', url: 'http://127.0.0.1:1/' }],
+      spawn: () => bridge,
+    });
+    await runtime.start();
+    const options = (bridge.received[1]?.params as SessionParams)._meta.claudeCode.options;
+
+    // Ticket 15's: an unattended Alice stalls forever on a permission request for the mailbox.
+    expect(options.allowedTools).toContain('mcp__blobot');
+    expect(options.allowedTools).toContain('Write');
   });
 
   it('injects the persona and the workspace through the session, not the prompt', async () => {
@@ -663,5 +709,60 @@ describe('the command menu', () => {
 
     // The ordinary case, and not an error: most workspaces have no `.claude/`.
     expect(runtime.availableCommands).toEqual([]);
+  });
+});
+
+describe('what the user may choose', () => {
+  it('offers the runtime\'s own groups and withholds the two blobot decides', async () => {
+    const { runtime } = await started();
+
+    // Advertised: mode, model, effort, fast, agent. `mode` is ticket 14's posture and would
+    // put `bypassPermissions` in a dropdown; `agent` picks a persona core composes.
+    expect(runtime.optionGroups.map((group) => group.id)).toEqual(['model', 'effort', 'fast']);
+    const effort = runtime.optionGroups.find((group) => group.id === 'effort');
+    expect(effort?.choices.map((choice) => choice.value)).toEqual(['low', 'medium', 'high', 'xhigh', 'max']);
+    expect(effort?.choices.find((choice) => choice.isDefault)?.value).toBe('medium');
+  });
+
+  it('applies the choices onto the session, because the session is the only lever', async () => {
+    const bridge = new FakeBridge();
+    const runtime = new ClaudeAgentRuntime({
+      agentId: 'bob',
+      cwd: '/tmp/blobot/bob',
+      persona: 'You are Bob.',
+      options: { effort: 'max', model: 'sonnet' },
+      spawn: () => bridge,
+    });
+    await runtime.start();
+
+    // `_meta.claudeCode.options.model` is accepted and then ignored by the real bridge:
+    // measured asking for `sonnet` at `session/new` and getting `opus[1m]` back.
+    const newSession = bridge.received[1]?.params as { _meta: { claudeCode: { options: Record<string, unknown> } } };
+    expect(newSession._meta.claudeCode.options).not.toHaveProperty('model');
+
+    expect(bridge.options['model']).toBe('sonnet');
+    expect(bridge.options['effort']).toBe('max');
+    expect(runtime.optionGroups.find((group) => group.id === 'model')?.current).toBe('sonnet');
+    // And the posture is still what ticket 14 forced, after all that setting.
+    expect(runtime.permissionMode).toBe('default');
+  });
+
+  it('starts anyway when the runtime refuses one, and says so', async () => {
+    const bridge = new FakeBridge();
+    bridge.refuse['fast'] = 'on';
+    const logs: string[] = [];
+    const runtime = new ClaudeAgentRuntime({
+      agentId: 'bob',
+      cwd: '/tmp/blobot/bob',
+      options: { fast: 'on', effort: 'high' },
+      spawn: () => bridge,
+      onStderr: (line) => logs.push(line),
+    });
+    await runtime.start();
+
+    expect(runtime.lifecycle).toBe('ready');
+    expect(logs.join('\n')).toMatch(/fast=on was refused/);
+    // The rest of the choices still land: one refusal is not the whole set.
+    expect(bridge.options['effort']).toBe('high');
   });
 });

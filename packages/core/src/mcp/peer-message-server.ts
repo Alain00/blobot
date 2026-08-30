@@ -32,13 +32,21 @@ export interface PeerMessageServerOptions {
 }
 
 /** The MCP protocol version the runtimes negotiated in ticket 15's transcripts. */
+import { PEER_CONTEXT_LIMIT, PEER_MESSAGE_LIMIT } from '../orchestrator/bounds.js';
+
 const PROTOCOL_VERSION = '2025-06-18';
 
 /**
  * Named `blobot` / `message_agent`, never `blobot_message_agent`: OpenCode prefixes the tool
  * with the server name and would publish `blobot_blobot_message_agent`.
  */
-const TOOL = {
+/**
+ * Exported because its **size is context**. This definition is sent to every agent on every
+ * turn, so the surface that shows what blobot injects measures the real thing rather than a
+ * number somebody typed. It is also the only tool blobot adds: everything else in an agent's
+ * tool list came from the runtime or from a server the user configured.
+ */
+export const MESSAGE_AGENT_TOOL = {
   name: 'message_agent',
   description:
     'Send an asynchronous message to a teammate agent. Use this whenever you are asked to ' +
@@ -49,18 +57,30 @@ const TOOL = {
     type: 'object',
     properties: {
       agent: { type: 'string', description: 'Name of the teammate agent to message' },
-      message: { type: 'string', description: 'The message body' },
+      message: {
+        type: 'string',
+        // The bound is said here as well as enforced in the orchestrator. Enforcement fails
+        // closed and is what makes the rule real; saying it is what stops a sender spending a
+        // tool call to find out.
+        description:
+          `The message body, under ${PEER_MESSAGE_LIMIT} characters. A teammate gets your ` +
+          'summary, not your transcript: commit your work and say which branch it is on.',
+        maxLength: PEER_MESSAGE_LIMIT,
+      },
       context: {
         type: 'string',
         description:
           'Optional one-line description of what you are working on, in your own words. ' +
           'It is shown to the teammate so they can judge how your request relates to theirs.',
+        maxLength: PEER_CONTEXT_LIMIT,
       },
     },
     required: ['agent', 'message'],
     additionalProperties: false,
   },
 } as const;
+
+const TOOL = MESSAGE_AGENT_TOOL;
 
 interface JsonRpcRequest {
   readonly jsonrpc?: string;

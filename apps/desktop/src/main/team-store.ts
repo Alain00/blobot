@@ -1,6 +1,10 @@
 import { randomBytes } from 'node:crypto';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import type { TrustLevel } from '@blobot/core';
 import {
   inspectWorkspace as inspectPath,
+  prepareWorkspace as preparePath,
   SqliteStore,
   workspaceProviderFor,
   WorkspaceError,
@@ -23,6 +27,16 @@ export interface NewAgentSpec {
   readonly executablePath?: string;
   /** The blobatar hue the user picked, 0 to 359. Absent means the name derives it. */
   readonly hue?: number;
+  /**
+   * What the user chose among the options the runtime advertises, keyed by the provider's own
+   * group id. Absent keys are the runtime's defaults, and nothing here reads either.
+   */
+  readonly runtimeOptions?: Readonly<Record<string, string>>;
+  /**
+   * How much of this agent's own work blobot vouches for. Absent is `normal`, which is what
+   * every agent hired before the selector existed is.
+   */
+  readonly trust?: TrustLevel;
 }
 
 /** Forming a team out of agents that already exist. */
@@ -44,6 +58,12 @@ export interface NewTeamSpec {
    * offers by default.
    */
   readonly repoPaths?: readonly string[];
+  /**
+   * The team's icon as a `data:` URL, when the user accepted the one found in the Workspace or
+   * chose a file. Leaving it out is the ordinary case and means the team is drawn from its
+   * members alone.
+   */
+  readonly icon?: string;
 }
 
 export interface CreateTeamDeps {
@@ -106,6 +126,8 @@ export function hireAgent(spec: NewAgentSpec, deps: CreateTeamDeps): AgentProfil
       : { instructions: spec.instructions.trim() }),
     ...(spec.executablePath === undefined ? {} : { executablePath: spec.executablePath }),
     ...(spec.hue === undefined ? {} : { hue: spec.hue }),
+    ...(spec.runtimeOptions === undefined ? {} : { runtimeOptions: spec.runtimeOptions }),
+    ...(spec.trust === undefined ? {} : { trust: spec.trust }),
     createdAt: now,
   });
 }
@@ -167,7 +189,10 @@ export function editAgentProfile(
     role,
     runtimeId: spec.runtimeId,
     ...(spec.executablePath === undefined ? {} : { executablePath: spec.executablePath }),
-    ...(profile.model === undefined ? {} : { model: profile.model }),
+    // Restated like the role, not carried over like the name: an edit says what the agent is
+    // now, and clearing the picker back to the runtime's defaults has to be sayable.
+    ...(spec.runtimeOptions === undefined ? {} : { runtimeOptions: spec.runtimeOptions }),
+    ...(spec.trust === undefined ? {} : { trust: spec.trust }),
     ...(instructions === undefined || instructions === '' ? {} : { instructions }),
     ...(spec.hue === undefined ? {} : { hue: spec.hue }),
   });
@@ -182,6 +207,8 @@ export function editAgentProfile(
       role,
       ...(instructions === undefined || instructions === '' ? {} : { instructions }),
       ...(spec.hue === undefined ? {} : { hue: spec.hue }),
+      ...(spec.runtimeOptions === undefined ? {} : { runtimeOptions: spec.runtimeOptions }),
+      ...(spec.trust === undefined ? {} : { trust: spec.trust }),
     });
   }
 
@@ -267,6 +294,7 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
     workspacePath: spec.workspacePath,
     workspaceKind: inspection.kind,
     ...(repoPaths.length === 0 ? {} : { workspaceRepos: repoPaths }),
+    ...(spec.icon === undefined ? {} : { icon: spec.icon }),
     turnBudget: spec.turnBudget,
   };
   deps.store.createTeam({ ...team, createdAt: now });
@@ -292,7 +320,8 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
       ...(profile.instructions === undefined ? {} : { instructions: profile.instructions }),
       ...(profile.hue === undefined ? {} : { hue: profile.hue }),
       ...(profile.executablePath === undefined ? {} : { executablePath: profile.executablePath }),
-      ...(profile.model === undefined ? {} : { model: profile.model }),
+      ...(profile.runtimeOptions === undefined ? {} : { runtimeOptions: profile.runtimeOptions }),
+      ...(profile.trust === undefined ? {} : { trust: profile.trust }),
       workspacePath: workspace.path,
       ...(workspace.branch === undefined ? {} : { branch: workspace.branch }),
       createdAt: deps.clock.now(),
@@ -304,6 +333,18 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
   // marked, so nobody is silently made the default recipient of everything typed at the team.
   deps.store.setTeamLead(team.id, leadAgentId);
   return { ...team, ...(leadAgentId === undefined ? {} : { leadAgentId }) };
+}
+
+/**
+ * Make this team a folder of its own, under `~/blobot`.
+ *
+ * The other door out of the flow's first step, for the user who has not got a repository in
+ * mind. The root is fixed and in the home directory rather than under `userData`: this is a
+ * folder the user is meant to work in, open in an editor and find again, not application state
+ * they will never look at.
+ */
+export async function prepareWorkspace(name: string): Promise<WorkspaceInspection> {
+  return preparePath(join(homedir(), 'blobot'), name);
 }
 
 /** The creation flow's first screen: what is at the path the user picked. */
@@ -341,6 +382,45 @@ export interface AgentRemoval {
 export interface TeamDeletion {
   readonly teamName: string;
   readonly removals: readonly AgentRemoval[];
+  /** What the full clean actually recovered, in bytes. Absent when none was asked for. */
+  readonly freedBytes?: number;
+}
+
+/**
+ * What a full clean would recover, measured before it is offered.
+ *
+ * Per agent as well as in total, because "3.1 GB" on its own is a number the user has to trust
+ * and "Alice 2.9 GB, Bob 180 MB" is one they can recognise. Measured on demand rather than
+ * stored: a workspace is a directory the agent and the user are both writing to, so any figure
+ * blobot kept would be a stale one.
+ */
+export interface TeamDiskUsage {
+  readonly bytes: number;
+  readonly agents: readonly { readonly agentName: string; readonly bytes: number }[];
+}
+
+/** How much disk this team's AgentWorkspaces are holding right now. */
+export async function measureTeam(teamId: string, deps: CreateTeamDeps): Promise<TeamDiskUsage> {
+  const team = deps.store.teamById(teamId);
+  if (team === undefined) throw new TeamCreationError('unknown_agent', 'That team is already gone.');
+  const workspaces = deps.workspaces ?? workspaceProviderFor(team.workspaceKind);
+
+  const agents: { agentName: string; bytes: number }[] = [];
+  for (const record of deps.store.agentsOfTeam(team.id)) {
+    // Never a refusal, at any level: this number is drawn beside a button, and a team whose
+    // folder has been deleted is the ordinary team to be deleting.
+    const bytes = await workspaces
+      .measure({
+        workspacePath: team.workspacePath,
+        teamName: team.name,
+        agentId: record.id,
+        agentName: record.name,
+        ...(team.workspaceRepos === undefined ? {} : { repos: team.workspaceRepos }),
+      })
+      .catch(() => 0);
+    agents.push({ agentName: record.name, bytes });
+  }
+  return { bytes: agents.reduce((total, agent) => total + agent.bytes, 0), agents };
 }
 
 /**
@@ -356,19 +436,33 @@ export interface TeamDeletion {
  * would be undeletable precisely when the user wants it gone. So each removal is attempted,
  * whatever it says is reported, and the rows go either way.
  */
-export async function deleteTeam(teamId: string, deps: CreateTeamDeps): Promise<TeamDeletion> {
+export async function deleteTeam(
+  teamId: string,
+  deps: CreateTeamDeps,
+  /**
+   * A **full clean**: every AgentWorkspace deleted whatever it holds, unmerged branches and
+   * copies included. Off unless the user asked for it on the dialog, having been shown the
+   * size, because it is the one action in blobot that destroys work git cannot give back.
+   */
+  options: { readonly clean?: boolean } = {},
+): Promise<TeamDeletion> {
   const team = deps.store.teamById(teamId);
   if (team === undefined) throw new TeamCreationError('unknown_agent', 'That team is already gone.');
   const workspaces = deps.workspaces ?? workspaceProviderFor(team.workspaceKind);
   const records = deps.store.agentsOfTeam(team.id);
+  const clean = options.clean === true;
 
   const removals: AgentRemoval[] = [];
+  let freedBytes = 0;
   for (const record of records) {
-    removals.push(await removeWorkspaceOf(record, team, workspaces));
+    // Measured first, while it is still there. The whole point of the option is the number, and
+    // a number reported after the fact would have to be the estimate rather than the result.
+    if (clean) freedBytes += await measureWorkspaceOf(record, team, workspaces);
+    removals.push(await removeWorkspaceOf(record, team, workspaces, clean));
     deps.store.tombstoneAgent(record.id, deps.clock.now());
   }
   deps.store.tombstoneTeam(team.id, deps.clock.now());
-  return { teamName: team.name, removals };
+  return { teamName: team.name, removals, ...(clean ? { freedBytes } : {}) };
 }
 
 /**
@@ -436,7 +530,8 @@ export async function editTeamRoster(
       ...(profile.instructions === undefined ? {} : { instructions: profile.instructions }),
       ...(profile.hue === undefined ? {} : { hue: profile.hue }),
       ...(profile.executablePath === undefined ? {} : { executablePath: profile.executablePath }),
-      ...(profile.model === undefined ? {} : { model: profile.model }),
+      ...(profile.runtimeOptions === undefined ? {} : { runtimeOptions: profile.runtimeOptions }),
+      ...(profile.trust === undefined ? {} : { trust: profile.trust }),
       workspacePath: workspace.path,
       ...(workspace.branch === undefined ? {} : { branch: workspace.branch }),
       createdAt: deps.clock.now(),
@@ -467,19 +562,39 @@ export async function editTeamRoster(
   return removals;
 }
 
-async function removeWorkspaceOf(
+async function measureWorkspaceOf(
   record: { readonly id: string; readonly name: string },
   team: Team,
   workspaces: WorkspaceProvider,
-): Promise<AgentRemoval> {
-  try {
-    const outcome = await workspaces.remove({
+): Promise<number> {
+  return workspaces
+    .measure({
       workspacePath: team.workspacePath,
       teamName: team.name,
       agentId: record.id,
       agentName: record.name,
       ...(team.workspaceRepos === undefined ? {} : { repos: team.workspaceRepos }),
-    });
+    })
+    .catch(() => 0);
+}
+
+async function removeWorkspaceOf(
+  record: { readonly id: string; readonly name: string },
+  team: Team,
+  workspaces: WorkspaceProvider,
+  clean = false,
+): Promise<AgentRemoval> {
+  const request = {
+    workspacePath: team.workspacePath,
+    teamName: team.name,
+    agentId: record.id,
+    agentName: record.name,
+    ...(team.workspaceRepos === undefined ? {} : { repos: team.workspaceRepos }),
+  };
+  try {
+    const outcome = clean
+      ? await workspaces.purge(request)
+      : await workspaces.remove(request);
     return {
       agentName: record.name,
       work: outcome.work,

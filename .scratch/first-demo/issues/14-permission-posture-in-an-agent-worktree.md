@@ -347,3 +347,150 @@ not consented to, in the creation flow where it is read once before any agent ex
 posture itself is unchanged, since it was always a property of what blobot arranges with the
 runtime and never of what the header said about it. The permission block is still where a user
 meets the posture in practice: it is the one moment the sentence is about something.
+
+## Amendment, 2026-08-30: Claude gets an allowlist too, and *"not ours to configure"* was too strong
+
+Reopened by the author, from the working surface: an agent asked to allow `Write
+src/components/desk/desk-items.ts` — a file **inside its own worktree**, on its own branch,
+recoverable by git. Nothing about that call is dangerous, outside the copy, or irreversible.
+
+### What was wrong
+
+This ticket read `default` as *"Standard behavior, prompts for dangerous operations"*, which is
+the bridge's own description of the mode, and took it at its word. It is not what the mode does.
+`default` prompts on **every** `Edit`, `Write` and every `Bash` that is not already pre-approved,
+regardless of path. The word *dangerous* in that table is marketing, not semantics.
+
+Two consequences the ticket argued itself into and then failed to notice it had:
+
+- **`waiting` became the normal state on Claude.** The ticket rejected coarse symmetry
+  (`{bash: ask, edit: ask}` on OpenCode) precisely because *"every `ls` and `npm test` a prompt"*
+  would spend ticket 09's only contrast inversion on the ordinary case. `default` on Claude is
+  that rejected posture, arrived at by accident, on one of the two runtimes.
+- **Two pieces of shipped copy were false.** The permission block said *"this reaches outside its
+  own workspace or cannot be undone"* over a call that did neither, and the creation flow's
+  disclosure promised *"inside that copy they can read, edit and run commands without asking
+  you"* — true of an OpenCode agent, untrue of a Claude one, in the same product, at the same
+  time. A disclosure that overstates protection is the failure this ticket named; one that
+  overstates *freedom* is the same defect, and it is the one that shipped.
+
+### The finding
+
+*"Claude Code is not ours to configure"* was inferred from the bridge discarding `permissionMode`,
+`canUseTool` and `allowDangerouslySkipPermissions`. But the bridge passes **`allowedTools`**
+straight through, and this repo has been relying on that since ticket 15: `preApprovedTools`
+pre-approves `mcp__blobot` by exactly this route, and it works. `allowedTools` takes the same rule
+strings as `permissions.allow` in settings — `Edit`, `Write`, `Bash(git status:*)`.
+
+So there was a lever all along. It is narrower than OpenCode's, and it is enough.
+
+### Decision
+
+**Claude sessions are handed a vouched allowlist through `_meta.claudeCode.options.allowedTools`,
+alongside the `mcp__blobot` entry already there. The mode stays `default`.**
+
+`adapters/claude/permissions.ts`, the counterpart to OpenCode's `PERMISSION_POSTURE`:
+
+- the editing tools — `Edit`, `Write`, `MultiEdit`, `NotebookEdit` — unconditionally, because an
+  AgentWorkspace is the agent's own copy in all three workspace kinds, and nothing it writes
+  there is the user's working tree;
+- a closed list of `Bash(<prefix>:*)` rules for the commands that are how an agent does its job:
+  inspection, local git, test and build runners, ordinary file moves.
+
+Everything else keeps prompting.
+
+### Why an allowlist, and not the settings file this was first going to be
+
+The obvious route was seeding `<workspace>/.claude/settings.local.json`, which the bridge already
+reads (`settingSources` includes `local`) and which `allow always` already writes to. It was
+rejected: an AgentWorkspace is a **checkout of the user's repository on a blobot branch**, so a
+file blobot puts there is a file the agent can stage, commit and merge back. That breaks the rule
+ticket 16 kept on the other runtime — *blobot writes nothing into the user's repository* — and it
+breaks it in the one place where the user's own tooling would carry the leak home. `allowedTools`
+is per session, in memory, and leaves nothing on disk.
+
+It also costs something and the cost is stated: an allowlist cannot express *allow everything
+except these*, so OpenCode's `bash {'*': allow}` minus seventeen patterns has no equivalent. The
+Claude list is closed and enumerated, so an unlisted-but-harmless command still prompts. That is
+an asymmetry in the safe direction, and it fails closed, which is the same instinct ADR-0003 used
+for the palette.
+
+**The pattern list is still a speed bump and not a boundary.** `npm run` executes a script the
+agent may have just written; `sed` can write anything. That was already true of the OpenCode list
+and this ticket already says so out loud. Nothing here is a guarantee, and nothing here changes
+what blobot claims: **prompting only, on both runtimes.**
+
+### The copy is corrected, not the disclosure's posture
+
+- The permission block stops asserting a reason it cannot know. It named the two things `default`
+  supposedly gates and named them wrongly; it now says what is actually true of a request that
+  reached the user — blobot did not pre-approve it, and the agent is stopped until an answer.
+- The disclosure keeps its shape and loses one clause. *"It is the runtime that decides what
+  counts, not a list blobot wrote"* is now false on both runtimes rather than one, since blobot
+  writes a list for each. It says the true thing instead, without naming commands: blobot
+  vouches for the ordinary work, and the runtime asks about the rest.
+
+Nothing else in this ticket moves. `bypassPermissions`, `acceptEdits`, `dontAsk` and `auto` remain
+unoffered and unset, and `mode` stays out of `SURFACED_OPTIONS`.
+
+## Amendment, 2026-08-30 (second): the posture is the user's, per agent, in three words
+
+Raised by the author on reading the first amendment: *"that settings should be per
+workspace/agent. we need a ui for this. a simple selector or a friendly UX for noobs."*
+
+Both halves are granted, and the second one is the part this ticket had actually got wrong. It
+decided a posture and defended it well; what it never asked is **whose decision it is.** Everything
+above reads as blobot choosing on the user's behalf and then disclosing the choice — which is the
+right default and a poor ceiling, because the two people this posture is wrong for are opposite:
+somebody pointing agents at a repository they cannot afford to have touched, and somebody who
+wants the thing to get on with it. Neither was reachable except by hand-editing a settings file
+the app never mentions.
+
+### The decision
+
+**Three levels, on the agent, in the hire and edit dialogs:** `careful`, `normal`, `trusting`.
+`normal` is what this ticket decided and stays the default, stored as nothing.
+
+| | Claude | OpenCode |
+|---|---|---|
+| `careful` | `allowedTools` is empty, so `default` mode asks about every edit and command | `{edit: 'ask', bash: {'*': 'ask'}}`, the object form and never the scalar |
+| `normal` | this ticket's vouched list | this ticket's rule list, verbatim |
+| `trusting` | the vouched list plus the network and the installers | the same rules with those patterns flipped to `allow` |
+
+The two adapters translate the same three words from opposite ends — Claude adds to an
+allow-nothing, OpenCode subtracts from an allow-all — which is why the vocabulary is in
+`core/trust.ts` and not in either of them.
+
+### Where the ceiling is, and why the control has three rows and not four
+
+There is no position above `trusting`, and there will not be one. The next step up is Claude's
+`bypassPermissions` or OpenCode's unqualified allow, and this ticket refuses both, so the
+selector ends where the refusal starts. **`rm`, `sudo`, `chmod`, `chown`, `ssh`, `scp`,
+`docker`, `git push` and `git remote` ask at every level, on both runtimes**, and the copy for
+`trusting` says so in the same sentence that offers it. That sentence is the ceiling made
+visible: a user reading the loosest option is entitled to know it is the loosest one.
+
+### Per agent, and deliberately not per team
+
+An AgentWorkspace is per agent. Trusting Alice has never said anything about Bob, and a
+team-wide control would say it does. So the control sits in the agent form under *how it
+answers*, which is the other half of the same question about the same agent: that one is what it
+says, this one is what it does. The creation flow's disclosure names the three levels and says
+where they live; it does not offer them, because the screen where a consequence is taken on is
+not always the screen where it is chosen.
+
+### What this costs the block
+
+The permission block can no longer explain itself by naming what blobot vouched for: that
+sentence is false for a `careful` agent, which it vouches for nothing for. It says the thing
+that is true at all three levels instead — blobot did not vouch for this one, so the runtime is
+asking, and what it vouches for is what this agent is set to.
+
+### Still not an approvals feature
+
+The out-of-scope line above holds. This is a default made choosable, not a permissions system:
+there is still no screen listing what an agent may currently do, nothing showing the
+`settings.local.json` that **allow always** accumulates, and no way to revoke a standing rule
+except by opening that file. And the user's own settings still outrank all three levels, which is
+asserted live rather than assumed: `ask` and `deny` sit above `allow`, and every level is built
+out of `allow`.

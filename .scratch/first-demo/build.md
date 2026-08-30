@@ -695,7 +695,7 @@ Standing instructions are folded into the persona under a line saying they apply
 `0001_outgoing_vampiro.sql` is additive: `agent_profiles`, plus `profile_id` and `instructions`
 on `agents`, both nullable, so the demo team and any existing database still work.
 
-## OpenCode is deferred, by the author, 2026-08-29
+## OpenCode is deferred, by the author, 2026-08-29 — **lifted 2026-08-30, see the foot of this file**
 
 Claude works end to end, so the second adapter is postponed in favour of making the desktop app
 a real product: teams and agents the user creates, rather than a team that is a TypeScript file.
@@ -1456,12 +1456,1129 @@ The folder's faces come down with it, to about 18px. That is well under the floo
 normally has, and it is the same licence as before: the floor is on *motion*, and a peeking face
 does not move.
 
-**The lead is named on the row it is about** — a mono `LEAD` beside that agent's name. The team's
-lead already decided something visible (the composer writes to it when the user names nobody, and
-the send control says so), but nothing in the rail said which agent that was. Deliberately quiet:
-a bordered mono word in `--muted`, taking ink on hover and on the selected row. Not an inversion,
-because both inversions are spent — `waiting`, and an armed primary button.
+**The lead is named on the team's row** — `led by Alice`, under the team name, on the line the
+running team used to leave for its status alone. The lead already decided something visible (the
+composer writes to it when the user names nobody, and the send control says so), but nothing in
+the rail said which agent that was.
 
-Only the open team's rows carry it. `UiTeam.leadAgentId` is an Agent id and the rail already has
-the team; a backgrounded team's summary carries a *profile* id instead, and the shut folder is not
-the place to answer a question about which session an unaddressed message lands in.
+It went on an agent's row first, as a mono `LEAD` beside the name, and that was the wrong row:
+who leads is a fact about **the team**, not about the agent. The same agent leads one team and
+not another, which is the same reason it does not live on an AgentProfile either. Corrected by
+the author the moment it was on screen.
+
+Named rather than drawn, by the blobatar rule: a face appears where you are identifying among
+agents or choosing one, and this is a single agent being mentioned.
+
+Only the open team can say it. `UiTeam.leadAgentId` is an Agent id and the conversation's roster
+is right there to resolve it against; a backgrounded team's summary carries a *profile* id while
+the members it lists are Agents, so the two do not meet without plumbing the rail does not have.
+No great loss: what the lead answers is where an unaddressed message lands, which is a question
+about the team you are writing to.
+
+### The opening is three moving parts, 2026-08-30
+
+Raised by the author against the first version of the fly-out, and both points were right.
+
+**The roster's box now grows from nothing.** The faces glided while the teams below them *jumped*
+by a whole roster's height between two frames, which is the inconsistency: half the change was
+animated and the louder half was not. `height` is the one non-`transform` property in the app and
+`DESIGN.md` now says so, with the reason — what has to move is everything *beneath* that box, and
+nothing but its height can move that. One box, a handful of rows, once per switch.
+
+The box is deliberately **not clipped**, which is the decision inside the decision. Clipping is
+the obvious way to grow a list, and it is wrong here: the rows would be revealed from the top, and
+a face flying *up* to the folder would be cut off the moment it left a box that is still short —
+the one thing the whole effect depends on. So the rows are painted where they will end up from the
+first frame, and what covers the overlap while the teams below slide away is:
+
+**Each row's text fades in.** It fades rather than travels: the name and the last line were never
+anywhere else, and a second thing sliding beside the face would be two gestures where the growth
+and the flight are already one.
+
+**The faces themselves mostly do not fade, and that is the interesting half of the answer.** The
+ask was for the blobs to come from `opacity: 0`. A face that was peeking out of the shut folder
+must not: it is on screen in frame N-1 and the travel only reads as travel because it is the same
+face, so fading it in would make it *appear* rather than *move* and would undo the illusion the
+FLIP exists for. But past the third there was no face — the folder said `+N` about them — so those
+arrive from nothing, which is the honest thing for something that was not on screen. Tested both
+ways round: the counted face fades, the peeking ones are asserted to carry no `opacity` at all.
+
+`useFaceFlight` is now `useTeamOpening`, because it is no longer only the faces.
+
+## Settled and built, 2026-08-30: one strip of chrome, not two
+
+The window had a topbar across the top — the wordmark, the team's name in bold, the workspace
+path, the DEMO badge, the activity toggle and the TURNS pips — and a `convhead` directly under
+it saying what the open pane is. Two hairline rows of chrome, and the top one's headline fact
+was the team's name, which the selected rail row was already saying larger and to the left. It
+was the same second-copy the pane header itself had been trimmed for on the same day.
+
+- **The topbar is gone from the working surface.** The empty state keeps it, because there is
+  no team, no rail selection and no `convhead` there, so the wordmark and the team count have
+  nowhere else to be.
+- **Its controls moved into `convhead`**, at the end of the row, as a `chrome` slot App fills:
+  the DEMO badge, the turn-budget continue button, the activity toggle, the TURNS pips. App
+  still owns them — `Conversation` renders a node, it does not learn what a turn budget is.
+- **The workspace path came with them**, on the team pane only: nothing else on screen carries
+  it. An agent pane keeps saying its own branch, which is more specific.
+- **The native menubar is hidden** (`Menu.setApplicationMenu(null)`). The default
+  File/Edit/View/Window strip was four menus of things blobot does not do, drawn above a window
+  whose own chrome is the interface.
+
+The wordmark is not on the working surface any more. The window title still says `blobot`, and
+the rail is the app's identity once you are inside it.
+
+
+## Built, 2026-08-30: the OpenCode adapter (03 + 16)
+
+The second runtime. `packages/core/src/adapters/opencode/` — `opencode acp` on stdio, the
+persona as an OpenCode **agent**, ticket 14's permission posture as inline config, and the
+mode re-asserted after every resume. `runtimeFor` in `apps/desktop/src/main/runtime-for.ts` is
+the one place a `runtime_id` becomes a class; `startTeam` holds `AgentRuntime` and nothing
+below it knows which provider an agent is. Detection's `supported` is `true` for OpenCode now,
+so the picker offers it without the "no adapter yet" line.
+
+### The shared half moved up, and it is bigger than `jsonrpc.ts`
+
+`packages/core/src/adapters/acp/` — `jsonrpc.ts` (as the last handoff asked), plus
+`child-transport.ts`, `wire.ts` and `session-updates.ts`. The last one is the surprise worth
+recording: the translation from a `session/update` to an `AgentEvent` is the **protocol's**
+shape, not a provider's, and OpenCode's six update kinds are a strict subset of the bridge's
+eleven. Both adapters call the same function and neither needed a special case in it. What is
+per-provider is what each one puts *inside* those fields, and that is handled where the
+connection is owned.
+
+The permanent rule is intact: a provider quirk still dies in its adapter. `acp/` holds nothing
+either runtime could disagree about, and each adapter still declares its own `McpServerConfig`
+so the day one needs a field the other cannot express, neither has to move.
+
+### What OpenCode made blobot do differently
+
+- **The persona is a process, not a session.** There is no ACP system-prompt field: `_meta` is
+  parsed and never read. `OPENCODE_CONFIG_CONTENT` carries one primary agent whose `prompt` is
+  the persona and whose key is the ACP mode id, with `default_agent` pointing at it so the
+  persona is live on turn 1 rather than after a round trip. Config is snapshot-cached per
+  directory for the process lifetime, so it has to be in the environment at spawn.
+- **Nothing is written into the user's repository**, which is ticket 14's decision and ticket
+  10's instinct. The env var is the last config layer, so it wins key by key over a repo's own
+  `opencode.json` while still deep-merging with it.
+- **The mode is re-asserted, not assumed.** `session/load` restores the *last used* mode from
+  the message history rather than `default_agent`, so a session that ever ran as `build` comes
+  back as `build`. `#applyPersonaMode` reads `configOptions[id=="mode"].currentValue` back and
+  only calls `session/set_mode` when it has to. That read is also the free health check
+  research 16 asked for: whether the persona is live is knowable without spending a turn.
+- **The version is reported, not enforced.** The Claude bridge is a dependency blobot installs
+  and pins exactly; `opencode` is the user's own binary on the user's own update schedule, and
+  refusing to start a team over a patch release is blobot breaking a machine that works. The
+  *protocol* version is still refused, because OpenCode does not negotiate it: a client
+  claiming 99 is answered `1` with no error.
+- **`authMethods` is never read as a sign-in prompt.** OpenCode advertises it even when it is
+  authenticated, so the Claude adapter's "non-empty means logged out" rule would refuse every
+  healthy machine.
+- **No MCP pre-approval.** Ticket 14's Claude amendment does not apply here: MCP tools are not
+  gated by the `bash`/`edit` keys, so `message_agent` rides the ungated path the ticket
+  originally assumed on both.
+- **`--pure` is deliberately not passed**, against research 03's suggestion. It runs OpenCode
+  without external plugins, and this machine's global config loads an *auth* plugin: a
+  determinism flag that can log the user out is not a trade blobot gets to make. The command
+  menu is controlled where ADR-0003 says it belongs, in `palette.ts`.
+- **The palette has no vouched built-ins.** Claude's five were chosen against a measurement of
+  what a real session advertises. OpenCode's built-in commands have not been measured, and
+  vouching for a name nobody has observed is guessing, so the allowlist is authored surface
+  only: the workspace's `.opencode/` and the operator's `~/.config/opencode/`. The consequence
+  is stated rather than hidden — on a machine with no authored commands, an OpenCode agent's
+  composer menu is empty. `live.test.ts` prints what a real session advertises, which is the
+  measurement that would change it.
+
+### Verified against the real `opencode` 1.18.4, at zero token cost
+
+Two things that needed no model turn and were run rather than assumed:
+
+- **The persona is live on turn 1.** A real `opencode acp` handshake, `session/new` in a temp
+  workspace, and `modeId` came back `alice` — the agent blobot defined, not `build`.
+- **The posture resolves exactly as ticket 14 wrote it.** `opencode debug agent alice` under
+  blobot's `OPENCODE_CONFIG_CONTENT` resolves 125 rules, of which the ones that matter are
+  `bash * → allow`, `bash rm * → ask`, `bash git push* → ask`, `bash npm install* → ask`,
+  `edit * → allow`, `read * → allow`, and `external_directory * → ask` from OpenCode's own
+  defaults. This is the assertion ticket 14 said should be assertable; it is now the last case
+  in `live.test.ts`.
+
+`FakeOpencode` is the wire-level fake, built from the captured transcripts in
+`research/03-transcripts/`: the `configOptions` block where the Claude bridge sends `modes`,
+the `session/load` that answers with no `sessionId`, the agent-side request ids that start at
+**0** in their own space, and the cancelled tool that reports `completed`.
+
+### Not run yet, and the reason
+
+**`live.test.ts` has never been run.** It costs tokens on the author's own credentials, and
+nothing in it can be faked into being free: the persona answer, the tool call in a real
+workspace, the loopback HTTP MCP server, the resume across two processes onto a *new* port, and
+the mid-flight cancel are exactly the five things only a real turn can prove. Run it with
+`BLOBOT_LIVE_OPENCODE=1 pnpm --filter @blobot/core exec vitest run src/adapters/opencode/live.test.ts`.
+
+Two of those five are genuinely unknown rather than merely unproven, and both are noted in the
+test: research 03 observed a **stdio** MCP server working and blobot's is **loopback HTTP**
+(`mcpCapabilities` advertising `{http:true}` is not the same as it working), and OpenCode's
+resume has never been exercised against a changed port and a changed bearer token, which the
+Claude adapter proved for itself in research 15 §7a.
+
+### Known gaps this leaves
+
+- **A team of mixed runtimes has never been run.** Nothing prevents it — `runtimeFor` is per
+  agent and the orchestrator holds `AgentRuntime` — but Alice on Claude and Bob on OpenCode
+  messaging each other has not happened once.
+- **The creation disclosure still describes only Claude's half.** Ticket 14's amendment
+  removed the command list because it was OpenCode's and OpenCode was deferred. It is not
+  deferred any more, so the asymmetry the ticket wrote about is real again and the disclosure
+  under-promises on OpenCode: blobot *can* name commands there, and says nothing about it.
+  Left alone rather than rewritten, because it is product copy and the ticket's own rule is
+  that blobot claims only what is true on both.
+- **A provider failure mid-turn is still unobserved**, which research 03 called its biggest
+  gap. It would arrive as either a `-32603` on the prompt reply or an unexpected `stopReason`;
+  the adapter handles both shapes, and neither has been seen.
+
+## Settled and built, 2026-08-30: the rail at a dozen teams, and a navigator
+
+The question was whether the UI is ready for more agents than fit on a screen. There is no cap
+anywhere and there should not be one, but "as many as you want" is a claim about *storage*: the
+pool holds three teams live (`LIVE_TEAM_LIMIT`), and a team of ten agents is ten processes and
+ten worktrees. The ceiling a user actually meets is a ten-agent *team*, not a large roster.
+
+**The rail broke first, and earliest — at eight or nine rows.** Every team is a row, the open
+team expands into a row per agent, and the whole column scrolls as one, so the rows you are
+actually clicking were the first below the fold.
+
+The first answer was to pin the open group: `position:sticky` against both edges of the
+scrollport, which keeps it on screen without hoisting it to the top. **Rejected by the author on
+sight, the same day.** A group stuck to an edge floats over the teams above and below it, and the
+rail is one list — the overlap reads as the open team sitting on top of the others rather than
+among them, which is a claim about rank that nothing here means. The rule stands: nothing in this
+column covers anything else in it.
+
+What the group gets instead is `scrollIntoView({ block: 'nearest' })` when the team changes, so
+switching to a team below the fold brings it into view and a team already on screen is not moved.
+That is all the rail does about scale. Finding a team you cannot see is the navigator's job.
+
+**The navigator** (`Navigator.tsx`, `ctrl+k`) is the other half: a cmdk layer over the working
+surface, agents first — the open team's, then everyone else's carrying their team's name — then
+teams, then *your agents* and *new team*. Choosing an agent on a team that is not open names both
+the team to open and the agent to land on; App leaves the wish in a ref, because the team switch
+resets the pane, and the reset honours it once the roster it names arrives.
+
+It is reached two ways: the key, and a **Search row at the top of the rail** carrying that key as
+its hint. The key alone made it a feature for whoever had been told about it. The row is a button
+drawn as a field rather than a field — one search, and it lives in the navigator — and it is not
+gated on team count, because a door that appears at eight teams is a door nobody finds. It sits
+in the rail rather than in the activity column: the rail is the surface it stands in for, and the
+activity column is the log and is hidden half the time.
+
+Deliberately **not** a search bar in the chrome, and deliberately **names only**. Searching what
+agents *said* is a different feature whose expensive half is not the query — SQLite has FTS5 —
+but the click: there is no addressable message and no scroll-to, so a result would be a teaser.
+That is the prerequisite whenever transcripts get long enough to lose something in.
+
+Filtering *your agents* and the two roster pickers (`NewTeam`, `TeamEdits`) is still open. They
+are flat `roster.map` lists, fine to about twenty-five, and a one-line filter each.
+
+
+## Built, 2026-08-30: the model and the effort are the user's to choose
+
+Asked for by the author while the OpenCode adapter was landing, with a screenshot of Claude
+Code's own picker: one trigger reading `Medium · 1M`, one menu holding a group per axis.
+
+**Where it lives: the hire and edit dialogs, not the running transcript.** The author chose it.
+The choice is a fact about the agent, so it is stored on the AgentProfile beside the runtime and
+the hue, copied onto the Agent at team creation, and applied when the team next starts.
+
+### What each runtime actually offers, measured rather than assumed
+
+Probed live on 2026-08-30, no model turn and therefore no tokens:
+
+| group | Claude bridge | OpenCode 1.18.4 |
+|---|---|---|
+| `model` | 5: `default, opus[1m], claude-fable-5[1m], sonnet, haiku` | 34, provider-prefixed |
+| `effort` | 6: `default, low, medium, high, xhigh, max` | **none** |
+| `fast` | `on/off` | none |
+| withheld | `mode` (ticket 14's posture), `agent` (the persona) | `mode` (the persona) |
+
+The asymmetry is the interesting part and it is **data, not a branch**: the adapter hands the UI
+a list of groups, and the same component draws three for one runtime and one for the other.
+
+### The bug this turned up
+
+**`_meta.claudeCode.options.model` is accepted and silently ignored.** `ClaudeAgentRuntimeOptions`
+has had a `model` field since the adapter was written; passing `sonnet` at `session/new` yields a
+session on `opus[1m]`. The lever that works on both runtimes is `session/set_config_option` after
+the session exists, verified by setting `effort=high`, `model=haiku` and `fast=on` and reading
+each back. So the dead field is gone from both adapters, along with the `model` key in
+`opencodeConfigContent`, and everything routes through one mechanism.
+
+Two things that shape the applying code, both measured: `fast=on` was **refused** while the model
+was `haiku` and accepted a moment later under `sonnet`, so the model is applied first and a
+refusal is reported rather than thrown; and the reply to `set_config_option` carries the whole
+refreshed block, so the current values are read back rather than assumed.
+
+### Decisions worth keeping
+
+- **One JSON column, not a column per axis.** `runtime_options` on `agent_profiles` and `agents`
+  (migration `0006`), keyed by the provider's own group ids. A schema that named `effort` would
+  be blobot deciding which runtimes may exist. The `model` column that shipped with ticket 13 and
+  was never once written stays in the table, dead and labelled: dropping it is a table rebuild
+  for nothing.
+- **Choosing the runtime's default stores nothing**, and the menu offers no `default` row even
+  where the provider advertises one. An agent pinned to today's default keeps it after the
+  provider moves on, and a user who picked the default picked the *behaviour*. This is also why
+  the trigger shows the *resolved* answer rather than the stored one.
+- **blobot never enumerates the options itself.** `describeRuntimeOptions` starts the runtime in
+  a scratch directory, reads `configOptions` off `session/new`, and stops it: a second or two, a
+  process, and no tokens. Both providers volunteer that block and neither answers the question
+  any other way. A list of model names in our source is the command palette's problem again, and
+  ADR-0003 already settled how that argument goes.
+- **An edit restates them, like the role**, and they reach a team at its next start. ADR-0002
+  carries the amendment, including why none of what pins the *name* and the *runtime* applies: a
+  model is not half of a ref and not the identity of a session.
+- **The store's credential guard was updated on purpose.** `store.test.ts` enumerates every
+  column of both tables so that adding one is a decision. `runtime_options` is the only free-form
+  column in the schema, and the reason it is not a hole: every value in it was read out of the
+  runtime's own advertised list a moment before it was written.
+
+### Not verified
+
+**Nobody has clicked it.** The dialog renders under jsdom in `RuntimeOptions.test.tsx` — groups
+drawn in order, the `default` badge, a choice stored, the default clearing the key — and the app
+still launches and screenshots. But the screenshot harness cannot open a modal, so the control
+has never been *seen*. Same gap as delete and save, and it wants the same fix.
+
+**No agent has yet run at a chosen setting.** Everything from the picker to
+`session/set_config_option` is covered against the wire fakes and the option lists came off the
+real binaries, but the round trip ends at "the session says it is on `max`" rather than at an
+answer that took longer to think.
+
+## Built, 2026-08-30: the context gauge, the ending that says why, and a column that survives
+
+The author asked what stops a session growing until the agent hallucinates and costs more, and
+where they could see it. `.scratch/transcript-scale/` gained an amendment and three resolved
+tickets (04, 05, 06). The rule did not move: **blobot does not manage the agent's context.**
+What moved is that it stopped hiding what it already receives.
+
+**The gauge was already end to end and thrown away at the last step.** `usage_update` reaches the
+vocabulary as `usage_updated`, is persisted by `SqliteRecorder`, and was dropped by `model.ts`
+under the comment "usage has no gauge yet". It is now a `CONTEXT` block at the head of the
+activity column: face, name, `used/size`, percent, one row per agent, seeded from
+`SqliteStore.lastUsageOfTeam` so a relaunch or a switch does not blank it. Both numbers, because
+the two runtimes' windows differ by five times. No bar, no colour, no threshold, no advice.
+
+**The `used: 0` reset is suppressed in two places**, the renderer and the store, because a
+cancelled turn's zero is persisted like any other reading. It is taken only from an agent that
+has never reported, where it is true.
+
+**Line 857 of this file is now true.** The palette kept `/compact` on the argument that "the
+context gauge is on screen; withholding the remedy while showing the problem is the worse trade".
+It was not on screen when that was written. It is, as of today, and `/compact` remains the whole
+of the remedy: nothing fires it and nothing suggests it.
+
+**`turn stopped · max tokens` became `turn stopped · the context window is full`**, through one
+exported `stoppedBecause`, with lines for `max_turn_requests`, `refusal` and `cancelled` down the
+same path. A test asserts none of them offers a remedy. The instrument is a new mock scenario,
+`runs-out-of-room`, which is also a demo run (`--demo-scenario=out-of-room`): the gauge at 100%
+and the transcript saying why are only worth anything together.
+
+**The bug the author found while it was being built.** Switching teams lost the activity column,
+and the first screenshot of the new scenario showed the answer stopping mid-sentence with nothing
+under it. Both the column and the `turn stopped` line were live-only, and `snapshot` sets
+`feed: []` on purpose. `SqliteStore.logOfTeam` now carries finished tool calls and finished turns
+in the snapshot, windowed together by time, and the pane formats a restored entry through the
+same code as a live one so the two cannot drift. A restored tool line deliberately never prints
+`(exit null)`: the column stores a null both for a cancelled tool and for a tool that never had
+an exit code, so printing it would be a guess.
+
+### The screenshot harness's blank frames are not a flake
+
+This file has called it "the known one-in-three capture flake". On this machine today it was
+every capture, four in a row, a blank 7.7 KB frame at four different delays. **`--disable-gpu`
+fixes it**, first try, every try since:
+
+```sh
+apps/desktop/node_modules/.bin/electron apps/desktop --no-sandbox --disable-gpu \
+  --demo --screenshot=/tmp/ui.png --screenshot-at=9000
+```
+
+### Then: what blobot itself injects, bounded (ticket 07)
+
+The author's follow-up, same day: bound what blobot puts into a turn, and show it. It turned up
+a rule that was a sentence in a file. `CLAUDE.md` says agent-to-agent communication is
+"never a full context copy between agents, always compact context", and **nothing enforced it**:
+`message_agent`'s schema called `context` a one-line description and checked nothing, and the
+body had no bound at all, so one agent could paste its whole transcript into a teammate's window
+and blobot would carry it, commit it and replay it on every relaunch.
+
+`packages/core/src/orchestrator/bounds.ts` holds the three numbers with the reasoning beside
+them: **4,000 characters** a message, **500** a context line, **5** messages a wake.
+
+- **Over the bound is refused, not truncated**, before the commit, so a refused message does not
+  exist: no row, nobody woken. The sender reads the reason as a *tool failure*, stays alive and
+  writes the short version. Truncating would hand the recipient half a request with no way to
+  know what the other half said. The limit is also in the tool's schema and description, so a
+  sender does not spend a call finding out.
+- **The wake batch is capped and the overflow requeued.** Nothing is dropped, and no new path
+  was needed: `#runTurn` already ends by waking the agent for whatever arrived mid-turn.
+- **`injectionOf` plus `lastPersonaOf` feed a breakdown under the gauge**, opened by clicking a
+  row: persona, the operator's standing instructions inside it, the last wake prompt and its
+  message count, and what is queued. **Estimated tokens**, four characters to one, with a tilde
+  and a line saying the gauge above is the runtime's own count. They are never added together.
+- **It opens in place, not over the log.** The author asked for a popover; an inline disclosure
+  is the app's existing idiom for the gesture, keeps the rail's rule that nothing in a column
+  covers anything else in it, and needs no focus trap. Inset like a rail row (`margin:0 6px`,
+  `8px` padding) after the author compared it to the rail: a band touching both edges read as a
+  section of the column rather than as one row in it.
+
+The persona and the standing instructions are measured and **not** bounded. They are written by
+a person and sent once per session; a limit on what the user may tell their own agent is a
+different decision.
+
+### The question that came out of it: what about injected MCP
+
+`.scratch/transcript-scale/issues/08-the-mcp-surface-nobody-counted.md`, open and **not
+decided**. blobot's own contribution is now measured and is nothing: `MESSAGE_AGENT_TOOL` is
+**956 characters, about 240 tokens**, on the wire every turn, and it is a row in the panel.
+
+What an agent *inherits* is the opposite. ADR-0003's amendment loads `user`, `project` and
+`local` scopes, so every MCP server the operator or the repository configures puts its full tool
+schemas into every turn. **Nothing filters them and nothing counts them** — the same vector the
+command palette was built to fail closed against, with none of the defence, and larger: the
+Claude Code session that wrote this reports **197 MCP tools at 272.8k tokens**, which is more
+than OpenCode's entire 200k window.
+
+blobot also **cannot see the list**: ACP advertises commands, not tools, which is why the
+palette was buildable and this is not. The panel's note says so rather than implying the
+breakdown is complete.
+
+The lever probably exists — the pinned SDK's `strictMcpConfig` ignores every MCP config but the
+one passed in, `_meta.claudeCode.options` is spread wholesale by the bridge, and blobot's own
+server is merged in regardless so it would survive. Unverified, and `model` was accepted and
+ignored down that same path. Flipping it is **ADR-0003's decision, not a ticket's**: it removes
+capability, not just context, and the first symptom would be an agent failing at something it
+did yesterday.
+
+### Not done
+
+- **`costUsd` is carried and drawn nowhere.** It rides the same event, only Claude sends it, and
+  it is a running total rather than an occupancy. Putting a dollar figure beside a percentage is
+  a billing decision nobody has made.
+- **No threshold.** An agent at 95% says 95% and nothing else. Whether a backgrounded team's
+  near-full agent should reach the user the way `waiting` does is a product question, and the
+  three-channel status vocabulary is where it would have to be answered.
+- **The bounds have never met a real agent.** Every test of them is against the mock. Nobody has
+  yet watched a live Claude read the refusal and write the short version, which is the whole
+  claim: that a refusal at the tool boundary teaches the sender where a truncation would not.
+
+## Built, 2026-08-30: a long menu grows a field
+
+A runtime is free to advertise forty models, and *how it answers* was one flat menu of every one
+of them. Past about a dozen rows a menu stops being something you scan, so past a dozen rows it
+now has a filter at the top.
+
+**The threshold is the decision, not the field.** Twelve choices across all groups. Under it the
+menu is exactly what it was, because a field the user pays for on every hire and needs on one
+runtime is the search bar `DESIGN.md` refuses in the chrome, moved inside a popover. The query
+dies when the menu closes: it narrows what is already on screen and holds nothing.
+
+**The list is now cmdk's, and Radix keeps the popover.** This is the standard's own division: a
+menu you type into is a combobox, and every Radix menu moves *real* focus onto the row under the
+pointer, which takes the field away mid-word. The rows are `option`s rather than `menuitemradio`s
+as a result, and the group is a heading rather than a radio group. The tick and the `default`
+badge are unchanged, and the menu still borrows `.selectmenu` and `.selectitem`.
+
+**Focus is moved from `onOpenAutoFocus`, and that is load-bearing.** Moving it later from an
+effect was tried first and does not survive: this menu opens inside the hire dialog, and focus
+arriving after both layers have settled reads to the dialog's focus scope as focus escaping, so
+the menu closes on its own about a second after opening. `onOpenAutoFocus` is `Menu.Content`'s
+own prop, spread straight through by `DropdownMenu.Content` but missing from the types it
+re-exports, so it goes in through a small typed object with the reason written next to it.
+
+**Matching is substring, on the label and the value together, every token.** `GPT-5.4` is what
+the menu says and `openai/gpt-5.4` is what the changelog said, and a fuzzy score on a name that
+dense with digits returns most of the list for `4.5`. A group the query empties is dropped rather
+than left as a heading over nothing, and the count beside the field says `11 of 22`.
+
+The menu opens on the row the agent is already set to (`defaultValue`, uncontrolled from there,
+so cmdk moves the highlight to the first match as the query narrows). Before this it opened
+wherever cmdk's first row happened to be, which on a list of forty is nowhere useful.
+
+### Verified
+
+Fourteen tests in `RuntimeOptions.test.tsx`, and **it has now been seen**, which closes the gap
+this file opened when the picker was built: the hire dialog forced open, twenty-two fake models
+behind it, screenshot at 20s. The field, the count, the heading, the badge and the tick all draw,
+the menu opens scrolled to the chosen row, and a second capture that renders `document.
+activeElement` in place of the count says **FIELD** a second and a half after opening, inside the
+dialog. Both captures needed the late delay; `--disable-gpu` is the documented fix for the blank
+frame and would have been faster.
+
+### Not done
+
+- **Nobody has typed into it in the real app.** The filtering is covered under jsdom, and the
+  field is focused in the real one, but the two facts have not been joined by a keystroke.
+- **The threshold is a guess with a reason, not a measurement.** Twelve is where a menu stops
+  being scannable in this type at this row height, by eye.
+- **Claude advertises 4 models on this machine and OpenCode advertises 34**, both read out of
+  the app's own cache file, so the field is real on OpenCode and will not appear on Claude. The
+  22-model list used to review the layout was fake.
+
+## Built, 2026-08-30: what a runtime offers is remembered across launches
+
+Filling the picker means spawning the CLI, reading the `configOptions` it volunteers and
+stopping it. That is **931 ms of the user's time, measured against the real `claude` today**,
+and it was being paid on every launch and thrown away with the process. The answer is now
+written beside the database as `runtime-options.json`, and a second launch answers in **0 ms**.
+
+**The keys are the executable and the version, not a timer.** A model list moves when the user
+upgrades the binary, so `2.1.251` is part of what makes the remembered answer true, and it is
+the same fact the dialog is already stating under the runtime picker. A different binary answers
+for itself. Age is only the third check and it is stale-while-revalidate: past a day the
+remembered list is drawn *now* and the spawn happens behind it, changing nothing until the next
+open. A menu that stalls to be current is the thing this exists to stop.
+
+**A failure is still never kept**, which was already the rule in memory and is now also the rule
+on disk: a CLI that is not installed yet or is signed out is this machine's weather, and
+remembering it would hand the next launch a wrong reason instantly. Written through a temporary
+file and renamed, because two windows can ask at once and a half-written JSON file is a cache
+that never hits again. One entry per runtime, replaced outright.
+
+Nothing here is authoritative, and it does not have to be: `applyOptionChoices` already skips a
+stored option the live session does not advertise and says so in the transcript. A remembered
+list going stale costs a line, never a launch.
+
+`RuntimeOptionsCache` takes its probe, its clock and its file, so seven tests in
+`runtime-options.test.ts` cover it without spawning anything, and the 931 ms → 0 ms figure came
+from driving the real class against the real `claude` through `tsx`.
+
+**And the picker still waited, because the probe was never the whole bill.** The handler awaited
+`detectRuntimes()` first, which locates each binary, reads its version and probes its login:
+**1.5 seconds, measured, on every call**, and five handlers were calling it. It is now asked once
+per launch (`known-runtimes.ts`) and started behind the window rather than in front of the first
+dialog, so by the time anyone opens one the answer is usually already there.
+
+**Detection is never persisted, and that is the difference between the two caches.** A remembered
+option list is a claim about a binary and is keyed by that binary's version. A remembered
+*readiness* would be a claim about right now: a tick saying *signed in* about a CLI that has since
+been logged out is precisely the confident false answer ticket 11 refuses. So it is a
+process-lifetime memo, refreshed by the one surface that draws it, which is also the moment the
+user has gone away and installed something.
+
+**The dialog no longer claims a runtime offers nothing before one is picked.** With detection out,
+`runtimeId` is `''` for a beat, and *how it answers* was reading `nothing to choose on this
+runtime` about a runtime nobody had been asked about. It says `pick a runtime first`.
+
+### Verified
+
+Both numbers are measured against the real binaries on this machine, and the settled dialog was
+photographed: `Opus (1M context) · Medium · Off` under HOW IT ANSWERS, with no *asking what it
+offers…* in front of it. The cache file the running app wrote is in `userData` and holds
+claude-code at `2.1.251` (4 models, 5 efforts, 2 fast) and opencode at `1.18.4` (34 models).
+
+### Not done
+
+- **The refresh is silent.** A menu open at the moment a stale-while-revalidate probe lands
+  keeps the old list until it is reopened. Repainting under the user's cursor is worse.
+- **The first hire on a fresh install still waits**, for detection and then for one probe. Both
+  are now paid once per machine rather than once per launch.
+- **Detection is refreshed only by the runtime picker.** A CLI installed while a dialog is
+  already open is not noticed until something reopens.
+
+
+## Built, 2026-08-30: a team has an icon, and a team can be given a folder
+
+Three asks from the author, in one pass: a team icon the user can upload, an icon detected from
+the Workspace, and a folder for the user who does not want to go and find one. They are ranked
+here in the reverse order they were asked, because the third is the one that removes a barrier
+and the first two are the ones that could have broken a rule.
+
+### The folder blobot makes
+
+`prepareWorkspace(root, teamName)` in `packages/core/src/workspace/prepare.ts` makes
+`~/blobot/<team-slug>`, `git init -b main`, and **one empty commit**. The commit is the whole
+point rather than a detail: a `plain` Workspace gives each agent a copy with no branch, no diff
+and no recovery, and a repository with nothing committed is the one state the flow genuinely
+refuses. One empty commit costs a millisecond and makes the free default a Workspace with every
+guarantee the picked-it-yourself path has.
+
+It supplies `user.name`/`user.email` **only when the machine has none**, because `-c` overrides
+rather than defaults and rewriting somebody's authorship for them is worse than failing. A
+folder that already exists with anything in it is **refused, never adopted**: the user asked for
+a new folder, and silently pointing autonomous processes at files they did not choose is the one
+outcome this must not have. An existing empty folder is used.
+
+**The creation flow's steps swapped**: the name is 01 and the folder is 02, because blobot names
+the folder after the team. Picking a folder still fills an empty name in, so the user who has a
+repository in mind loses nothing. `DESIGN.md` carries the reason.
+
+### The icon
+
+Stored as a **`data:` URL in one new column on `teams`**, not as a path and not as a file in
+`userData`. The folder an icon came out of is a thing the user can move, and a team whose mark
+vanished with its folder would be the bug the launch reconcile exists to report. It is a PNG
+downscaled to 128px in `apps/desktop/src/main/team-icon.ts`, a few kilobytes, which is cheaper
+than an asset directory with its own lifecycle to get wrong.
+
+**It goes on the folder, never instead of it.** The faces answer who is on the team; the icon
+answers which project, and the mark is also the body that animates the folded team status. The
+first version drew it *contained* inside the front panel, which is the tidier idea and does not
+survive the rail: at 34px that panel is about ten pixels tall and the icon read as a smudge. It
+is a **sticker on the lower-left corner, over the front panel's bottom edge**, greyed —
+grayscale rather than a silhouette mask, because luminance is most of what makes a logo readable
+that small. Seen in the real app before this was written.
+
+`findWorkspaceIcon` is **one walk of the tree, four levels deep, ranking every candidate it
+passes** — not a list of paths it hopes exist. It took two rewrites to get there, and the reason
+is worth keeping: probing the top level alone found nothing in a real repository of the author's,
+where the icon lives at `apps/contapp-web/public/favicon.png`; probing one level into `apps/`
+found that and would still have missed `apps/web/frontend/public/favicon.png`, which is the same
+shape with one more floor. **There is no list of paths that ends**, so the search stopped being
+a list.
+
+The ranking is four ordered questions, each worth ten of the next. *Which directory* dominates,
+so a `public/` anywhere beats a `docs/` at the top. Then *how deep*, so a repository that put an
+icon at its own root outranks one belonging to an application inside it. Then *whether a folder
+on the way is named after the repository*: `contapp-web/apps/contapp-web` is the front of the
+house and the repository has said so, where alphabetical order picks `contapp-pos`. Then the
+file's own name, `apple-touch-icon` down to `favicon`. Names match exactly — a repository full of
+`logo-white.png` and `logo-dark-text.png` has not said which one is the mark.
+
+`node_modules`, the build outputs and test trees are skipped, and that one list buys two things:
+it is what makes the walk cheap, and those trees are also full of *other people's* marks. A
+favicon out of a dependency's fixtures is exactly the wrong suggestion.
+
+**Raster only**, which is not a limitation but the point: these are files out of a repository blobot did not write, rendered in
+the app's own window, and `nativeImage` decoding nothing else keeps markup-that-is-also-a-document
+out of the renderer. A project with only an SVG logo simply has no suggestion, which is a fine
+answer.
+
+**Never silent.** The flow shows the mark as it will actually be, names the file it came from,
+and offers *choose an image…* and *no icon*. An icon that appears out of nowhere and is subtly
+wrong is worse than none, because nothing on screen explains it. `EditTeam` offers the same
+control, and re-runs detection for a team that has no icon — which is how every team formed
+before this gets one without being recreated. Setting an icon restarts nothing.
+
+### Verified
+
+- `prepare.test.ts` (15) against the real filesystem and the real `git`: the kind, the commit,
+  the slug, the no-identity machine, the refusal, the empty-folder case, the icon ranking
+  including the SVG that is not offered, and five nesting cases — the monorepo, four levels
+  down, the name match, top-level precedence, and the dependency whose icon is not offered.
+- The search timed against real trees on this machine. 3ms for the author's monorepo
+  (`apps/contapp-web/public/favicon.png`), 1ms for blobot, which correctly has none, and
+  **148ms for the whole of `~/Projects`**, which is the worst case a `nested` Workspace can be
+  and is already a path that spends seconds inspecting repositories.
+- One test in `store.test.ts` for the round trip and for taking an icon off again.
+- One in `Rail.test.tsx`: a row wears the icon **and** keeps its two faces, and a team without
+  one draws no placeholder.
+- The rail, in the real app, with an icon on the demo team (a temporary hack, reverted).
+
+### Not done
+
+- **A `nested` Workspace gets an arbitrary sibling's icon.** A folder of *repositories* is
+  walked like any other, so pointing at `~/Projects` suggests the mark of whichever project
+  ranks highest — which the flow names and the user can reject, but nobody chose it. Which
+  sibling repository speaks for a team spanning twenty of them is a different question from the
+  monorepo one, and it has not been asked.
+- **An icon more than four levels down is invisible**, which is the same kind of stated limit
+  `inspect.ts` has at two. Unbounded descent is how a folder picker starts taking seconds.
+- **No test drives `chooseTeamIcon` or `encodeTeamIcon`.** Both need Electron's `nativeImage` and
+  the OS file dialog. The refusal path is written and has not been exercised.
+- **Nothing bounds how many icons a database holds.** A few KB per team, so a hundred teams is a
+  few hundred KB, which is nothing — but it is unbounded by construction rather than by check.
+
+## Built, 2026-08-30: a full clean, priced before it is chosen
+
+Deleting a team removed the AgentWorkspaces the careful way and always had: `git branch -d`, so
+a branch with unmerged commits was kept and named, and a copied workspace was kept always
+because nothing can ask a directory whether it holds anything. The cost was never said out loud:
+**the leftovers are unbounded and nothing in the app ever mentions one again.** A user who forms
+and deletes ten teams out of the same repository has ten worktree checkouts and any number of
+`blobot/<team>/<agent>` branches, and the only way to find out is `du`.
+
+So the delete dialog now carries one tick, **full clean**, with the number attached:
+`recovers about 3.1 GB · alice 2.9 GB · bob 180 MB`.
+
+### The seam, and why it is two methods rather than a flag
+
+`WorkspaceProvider` grew `purge` and `measure` beside `remove`. `purge` is a separate method on
+purpose: `remove` is the safe default and **cannot become the destructive one by a caller passing
+the wrong boolean**. Each provider answers for its own mechanism.
+
+- **git** — `purgeWorktree` runs `branch -d` first and only reaches `-D` if that refused, so the
+  forceful command is only ever run on a branch that really did still hold something.
+- **plain** — the one place blobot deletes a copy. It does not contradict the rule that put
+  `kept` there (never put unrecoverable loss behind a dialog people click through), because this
+  is not behind a dialog people click through: it is a tick, off by default, with the size on it.
+- **nested** — every repository's branch, then the mirrored tree itself, which is also the only
+  way the copied loose files ever go.
+
+`measure` is a plain walk of the directory (`workspace/size.ts`), apparent sizes, symlinks
+counted as links and never followed. It is deliberately *about*: hard links are counted once per
+name, which can overstate a worktree. A number rounded to a unit is what the user acts on.
+
+### What the UI does with it
+
+- Measured **as the dialog opens**, not when the tick is clicked: the size is the reason to tick
+  it, so it has to be on screen before the decision.
+- Ticking it **rewrites the paragraph above it** rather than adding a warning under it. The
+  dialog's first sentence is the promise, so the promise is what changes: "work that was never
+  merged goes with it. Nothing here is recoverable, by blobot or by git."
+- The primary button becomes `delete and clean`, so the last thing read before the click says
+  which of the two actions is about to run.
+- Afterwards the dialog reports what was **actually** recovered, measured as the clean ran. The
+  figure on the button was an estimate of a directory two agents were still writing to.
+- The tick is drawn as a `.rosterrow`, which is the tick this app already has. A second kind of
+  checkbox would be saying it is a different kind of thing.
+
+### Verified
+
+- `git-worktrees.test.ts` (2 new): a purge deletes a branch holding a commit that `remove` would
+  have kept, and `measure` answers 0 for a workspace that is gone.
+- `non-git-workspaces.test.ts` (2 new): the copy and **its marker** go, so the same agent starts
+  again rather than reporting the copy it no longer has as lost work; and the mirrored tree takes
+  every branch and the tree.
+- `team-store.test.ts` (4 new): a clean reaches `purge` and never `remove`, an ordinary delete
+  reaches `remove` and **measures nothing**, `freedBytes` is the sum measured before the removal,
+  and `measureTeam` changes nothing.
+- On screen with `--screen=delete-team`, which is new and exists for the same reason `--screen=agents`
+  does: a dialog the screenshot harness cannot click its way to.
+
+### Not done
+
+- **The transcript is not part of a full clean.** It stays in the database, deliberately, and the
+  dialog still says so. What these agents were told is a record; disk is not the reason to lose it.
+- **Nothing measures the leftovers of teams already deleted.** This clean is offered while the
+  team still exists. Worktrees and branches left behind by every delete before today are still
+  only findable with `du`, and a rescue that scans the worktree root is its own effort.
+- **The estimate is not live.** It is read once as the dialog opens; an agent writing during the
+  seconds it is open makes the figure stale. The reported result is the honest one.
+
+## Built, 2026-08-30: a runtime that is not ready, handled rather than reported
+
+Ticket 11 gave the picker four honest states and no door out of any of them. *Not installed* was
+a sentence, and the reader's next move was to go and find the vendor's documentation. The author
+asked for the door, and was specific about its shape: **spawn the CLI and run its own interactive
+sign-in, let it open a browser, let the user come back**; and installing is fine if the user
+confirms it. `.scratch/runtime-readiness/spec.md` carries the decisions and the wording.
+
+### blobot does not sign anybody in
+
+It runs `claude auth login` or `opencode auth login` on a pseudo-terminal in a modal and gets out
+of the way. Keystrokes go from the pane to that process and bytes come back, and **nothing on the
+way through is read, parsed or logged**. That is the no-credential-storage rule kept by *not
+participating* rather than by refusing to help, and it is the only shape in which blobot can be
+useful here at all.
+
+- **A PTY, not a pipe** (`main/runtime-step.ts`). Both commands are written for a person: on a
+  pipe the CLI sees no TTY, drops to a non-interactive path, and either fails or waits forever
+  with nothing on screen. `node-pty` is N-API now, so the prebuilt module loads in Electron 44
+  unmodified; it is in the root's `onlyBuiltDependencies` because Linux has no prebuild and
+  builds from source.
+- **One at a time.** Starting a second ends the first, which is what closing the pane already
+  does. A step that was replaced or killed is **silent on the way out**: its pane is gone, and an
+  exit reported for it would land on the screen the next one is drawing.
+- **The environment is the app's minus two lies**: `ELECTRON_RUN_AS_NODE` and
+  `BLOBOT_CLAUDE_BRIDGE` are facts about *this* process, and the child has no business inheriting
+  either. `cwd` is the user's home: neither command is about a repository, and an installer run
+  inside somebody's project is a surprise.
+
+### The command is core's, and the renderer never holds one
+
+`detect/remedies.ts` is a table keyed by `runtimeId`, and `remedyFor` resolves it against
+detection **as it stands right now**. The renderer sends two ids and gets back `{shown, note}` to
+print. No string a user can reach becomes part of an argv, and a stale renderer cannot ask to
+sign in to something that is no longer installed. `remediesFor` offers at most one thing:
+`not_installed` gets the install, `needs_sign_in` and `unknown` get the login, `ready` gets
+nothing, and Windows gets nothing at all — by absence rather than by a button that fails, because
+no research covers it and neither install command is a Windows one.
+
+Installing runs the vendor's own published command, quoted in full and confirmed first
+(`curl -fsSL https://claude.ai/install.sh | bash`, `curl -fsSL https://opencode.ai/install | bash`;
+both verified live returning 200 on 2026-08-30). Running something else would install a build the
+vendor does not support, somewhere its own updater will not find. Both land in `~/.local/bin`,
+already in the cascade detection searches, so a fresh install is found without a restart.
+
+### Nothing concludes from an exit code
+
+An installer can exit 0 having put a binary where nothing looks, and a login can be abandoned in
+a browser tab with the command exiting cleanly. So the ending is `refreshKnownRuntimes()`, and
+the line the screen closes on is the picker's own four words. It never says *signed in*.
+
+### The one thing that is now refused at launch
+
+`refuseMissingRuntimes` in `start-team.ts` stops a team whose agent's runtime is `not_installed`,
+naming the runtime and the agents that need it. **This is not ticket 11's gate reopened.** That
+rule is about not standing between the user and *trying*, and it still holds for `needs_sign_in`:
+that probe's positive was never proof, so a signed-out runtime still starts and says so itself.
+`not_installed` is the one state that is not a guess — there is no binary, the spawn fails
+either way, and the only question was whether the user read `spawn opencode ENOENT`.
+
+### The governing rule survives a terminal
+
+xterm gets a monochrome sixteen-colour palette (`MONOCHROME_ANSI`), two luminance tiers rather
+than one flat grey. Left alone it put OpenCode's greens and cyans on screen beside the blobatars,
+which is the one thing `DESIGN.md` forbids outright, and the transcript already holds the same
+line by rendering markdown with no syntax colour. Nothing legible is lost: the provider list
+marks its selection with a filled circle against empty ones, and the dim/bold/inverse channels
+carry the rest. `DESIGN.md` has the consequence, the screen and the wording rule.
+
+Escape and an outside click belong to the terminal while a command runs, since these are TUIs and
+a key the program is waiting on must not close the window. The way out says `stop and close`.
+
+### The bug that got through, and the shape that fixes it
+
+First run in `pnpm dev` it hung: the login printed `┌ Add credential` and then nothing, forever,
+with the footer still offering `stop and close`. **React runs an effect twice in development** —
+mount, clean up, mount again — and this effect owns a process. The first mount's cleanup called
+an unaddressed `closeRuntimeStep()`, which landed *after* the second mount had started its own
+process and killed the survivor. It was invisible in every screenshot because `electron-vite
+build` ships React's production build, where the double invoke does not happen: **the harness
+could not see it, and dev could not miss it.**
+
+The fix is not to fight the double invoke. **Every step call now names the session it means**: the
+pane mints a `stepId` with `crypto.randomUUID()`, sends it with start, input, resize and close,
+and both streams are filtered by it on the way back. A stop that names a session which is no
+longer live does nothing, so whichever order the two land in, each acts on the session it meant.
+The id carries no authority — the argv is still core's — and the cleanup no longer has to await
+the start it is undoing.
+
+That silence was the second half of the bug: `stopStep` deliberately reports no exit, because a
+pane that has gone away should not conclude. Correct on its own, and it is what turned a killed
+process into a screen that never changed. Both halves are covered now.
+
+### The second one: a bridge older than the window
+
+The next run said **"blobot does not know that runtime."** It was not a detection bug. `stepId`
+had just been added as the *first* of three positional arguments, and a preload only reloads when
+the app restarts, so the window was sending three and the bridge under it was still sending two:
+`opencode` arrived as the step id and `sign_in` as the runtime id, and main went looking for a
+runtime by that name. Three strings in a row are a shape a stale bridge can still satisfy.
+
+So `startRuntimeStep` takes **one named object**, checked on arrival (`asStepRequest`), and a
+version skew now says it is one and names the fix. The check earns its place twice over: `kind`
+is the only thing the renderer is trusted with, and it is now validated against the two words
+core will answer to rather than passed through.
+
+### What the author cut, once it worked
+
+The dialog had a header: an eyebrow, `OpenCode` in the hand face, the command, and a line of
+prose, stacked above a program whose own first line is `┌ Add credential` followed by what it
+wants. **The terminal is the dialog.** The header is gone, the title survives for a screen
+reader only, and the sheet is now a frame around the pane rather than a page with a pane on it.
+The command line survives in one place, the **install confirm**, because that is consent and the
+terminal has not run yet.
+
+Two things a terminal is expected to do, added with it: a printed URL is **clickable**
+(`WebLinksAddon`, opened through `shell.openExternal` in main, `http` and `https` only, because
+that text came out of another program's stdout), and a selection copies with **`ctrl+shift+c`**,
+never `ctrl+c`, which in a terminal is how you interrupt what is running.
+
+### The bug the feature exposed, which was older than the feature
+
+The author signed in to OpenCode through the new terminal, the login printed `Done`, and
+detection still said **no credential on this machine**. Not a bug in any of this: ticket 11's
+`parseOpencodeAuthList` had been answering `false` for **every input since it was written**.
+
+`opencode auth list` draws its output in a box, `┌  Credentials …` / `●  GitHub Copilot oauth` /
+`└  4 credentials`, and the parser tested for a heading at `^credentials`, which never matched.
+The research recorded the section names and not the glyphs in front of them. It **failed closed**,
+so on the machine it was written on — genuinely signed out — it was right, and it stayed right
+until blobot could sign somebody in and check its own work.
+
+Fixed by stripping the frame before reading, and by treating the closing `N credentials` as an
+answer in its own right, so an unanticipated shape reads as "not understood" rather than as
+"signed out". The test carries the real bytes now, copied out of the terminal. Ticket 11 has an
+amendment, with the rule it suggests: **a parser over a human-facing CLI wants a captured sample,
+not prose about one.**
+
+Worth saying plainly: this is the second time in one feature that the thing which hid a defect was
+the harness agreeing with the code. A screenshot could not see a development-only React
+behaviour, and a probe that fails closed cannot be told from a machine that is signed out.
+
+### Verified
+
+- `detect/remedies.test.ts` (9): the login uses the binary the cascade found rather than the
+  name, `ready` offers nothing, Windows offers nothing, an unsupported runtime offers nothing.
+- `detect/runtimes.test.ts` (2 new): the boxed output `opencode` 1.18.4 really prints reads as
+  credentials present, and a box closing on `0 credentials` reads as none.
+- `main/runtime-step.test.ts` (8), against a **real pseudo-terminal**: the command gets a TTY,
+  typing reaches it, the exit code comes back, a replaced step is silent, a killed one is silent,
+  a stop naming a dead session leaves the live one alone, and a replaced pane's keystrokes and
+  resizes reach nothing.
+- `components/RuntimeSetup.test.tsx` (5): the button sits beside the state it answers, a ready
+  runtime gets none, the picker is not disabled, and the install confirm runs nothing until it
+  is told to and then sends only the two ids.
+- **Live, on screen, in the app**: the real `opencode auth login` drawing its provider select,
+  its search field and its arrow-key hints inside the dialog. `--screen=hire` is new, and exists
+  for the same reason `--screen=agents` does: a dialog the harness cannot click its way to.
+
+### Not done
+
+- **`claude auth login` was never run live.** Its flags were read off `--help` on this machine and
+  the subcommand contract matches OpenCode's, but running it would have started a real login and
+  opened a browser on the author's machine. This is the obvious first thing for the next session
+  with a spare account.
+- **No remedy on a runtime that is `ready`**, so switching accounts is not reachable from here.
+- **Nothing is offered from the failed-launch line.** The refusal names the runtime and points at
+  the agents screen; it does not carry the button, because that line is drawn from a string and
+  would need the runtime id threaded through the open error to do better.
+- **macOS and Windows**, as ever. The PTY environment and the install scripts have been run on
+  neither.
+- **The screenshot harness reviews a production build**, so nothing it captures can catch a
+  development-only React behaviour. The lesson from the hang above: a surface whose effect owns a
+  process wants a `pnpm dev` pass as well as a screenshot.
+
+## Built, 2026-08-30: the composer takes a paragraph
+
+Raised by the author from a screenshot: a long prompt scrolled sideways out of the field as it
+was typed. The composer was an `<input>`, which cannot wrap, under a `white-space:pre` highlight
+layer that could not have wrapped either. Nothing was broken; multiline was never built.
+
+It is a `<textarea rows={1}>` now, and it grows with the words up to six lines, then scrolls.
+
+**No measuring, no resize observer.** The highlight layer is the one in the flow, so its wrapped
+height *is* the field's height; `.mirror` is whatever `.hl` came out to be, and the textarea is
+absolutely positioned over the whole of it. The two must wrap identically or the caret drifts
+off the glyphs — same font, same width, no padding or border on either, `pre-wrap` and
+`break-word` on both, because `break-word` is what a textarea does by default. The scroll box is
+a separate element outside cmdk's positioning context, since `overflow` on `.mentionwrap` would
+have clipped the mention menu that hangs above it.
+
+Three consequences on screen: the pill is `align-items:flex-end`, so the send stays where the
+hand left it and the last line typed is the one beside it; `.mentionwrap` carries 5px of padding,
+so one line is still centred against the 32px send and the pill is the height it always was
+until a second line arrives; and a trailing zero-width space gives a line ending in `\n` a line
+box, so the caret on an empty last line sits over text rather than over the border.
+
+**Enter still sends, shift+Enter opens a line** — and the two keys leave by different doors.
+Send *prevents*, which is how the input claims a key from cmdk. A new line has to be left to the
+browser, and cmdk's root cancels Enter whether or not shift is down and whether or not a menu is
+showing, so shift+Enter *stops propagation* instead: cmdk never sees it and the textarea does
+what a textarea does. Preventing there typed `first linesecond line`, which is not something
+jsdom can show you — it was found by driving the running app with real key events through
+`webContents.sendInputEvent`, and the test pins it on `defaultPrevented` after the event has
+finished travelling.
+
+### Verified
+
+- `components/Composer.test.tsx` (8, up from 7): shift+Enter sends nothing and cancels nothing,
+  Enter sends and cancels. The assertion was checked against the bug — it fails without the
+  `stopPropagation`. The seven existing claims moved from `HTMLInputElement` to
+  `HTMLTextAreaElement` and are unchanged.
+- **On screen**, with the author's own sentence: two lines wrapped in a grown pill, and a twelve
+  sentence draft capped at six lines and scrolled to the caret. The capture flake is unchanged —
+  three blank frames before one landed at `--screenshot-at=9000`.
+
+### Not done
+
+- **The scroll box has no fade or edge**, so at six lines the text is simply cut by the pill's
+  top. Nothing says there is more above except the scrollbar.
+
+## Built, 2026-08-30: blobot vouches for the ordinary work on Claude too
+
+Raised by the author from a screenshot: an agent stopped to ask permission to `Write
+src/components/desk/desk-items.ts`, a file **inside its own worktree**, on its own branch.
+
+The cause was ticket 14 taking `default` mode's own description at its word. The bridge calls it
+*"Standard behavior, prompts for dangerous operations"*; what it does is prompt on every `Edit`,
+every `Write` and every un-preapproved `Bash`, at any path. So a Claude agent asked about work
+that ticket 14 had explicitly decided should not be asked about, and `waiting` — ticket 09's one
+contrast inversion — became the normal state on one of the two runtimes. The same ticket had
+rejected exactly that posture for OpenCode, in writing, and then arrived at it by accident here.
+
+**Ticket 14 is reopened with a 2026-08-30 amendment**, and its *"Claude Code is not ours to
+configure"* is narrowed. That sentence generalised from the three options the bridge discards
+(`permissionMode`, `canUseTool`, `allowDangerouslySkipPermissions`). It passes `allowedTools`
+through untouched, and this repo has depended on that since ticket 15, where `preApprovedTools`
+pre-approves `mcp__blobot` by the same route.
+
+`adapters/claude/permissions.ts` is the counterpart to OpenCode's `PERMISSION_POSTURE`:
+`Edit`, `Write`, `MultiEdit` and `NotebookEdit` unconditionally, plus a closed list of
+`Bash(<prefix>:*)` rules for inspection, local git, the test and build runners, and ordinary file
+moves. It joins the mailbox entry in the one `allowedTools` array. The mode stays `default`;
+nothing about `auto`, `acceptEdits`, `dontAsk` or `bypassPermissions` moves, and `mode` stays out
+of `SURFACED_OPTIONS`.
+
+### Why not the settings file, which was the first answer
+
+Seeding `<workspace>/.claude/settings.local.json` would have worked — the bridge reads `local`
+scope, and it is where **allow always** already writes. It was rejected because an AgentWorkspace
+is a checkout of the user's repository on a blobot branch: a file blobot leaves there can be
+staged, committed and merged home. Ticket 16 kept *blobot writes nothing into the user's
+repository* on the other runtime by moving to `OPENCODE_CONFIG_CONTENT`; `allowedTools` is the
+same move, per session and in memory.
+
+The cost is that an allowlist cannot express *everything except these*, so OpenCode's `bash
+{'*': allow}` minus seventeen patterns has no equivalent. Claude's list is enumerated, and an
+unlisted-but-harmless command still prompts. The asymmetry runs in the safe direction.
+
+### Two pieces of shipped copy were false, and are fixed
+
+The permission block asserted a reason blobot cannot know — *"this reaches outside its own
+workspace or cannot be undone"* — over calls that did neither. It now says the thing that is true
+of every request that gets that far: blobot did not vouch for this one, so the runtime is asking
+and the agent is stopped until an answer.
+
+The creation flow's disclosure promised *"inside that copy they can read, edit and run commands
+without asking you"* and that the runtime decides what counts *"not a list blobot wrote"*. The
+first was true of an OpenCode agent and false of a Claude one; the second is now false on both,
+since blobot writes a list for each. It says so without naming what is on it.
+
+### Verified
+
+- `claude-agent-runtime.test.ts` (3 new): the rules reach `_meta.claudeCode.options.allowedTools`;
+  nothing that reaches the network, changes permissions or publishes is on the list, checked by
+  name including bare `git`, which would have swallowed `git push`; the mailbox is still there
+  beside them.
+- **Live, against a real `claude`** (`live.test.ts`, 3 new, all run): asked to create a file in
+  its own workspace, no permission request arrives and the file is written — which is the only
+  way to know `allowedTools` is honoured rather than discarded like `permissionMode` beside it.
+  Asked to run `chmod`, a request still arrives, so the allowlist is not vacuous. And with
+  `{"permissions":{"ask":["Write"]}}` in the workspace's own `.claude/settings.json` the request
+  comes back, so the user's settings still outrank blobot's vouching: `ask` and `deny` sit above
+  `allow`, and `allowedTools` is an `allow`.
+- Full suite green: core 324, desktop 207.
+
+### Not done
+
+- **OpenCode's list and Claude's are two lists**, maintained separately, and nothing checks that
+  the seventeen patterns OpenCode asks about stay absent from Claude's allowlist. The Claude test
+  hardcodes them. A shared "never vouch for this" table would be the honest shape.
+- **The permission block still names `.claude/settings.local.json`** in copy shown for an
+  OpenCode agent too, where an *always* goes somewhere else entirely. That is a
+  provider-agnostic-UI violation that predates this change and is now the only one left in the
+  block.
+- **The list is still a speed bump and not a boundary**, which ticket 14 says out loud about
+  both runtimes. `npm run` executes a script the agent may have just written, and `sed` writes
+  whatever it is told to. `bash` and `sh` were dropped from the list for being the sharpest
+  instance of it, which narrows the hole and does not close it.
+
+## Built, 2026-08-30: the posture is a choice, per agent, in three words
+
+The author's answer to the entry above: *"that settings should be per workspace/agent. we need a
+ui for this. a simple selector or a friendly UX for noobs, no complex context."*
+
+`WHAT IT CAN DO WITHOUT ASKING` in the hire and edit dialogs, under *how it answers*, because it
+is the other half of the same question about the same agent: that one is what it says, this one
+is what it does. Three rows, each a word over the sentence that says what the word costs, and the
+same sentence under the closed control so a form nobody opened still says what the agent will do.
+
+- **careful** asks before every edit and every command.
+- **normal** edits and runs ordinary commands in its own copy, asks about the rest. The default,
+  and what the entry above shipped.
+- **trusting** also installs packages and fetches from the network. Still asks before deleting,
+  publishing, or changing who can do what.
+
+### Three positions, and the fourth that does not exist
+
+`trusting` is the ceiling, and the copy carries it: `rm`, `sudo`, `chmod`, `chown`, `ssh`, `scp`,
+`docker`, `git push` and `git remote` ask at every level on both runtimes. The step above it is
+`bypassPermissions` or an unqualified allow, which ticket 14 refuses, so the menu has no fourth
+row for the same reason `mode` is not in `SURFACED_OPTIONS`.
+
+### The vocabulary is blobot's, which is new here
+
+`core/trust.ts` holds three words and nothing else. Every other choice in the agent form is
+either the provider's vocabulary passed through opaquely or a label the runtime handed us to
+print; these three mean the same thing on both runtimes *because* the adapters translate them
+into different things — Claude adds to an allow-nothing (`vouchedTools`), OpenCode subtracts from
+an allow-all (`permissionPosture`). The renderer writes the sentence explaining each and still
+cannot tell which runtime is behind it.
+
+### Per agent, and the reason that is not arbitrary
+
+An AgentWorkspace is per agent, so trusting Alice has never said anything about Bob. It rides the
+model and the effort's path exactly: chosen on the profile, copied onto the Agent at team
+creation, restated by an edit, taken by a running team at its **next start**. That last part is
+not a policy choice here — `allowedTools` is a `session/new` parameter and OpenCode's posture is
+the child's environment, so neither can change under a live process. ADR-0002 carries the
+amendment.
+
+### Verified
+
+- `adapters/claude/permissions.test.ts` (4, new): careful vouches for *nothing*; trusting is a
+  superset of normal; and the nine commands no level reaches, checked at all three levels.
+- `adapters/opencode/config.test.ts` (4 more): careful is the object form and never the scalar
+  that would make `read` ask; normal is `PERMISSION_POSTURE` verbatim; the level reaches both
+  copies of the posture in the config the process is handed.
+- `team-store.test.ts` (2 more): the level is copied onto the Agent, absent when nobody chose,
+  and restated up and back down again.
+- `components/TrustPick.test.tsx` (4, new): the closed control says what the agent will do, the
+  trigger shows the word alone, and `trusting` names its ceiling in the same breath.
+- `store.test.ts`: the "nowhere to put a credential" column list caught the new column, which is
+  what it is for. Migration `0008`.
+- **Live, against a real `claude`** (1 more, run): the same prompt and the same workspace as the
+  entry above, with `careful` on the agent, and the write it did silently now stops to ask. One
+  word on the agent, end to end onto the wire.
+- **On screen**, `--screen=hire`: the field in the column and the menu open, two lines a row.
+- Full suite green: core 332, desktop 212. Typecheck clean on both.
+
+### Not done
+
+- **Nothing shows what an agent may currently do** beyond the level it is set to. There is still
+  no list of standing rules and no way to revoke one that **allow always** wrote, except by
+  opening `.claude/settings.local.json` in the worktree. Ticket 14's out-of-scope line.
+- **The level cannot be raised from the permission block**, which is the moment a user most wants
+  to. Answering a request and changing a posture are different acts and the second one restarts
+  nothing, so a control there would have to say "at its next start", inline, mid-turn.
+- **The Radix menu cannot be screenshotted open** through the review harness: a `pointerdown` on
+  a select trigger makes `capturePage` return a blank frame every time. The capture above was
+  taken with the portal removed and `open` forced, then reverted. Worth a flag in `index.ts` if
+  another menu ever needs reviewing this way.
+
+## Built, 2026-08-30: the runtime picker carries the runtime's own mark
+
+`RuntimeMark.tsx`, in the hire and edit dialogs' RUNTIME select — the trigger and every row.
+`claude-code` and `opencode` have one; anything else draws nothing.
+
+Prompted by `pingdotgg/t3code`, which ships five harness logos under MIT. **We took none of
+them.** MIT covers t3code's code, not Anthropic's or SST's trademarks — it cannot sublicense a
+mark it copied — so the licence bought nothing, and the actual basis for us drawing a vendor's
+logo is the same either way: naming the product we speak to. Given that, the marks come from the
+vendors' own origins (`claude.ai/favicon.svg`, `sst/opencode`'s brand folder), which is the same
+work with provenance we can state. Three of the five were for runtimes blobot has no probe for.
+
+### The exception this needed in DESIGN.md, and why it is an addition rather than a breach
+
+The Icons section says Lucide and *"no other icon set, no inline SVG paths pasted into
+components"*. Read flat that forbids this. But the team-icon rule already settles how blobot
+shows a vendor's logo — **greyed, never coloured, never in place of the identity that matters**,
+and "greyed rather than silhouetted, because luminance is most of what makes a logo readable at
+that size". A runtime mark is that same question in a second place, so the clause added under
+Icons applies that answer rather than contradicting it. `RuntimeMark.tsx` is named there as the
+only module allowed to hold a vendor path, so the ban still bites everywhere else.
+
+### OpenCode has no mark that survives 15px, and that is the vendor's logo not a drawing problem
+
+OpenCode ships its logo **only as a negative**: a full-bleed plate with the box knocked out of
+it, in both the light and the dark variant. Greying that plate puts a filled `--muted` square in
+a select row — the heaviest thing in the sheet, and a shape rather than a mark. So it is drawn
+positive at the vendor's own coordinates (240x300 canvas, box at 60..180 x 60..240, the block
+its lower two thirds), with only the line weight ours.
+
+It is still the weaker of the two at 15px: a bounded rectangle has no open structure to survive
+the size, where the Claude starburst reads as itself. Four other renderings were tried and
+compared at 15 and 48px — rounded corners read as a phone, the negative plate read as a block,
+and a wider landscape box read clearly as a terminal but was *our* drawing rather than
+OpenCode's. Faithful-and-weak was chosen over legible-and-invented. **This is the open question
+if the marks are ever revisited**, and the honest alternative is no mark for OpenCode at all.
+
+The label never leaves: the mark is a second channel onto one fact, never the only one.
+
+### Verified
+
+- `pnpm typecheck`, `pnpm test` (216 tests, 1 skipped) green.
+- `--screen=hire` screenshot: the Claude mark sits at `--muted` beside the label, same weight as
+  the chevron, nothing saturated added to the sheet.
+- `RuntimeMark.test.tsx` pins the two rules that keep the exception allowed: no literal `fill="#`
+  or `stroke="#` in either mark, and an unknown id renders empty rather than a placeholder.
+
+### Not done
+
+- The open menu was reviewed by rendering the marks standalone, not through the real Radix
+  portal: there is no `--screen=` that opens a select. The rows themselves are unchanged markup.
+- Codex and Gemini have no probe yet, so no mark. When they land they are label-only until
+  somebody fetches their marks from origin, which is deliberate.

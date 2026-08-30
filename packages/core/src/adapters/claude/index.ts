@@ -13,4 +13,4 @@ export {
   spawnClaudeBridge,
 } from './stdio-bridge.js';
 export type { SpawnBridge, SpawnBridgeOptions } from './stdio-bridge.js';
-export { stopReasonOf, toolKind, translateSessionUpdate } from './translate.js';
+export { stopReasonOf, toolKind, translateSessionUpdate } from '../acp/session-updates.js';

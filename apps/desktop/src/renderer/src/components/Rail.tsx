@@ -1,9 +1,10 @@
-import { ChevronRight, Pencil, Trash2 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { ChevronRight, Pencil, Search, Trash2 } from 'lucide-react';
 import type { AgentStatus } from '@blobot/core/domain';
 import type { UiAgent, UiTeam, UiTeamSummary } from '../../../shared/api.js';
 import { foldTeamStatus, lastLineOf, type Item, type Pane } from '../model.js';
 import { lastActive } from '../time.js';
-import { useFaceFlight } from '../useFaceFlight.js';
+import { useTeamOpening } from '../useTeamOpening.js';
 import { Blob } from './Blob.js';
 import { TeamMark } from './TeamMark.js';
 import { StatusWord } from './StatusWord.js';
@@ -34,6 +35,7 @@ export function Rail({
   onEditTeam,
   onDeleteTeam,
   onOpenAgents,
+  onFind,
 }: {
   team: UiTeam;
   teams: readonly UiTeamSummary[];
@@ -49,12 +51,29 @@ export function Rail({
   onDeleteTeam?: (teamId: string) => void;
   /** Opens *your agents*. Absent in demo mode, whose agents are a TypeScript file. */
   onOpenAgents?: () => void;
+  /** Opens the navigator. The same thing ctrl+k does, for the user who has not been told. */
+  onFind?: () => void;
 }): React.JSX.Element {
   const teamStatus = foldTeamStatus(agents.map((agent) => statuses[agent.id] ?? 'idle'));
   // The roster, not just the team: a team opens in two steps — its row arrives from the store,
   // its members arrive when the snapshot does — and the flight belongs to the step that puts
   // faces on screen. Keying on the team alone would run it against an empty column.
-  const flight = useFaceFlight(`${team.id}:${agents.map((agent) => agent.id).join(',')}`);
+  // Only the open team can say this. `UiTeam.leadAgentId` is an Agent id and the conversation's
+  // roster is right here to resolve it against; a backgrounded team's summary carries a
+  // *profile* id, and the members it lists are Agents, so the two do not meet without plumbing
+  // the rail does not have. No great loss: the question the lead answers is where an unaddressed
+  // message lands, and that is a question about the team you are writing to.
+  const lead = agents.find((agent) => agent.id === team.leadAgentId);
+  const opening = useTeamOpening(`${team.id}:${agents.map((agent) => agent.id).join(',')}`);
+  // The open team keeps its place in the order, so with a dozen teams that place can be below
+  // the fold — and the rows the user is about to click are its agents. Brought into view when
+  // the team changes rather than pinned there: a group stuck to the edge of the column floats
+  // over the teams above and below it, which reads as the open team sitting on top of the list
+  // rather than in it. `nearest` because a team already on screen must not be moved.
+  const group = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    group.current?.scrollIntoView({ block: 'nearest' });
+  }, [team.id]);
   // **A team keeps its place in the column when you open it.** The rail used to hoist the
   // running team to the top, which meant the order of the list depended on which row you last
   // clicked: a user reaching for the team they were on a minute ago found a different team
@@ -73,6 +92,9 @@ export function Rail({
     // The running team is drawn from `team`, which is the conversation's view of it and
     // carries no kind. The summary row has one, and demo mode has no row at all.
     workspaceKind: open?.workspaceKind ?? 'git',
+    // From the conversation's team rather than the summary, for the same reason the name is:
+    // an icon set a moment ago is on `team` before the row is re-read, and demo mode has no row.
+    ...(team.icon === undefined ? {} : { icon: team.icon }),
     members: agents,
     ...(open?.lastActiveAt === undefined ? {} : { lastActiveAt: open.lastActiveAt }),
   };
@@ -82,7 +104,20 @@ export function Rail({
       : teams.map((row) => (row.id === team.id ? running : row));
 
   return (
-    <div className="rail" ref={flight}>
+    <div className="rail" ref={opening}>
+      {/* The navigator has a key and, until this, nothing else — which makes it a feature for
+          whoever was told about it. A row at the top of the column it stands in for, wearing the
+          shortcut it is teaching. It is a **button drawn as a field**, not a field: there is one
+          search in this app and it lives in the navigator, and a second input here would either
+          duplicate it or drift from it. */}
+      {onFind !== undefined && (
+        <button className="railfind" onClick={onFind} title="Find a team or an agent">
+          <Search size={13} aria-hidden />
+          <span>Search</span>
+          <span style={{ flex: 1 }} />
+          <span className="mono muted">{shortcut()}</span>
+        </button>
+      )}
       {/* Above the teams, because that is the order the model reads in: agents exist, and
           teams are formed out of them. One quiet row rather than a second list, since this
           column's job is the teams and the agents have a screen of their own. */}
@@ -128,7 +163,12 @@ export function Rail({
               {row.members.length === 0 ? (
                 <span className="ghost" aria-hidden="true" />
               ) : (
-                <TeamMark agents={row.members} status={rowStatus.status} size={34} />
+                <TeamMark
+                  agents={row.members}
+                  status={rowStatus.status}
+                  {...(row.icon === undefined ? {} : { icon: row.icon })}
+                  size={34}
+                />
               )}
               <span className="who">
                 <span className="nm">
@@ -155,32 +195,54 @@ export function Rail({
         }
 
         return (
-          <div key={row.id} className="teamgroup">
+          <div key={row.id} className="teamgroup open" ref={group}>
             <TeamRow row={row} onEditTeam={onEditTeam} onDeleteTeam={onDeleteTeam}>
             <button
               className={`teamrow${pane.kind === 'team' ? ' sel' : ''}`}
               onClick={() => onSelect({ kind: 'team' })}
             >
-              <TeamMark agents={agents} status={teamStatus.status} size={34} open />
+              <TeamMark
+                agents={agents}
+                status={teamStatus.status}
+                {...(row.icon === undefined ? {} : { icon: row.icon })}
+                size={34}
+                open
+              />
               <span className="who">
                 <span className="nm">
                   <b>{row.name}</b>
                 </span>
                 {/* No count on the running team: its members are enumerated directly beneath
-                    it, and the folded status is the thing that needs the width. */}
-                {/* Silent while every member is idle, for the same reason the rows are: a
-                    team that says ALL IDLE over four rows saying IDLE is four words of
-                    nothing. It speaks the moment one member is not. */}
-                {teamStatus.status !== 'idle' && (
+                    it, and the line is spent on the two things the rows below cannot say.
+
+                    Who leads, which is a fact about the *team* and not about the agent — the
+                    same agent leads one team and not another — and which is what the composer
+                    resolves to when the user names nobody. It is named rather than drawn: a
+                    face appears where you are identifying among agents or choosing one, and
+                    this is a single agent being mentioned.
+
+                    And the folded status, silent while every member is idle, for the same
+                    reason the rows below are: a team that says ALL IDLE over four rows saying
+                    IDLE is four words of nothing. */}
+                {(lead !== undefined || teamStatus.status !== 'idle') && (
                   <span className="sub">
+                    {lead !== undefined && <span className="n">led by {lead.name}</span>}
                     <span style={{ flex: 1 }} />
-                    <StatusWord status={teamStatus.status} label={teamStatus.label} />
+                    {teamStatus.status !== 'idle' && (
+                      <StatusWord status={teamStatus.status} label={teamStatus.label} />
+                    )}
                   </span>
                 )}
               </span>
             </button>
             </TeamRow>
 
+            {/* The roster, in a box of its own because opening a team has to *make room* for it
+                rather than shove the column down between two frames. The box's height is what
+                animates; its rows are painted where they will end up from the first frame, so
+                a face flying up to the folder is not clipped on its way out. What covers the
+                overlap while the teams below slide away is the rows' own fade. */}
+            <div className="roster">
             {agents.map((agent) => {
               const status = statuses[agent.id] ?? 'idle';
               const last = lastLineOf(items, agent.id);
@@ -204,14 +266,9 @@ export function Rail({
                     animated
                     face={agent.id}
                   />
-                  <span className="who">
+                  <span className="who" data-arriving>
                     <span className="nm">
                       <b>{agent.name}</b>
-                      {/* Who the composer writes to when the user names nobody. A permanent
-                          fact about this team, so unlike the role it does not go once the
-                          agent has spoken — and a mono word rather than an inversion, which
-                          is spent on `waiting` and on an armed button. */}
-                      {agent.id === team.leadAgentId && <span className="lead mono">LEAD</span>}
                       <span className="grow" />
                       {/* When it last spoke, where a chat app puts it. Absent, rather than
                           zero, for an agent that has not said anything yet. */}
@@ -240,11 +297,17 @@ export function Rail({
                 </button>
               );
             })}
+            </div>
           </div>
         );
       })}
     </div>
   );
+}
+
+/** What to call the navigator's key on this machine. Mac has one word for it and nothing else does. */
+function shortcut(): string {
+  return navigator.userAgent.includes('Mac OS X') ? '\u2318K' : 'CTRL K';
 }
 
 /**

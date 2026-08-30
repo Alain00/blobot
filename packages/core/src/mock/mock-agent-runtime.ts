@@ -11,6 +11,7 @@ import type {
   PermissionHandler,
   Prompt,
   RuntimeLifecycle,
+  RuntimeOptionGroup,
   Unsubscribe,
 } from '../runtime.js';
 import { AsyncQueue } from './async-queue.js';
@@ -197,6 +198,17 @@ export class MockAgentRuntime implements AgentRuntime {
 
   get availableCommands(): readonly AvailableCommand[] {
     return this.#commands;
+  }
+
+  /**
+   * The mock offers nothing to choose, and says so rather than inventing a model list.
+   *
+   * An empty list is a real answer on a real runtime too — OpenCode advertises no effort
+   * scale — so the consumer already has to handle it, and a demo agent offering a picker over
+   * models it does not have would be the kind mock ticket 08 exists to refuse.
+   */
+  get optionGroups(): readonly RuntimeOptionGroup[] {
+    return [];
   }
 
   onCommandsChange(listener: (commands: readonly AvailableCommand[]) => void): Unsubscribe {

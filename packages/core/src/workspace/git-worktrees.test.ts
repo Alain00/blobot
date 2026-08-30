@@ -260,6 +260,30 @@ describe('deleting an agent', () => {
   });
 });
 
+describe('a full clean', () => {
+  it('deletes a branch that still holds work, which is the whole difference from remove', async () => {
+    const repo = repository();
+    const workspaces = provider();
+    const workspace = await workspaces.provision(request(repo));
+    git(workspace.path, 'commit', '--allow-empty', '-m', 'work the user is done with');
+
+    expect(await workspaces.purge(request(repo))).toEqual({ work: 'discarded' });
+    expect(existsSync(workspace.path)).toBe(false);
+    expect(git(repo, 'branch', '--list', workspace.branch as string).trim()).toBe('');
+  });
+
+  it('says how much disk the workspace is holding, and 0 for one that is gone', async () => {
+    const repo = repository();
+    const workspaces = provider();
+    const workspace = await workspaces.provision(request(repo));
+    writeFileSync(join(workspace.path, 'big.txt'), 'x'.repeat(50_000));
+
+    expect(await workspaces.measure(request(repo))).toBeGreaterThan(50_000);
+    await workspaces.purge(request(repo));
+    expect(await workspaces.measure(request(repo))).toBe(0);
+  });
+});
+
 describe('names that are not git refs', () => {
   it('slugs a team or agent name into something git will accept', () => {
     expect(branchNameFor('My Storefront!', 'Alice B.')).toBe('blobot/my-storefront/alice-b');

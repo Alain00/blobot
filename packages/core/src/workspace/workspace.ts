@@ -108,6 +108,17 @@ export interface WorkspaceProvider {
   provision(request: ProvisionRequest): Promise<AgentWorkspace>;
   reconcile(request: ProvisionRequest): Promise<ReconcileOutcome>;
   remove(request: ProvisionRequest): Promise<RemovalOutcome>;
+  /**
+   * Everything, whatever it holds. The other half of `remove`, and a separate method rather
+   * than a flag on it so that no caller reaches the unrecoverable version by passing the wrong
+   * boolean: `remove` is the safe default and cannot become this by accident.
+   */
+  purge(request: ProvisionRequest): Promise<RemovalOutcome>;
+  /**
+   * How much disk this AgentWorkspace is holding, in bytes, so a purge can be offered with its
+   * price attached. Never a refusal: a workspace that is gone measures 0.
+   */
+  measure(request: ProvisionRequest): Promise<number>;
 }
 
 /** The team half of `blobot/<team>/<agent>`, and the directory name under the worktree root. */
@@ -136,7 +147,9 @@ export class WorkspaceError extends Error {
     | 'no_commits'
     | 'git_failed'
     | 'empty_workspace'
-    | 'copy_failed';
+    | 'copy_failed'
+    /** A folder blobot was asked to make is already there with something in it. */
+    | 'already_there';
 
   constructor(code: WorkspaceError['code'], message: string) {
     super(message);

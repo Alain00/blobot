@@ -24,7 +24,42 @@ function fakeRunner(table: Record<string, CommandResult>): CommandRunner & { cal
 
 const ok = (stdout = ''): CommandResult => ({ code: 0, stdout, stderr: '' });
 
+/**
+ * Byte for byte what `opencode` 1.18.4 printed on this machine on 2026-08-30, escapes included.
+ *
+ * Copied from the terminal rather than written from the docs, which is the whole lesson of the
+ * bug it pins: the version that read this by section name matched nothing at all, and answered
+ * `false` for every input including this one.
+ */
+const OPENCODE_1_18_4 =
+  '\u001B[0m\n' +
+  '\u250C  Credentials \u001B[90m~/.local/share/opencode/auth.json\n' +
+  '\u2502\n' +
+  '\u25CF  GitHub Copilot \u001B[90moauth\n' +
+  '\u2502\n' +
+  '\u25CF  OpenAI \u001B[90moauth\n' +
+  '\u2502\n' +
+  '\u25CF  Anthropic \u001B[90moauth\n' +
+  '\u2502\n' +
+  '\u25CF  OpenCode Zen \u001B[90mapi\n' +
+  '\u2502\n' +
+  '\u2514  4 credentials\n';
+
 describe('parseOpencodeAuthList', () => {
+  it('reads the boxed output the CLI actually prints', () => {
+    expect(parseOpencodeAuthList(OPENCODE_1_18_4)).toBe(true);
+  });
+
+  it('is false when the box closes on a count of none', () => {
+    // The negative has to come from the count rather than from finding no entries, or an output
+    // shape nobody anticipated reads as "signed out" instead of as "not understood".
+    expect(
+      parseOpencodeAuthList(
+        '\u250C  Credentials \u001B[90m~/.local/share/opencode/auth.json\n\u2502\n\u2514  0 credentials\n',
+      ),
+    ).toBe(false);
+  });
+
   it('reads a credential through the escapes NO_COLOR does not remove', () => {
     const stdout = `${ESC}[1mCredentials${ESC}[0m\n  ${ESC}[32manthropic${ESC}[0m  oauth\n\n1 credentials\n`;
     expect(parseOpencodeAuthList(stdout)).toBe(true);

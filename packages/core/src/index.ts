@@ -29,8 +29,14 @@ export type {
   PermissionRequest,
   Prompt,
   RuntimeLifecycle,
+  RuntimeOptionChoices,
+  RuntimeOptionGroup,
+  RuntimeOptionChoice,
   Unsubscribe,
 } from './runtime.js';
+
+export type { TrustLevel } from './trust.js';
+export { DEFAULT_TRUST, trustLevelOf } from './trust.js';
 
 export type { Clock } from './clock.js';
 export { SystemClock, VirtualClock } from './clock.js';
@@ -65,7 +71,7 @@ export type { IdFactory } from './ids.js';
 
 export type { Agent, AgentDefinition, AgentProfile, Message, Team } from './orchestrator/domain.js';
 export { composePersona, composeWakePrompt } from './orchestrator/envelope.js';
-export { findAgentByName } from './orchestrator/roster.js';
+export { findAgentByName, namesMentioned } from './orchestrator/roster.js';
 export { InMemoryMessageStore } from './orchestrator/message-store.js';
 export type { MessageStore } from './orchestrator/message-store.js';
 export { Orchestrator } from './orchestrator/orchestrator.js';
@@ -74,6 +80,7 @@ export type {
   OrchestratorOptions,
   PendingPermission,
   PermissionOutcome,
+  SilentHandoff,
   TurnRecorder,
 } from './orchestrator/orchestrator.js';
 
@@ -92,6 +99,15 @@ export {
   resolveClaudeExecutable,
 } from './adapters/claude/stdio-bridge.js';
 
+// The OpenCode adapter. Same reason it is not in `/domain`: it spawns `opencode acp`.
+export { OpencodeAgentRuntime } from './adapters/opencode/opencode-agent-runtime.js';
+export type { OpencodeAgentRuntimeOptions } from './adapters/opencode/opencode-agent-runtime.js';
+export { agentKeyFor, opencodeConfigContent, permissionPosture } from './adapters/opencode/config.js';
+export {
+  resolveOpencodeExecutable,
+  VERIFIED_OPENCODE_VERSION,
+} from './adapters/opencode/stdio.js';
+
 // Ticket 10: AgentWorkspaces. The git implementation shells out, so it is not in `/domain`.
 export { GitWorktreeWorkspaces, defaultWorktreeRoot } from './workspace/git-worktrees.js';
 // The amendment's other two kinds of Workspace: a folder git cannot hold, and a folder of
@@ -99,7 +115,11 @@ export { GitWorktreeWorkspaces, defaultWorktreeRoot } from './workspace/git-work
 export { CopiedDirectoryWorkspaces, defaultCopyRoot } from './workspace/copied-directory.js';
 export { NestedRepoWorkspaces, defaultTreeRoot } from './workspace/nested-repos.js';
 export { inspectWorkspace } from './workspace/inspect.js';
+export { prepareWorkspace } from './workspace/prepare.js';
+export { findWorkspaceIcon, type WorkspaceIcon } from './workspace/icon.js';
 export { workspaceProviderFor } from './workspace/provider-for.js';
+// What a full clean would recover. The words for a size are the renderer's, not core's.
+export { directorySize } from './workspace/size.js';
 export { WorkspaceError, branchNameFor, refSlug } from './workspace/workspace.js';
 export type {
   AgentWorkspace,
@@ -112,7 +132,7 @@ export type {
 } from './workspace/workspace.js';
 
 // Ticket 15: blobot's own MCP server, over loopback HTTP. Not in `/domain` — it binds a port.
-export { PeerMessageServer } from './mcp/peer-message-server.js';
+export { MESSAGE_AGENT_TOOL, PeerMessageServer } from './mcp/peer-message-server.js';
 export type {
   PeerMessageEndpoint,
   PeerMessageServerOptions,
@@ -127,6 +147,9 @@ export type {
   RuntimeDetection,
   RuntimeReadiness,
 } from './detect/runtimes.js';
+// The way out of a state detection reports: the runtime's own login, the vendor's own installer.
+export { remediesFor, remedyFor } from './detect/remedies.js';
+export type { RemedyKind, RuntimeRemedy } from './detect/remedies.js';
 
 export { openDatabase } from './store/database.js';
 export type { BlobotDatabase, OpenDatabaseOptions, OpenedDatabase } from './store/database.js';

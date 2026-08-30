@@ -15,8 +15,12 @@ import type {
   UiPermissionRequest,
   UiCommand,
   UiRuntimeChoice,
+  RuntimeStepOutcome,
   UiSnapshot,
+  UiTeamIcon,
+  UiTeamDiskUsage,
   UiWorkspaceInspection,
+  UiRuntimeOptions,
 } from '../shared/api.js';
 
 /**
@@ -39,9 +43,21 @@ const api: BlobotApi = {
     ipcRenderer.invoke('blobot:initializeWorkspace', path) as Promise<
       UiWorkspaceInspection | { error: string }
     >,
+  prepareWorkspace: (name) =>
+    ipcRenderer.invoke('blobot:prepareWorkspace', name) as Promise<
+      UiWorkspaceInspection | { error: string }
+    >,
+  suggestTeamIcon: (path) =>
+    ipcRenderer.invoke('blobot:suggestTeamIcon', path) as Promise<UiTeamIcon | undefined>,
+  chooseTeamIcon: () =>
+    ipcRenderer.invoke('blobot:chooseTeamIcon') as Promise<UiTeamIcon | { error: string } | undefined>,
+  setTeamIcon: (teamId, icon) =>
+    ipcRenderer.invoke('blobot:setTeamIcon', teamId, icon) as Promise<void>,
   detectRuntimes: () =>
     ipcRenderer.invoke('blobot:detectRuntimes') as Promise<readonly UiRuntimeChoice[]>,
   listAgents: () => ipcRenderer.invoke('blobot:listAgents') as Promise<readonly UiAgentProfile[]>,
+  describeRuntimeOptions: (runtimeId: string) =>
+    ipcRenderer.invoke('blobot:describeRuntimeOptions', runtimeId) as Promise<UiRuntimeOptions>,
   hireAgent: (spec: NewAgentSpec) =>
     ipcRenderer.invoke('blobot:hireAgent', spec) as Promise<HireResult>,
   editAgent: (profileId: string, spec: NewAgentSpec) =>
@@ -59,10 +75,34 @@ const api: BlobotApi = {
       profileIds,
       leadProfileId,
     ) as Promise<TeamDeletionResult>,
-  deleteTeam: (teamId: string) =>
-    ipcRenderer.invoke('blobot:deleteTeam', teamId) as Promise<TeamDeletionResult>,
+  deleteTeam: (teamId: string, clean?: boolean) =>
+    ipcRenderer.invoke('blobot:deleteTeam', teamId, clean === true) as Promise<TeamDeletionResult>,
+  teamDiskUsage: (teamId: string) =>
+    ipcRenderer.invoke('blobot:teamDiskUsage', teamId) as Promise<UiTeamDiskUsage>,
   answerPermission: (requestId: string, choice: PermissionChoice) =>
     ipcRenderer.invoke('blobot:answerPermission', requestId, choice) as Promise<void>,
+  // The runtime's own login or its vendor's own installer, on a terminal. Two ids go out and
+  // keystrokes go out; the command line is core's and is never sent from this side.
+  // One named object over the wire, so a bridge older than the window fails as a version skew
+  // that says so rather than as three strings that happen to line up one place to the left.
+  startRuntimeStep: (stepId: string, runtimeId: string, kind: 'sign_in' | 'install') =>
+    ipcRenderer.invoke('blobot:startRuntimeStep', { stepId, runtimeId, kind }) as Promise<{
+      ok: boolean;
+      error?: string;
+    }>,
+  openLink: (url: string) => ipcRenderer.invoke('blobot:openLink', url) as Promise<void>,
+  sendRuntimeStepInput: (stepId: string, data: string) =>
+    ipcRenderer.invoke('blobot:runtimeStepInput', stepId, data) as Promise<void>,
+  resizeRuntimeStep: (stepId: string, cols: number, rows: number) =>
+    ipcRenderer.invoke('blobot:runtimeStepResize', stepId, cols, rows) as Promise<void>,
+  closeRuntimeStep: (stepId: string) =>
+    ipcRenderer.invoke('blobot:closeRuntimeStep', stepId) as Promise<void>,
+  onRuntimeStepData: (listener) =>
+    subscribe('blobot:runtime-step-data', (_e, stepId: string, data: string) =>
+      listener(stepId, data),
+    ),
+  onRuntimeStepExit: (listener) =>
+    subscribe('blobot:runtime-step-exit', (_e, outcome: RuntimeStepOutcome) => listener(outcome)),
   onEvent: (listener) =>
     subscribe('blobot:event', (_e, teamId: string, event: AgentEvent) => listener(teamId, event)),
   onStatus: (listener) =>
@@ -80,6 +120,12 @@ const api: BlobotApi = {
   onBudget: (listener) =>
     subscribe('blobot:budget', (_e, teamId: string, used: number, budget: number) =>
       listener(teamId, used, budget),
+    ),
+  onSilentHandoff: (listener) =>
+    subscribe(
+      'blobot:silent-handoff',
+      (_e, teamId: string, agentId: string, named: string[], at: number) =>
+        listener(teamId, agentId, named, at),
     ),
   onTurns: (listener) =>
     subscribe('blobot:turns', (_e, teamId: string, turns: number) => listener(teamId, turns)),

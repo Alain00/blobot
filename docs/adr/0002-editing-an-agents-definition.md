@@ -90,3 +90,66 @@ is what forbids it.
 Renaming a **team**, which is the same problem one level up and still open. Whether an agent
 should be able to be given a different runtime *on one team* by rejoining it, which is
 expressible today (take it off, put it back on) at the cost of that workspace.
+
+## Amendment, 2026-08-30: how it answers is part of the definition
+
+An AgentProfile now also holds **what the user chose among the options its runtime advertises**
+— a model, a reasoning effort, whatever else that runtime offers — as one JSON column
+(`runtime_options`) keyed by the provider's own group ids.
+
+It behaves like the role, not like the runtime: **restated on every team the agent is on, taken
+at that team's next start.** The reasoning is this ADR's own. A model is not half of a ref and
+not the identity of a session — the session is the same session on the same provider, answering
+differently — so none of what pins the name and the runtime applies. And a running agent is
+mid-conversation under the settings it was launched with, which is exactly the case the role
+already settles: rewriting how a process reasons while it is reasoning is worse than waiting.
+
+Three things fall out of it, all of them the same instinct as the hue:
+
+- **Choosing the runtime's own default stores nothing.** An absent key means "whatever this
+  runtime does". Writing today's default down would silently pin an agent to it after the
+  provider moved on, and the user who picked the default picked the *behaviour*, not the value.
+- **The choices are copied onto the Agent at team creation**, like the name and the face, so a
+  transcript can be read against what that agent was actually set to at the time.
+- **Blobot never enumerates the options itself.** The runtime is started and asked, because both
+  providers volunteer `configOptions` on `session/new` and neither answers the question any
+  other way. A list of model names in blobot's source would be stale on somebody else's release
+  cadence — the same argument the command palette settled in ADR-0003.
+
+This one *did* need a migration (`0006`), which is the only line above that this amendment
+contradicts.
+
+## Amendment, 2026-08-30: what it may do without asking is part of the definition too
+
+The permission posture is now a per-agent choice — `careful`, `normal` or `trusting` — and it
+lands in exactly the same place as the amendment above, by exactly the same argument.
+
+**The teams an agent is already on take the new level at their next start.** It could not work
+any other way even if this ADR wanted it to: on Claude the vouched list is an `allowedTools`
+parameter of `session/new`, and on OpenCode the posture is a config in the child process's
+environment. Neither can change under a live process, so *"restated on the profile, taken at the
+next start"* is not a policy decision here, it is the only thing the mechanism allows. The
+policy decision is that this is fine, and that is the role's reasoning unchanged: an agent
+mid-turn is working under the posture it was launched with, and a permission model that shifted
+under a running tool call is worse than one that waits.
+
+The rest follows the model and the effort:
+
+- **`normal` is stored as nothing**, so an agent hired before the selector existed is already
+  what it always was. Unlike a model default, though, the *form* always sends a word: an agent
+  lowered from `trusting` back to `normal` has to be able to say `normal`, not merely stop
+  saying `trusting`.
+- **The level is copied onto the Agent at team creation**, so a transcript is readable against
+  what that agent was actually allowed to do at the time.
+- **It is per agent and never per team.** An AgentWorkspace is per agent, so trusting Alice has
+  never said anything about Bob, and a team-wide control would imply otherwise.
+
+Where it differs from everything else in this ADR: **the three words are blobot's own.** Every
+other choice here is either the provider's vocabulary passed through opaquely or a label the
+runtime handed us to print. These three mean the same thing on both runtimes precisely because
+each adapter translates them into something different — an allowlist that grows on Claude, a
+rule list that loosens on OpenCode. That is the provider rule doing its job in the direction it
+usually is not asked to: the UI names the decision, and no component knows what either runtime
+makes of it.
+
+Migration `0008`, one nullable column on each of the two tables.

@@ -19,6 +19,7 @@ import {
   editAgentProfile,
   editTeamRoster,
   hireAgent,
+  measureTeam,
 } from './team-store.js';
 
 const migrationsFolder = fileURLToPath(
@@ -68,6 +69,25 @@ class FakeWorkspaces implements WorkspaceProvider {
     this.removed.push(request);
     if (this.removal instanceof Error) throw this.removal;
     return this.removal;
+  }
+
+  /** Who was purged rather than removed, kept apart so a test can prove which one ran. */
+  readonly purged: ProvisionRequest[] = [];
+  purgeOutcome: RemovalOutcome | Error = { work: 'discarded' };
+
+  async purge(request: ProvisionRequest): Promise<RemovalOutcome> {
+    this.purged.push(request);
+    if (this.purgeOutcome instanceof Error) throw this.purgeOutcome;
+    return this.purgeOutcome;
+  }
+
+  /** Bytes per agent, by name. Anybody not named holds nothing. */
+  sizes: Record<string, number> = {};
+  readonly measured: ProvisionRequest[] = [];
+
+  async measure(request: ProvisionRequest): Promise<number> {
+    this.measured.push(request);
+    return this.sizes[request.agentName] ?? 0;
   }
 }
 
@@ -295,6 +315,46 @@ describe('agents that exist on their own', () => {
     });
   });
 
+  it('carries the runtime options onto the Agent, as they were when it joined', async () => {
+    const mara = hireAgent(
+      {
+        name: 'Mara',
+        role: 'marketing',
+        runtimeId: 'claude-code',
+        runtimeOptions: { model: 'sonnet', effort: 'high' },
+      },
+      { store, clock },
+    );
+    const team = await createTeam(
+      { ...spec, profileIds: [mara.id] },
+      { store, clock, workspaces, inspect: () => workspaces.inspect() },
+    );
+
+    // Copied like the name and the face, so a transcript is readable against what the agent
+    // was actually set to at the time rather than against what it is set to now.
+    expect(store.agentsOfTeam(team.id)[0]?.runtimeOptions).toEqual({
+      model: 'sonnet',
+      effort: 'high',
+    });
+  });
+
+  it('carries the trust level onto the Agent too, and defaults to nothing stored', async () => {
+    const mara = hireAgent(
+      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code', trust: 'trusting' },
+      { store, clock },
+    );
+    const shy = hireAgent({ name: 'Shy', role: 'research', runtimeId: 'claude-code' }, { store, clock });
+    const team = await createTeam(
+      { ...spec, profileIds: [mara.id, shy.id] },
+      { store, clock, workspaces, inspect: () => workspaces.inspect() },
+    );
+
+    const roster = store.agentsOfTeam(team.id);
+    expect(roster.find((agent) => agent.name === 'Mara')?.trust).toBe('trusting');
+    // Nobody chose, so nothing is stored, and `normal` is what the adapters make of that.
+    expect(roster.find((agent) => agent.name === 'Shy')?.trust).toBeUndefined();
+  });
+
   it('refuses a second agent of the same name', () => {
     hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
     expect(() =>
@@ -347,6 +407,65 @@ describe('editing an agent', () => {
       instructions: 'Cite two.',
       hue: 215,
     });
+  });
+
+  it('restates the runtime options too, and can clear them back to the defaults', async () => {
+    const mara = hireAgent(
+      {
+        name: 'Mara',
+        role: 'marketing',
+        runtimeId: 'claude-code',
+        runtimeOptions: { model: 'sonnet', effort: 'max' },
+      },
+      { store, clock },
+    );
+    const team = await createTeam({ ...spec, profileIds: [mara.id] }, deps());
+
+    editAgentProfile(
+      mara.id,
+      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code', runtimeOptions: { effort: 'low' } },
+      deps(),
+    );
+
+    // Restated, not merged: the form says what the agent is now, so a choice the user removed
+    // has to actually go. It reaches the team at its next start, like the role.
+    expect(store.profileById(mara.id)?.runtimeOptions).toEqual({ effort: 'low' });
+    expect(store.agentsOfTeam(team.id)[0]?.runtimeOptions).toEqual({ effort: 'low' });
+
+    editAgentProfile(
+      mara.id,
+      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code', runtimeOptions: {} },
+      deps(),
+    );
+    // Choosing nothing is a real answer: it means the runtime's own defaults.
+    expect(store.profileById(mara.id)?.runtimeOptions).toBeUndefined();
+    expect(store.agentsOfTeam(team.id)[0]?.runtimeOptions).toBeUndefined();
+  });
+
+  it('restates the trust level, up and back down again', async () => {
+    const mara = hireAgent(
+      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code' },
+      { store, clock },
+    );
+    const team = await createTeam({ ...spec, profileIds: [mara.id] }, deps());
+
+    editAgentProfile(
+      mara.id,
+      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code', trust: 'trusting' },
+      deps(),
+    );
+    expect(store.profileById(mara.id)?.trust).toBe('trusting');
+    expect(store.agentsOfTeam(team.id)[0]?.trust).toBe('trusting');
+
+    // The direction that matters: lowering has to actually lower, and `normal` is a word the
+    // form sends rather than a silence it falls back to.
+    editAgentProfile(
+      mara.id,
+      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code', trust: 'careful' },
+      deps(),
+    );
+    expect(store.profileById(mara.id)?.trust).toBe('careful');
+    expect(store.agentsOfTeam(team.id)[0]?.trust).toBe('careful');
   });
 
   it('restates role, instructions and face on a team the agent is on, and not the name', async () => {
@@ -501,6 +620,56 @@ describe('deleting a team', () => {
     expect(deletion.removals.map((removal) => removal.work)).toEqual(['unknown', 'unknown']);
     expect(deletion.removals[0]?.detail).toContain('cannot find /repo');
     expect(store.listTeams()).toHaveLength(0);
+  });
+
+  /**
+   * The full clean. It is a different provider call rather than a flag on the same one, so the
+   * test that matters is which one ran: a `clean` that reached `remove` would keep the branches
+   * it was ticked to delete and report a figure it never recovered.
+   */
+  it('purges every workspace when a full clean was asked for, and never otherwise', async () => {
+    const team = await createTeam(spec, deps());
+    const deletion = await deleteTeam(team.id, deps(), { clean: true });
+
+    expect(workspaces.purged.map((request) => request.agentName)).toEqual(['Alice', 'Bob']);
+    expect(workspaces.removed).toHaveLength(0);
+    expect(deletion.removals.map((removal) => removal.work)).toEqual(['discarded', 'discarded']);
+
+    const other = await createTeam(teamOf({ name: 'Carol', role: 'infra' }), deps());
+    await deleteTeam(other.id, deps());
+    expect(workspaces.purged).toHaveLength(2);
+    expect(workspaces.removed.map((request) => request.agentName)).toEqual(['Carol']);
+  });
+
+  it('reports what the clean recovered, measured before the workspaces went', async () => {
+    workspaces.sizes = { Alice: 3_000, Bob: 500 };
+    const team = await createTeam(spec, deps());
+
+    expect(await deleteTeam(team.id, deps(), { clean: true })).toMatchObject({ freedBytes: 3_500 });
+  });
+
+  it('says nothing about disk when no clean was asked for', async () => {
+    workspaces.sizes = { Alice: 3_000 };
+    const team = await createTeam(spec, deps());
+
+    const deletion = await deleteTeam(team.id, deps());
+    expect(deletion.freedBytes).toBeUndefined();
+    expect(workspaces.measured).toHaveLength(0);
+  });
+
+  it('measures the team so the clean can be offered with its price on it', async () => {
+    workspaces.sizes = { Alice: 2_048, Bob: 1_024 };
+    const team = await createTeam(spec, deps());
+
+    const usage = await measureTeam(team.id, deps());
+    expect(usage.bytes).toBe(3_072);
+    expect(usage.agents).toEqual([
+      { agentName: 'Alice', bytes: 2_048 },
+      { agentName: 'Bob', bytes: 1_024 },
+    ]);
+    // Measuring is a question, never a change.
+    expect(workspaces.removed).toHaveLength(0);
+    expect(workspaces.purged).toHaveLength(0);
   });
 
   it('frees the name, so a team can be made again for the folder it was moved to', async () => {

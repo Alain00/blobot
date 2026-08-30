@@ -10,6 +10,7 @@ import {
   commandMenu,
   reduce,
   slashPartial,
+  stoppedBecause,
   type AppState,
   type Item,
 } from './model.js';
@@ -43,12 +44,44 @@ describe('a snapshot', () => {
     agents: [],
     statuses: {},
     commands: {},
+    usage: {},
+    log: { tools: [], turns: [] },
+    injection: {},
     messages: [peerMessage],
     answers: [{ id: 'a1', agentId: 'bob', text: 'on it', at: 20 }],
     turnsThisPrompt: 0,
     demoMode: false,
     permissions: [],
   };
+
+  it('restores the activity column the way it was watched, without blobot\'s own tool', () => {
+    const state = reduce(initialState, {
+      type: 'snapshot',
+      snapshot: {
+        ...snapshot,
+        log: {
+          tools: [
+            {
+              toolCallId: 'call_1',
+              agentId: 'alice',
+              at: 10,
+              title: 'mcp__blobot__message_agent',
+              status: 'completed',
+            },
+            {
+              toolCallId: 'call_2',
+              agentId: 'alice',
+              at: 11,
+              title: 'git log\n  --oneline',
+              status: 'completed',
+            },
+          ],
+          turns: [],
+        },
+      },
+    });
+    expect(state.feed.map((entry) => entry.text)).toEqual(['git log --oneline completed']);
+  });
 
   it('seeds the pane with the persisted transcript, so a restart is not an empty window', () => {
     const state = reduce(initialState, { type: 'snapshot', snapshot });
@@ -108,6 +141,73 @@ describe('the conversation model', () => {
     expect(done.feed[0]?.text).toContain('read src/auth.ts');
   });
 
+  it('takes the refined title off a call that was announced before its arguments', () => {
+    const running = apply([
+      {
+        type: 'tool_call_started',
+        toolCallId: 'call_1',
+        title: 'Terminal',
+        kind: 'execute',
+        at: 1,
+        ...identity,
+      },
+      {
+        type: 'tool_call_updated',
+        toolCallId: 'call_1',
+        status: 'in_progress',
+        title: 'git log --oneline -5',
+        at: 2,
+        ...identity,
+      },
+    ]);
+    expect(running.items[0]).toMatchObject({ kind: 'tool', title: 'git log --oneline -5' });
+
+    const done = reduce(running, {
+      type: 'event',
+      event: {
+        type: 'tool_call_updated',
+        toolCallId: 'call_1',
+        status: 'completed',
+        at: 3,
+        ...identity,
+      },
+    });
+    expect(done.feed[0]?.text).toBe('git log --oneline -5 completed');
+  });
+
+  it('flattens a command that runs over several lines into one entry', () => {
+    const long = 'echo "---A---" &&\n  git shortlog -sn --all |\n  head -15';
+    const state = apply([
+      {
+        type: 'tool_call_started',
+        toolCallId: 'call_1',
+        title: long,
+        kind: 'execute',
+        at: 1,
+        ...identity,
+      },
+    ]);
+    const tool = state.items[0] as { title: string };
+    expect(tool.title).toBe('echo "---A---" && git shortlog -sn --all | head -15');
+    expect(tool.title).not.toContain('\n');
+  });
+
+  it('cuts a command too long for the column rather than letting it take the column', () => {
+    const state = apply([
+      {
+        type: 'tool_call_started',
+        toolCallId: 'call_1',
+        title: `git log ${'--oneline '.repeat(20)}`,
+        kind: 'execute',
+        at: 1,
+        ...identity,
+      },
+    ]);
+    const tool = state.items[0] as { title: string };
+    expect(tool.title).toHaveLength(80);
+    expect(tool.title.endsWith('\u2026')).toBe(true);
+  });
+
   it('leaves an ordinary turn end in the feed alone', () => {
     const state = apply([
       { type: 'turn_ended', turnId: 't1', stopReason: 'end_turn', at: 3, ...identity },
@@ -120,7 +220,7 @@ describe('the conversation model', () => {
     const state = apply([
       { type: 'turn_ended', turnId: 't1', stopReason: 'max_tokens', at: 3, ...identity },
     ]);
-    expect(state.items[0]).toMatchObject({ kind: 'system', text: 'turn stopped · max tokens' });
+    expect(state.items[0]).toMatchObject({ kind: 'system', text: 'turn stopped · the context window is full' });
     expect(state.feed[0]?.emphasis).toBe(true);
   });
 
@@ -310,6 +410,9 @@ describe('a permission block', () => {
         agents: [],
         statuses: {},
         commands: {},
+        usage: {},
+        log: { tools: [], turns: [] },
+        injection: {},
         messages: [],
         answers: [],
         permissions: [request],
@@ -470,5 +573,202 @@ describe('the composer\'s slash menu', () => {
 
   it('stays shut after Escape until the next keystroke', () => {
     expect(menu('/', { dismissed: true })).toEqual({ suggestions: [] });
+  });
+});
+
+describe('a handoff that was named and never sent', () => {
+  const observed = (named: readonly string[]): AppState =>
+    reduce(initialState, { type: 'silentHandoff', agentId: 'alice', named, at: 40 });
+
+  it('states the two facts and offers nothing', () => {
+    const [item] = observed(['Bob']).items;
+    expect(item).toMatchObject({
+      kind: 'system',
+      agentId: 'alice',
+      text: 'named Bob · no message sent',
+    });
+  });
+
+  it('reads as a sentence when there are several', () => {
+    expect(observed(['Bob', 'Carol']).items[0]).toMatchObject({
+      text: 'named Bob and Carol · no message sent',
+    });
+    expect(observed(['Bob', 'Carol', 'Dave']).items[0]).toMatchObject({
+      text: 'named Bob, Carol and Dave · no message sent',
+    });
+  });
+
+  it('lands once, however many times the observation arrives', () => {
+    const once = observed(['Bob']);
+    const twice = reduce(once, {
+      type: 'silentHandoff',
+      agentId: 'alice',
+      named: ['Bob'],
+      at: 40,
+    });
+    expect(twice.items).toHaveLength(1);
+  });
+});
+
+describe('the context gauge', () => {
+  const usage = (used: number, size = 200_000, at = 10): AgentEvent => ({
+    type: 'usage_updated',
+    ...identity,
+    at,
+    used,
+    size,
+  });
+
+  it('keeps the last reading per agent', () => {
+    const state = apply([
+      usage(4_000),
+      usage(37_000, 1_000_000, 20),
+      { ...usage(148_000), agentId: 'bob', sessionId: 'session_bob' },
+    ]);
+    expect(state.usage).toEqual({
+      alice: { used: 37_000, size: 1_000_000 },
+      bob: { used: 148_000, size: 200_000 },
+    });
+  });
+
+  it('ignores the zero a cancelled turn reports, so stopping an agent does not empty it', () => {
+    const state = apply([usage(37_000), usage(0, 200_000, 20)]);
+    expect(state.usage.alice).toEqual({ used: 37_000, size: 200_000 });
+  });
+
+  it('takes a zero from an agent that has said nothing yet, because that one is true', () => {
+    expect(apply([usage(0)]).usage.alice).toEqual({ used: 0, size: 200_000 });
+  });
+
+  it('is seeded by the snapshot, so a relaunch draws what the agent is carrying', () => {
+    const state = reduce(initialState, {
+      type: 'snapshot',
+      snapshot: {
+        team: { id: 'team', name: 'checkout', workspacePath: '/repo', turnBudget: 10 },
+        teams: [],
+        agents: [],
+        statuses: {},
+        commands: {},
+        usage: { alice: { used: 37_000, size: 1_000_000 } },
+        log: { tools: [], turns: [] },
+        injection: {},
+        messages: [],
+        answers: [],
+        permissions: [],
+        turnsThisPrompt: 0,
+        demoMode: false,
+      },
+    });
+    expect(state.usage).toEqual({ alice: { used: 37_000, size: 1_000_000 } });
+  });
+});
+
+describe('a turn that ended early', () => {
+  const ended = (stopReason: 'end_turn' | 'max_tokens' | 'refusal' | 'max_turn_requests'): AgentEvent => ({
+    type: 'turn_ended',
+    ...identity,
+    at: 30,
+    turnId: 'turn_1',
+    stopReason,
+  });
+
+  it('says why in the transcript, not only in the activity column', () => {
+    const state = apply([ended('max_tokens')]);
+    expect(state.items).toMatchObject([
+      { kind: 'system', agentId: 'alice', text: 'turn stopped · the context window is full' },
+    ]);
+  });
+
+  it('names a consequence rather than the protocol\'s mechanism', () => {
+    // The three endings that arrive down the same path. `max tokens` was what the pane used to
+    // draw, which names a mechanism and reads to a user as an agent that got worse for no
+    // reason.
+    expect(stoppedBecause('max_tokens')).toBe('turn stopped · the context window is full');
+    expect(stoppedBecause('max_turn_requests')).toBe(
+      'turn stopped · the runtime hit its own request limit',
+    );
+    expect(stoppedBecause('refusal')).toBe('turn stopped · declined to answer');
+    expect(stoppedBecause('cancelled')).toBe('turn stopped · cancelled');
+  });
+
+  it('offers no remedy, because blobot does not manage the agent\'s context', () => {
+    for (const reason of ['max_tokens', 'max_turn_requests', 'refusal'] as const) {
+      expect(stoppedBecause(reason)).not.toMatch(/compact|continue|retry|try again/i);
+    }
+  });
+
+  it('leaves an ordinary ending in the activity column, where a log belongs', () => {
+    const state = apply([ended('end_turn')]);
+    expect(state.items).toEqual([]);
+    expect(state.feed[0]?.text).toBe('turn ended · end_turn');
+  });
+});
+
+describe('the activity column, after a team switch', () => {
+  const snapshot = (log: {
+    tools: { toolCallId: string; agentId: string; at: number; title: string; status: string }[];
+    turns: { turnId: string; agentId: string; at: number; stopReason: 'end_turn' | 'max_tokens' }[];
+  }): AppState =>
+    reduce(initialState, {
+      type: 'snapshot',
+      snapshot: {
+        team: { id: 'team', name: 'checkout', workspacePath: '/repo', turnBudget: 10 },
+        teams: [],
+        agents: [],
+        statuses: {},
+        commands: {},
+        usage: {},
+        log,
+        injection: {},
+        messages: [],
+        answers: [],
+        permissions: [],
+        turnsThisPrompt: 0,
+        demoMode: false,
+      },
+    });
+
+  it('comes back with the team, newest first, instead of emptying', () => {
+    const state = snapshot({
+      tools: [
+        { toolCallId: 'call_1', agentId: 'alice', at: 10, title: 'read src/auth.ts', status: 'completed' },
+      ],
+      turns: [{ turnId: 'turn_1', agentId: 'alice', at: 20, stopReason: 'end_turn' }],
+    });
+    expect(state.feed.map((entry) => entry.text)).toEqual([
+      'turn ended · end_turn',
+      'read src/auth.ts completed',
+    ]);
+  });
+
+  it('is keyed the way a live line is, so the same call is not logged twice', () => {
+    const state = snapshot({
+      tools: [
+        { toolCallId: 'call_1', agentId: 'alice', at: 10, title: 'read src/auth.ts', status: 'completed' },
+      ],
+      turns: [],
+    });
+    expect(state.feed[0]?.id).toBe('call_1:done');
+  });
+
+  it('brings an unusual ending back into the transcript, not only into the column', () => {
+    // An answer that stopped mid-sentence and came back without its reason read as an answer
+    // that finished.
+    const state = snapshot({
+      tools: [],
+      turns: [{ turnId: 'turn_1', agentId: 'alice', at: 20, stopReason: 'max_tokens' }],
+    });
+    expect(state.items).toMatchObject([
+      { kind: 'system', agentId: 'alice', text: 'turn stopped · the context window is full' },
+    ]);
+    expect(state.feed[0]?.emphasis).toBe(true);
+  });
+
+  it('leaves an ordinary ending out of the transcript, as the live path does', () => {
+    const state = snapshot({
+      tools: [],
+      turns: [{ turnId: 'turn_1', agentId: 'alice', at: 20, stopReason: 'end_turn' }],
+    });
+    expect(state.items).toEqual([]);
   });
 });

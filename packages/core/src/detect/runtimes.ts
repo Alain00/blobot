@@ -81,8 +81,7 @@ const OPENCODE: RuntimeProbe = {
   runtimeId: 'opencode',
   label: 'OpenCode',
   binary: 'opencode',
-  // Tickets 03 + 16 are deferred; `AgentRuntime` has one real implementation today.
-  supported: false,
+  supported: true,
   extraDirs: ['.opencode/bin', '.local/bin'],
   probeAuth: async (path, run) => {
     // `opencode auth list` always exits 0, so stdout is the only signal — and it stays
@@ -172,23 +171,41 @@ export function parseVersion(stdout: string): string | undefined {
 /**
  * `opencode auth list` prints two independent sections — `Credentials` from `auth.json` and
  * `Environment` from env var *names* (never values). Either counts as "something is there".
+ *
+ * **Every line is drawn inside a box, and that is what this got wrong.** Observed against 1.18.4
+ * on 2026-08-30, the real output is `┌  Credentials ~/.local/share/opencode/auth.json`, then
+ * `●  GitHub Copilot oauth` per entry, closed by `└  4 credentials`. Ticket 11's research
+ * recorded the section names and not the glyphs in front of them, so a heading test anchored at
+ * `^credentials` matched nothing and this answered **false for every input**. It looked correct
+ * for as long as the machine it was written on had no credentials, and it kept looking correct
+ * after a login blobot had itself just run: the failure mode of failing closed is that it agrees
+ * with you exactly until the moment it matters.
+ *
+ * So the box is stripped before anything is read: leading whitespace, box-drawing characters and
+ * the filled or empty circles that mark an entry. Nothing else about the shape is assumed, and
+ * the closing count is read as its own answer, so `0 credentials` is a negative in its own right
+ * rather than an absence of entries.
  */
 export function parseOpencodeAuthList(stdout: string): boolean {
-  const lines = stripAnsi(stdout)
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+  /** The frame, not the content: box drawing (U+2500..) and the geometric bullets (U+25A0..). */
+  const frame = /^[\s\u2500-\u257F\u25A0-\u25FF\u2022\u00B7]+/u;
   let inSection = false;
-  for (const line of lines) {
-    const heading = /^(credentials|environment)\b/i.test(line);
-    if (heading) {
+  let counted: number | undefined;
+  for (const raw of stripAnsi(stdout).split('\n')) {
+    const line = raw.replace(frame, '').trim();
+    if (line === '') continue;
+    const summary = /^(\d+)\s+credentials?\b/i.exec(line);
+    if (summary !== null) {
+      counted = Number(summary[1]);
+      continue;
+    }
+    if (/^(credentials|environment)\b/i.test(line)) {
       inSection = true;
       continue;
     }
-    if (/^\d+\s+credentials?\b/i.test(line)) continue;
     if (inSection) return true;
   }
-  return false;
+  return (counted ?? 0) > 0;
 }
 
 export function stripAnsi(text: string): string {

@@ -100,7 +100,10 @@ team headlessly):
   three voices, monochrome status, `@mention` addressing. Runs demo mode on mock runtimes.
   `pnpm --filter @blobot/desktop exec electron-vite build` then run electron with
   `--screenshot=<path>` (optionally `--pane=<agentId>`, `--screenshot-at=<ms>`) to review it
-  without a human at the screen.
+  without a human at the screen. `--demo-scenario=<name>` picks which run the demo team plays
+  (`?` lists them; `pnpm demo -- --scenario=<name>` reads the same table headlessly), and
+  `--autoplay-at=<ms>` delays the scripted prompt — on a cold machine the renderer paints after
+  the turn has already ended and the screenshot catches only what was persisted.
 
 **Build status and session handoff live in `.scratch/first-demo/build.md`** — what is built, what
 was decided while building that no ticket covers, the known gaps, and what the next session picks
@@ -139,6 +142,27 @@ up. Read it before starting work.
   ordinary reason to delete a team is that the folder is gone. Editing takes the whole roster,
   instantiates joiners exactly as creation does, and restarts the team, because a persona names
   the roster.
+
+- **blobot vouches for the ordinary work, on both runtimes.** Claude's `default` mode prompts on
+  every edit at any path, so an agent asked for permission to write a file inside its own
+  worktree. `adapters/claude/permissions.ts` is the counterpart to OpenCode's
+  `PERMISSION_POSTURE`: the editing tools plus a closed list of `Bash(<prefix>:*)` rules, handed
+  over `_meta.claudeCode.options.allowedTools`, which the bridge passes through where it discards
+  `permissionMode`. Not a settings file, because an AgentWorkspace is a checkout of the user's
+  repository and a file left there can be committed home. The mode stays `default`; `auto`,
+  `acceptEdits`, `dontAsk` and `bypassPermissions` stay unoffered. Verified live in both
+  directions: a write in its own workspace does not ask, a `chmod` still does. Ticket 14's
+  2026-08-30 amendment, which narrows its own *"Claude Code is not ours to configure"*.
+
+- **How much it vouches for is the user's choice, per agent**: `careful`, `normal`, `trusting`,
+  in the hire and edit dialogs under *how it answers*. Three words of blobot's own vocabulary
+  (`core/trust.ts`) that each adapter translates from the opposite end, so the renderer names the
+  decision and still cannot tell which runtime is behind it. `trusting` is the ceiling and says
+  so: `rm`, `sudo`, `chmod`, `chown`, `ssh`, `scp`, `docker`, `git push` and `git remote` ask at
+  every level, because the step above is `bypassPermissions` and ticket 14 refuses it. Per agent
+  and never per team, since an AgentWorkspace is per agent. Taken at the team's next start, which
+  is not a policy: `allowedTools` is a `session/new` parameter and OpenCode's posture is the
+  child's environment. Ticket 14's second 2026-08-30 amendment, and ADR-0002's.
 
 - **Ticket 14's posture is on screen** (14): a permission request is a channel on the
   orchestrator, so `waiting` is the status fold's own answer; the block is inline in the
@@ -190,9 +214,73 @@ up. Read it before starting work.
   rail was asserting that about teams the pool was still running. Whether the pool is holding
   a team is *not* surfaced: nobody chose it and an evicted team resumes when it comes back.
 
-Next: surfacing whether an agent resumed or started fresh.
-`build.md`'s *Next session* has the order and the reasons. OpenCode (03 + 16) is deferred by the author, 2026-08-29; the cost of proving
-`AgentRuntime` against one provider only is recorded in `build.md`.
+- **The OpenCode adapter** (03 + 16) in `packages/core/src/adapters/opencode`: `opencode acp`
+  over stdio, the persona as an OpenCode **agent** delivered through `OPENCODE_CONFIG_CONTENT`
+  so blobot writes nothing into the user's repository, ticket 14's permission posture in the
+  same config, and `session/set_mode` re-asserted after a resume because OpenCode restores the
+  last used mode rather than the configured default. The shared half of the two adapters now
+  lives in `packages/core/src/adapters/acp` — JSON-RPC, the child-process transport, the wire
+  shapes, and the `session/update` translation, which turned out to be the protocol's shape
+  rather than a provider's. `runtimeFor` in `apps/desktop/src/main/runtime-for.ts` is the one
+  place a `runtime_id` becomes a class. Verified against a real `opencode` 1.18.4 at zero
+  token cost: the persona is live on turn 1, and `opencode debug agent` resolves exactly the
+  rules ticket 14 wrote. `BLOBOT_LIVE_OPENCODE=1` runs the turns that cost tokens, and has not
+  been run yet.
+
+- **The model and the effort are the user's to choose**, per agent, in the hire and edit
+  dialogs. Each adapter hands the UI the option groups its runtime advertises on `session/new`
+  (`model`, `effort` and `fast` on Claude; `model` alone on OpenCode) minus the ones blobot
+  decides itself, and applies the choices with `session/set_config_option` — the only lever that
+  works, since `_meta.claudeCode.options.model` turned out to be accepted and ignored. The
+  choices live in one JSON column on the profile, are copied onto the Agent at team creation,
+  and taking the runtime's own default stores nothing. `docs/adr/0002` carries the amendment.
+
+- **How full an agent's context is, on screen.** A `CONTEXT` block at the head of the activity
+  column: face, name, `used/size`, percent, per agent, from the `usage_updated` the runtimes
+  already sent and the renderer already threw away. Observation only, and the rule is unchanged:
+  blobot does not compact, the CLI behind the adapter owns that, and `/compact` in the palette is
+  the whole of the remedy. A turn that stops early now says why in the transcript rather than
+  naming a protocol enum (`turn stopped · the context window is full`), and the activity column
+  and that line both survive a team switch, because the snapshot carries the persisted log. And
+  **what blobot itself injects is bounded**: `orchestrator/bounds.ts` refuses a peer message over
+  4,000 characters at the tool boundary rather than truncating it, caps the wake batch at five
+  and requeues the rest, and shows the breakdown under the gauge in estimated tokens. That rule
+  was in this file and enforced nowhere.
+
+- **A team has an icon, and a team can be given a folder.** The icon is a `data:` URL in one
+  column on `teams`, drawn as a **sticker on the folder** in the rail and never in place of the
+  mark: the faces say who is on the team, the icon says which project, and the folder is the
+  body that animates the folded status. It is detected from the Workspace
+  (`workspace/icon.ts`: one walk four levels deep, raster only, ranked by directory then depth then a folder named after the repository) and **offered rather than applied** —
+  the flow names the file it found. And the creation flow has a second door out of its folder
+  step: *make one for me* puts a git repository with one empty commit under `~/blobot`, named
+  after the team, so nobody has to go and find a repository before they can watch two agents
+  talk. The name is step 01 now, because the folder is named after it.
+
+- **Deleting a team can be a full clean, priced first.** The dialog carries one tick that
+  deletes every AgentWorkspace whatever it holds, unmerged branches and copies included, with
+  what it recovers on it (`recovers about 3.1 GB · alice 2.9 GB · bob 180 MB`) and the result
+  reported after. It is a second provider method (`purge`, beside `remove`, plus `measure`), not
+  a flag, so no caller reaches the unrecoverable version by passing the wrong boolean. Without
+  it the leftovers were unbounded and nothing in the app ever mentioned one again.
+
+- **A runtime that is not ready is handled, not just reported.** Ticket 11's four states now
+  each carry the way out of them: the picker offers **the runtime's own `auth login`**, or **the
+  vendor's own published install command**, on a real pseudo-terminal inside the app
+  (`main/runtime-step.ts`, `components/RuntimeSetup.tsx`, the table in `detect/remedies.ts`). The
+  CLI signs the user in itself and opens its own browser; keystrokes pass through and blobot
+  reads none of them, which is how the no-credential-storage rule is kept while still helping.
+  argv is core's and never the renderer's: two ids travel, and the command is looked up on the
+  far side. Nothing concludes from an exit code, because an installer can exit 0 having installed
+  nothing, so the screen ends on detection asked again in the same four words. Detection still
+  gates nothing, with one addition: a launch whose agent's runtime is `not_installed` is refused
+  by name rather than surfacing as `spawn opencode ENOENT`. xterm is handed a monochrome palette,
+  because a terminal is quoted and not exempt from the governing rule. `.scratch/runtime-readiness/`
+  has the decisions; `claude auth login` is the one path not run live.
+
+Next: surfacing whether an agent resumed or started fresh, and running
+`adapters/opencode/live.test.ts` against the real thing.
+`build.md`'s *Next session* has the order and the reasons.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that
 reproduces every observed trap on purpose — ragged deltas, a cancelled tool reporting

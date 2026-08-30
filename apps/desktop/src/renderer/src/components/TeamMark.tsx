@@ -33,11 +33,19 @@ interface Slot {
 export function TeamMark({
   agents,
   status,
+  icon,
   size = 46,
   open = false,
 }: {
   agents: readonly { readonly id: string; readonly name: string; readonly hue?: number }[];
   status: AgentStatus;
+  /**
+   * The team's own icon, as a `data:` URL, when it has one. Drawn **on the folder**, where a
+   * folder carries its label, and never instead of it: the faces answer who is on this team
+   * and the icon answers which project they are in, which are two different questions and only
+   * one of them is what a rail full of similar-looking teams is hard to answer.
+   */
+  icon?: string;
   size?: number;
   /**
    * This team is the one on screen, so the folder is open and its agents are the rows beneath
@@ -82,6 +90,14 @@ export function TeamMark({
       <svg className="front" viewBox="0 0 100 100" aria-hidden>
         <path d={open ? FRONT_OPEN : FRONT_SHUT} vectorEffect="non-scaling-stroke" />
       </svg>
+      {/* Over the front, because it is a label on the folder and not cargo in it — and larger
+          when the folder is open, where the pocket is empty and there is room. It is drawn in
+          grey by the stylesheet: the rule that the blobatars are the only saturated thing on
+          screen is what stops a rail of colourful favicons from shouting down the faces, and a
+          grey image still carries the luminance that makes a logo recognisable. */}
+      {icon !== undefined && (
+        <img className="teamicon" src={icon} alt="" aria-hidden style={iconBox(size)} />
+      )}
       {/* On the front panel, where a folder is labelled, and only while it is shut: an open
           folder's members are enumerated in full on the rows underneath it. */}
       {more !== undefined && !open && <span className="more mono">+{more}</span>}
@@ -119,6 +135,26 @@ const BACK =
 const FRONT_SHUT = 'M8 50 H92 V75.5 a3.5 3.5 0 0 1-3.5 3.5 H11.5 a3.5 3.5 0 0 1-3.5-3.5 Z';
 const FRONT_OPEN =
   'M4 50 H96 L81.9 76 a3.5 3.5 0 0 1-3.22 2.1 H21.32 a3.5 3.5 0 0 1-3.22-2.1 Z';
+
+/**
+ * Where the icon sits on the folder, in pixels of the box.
+ *
+ * **On the front panel's lower-left corner, and over its bottom edge** — a sticker on a folder
+ * rather than a label printed inside one. The first version was drawn to fit *within* the
+ * panel, which is the tidier idea and does not survive contact with the rail: the front runs
+ * from y=50 to y≈79, so at the 34px a row draws, a contained icon is about nine pixels of grey
+ * and reads as a smudge on the chrome. Straddling the edge buys back half again as much width
+ * without touching the faces above it, and a mark that hangs slightly off its container is what
+ * a sticker looks like anyway.
+ *
+ * Left, because the right of the panel is where the `+N` goes and a folder does not carry two
+ * labels in one place. The same in both states: the open folder's emptiness means *its members
+ * are the rows beneath it*, and that claim is about the cargo, not about the label.
+ */
+function iconBox(size: number): React.CSSProperties {
+  const edge = Math.round(size * 0.4);
+  return { width: edge, height: edge, left: Math.round(size * 0.06), top: Math.round(size * 0.52) };
+}
 
 /**
  * Where the peeking members sit, and how many the `+N` stands in for.

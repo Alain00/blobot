@@ -1,7 +1,7 @@
 import { AsyncQueue } from '../../mock/async-queue.js';
-import type { JsonRpcMessage, LineTransport } from './jsonrpc.js';
+import type { JsonRpcMessage, LineTransport } from '../acp/jsonrpc.js';
 import { BRIDGE_VERSION } from './stdio-bridge.js';
-import type { SessionUpdate } from './wire.js';
+import type { SessionUpdate } from '../acp/wire.js';
 
 /**
  * A bridge that speaks the protocol without spawning anything.
@@ -129,6 +129,43 @@ export class FakeBridge implements LineTransport {
 
   readonly #permissionReplies = new Map<number, (message: JsonRpcMessage) => void>();
 
+  /**
+   * What the session is currently set to, and which value it will refuse.
+   *
+   * Both are observed rather than invented: the bridge advertises five option groups and
+   * accepts `session/set_config_option` for them, and it refused `fast=on` while the model was
+   * `haiku` and accepted it a moment later under `sonnet` — so an option can be legal, offered,
+   * and still refused because of another option's value.
+   */
+  readonly options: Record<string, string> = {
+    mode: 'auto',
+    model: 'opus[1m]',
+    effort: 'medium',
+    fast: 'off',
+    agent: 'default',
+  };
+
+  readonly refuse: Record<string, string> = {};
+
+  #configOptions(): unknown[] {
+    const of = (id: string, name: string, values: string[]): unknown => ({
+      id,
+      name,
+      type: 'select',
+      currentValue: this.options[id],
+      options: values.map((value) => ({ value, name: value })),
+    });
+    return [
+      // `mode` and `agent` are advertised and must never reach the user: one is ticket 14's
+      // posture and the other is the persona.
+      of('mode', 'Permission Mode', ['auto', 'default', 'acceptEdits', 'plan', 'dontAsk', 'bypassPermissions']),
+      of('model', 'Model', ['default', 'opus[1m]', 'claude-fable-5[1m]', 'sonnet', 'haiku']),
+      of('effort', 'Reasoning', ['default', 'low', 'medium', 'high', 'xhigh', 'max']),
+      of('fast', 'Fast Mode', ['on', 'off']),
+      of('agent', 'Agent', ['default', 'posthog:error-analyzer']),
+    ];
+  }
+
   // ------------------------------------------------------------------ internals
 
   #handle(message: JsonRpcMessage): void {
@@ -154,6 +191,7 @@ export class FakeBridge implements LineTransport {
         this.#reply(message, {
           sessionId: this.sessionId,
           modes: { currentModeId: 'auto', availableModes: [] },
+          configOptions: this.#configOptions(),
         });
         return;
       case 'session/load': {
@@ -173,12 +211,31 @@ export class FakeBridge implements LineTransport {
         this.#reply(message, {
           sessionId: asked,
           modes: { currentModeId: 'auto', availableModes: [] },
+          configOptions: this.#configOptions(),
         });
         return;
       }
       case 'session/set_mode':
         this.#reply(message, {});
         return;
+      case 'session/set_config_option': {
+        const params = message.params as { configId?: string; value?: string };
+        const id = params?.configId ?? '';
+        const value = params?.value ?? '';
+        const refused = this.refuse[id];
+        if (refused !== undefined && refused === value) {
+          this.#send({
+            jsonrpc: '2.0',
+            id: message.id as number,
+            error: { code: -32603, message: 'Internal error' },
+          });
+          return;
+        }
+        this.options[id] = value;
+        // The reply carries the whole refreshed block, which is what the real bridge sends.
+        this.#reply(message, { configOptions: this.#configOptions() });
+        return;
+      }
       case 'session/prompt':
         this.#pendingPrompts.push(message);
         return;

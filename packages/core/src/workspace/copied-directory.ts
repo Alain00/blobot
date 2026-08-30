@@ -3,6 +3,7 @@ import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { inspectWorkspace } from './inspect.js';
+import { directorySize } from './size.js';
 import {
   refSlug,
   requireWorkspaceExists,
@@ -100,6 +101,25 @@ export class CopiedDirectoryWorkspaces implements WorkspaceProvider {
       work: 'kept',
       detail: `${workspace.path} was kept: it is a copy with no branch behind it, so deleting it would be unrecoverable. Remove it by hand when you are done with it.`,
     };
+  }
+
+  /**
+   * Deletes the copy. This is the one place blobot will, and it exists because the alternative
+   * was worse: `remove` keeps every copy forever, so a user who made teams out of a folder of
+   * documents accumulates whole trees of them with nothing in the app that will ever mention
+   * one again. The rule the class comment states is unbroken, because this is not behind a
+   * dialog people click through: it is a choice made by name, with the size attached.
+   */
+  async purge(request: ProvisionRequest): Promise<RemovalOutcome> {
+    const workspace = this.workspaceFor(request);
+    await rm(workspace.path, { recursive: true, force: true });
+    await rm(this.#markerPath(request), { force: true });
+    return { work: 'discarded' };
+  }
+
+  /** The copy *is* the work, so its size is the whole of what a purge here recovers. */
+  async measure(request: ProvisionRequest): Promise<number> {
+    return directorySize(this.workspaceFor(request).path);
   }
 
   /** Where an agent's copy lives. Pure: no filesystem. */

@@ -4,14 +4,19 @@ import type { AvailableCommand } from '../../runtime.js';
 import type { ContentBlock, SessionUpdate, ToolContent } from './wire.js';
 
 /**
- * Where every Claude-shaped quirk dies.
+ * An ACP `session/update` in blobot's vocabulary.
  *
- * The bridge emits eleven `sessionUpdate` kinds; blobot's vocabulary has room for five of
- * them. The other six are dropped here rather than downstream, because an event only one
- * provider can emit is the leak the vocabulary exists to prevent (ticket 04):
+ * Shared by both adapters, because this is the *protocol's* shape rather than a provider's:
+ * the Claude bridge emits eleven `sessionUpdate` kinds, OpenCode emits six, and OpenCode's
+ * six are a strict subset. What differs between the two providers is what they put *inside*
+ * these fields, and that is handled by the runtime that owns the connection.
+ *
+ * Blobot's vocabulary has room for five kinds. The rest are dropped here rather than
+ * downstream, because an event only one provider can emit is the leak the vocabulary exists
+ * to prevent (ticket 04):
  *
  * - `plan` (Claude's `TodoWrite`) and `current_mode_update`, `session_info_update`,
- *   `config_option_update` — Claude-only state with no OpenCode counterpart.
+ *   `config_option_update` — provider-only state with no counterpart on the other side.
  * - `available_commands_update` — a slash-command menu, several KB on every turn. It is
  *   *captured* by the runtime rather than discarded (see `commandsFrom`), but it stays out of
  *   the vocabulary: an event would carry it through the recorder into SQLite.

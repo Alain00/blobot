@@ -165,6 +165,140 @@ live('against a real claude', () => {
     ).toContain('ZUCCHINI-42');
   }, 180_000);
 
+  /**
+   * Ticket 14's 2026-08-30 amendment, against the thing it is a claim about.
+   *
+   * The amendment rests on one fact the fake bridge cannot establish: that `allowedTools` in
+   * `_meta.claudeCode.options` is honoured as a permission rule rather than discarded like
+   * `permissionMode` beside it. If it were discarded, `default` mode would raise a request here
+   * and the agent would sit in `waiting` forever, which is exactly the bug this replaces.
+   */
+  it('writes a file in its own workspace without asking, because blobot vouched for it', async () => {
+    const runtime = new ClaudeAgentRuntime({
+      agentId: 'alice',
+      cwd: workspace(),
+      persona: 'You are Alice, a blobot teammate. Answer in as few words as possible.',
+    });
+    // Nobody is listening, which is the unattended case: a request that arrives is cancelled and
+    // the write never happens. The assertion is that none arrives.
+    const requests: string[] = [];
+    runtime.setPermissionHandler(async (request) => {
+      requests.push(request.title);
+      return null;
+    });
+    await runtime.start();
+
+    const events: AgentEvent[] = [];
+    for await (const event of runtime.sendPrompt({
+      text: 'Create a file called NOTE.txt in this directory containing exactly: ZUCCHINI-42. ' +
+        'Then reply with the word DONE.',
+      from: 'user',
+    })) {
+      events.push(event);
+    }
+    await runtime.stop();
+
+    expect(requests).toEqual([]);
+    expect(
+      events
+        .filter((event) => event.type === 'agent_message_completed')
+        .map((event) => event.text)
+        .join(''),
+    ).toContain('DONE');
+  }, 180_000);
+
+  it('asks about the same write when the agent is careful', async () => {
+    // The selector, end to end: same prompt, same workspace, one word different on the agent.
+    const runtime = new ClaudeAgentRuntime({
+      agentId: 'alice',
+      cwd: workspace(),
+      persona: 'You are Alice, a blobot teammate. Answer in as few words as possible.',
+      trust: 'careful',
+    });
+    const requests: string[] = [];
+    runtime.setPermissionHandler(async (request) => {
+      requests.push(request.title);
+      return null;
+    });
+    await runtime.start();
+
+    for await (const _event of runtime.sendPrompt({
+      text: 'Create a file called NOTE.txt in this directory containing exactly: ZUCCHINI-42.',
+      from: 'user',
+    })) {
+      // The request is the assertion.
+    }
+    await runtime.stop();
+
+    expect(requests.length).toBeGreaterThan(0);
+  }, 180_000);
+
+  /**
+   * The other half of the same claim, and the one that keeps it from being vacuous: an
+   * allowlist that allowed everything would pass the test above too.
+   */
+  it('still asks about a command blobot did not vouch for', async () => {
+    const runtime = new ClaudeAgentRuntime({
+      agentId: 'alice',
+      cwd: workspace(),
+      persona: 'You are Alice, a blobot teammate. Answer in as few words as possible.',
+    });
+    const requests: string[] = [];
+    runtime.setPermissionHandler(async (request) => {
+      requests.push(request.title);
+      return null;
+    });
+    await runtime.start();
+
+    for await (const _event of runtime.sendPrompt({
+      text: 'Run this exact shell command and tell me what it printed: chmod 644 HELLO.txt',
+      from: 'user',
+    })) {
+      // The turn's content is not the assertion; the request that interrupts it is.
+    }
+    await runtime.stop();
+
+    expect(requests.length).toBeGreaterThan(0);
+  }, 180_000);
+
+  /**
+   * The user's own settings still win, which is the answer to *"how do I change this?"*.
+   *
+   * `settingSources` includes `project`, and settings precedence puts `ask` and `deny` above
+   * `allow` — which is where `allowedTools` lands. So a `.claude/settings.json` in the folder the
+   * team was made from asks for the vouching back, and blobot does not have the last word on its
+   * own posture. Asserted here because it is a claim the UI makes on blobot's behalf.
+   */
+  it('gives the vouching back when the user asks for it in their own settings', async () => {
+    const dir = workspace();
+    mkdirSync(join(dir, '.claude'), { recursive: true });
+    writeFileSync(
+      join(dir, '.claude', 'settings.json'),
+      JSON.stringify({ permissions: { ask: ['Write'] } }),
+    );
+    const runtime = new ClaudeAgentRuntime({
+      agentId: 'alice',
+      cwd: dir,
+      persona: 'You are Alice, a blobot teammate. Answer in as few words as possible.',
+    });
+    const requests: string[] = [];
+    runtime.setPermissionHandler(async (request) => {
+      requests.push(request.title);
+      return null;
+    });
+    await runtime.start();
+
+    for await (const _event of runtime.sendPrompt({
+      text: 'Create a file called NOTE.txt in this directory containing exactly: ZUCCHINI-42.',
+      from: 'user',
+    })) {
+      // Again the request is the assertion, not the answer.
+    }
+    await runtime.stop();
+
+    expect(requests.length).toBeGreaterThan(0);
+  }, 180_000);
+
   it('finds and calls blobot own message_agent tool over loopback HTTP', async () => {
     // Ticket 15's actual claim, against the real thing: invocation, not just discovery.
     const calls: PeerMessageCall[] = [];

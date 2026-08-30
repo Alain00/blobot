@@ -1,9 +1,8 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
-import { accessSync, constants } from 'node:fs';
+import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
-import { createInterface } from 'node:readline';
-import type { LineTransport } from './jsonrpc.js';
+import { childTransport, isExecutable, searchPath } from '../acp/child-transport.js';
+import type { LineTransport } from '../acp/jsonrpc.js';
 
 /** The one version this adapter is written against. Ticket 07: exact-pinned, checked loudly. */
 export const BRIDGE_VERSION = '0.70.0';
@@ -42,71 +41,6 @@ export const spawnClaudeBridge: SpawnBridge = (options) => {
   });
   return childTransport(child, options.onStderr);
 };
-
-function childTransport(
-  child: ChildProcessWithoutNullStreams,
-  onStderr: ((line: string) => void) | undefined,
-): LineTransport {
-  const closeListeners = new Set<(reason: string | undefined) => void>();
-  let closedBy: string | undefined;
-  let closed = false;
-
-  const announceClose = (reason: string | undefined): void => {
-    if (closed) return;
-    closed = true;
-    closedBy = reason;
-    for (const listener of closeListeners) listener(reason);
-  };
-
-  child.on('error', (error) => announceClose(error.message));
-  child.on('exit', (code, signal) => {
-    announceClose(
-      code === 0 || code === null
-        ? signal === null
-          ? undefined
-          : `the bridge process was killed by ${signal}`
-        : `the bridge process exited with code ${code}`,
-    );
-  });
-
-  if (onStderr !== undefined) {
-    createInterface({ input: child.stderr }).on('line', onStderr);
-  }
-
-  return {
-    write(line: string): void {
-      if (child.stdin.destroyed) return;
-      child.stdin.write(line);
-    },
-    lines(): AsyncIterable<string> {
-      return createInterface({ input: child.stdout, crlfDelay: Infinity });
-    },
-    async close(): Promise<void> {
-      if (child.exitCode !== null) return;
-      // The bridge shuts down on stdin EOF (`connection.closed.then(shutdown)`), so a clean
-      // stop is closing the pipe — no SIGKILL dance.
-      child.stdin.end();
-      await new Promise<void>((resolve) => {
-        const timer = setTimeout(() => {
-          child.kill('SIGKILL');
-          resolve();
-        }, 2_000);
-        child.once('exit', () => {
-          clearTimeout(timer);
-          resolve();
-        });
-      });
-    },
-    onClose(listener: (reason: string | undefined) => void): () => void {
-      if (closed) {
-        listener(closedBy);
-        return () => undefined;
-      }
-      closeListeners.add(listener);
-      return () => closeListeners.delete(listener);
-    },
-  };
-}
 
 /**
  * The bridge's own entry point, resolved out of our pinned dependency rather than `npx`'d:
@@ -153,22 +87,4 @@ export function resolveClaudeExecutable(explicit?: string): string {
   throw new Error(
     'claude was not found on PATH. Install Claude Code, or set CLAUDE_CODE_EXECUTABLE to its path.',
   );
-}
-
-function searchPath(binary: string): string | undefined {
-  for (const entry of (process.env.PATH ?? '').split(':')) {
-    if (entry.length === 0) continue;
-    const candidate = join(entry, binary);
-    if (isExecutable(candidate)) return candidate;
-  }
-  return undefined;
-}
-
-function isExecutable(path: string): boolean {
-  try {
-    accessSync(path, constants.X_OK);
-    return true;
-  } catch {
-    return false;
-  }
 }

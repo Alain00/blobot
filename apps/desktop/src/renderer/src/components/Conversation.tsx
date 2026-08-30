@@ -15,12 +15,19 @@ export function Conversation({
   items,
   onAnswerPermission,
   opening = false,
+  workspacePath,
+  chrome,
 }: {
   pane: Pane;
   agents: readonly UiAgent[];
   statuses: Record<string, AgentStatus>;
   items: readonly Item[];
   onAnswerPermission: (requestId: string, choice: PermissionChoice) => void;
+  /** Where the team's agents branch from. Only the team pane says it; an agent says its own. */
+  workspacePath?: string;
+  /** The window's controls, rendered at the end of this row. App owns them; this row is
+      the only chrome above the transcript, so it is where they live. */
+  chrome?: React.ReactNode;
   /** The team is still starting. Nobody has asked these agents anything yet. */
   opening?: boolean;
 }): React.JSX.Element {
@@ -52,14 +59,22 @@ export function Conversation({
 
           The blobatar rule the rest of the app now follows: a face appears where you are
           identifying among agents or choosing one, and never where a single agent is merely
-          named. */}
+          named.
+
+          It is also the only chrome above the transcript now, by the author, 2026-08-30. A
+          strip across the top of the window said the team's name and its path, and the rail
+          row for that team was already saying the name a few pixels to the left — the same
+          second-copy the header itself had been trimmed for. The path survives here, because
+          nothing else on screen carries it, and the controls that strip held (the turn pips
+          and the activity toggle) come with it, at the end of this row. */}
       <div className="convhead">
         <span className="where">
           {focused === undefined
-            ? `${agents.length} agents · a workspace each`
+            ? `${agents.length} agents · a workspace each${workspacePath === undefined ? '' : ` · ${workspacePath}`}`
             : // The runtime appears exactly once, as a label. The UI never branches on it.
               `${focused.role} · ${focused.runtimeLabel} · ${focused.branch ?? focused.workspacePath}`}
         </span>
+        {chrome !== undefined && <span className="chrome">{chrome}</span>}
       </div>
 
       {/* The column is the readable thing, not the pane: it fills the width it is given and
@@ -324,9 +339,18 @@ const ItemView = React.memo(function ItemView({
             <b>{fromName}</b> wants to run <span className="mono">{item.title}</span>
           </div>
           {/* Said every time rather than once at team creation: this is the moment the sentence
-              is about something, and the block is where a user decides what blobot is. */}
+              is about something, and the block is where a user decides what blobot is.
+
+              It used to say "this reaches outside its own workspace or cannot be undone", which
+              was a reason blobot cannot know and which was false of most of what it was printed
+              over: on Claude, `default` mode asked about every edit inside the agent's own
+              worktree. Ticket 14's 2026-08-30 amendment. It now says the one thing that is true
+              of every request that reaches here, at all three trust levels — naming what blobot
+              vouches for would be wrong for a `careful` agent, which it vouches for nothing
+              for. */}
           <div className="why">
-            It is asking because this reaches outside its own workspace or cannot be undone.
+            blobot did not vouch for this one, so the runtime is asking and the agent waits until
+            you answer. What it vouches for is what this agent is set to, in its own definition.
             Allow once covers this call. Allow always writes a rule into this agent&apos;s own
             .claude/settings.local.json and stops asking for this one thing.
           </div>

@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { copyTree } from './copied-directory.js';
 import { GitWorktreeWorkspaces } from './git-worktrees.js';
 import { inspectWorkspace } from './inspect.js';
+import { directorySize } from './size.js';
 import {
   branchNameFor,
   refSlug,
@@ -189,6 +190,29 @@ export class NestedRepoWorkspaces implements WorkspaceProvider {
       return { work: 'discarded' };
     }
     return { work: 'kept', detail: kept.join('; ') };
+  }
+
+  /**
+   * Every repository's branch deleted whatever is on it, and then the mirrored tree itself,
+   * which is also how the loose files go: they have no branch behind them, so nothing else
+   * would ever remove them.
+   */
+  async purge(request: ProvisionRequest): Promise<RemovalOutcome> {
+    const workspace = this.workspaceFor(request);
+    const branch = branchNameFor(request.teamName, request.agentName);
+
+    for (const repo of await this.#chosenRepos(request)) {
+      const source = join(request.workspacePath, repo);
+      if (!existsSync(source)) continue;
+      await this.#git.purgeWorktree(source, join(workspace.path, repo), branch);
+    }
+    await rm(workspace.path, { recursive: true, force: true });
+    return { work: 'discarded' };
+  }
+
+  /** The mirrored tree: worktrees and copied loose files together, which is what is on disk. */
+  async measure(request: ProvisionRequest): Promise<number> {
+    return directorySize(this.workspaceFor(request).path);
   }
 
   workspaceFor(request: ProvisionRequest): AgentWorkspace {

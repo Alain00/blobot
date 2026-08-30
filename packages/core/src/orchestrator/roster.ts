@@ -14,3 +14,22 @@ export function findAgentByName(roster: readonly Agent[], name: string): Agent |
     (candidate) => candidate.name.toLowerCase() === wanted || candidate.id === name.trim(),
   );
 }
+
+/**
+ * Which teammates a piece of prose *names*. Lexical, and deliberately nothing more.
+ *
+ * This is the whole of blobot's reading of an agent's answer: a name is a fact and its absence
+ * is a fact, where "did she promise to message him?" is a reading of intent, and blobot
+ * provides no inference. See
+ * `.scratch/team-addressing/issues/05-mock-a-coordinator-that-forgets-to-route.md`.
+ *
+ * Word boundaries, case-insensitively, with an optional `@` in front so the composer's gesture
+ * and plain prose count the same. A name inside a longer word does not count: `Bobbin` is not
+ * Bob.
+ */
+export function namesMentioned(text: string, roster: readonly Agent[]): Agent[] {
+  return roster.filter((candidate) => {
+    const name = candidate.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(^|[^\\w@])@?${name}(?![\\w@])`, 'i').test(text);
+  });
+}

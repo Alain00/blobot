@@ -36,6 +36,7 @@ interface Drawn {
   readonly sent: [readonly string[], string][];
   type: (text: string) => void;
   send: () => HTMLButtonElement;
+  press: (key: string, shift?: boolean) => { prevented: boolean };
 }
 
 function draw(pane: Pane, lead?: string): Drawn {
@@ -54,7 +55,7 @@ function draw(pane: Pane, lead?: string): Drawn {
       }),
     );
   });
-  const input = host.querySelector('input') as HTMLInputElement;
+  const input = host.querySelector('textarea') as HTMLTextAreaElement;
   return {
     host,
     sent,
@@ -62,7 +63,7 @@ function draw(pane: Pane, lead?: string): Drawn {
       act(() => {
         // React listens for the native event, so the value goes in through the prototype setter.
         const setter = Object.getOwnPropertyDescriptor(
-          HTMLInputElement.prototype,
+          HTMLTextAreaElement.prototype,
           'value',
         )?.set;
         setter?.call(input, text);
@@ -70,6 +71,23 @@ function draw(pane: Pane, lead?: string): Drawn {
       });
     },
     send: () => host.querySelector('button.send') as HTMLButtonElement,
+    /**
+     * Returns whether the key's default was cancelled once the event has finished travelling.
+     * That is the whole of the shift+Enter question: cmdk's root cancels Enter on the way up
+     * whether or not shift is down, and a cancelled Enter is a newline that never happens.
+     */
+    press: (key: string, shift = false) => {
+      const event = new KeyboardEvent('keydown', {
+        key,
+        shiftKey: shift,
+        bubbles: true,
+        cancelable: true,
+      });
+      act(() => {
+        input.dispatchEvent(event);
+      });
+      return { prevented: event.defaultPrevented };
+    },
   };
 }
 
@@ -154,5 +172,29 @@ describe('the team pane addresses the lead', () => {
 
     act(() => drawn.send().click());
     expect(drawn.sent).toEqual([[['bob'], 'ship it']]);
+  });
+});
+
+/**
+ * The field is a textarea, because a message to an agent is a paragraph as often as it is a
+ * line — an input could not wrap, so a long prompt scrolled sideways out of sight as it was
+ * written. What that costs is Enter, which has always sent here: shift holds it back.
+ */
+describe('a message longer than a line', () => {
+  it('sends on Enter and opens a line on shift+Enter', () => {
+    const drawn = draw({ kind: 'team' }, 'alice');
+    drawn.type('first line');
+
+    // The line the browser is left to insert: nothing sent, and nothing cancelled by the time
+    // the event has finished travelling. It is stopped at the input rather than prevented there,
+    // because cmdk's root cancels Enter with shift down and no menu showing — which typed
+    // `first linesecond line` in the running app.
+    const shifted = drawn.press('Enter', true);
+    expect(drawn.sent).toEqual([]);
+    expect(shifted.prevented).toBe(false);
+
+    const plain = drawn.press('Enter');
+    expect(plain.prevented).toBe(true);
+    expect(drawn.sent).toEqual([[['alice'], 'first line']]);
   });
 });

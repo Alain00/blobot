@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commandsFrom, stopReasonOf, toolKind, translateSessionUpdate } from './translate.js';
+import { commandsFrom, stopReasonOf, toolKind, translateSessionUpdate } from './session-updates.js';
 
 describe('translating the bridge into the vocabulary', () => {
   it('turns message chunks into deltas, keeping the messageId', () => {

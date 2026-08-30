@@ -22,6 +22,11 @@ import { Rail } from './Rail.js';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
+// The rail brings the open team's group into view when the team changes, and jsdom implements
+// no scrolling at all. Stubbed rather than guarded in the component: the guard would be a line
+// of production code that exists for the test environment.
+Element.prototype.scrollIntoView ??= function scrollIntoView(): void {};
+
 const OPEN: UiTeam = { id: 'open', name: 'portfolio', workspacePath: '/w', turnBudget: 10 };
 const OPEN_AGENTS: readonly UiAgent[] = [
   { id: 'alice', name: 'Alice', role: 'builds', runtimeLabel: 'mock', workspacePath: '/w/a' },
@@ -41,6 +46,7 @@ const TEAMS: readonly UiTeamSummary[] = [
     name: 'hermes-agent',
     workspacePath: '/h',
     workspaceKind: 'git',
+    icon: 'data:image/png;base64,iVBORw0KGgo=',
     members: [
       { id: 'mara', name: 'Mara' },
       { id: 'nils', name: 'Nils' },
@@ -94,6 +100,20 @@ describe('a team the user is not looking at', () => {
     expect(row.querySelector('.ghost')).toBeNull();
     expect(row.querySelectorAll('.mark > .blob')).toHaveLength(2);
     expect(drawn.text).toContain('2 agents');
+    done(drawn);
+  });
+
+  it('wears the team icon on the folder without giving up its faces', () => {
+    const drawn = draw({});
+    const row = backgrounded(drawn);
+    // Both, and that is the whole claim: the icon says which project, the faces say who is on
+    // it, and an icon that replaced the mark would answer the first question by deleting the
+    // second — along with the folded status the folder is the body of.
+    expect(row.querySelector('.mark .teamicon')).not.toBeNull();
+    expect(row.querySelectorAll('.mark > .blob')).toHaveLength(2);
+    // The open team has none, and draws none. No placeholder: a team without an icon is not a
+    // team missing one.
+    expect(drawn.host.querySelector('.teamgroup .teamicon')).toBeNull();
     done(drawn);
   });
 

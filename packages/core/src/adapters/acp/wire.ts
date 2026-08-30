@@ -1,11 +1,12 @@
 /**
- * The wire shapes this adapter reads off the bridge, declared by us.
+ * The ACP wire shapes the adapters read, declared by us.
  *
  * Deliberately *not* imported from `@agentclientprotocol/*`: core exports no ACP type, and a
  * structural declaration of the handful of fields we consume is both smaller and honest about
- * what we actually depend on. The bridge is pinned to an exact version and checked at startup,
- * so drift is a loud failure rather than a silent mis-parse. Everything is optional because a
- * wire message is untrusted input, not a promise.
+ * what we actually depend on. Everything is optional because a wire message is untrusted
+ * input, not a promise — and neither runtime is obliged to fill a field just because the spec
+ * names it. A provider extension that only one adapter reads (OpenCode's `configOptions`,
+ * say) belongs in that adapter's own wire file, not here.
  */
 
 export interface InitializeResult {
@@ -32,6 +33,7 @@ export interface AuthMethod {
 export interface NewSessionResult {
   readonly sessionId?: string;
   readonly modes?: { readonly currentModeId?: string };
+  readonly configOptions?: readonly ConfigOption[];
 }
 
 export interface PromptResult {
@@ -85,4 +87,25 @@ export interface PermissionRequestParams {
     readonly name?: string;
     readonly kind?: string;
   }[];
+}
+
+/**
+ * The `configOptions` block, an extension both runtimes send on `session/new` and on
+ * `session/set_config_option`'s reply. OpenCode sends it in place of `modes`; the Claude
+ * bridge sends both.
+ *
+ * The `options` array is large — 34 models on OpenCode, five plus an effort scale on the
+ * bridge — and it is resent on every session call. It is never logged verbatim.
+ */
+export interface ConfigOption {
+  readonly id?: string;
+  readonly name?: string;
+  readonly type?: string;
+  readonly currentValue?: string;
+  readonly options?: readonly { readonly value?: string; readonly name?: string }[];
+}
+
+/** The half of `JsonRpcConnection` the option helpers need, so they can be tested without one. */
+export interface JsonRpcRequester {
+  request<T>(method: string, params?: unknown): Promise<T>;
 }

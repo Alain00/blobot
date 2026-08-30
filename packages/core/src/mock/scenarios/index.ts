@@ -35,6 +35,29 @@ export const bobReviews: Scenario = scenario('bob-reviews')
   .messageAgent('Alice', 'Reviewed: the retry loop needs a backoff, otherwise both attempts hit the same 429.')
   .end();
 
+/**
+ * Alice says she will get Bob involved, and never calls the tool.
+ *
+ * Ticket 08's thesis, applied to the one failure a kind mock would never produce: the turn is
+ * *healthy*. It thinks, it reads a file, it ends `end_turn`, and the work it promised silently
+ * never happens. Observed live in the ordinary two-agent case, where Alice ignored blobot's
+ * tool, reached for Claude's own `ListAgents` and reported Bob unreachable — the failure
+ * `SHADOWING_TOOLS` fixed for that one route and cannot fix as a class.
+ *
+ * Nothing in the event stream marks it, which is the point: the only way to see it is to know
+ * what the user asked and count what was sent. See
+ * `.scratch/team-addressing/issues/05-mock-a-coordinator-that-forgets-to-route.md`.
+ */
+export const promisesBobAndForgets: Scenario = scenario('promises-bob-and-forgets')
+  .think('The retry loop is Bob’s side of the house, so he should look at it.')
+  .callTool('read src/auth.ts', 'read', {
+    rawInput: { path: 'src/auth.ts' },
+    durationMs: 300,
+    outcome: { status: 'completed', output: 'export async function refresh() { /* … */ }\n', exit: 0 },
+  })
+  .say('I will ask Bob to review the retry loop while I carry on with the token store.')
+  .end();
+
 /** A tool fails and the turn carries on. This must not render as an error. */
 export const toolFailureContinues: Scenario = scenario('tool-failure-continues')
   .think('Checking whether the config file exists.')
@@ -147,9 +170,29 @@ export const losesCommands: Scenario = scenario('loses-commands')
   .advertises([])
   .end();
 
+/**
+ * The agent runs out of room mid-answer.
+ *
+ * A turn that stops for want of context is the one ending a user experiences as "the agent got
+ * worse and I could not tell why": the answer simply stops, and on a runtime that reports
+ * nothing else the pane would draw a finished turn. It stops mid-sentence on purpose, because
+ * that is what it looks like, and the transcript's line is what tells the reader why.
+ */
+export const runsOutOfRoom: Scenario = scenario('runs-out-of-room')
+  .think('The migration touches every call site, so I am reading all of them before I answer.')
+  .callTool('read src/', 'read', {
+    rawInput: { path: 'src/' },
+    durationMs: 400,
+    outcome: { status: 'completed', output: '… 84 files\n', exit: 0 },
+  })
+  .usage(196_000)
+  .say('There are four call sites that pass the old shape. The first is in the checkout')
+  .end('max_tokens');
+
 export const scenarios = {
   'alice-asks-bob': aliceAsksBob,
   'bob-reviews': bobReviews,
+  'promises-bob-and-forgets': promisesBobAndForgets,
   'tool-failure-continues': toolFailureContinues,
   'bob-fails-midturn': bobFailsMidturn,
   'runtime-dies-midturn': runtimeDiesMidturn,
@@ -158,6 +201,7 @@ export const scenarios = {
   'asks-before-deleting': asksBeforeDeleting,
   'advertises-commands': advertisesCommands,
   'loses-commands': losesCommands,
+  'runs-out-of-room': runsOutOfRoom,
   refuses,
 } as const satisfies Record<string, Scenario>;
 
