@@ -5,6 +5,7 @@ import { Conversation } from './components/Conversation.js';
 import { Feed } from './components/Feed.js';
 import { NewTeam } from './components/NewTeam.js';
 import { Rail } from './components/Rail.js';
+import { DeleteTeam, EditTeam } from './components/TeamEdits.js';
 import { initialState, itemsFor, reduce, type Pane } from './model.js';
 import { useFeedVisible } from './useFeedVisible.js';
 import { useRailWidth } from './useRailWidth.js';
@@ -18,6 +19,9 @@ export function App(): React.JSX.Element {
     initialPane === '' ? { kind: 'team' } : { kind: 'agent', agentId: initialPane },
   );
   const [creating, setCreating] = useState(false);
+  /** The team a modal is about, and which one. Never the team on screen by implication. */
+  const [editing, setEditing] = useState<string | undefined>(undefined);
+  const [deleting, setDeleting] = useState<string | undefined>(undefined);
   /** Why the last team the user clicked would not open. Cleared by the next click. */
   const [openError, setOpenError] = useState<string | undefined>(undefined);
   const rail = useRailWidth();
@@ -64,6 +68,15 @@ export function App(): React.JSX.Element {
       window.blobot.onBudget((teamId, used, budget) => {
         if (mine(teamId)) dispatch({ type: 'budget', used, budget });
       }),
+      // A backgrounded team can be blocked on the user too. It is not drawn into this
+      // transcript — that is what the team filter is for — and the rail says `waiting` on it
+      // the moment it is opened, because status comes with the snapshot.
+      window.blobot.onPermission((teamId, request) => {
+        if (mine(teamId)) dispatch({ type: 'permission', request, at: Date.now() });
+      }),
+      window.blobot.onPermissionSettled((teamId, requestId, outcome) => {
+        if (mine(teamId)) dispatch({ type: 'permissionSettled', id: requestId, outcome });
+      }),
       // A team switch replaces everything the panes are showing, so it re-snapshots rather
       // than patching: the transcript on screen belongs to the team that just went away.
       window.blobot.onTeamChanged(() => refresh(true)),
@@ -76,6 +89,10 @@ export function App(): React.JSX.Element {
   const items = useMemo(() => itemsFor(state.items, pane), [state.items, pane]);
   const snapshot = state.snapshot;
   if (snapshot === undefined) return <div className="app" />;
+  // Looked up rather than copied into state: a team that has just been deleted must not stay
+  // on screen inside a modal that is about it.
+  const editingTeam = snapshot.teams.find((row) => row.id === editing);
+  const deletingTeam = snapshot.teams.find((row) => row.id === deleting);
 
   // The genuine empty state: a first launch, before any team exists.
   if (snapshot.team === undefined || creating) {
@@ -173,6 +190,8 @@ export function App(): React.JSX.Element {
                   });
                 },
                 onNewTeam: () => setCreating(true),
+                onEditTeam: (teamId: string) => setEditing(teamId),
+                onDeleteTeam: (teamId: string) => setDeleting(teamId),
               })}
         />
         <div className="conv">
@@ -182,6 +201,9 @@ export function App(): React.JSX.Element {
             agents={snapshot.agents}
             statuses={state.statuses}
             items={items}
+            onAnswerPermission={(requestId, choice) =>
+              void window.blobot.answerPermission(requestId, choice)
+            }
           />
           <Composer
             agents={snapshot.agents}
@@ -190,6 +212,22 @@ export function App(): React.JSX.Element {
           />
         </div>
         {feed.visible && <Feed entries={state.feed} agents={snapshot.agents} pane={pane} />}
+        {editingTeam !== undefined && (
+          <EditTeam
+            team={editingTeam}
+            onClose={() => setEditing(undefined)}
+            // The roster changed under the team, so everything on screen is about to be
+            // replaced: the main process restarts it and the snapshot comes back with it.
+            onSaved={() => refresh(true)}
+          />
+        )}
+        {deletingTeam !== undefined && (
+          <DeleteTeam
+            team={deletingTeam}
+            onClose={() => setDeleting(undefined)}
+            onDeleted={() => refresh(true)}
+          />
+        )}
         <div
           className={`railgrab${rail.dragging ? ' on' : ''}`}
           style={{ left: rail.width }}

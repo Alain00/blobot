@@ -65,6 +65,8 @@ It therefore needs a git repo with at least one commit, and warns on a dirty tre
 | AgentWorkspaces: git worktrees, reconcile | `packages/core/src/workspace/` | 10 |
 | Runtime detection: four honest states | `packages/core/src/detect/` | 11 |
 | Team creation + persistence, the running team | `apps/desktop/src/main/` | 11, 13 |
+| Deleting and editing a team, the workspaces with it | `apps/desktop/src/main/team-store.ts` | 10 |
+| The permission channel: `waiting`, the inline block, two answers | `orchestrator.ts`, `permission-choices.ts` | 14 |
 
 `@blobot/core` is the full entry point (pulls in `better-sqlite3` + Drizzle).
 `@blobot/core/domain` is the pure one — vocabulary, aggregates, status fold, roster lookup — for
@@ -198,32 +200,41 @@ meaningless alone.
   *consumer* duty and the mock reproduces the trap on purpose, so the adapter is faithful and
   nothing downstream suppresses it yet. The renderer has no context gauge, so it costs nothing
   today — and it will be a visible bug the moment one is drawn.
-- **Only `session/new`.** No `session/load`, so nothing resumes across a restart yet. Ticket
-  14's trap applies when it lands: re-send `session/set_mode` after every load or resume —
-  `#applyPermissionMode()` is the call site.
-- **A restart restores the transcript, not the agents' memory of it.** Every launch is a fresh
-  `session/new` against the same rows, so the pane shows a conversation the agent cannot
-  remember having. `session/load` is the fix and is still not implemented.
-- **One orchestrator at a time.** Switching teams stops one and starts the other, which costs a
-  fresh session for every agent. Holding several is wiring rather than surgery — `Orchestrator`
-  is per-team already — and is the previous handoff's item 4.
+- **A resumed agent looks exactly like one that started fresh.** `session/load` landed
+  (2026-08-29) and `runtime.resumed` records which of the two happened, but nothing surfaces
+  it. Observed on the first real launch: two agents resumed, and Mara's stored session was gone
+  on Claude's side, so she silently started again under a transcript she can no longer remember.
+  The user has no way to tell.
+- **A backgrounded team is invisible while it works.** Three teams stay live now, and a team
+  the user is not looking at can keep taking turns with only its turn budget bounding it. The
+  rail shows nothing. Whether it *should* keep working is a product question and should be a
+  property of the team, not a side effect of how recently it was clicked.
 - **A profile cannot be edited.** Hired and retired, nothing in between: no rename, no change
   of role or runtime — and therefore no answer yet to what an edit means for the teams an agent
   is already on. Named in ADR-0001 as not decided.
 - **Agents are only visible inside team creation.** There is no screen for *your agents* on its
   own, which is the surface the model most obviously wants next.
-- **A team cannot be edited or deleted.** No add-an-agent-later, no rename, no removal — and
-  `WorkspaceProvider.remove` (with ticket 10's `-d` versus `-D` rule) therefore has no caller.
-- **A team switch is a hard cut with no confirmation**, even mid-turn: the running agents are
-  stopped where they stand.
+- **A team still cannot be renamed.** Deleting and changing who is on it landed 2026-08-29;
+  the name is the half that is load-bearing (it is `blobot/<team>/<agent>`), so renaming means
+  moving every branch or accepting that the branch stops matching the team. Undecided.
+- **The rail's delete and edit have never been clicked.** Everything under them is covered —
+  the store's tombstone, the provider removals, the refusals — but the IPC handlers in
+  `index.ts` that release the team from the pool, remove the worktrees and start it again are
+  not, for the same reason the open-error banner is not: nothing in the harness can click.
 
 - **The renderer hides blobot's own `message_agent` tool by matching its name**
   (`apps/desktop/src/renderer/src/model.ts`). This is the leak ticket 04 warned about in a
   smaller hat. The clean fix is for the adapter to tag its own tool so the UI never matches a
   string — worth doing *with* the first real adapter.
-- **Ticket 14's permission block is not rendered.** Nothing can request permission yet: the mock
-  has no permission path. Needs a mock scenario that asks, plus the inline block with exactly
-  **Allow once** and **Reject** (never `allow_always`).
+- **An answered permission block does not survive a re-snapshot.** The question does (it comes
+  back with `UiSnapshot.permissions` while it is still pending), but the record of what you
+  answered is renderer state: switch away and back and the line is gone. Permissions are not in
+  the event vocabulary and so are not recorded — see the note on ticket 04 below.
+- **A permission request is not persisted, and never reaches the transcript tables.** It is a
+  runtime callback rather than an `AgentEvent` (ticket 04 kept the correlation id and the reply
+  channel out of the vocabulary), so `SqliteRecorder` never sees it. What the user allowed is
+  therefore not auditable, which is a real gap the moment anybody asks what an agent was
+  permitted to do.
 - **Thinking is not displayed anywhere.** It is persisted (`agent_messages.kind = 'thought'`)
   but no pane shows it.
 - **Migrations are found by a dev-time relative path** in `apps/desktop/src/main/index.ts`.
@@ -563,22 +574,97 @@ detail, but nothing surfaces it in the UI yet), and **the scope picker has been 
 but never clicked** — it was reviewed by pointing the flow at a fixture folder, not with a
 mouse.
 
+## Settled, 2026-08-29: the four items of the last handoff
+
+All four landed together. What they cost and what they decided that no ticket covers:
+
+**1. Deleting a team.** `SqliteStore.tombstoneTeam` plus `deleteTeam` in
+`apps/desktop/src/main/team-store.ts`, a confirm on the team's own rail row, and the removals
+reported afterwards rather than swallowed.
+
+- **The order is workspaces first, rows second.** Every branch is `blobot/<team>/<agent>` and
+  the team's name is what finds it, so the rows have to still say what they said when the
+  worktrees were made.
+- **A workspace that cannot be reached is not a refusal.** The ordinary reason to delete a team
+  is that the folder is gone, which is exactly when `git worktree remove` cannot run: a team
+  deletable only while healthy would be undeletable precisely when the user wants it gone. Each
+  removal is attempted, whatever it says is reported as `unknown`, and the rows go either way.
+- **The tombstone releases the name.** `teams.name` is unique because it is half of a branch
+  name, so a tombstone that kept the string would refuse the next team of that name while
+  showing the user nothing to explain it — and the user deleting a team pointed at a moved
+  folder is usually about to make the same team again. The dead row is renamed
+  `<name> · deleted · <id>`, which is safe only because it happens after the removals and
+  nothing derives anything from a team name again.
+- **What is kept is said out loud.** A branch with unmerged commits survives and nothing else in
+  the app will ever mention it, so the confirm turns into a report rather than closing.
+
+**2. Ticket 14's permission block.** The channel is the orchestrator's:
+`onPermissionRequested` / `answerPermission` / `onPermissionSettled`, with `AgentStatusTracker`
+finally getting the `permissionRequested()` calls it was written for.
+
+- **The orchestrator owns it, not the app.** It holds the trackers, so `waiting` cannot
+  disagree with the blobatar; and it installs the handler on every runtime whether or not
+  anybody is listening, because **with no listener the answer is `cancelled`, never allowed**.
+  An unattended team is blobot's normal case and approving on nobody's behalf is the one answer
+  we may not give.
+- **The option ids never leave the main process.** The renderer answers `allow` or `reject`;
+  `permission-choices.ts` maps those onto the runtime's option ids by *kind*. `allow_always`
+  has no path to the UI at all, which is how ticket 14 stays a posture rather than becoming an
+  approvals system.
+- **The two announcements race.** A permission request travels a callback while the tool's own
+  `tool_call_started` travels the turn's queue, and either can reach the renderer first —
+  observed the wrong way round on the first demo run, where the block appeared under a line
+  reading `running`. The reducer handles both orders and the tool line is not drawn at all
+  while its call is `asking`.
+- **The mock asks now** (`callTool(..., { asks: true })`, scenario `asks-before-deleting`), and
+  demo mode ends on a live block. A permission prompt was otherwise unreachable in a scripted
+  replay, which meant the first place we would meet the UI was somebody's real repository.
+
+**3. Ticket 14's disclosure**, at the foot of the creation flow, above the button that spawns
+the first agent. **Its text had to change, and ticket 14 carries the amendment.** The specified
+copy promises a prompt before `rm`, `sudo`, `curl`, `git push` and package installs — that is
+`OPENCODE_CONFIG_CONTENT`'s list, and OpenCode is deferred. On Claude the only lever is
+`session/set_mode("default")` and what counts as dangerous is the CLI's judgment, so printing
+the list would be blobot claiming a rule it did not write. **The same sentence had already
+shipped as the conversation header's posture indicator** (`asks before rm, git push, curl`),
+where it was false for every agent in the app; it now reads `asks before dangerous commands`.
+
+**4. Editing a team.** `editTeamRoster` takes the whole roster rather than a delta, because the
+screen is a set of ticks. Joining instantiates an Agent exactly as `createTeam` does — the same
+code path deliberately, since a membership *is* a workspace, a session, a mailbox and a status.
+**Saving stops and restarts the team**: a persona names the roster (ticket 06), the mailbox
+resolves recipients out of it, and an agent who has just left still holds a session and a
+loopback token, so a live team whose membership changed is a team disagreeing with itself.
+Restarting is cheap now that `session/load` resumes each agent where it was.
+
 ## Next session
 
-Items 1 and 2 of the previous handoff are done. What is left of it, in the same order:
+1. **A screen for *your agents*.** They are still only visible inside team creation, and
+   editing a profile — rename, change of role or runtime — is the open question ADR-0001 named
+   and did not answer.
+2. **Surface a resumed session.** `runtime.resumed` knows whether an agent came back knowing
+   the conversation or started again under a transcript it cannot remember, and nothing says
+   so. Observed live: Mara silently started fresh.
+3. **A backgrounded team that is working says nothing.** Three teams stay live and a team the
+   user is not looking at can keep taking turns.
+4. **Renaming a team**, which needs a decision about the branches first.
 
-1. **Ticket 14's disclosure**, which the creation flow is *specified* to carry: once, before
-   the first agent is spawned, stated rather than consented to. Its text is written out in the
-   ticket. `NewTeam.tsx` is the screen and says so in a comment. Plus the posture indicator in
-   the conversation header.
-2. **Ticket 14's permission block.** Unreachable in demo mode, reachable on day one of real
-   repos: an agent that asks about `rm` or `git push` currently stalls, because
-   `setPermissionHandler` is never called by the app. Inline in the transcript, exactly **Allow
-   once** and **Reject**.
-3. ~~**One orchestrator per team**, so switching stops being a restart.~~ Done, 2026-08-29 —
-   see *Settled: switching a team no longer restarts it* below.
-4. **Editing a team**: add or remove an agent, and the `remove` path that finally exercises
-   ticket 10's `-d`-versus-`-D` rule.
+Things left unverified, worth knowing before trusting them:
+
+- **Nobody has ever clicked delete or save.** Everything under them is covered — the store's
+  tombstone, the provider removals, the refusals, all under test — and both dialogs were
+  rendered and read on screen. What has not run once is the click: the IPC handlers in
+  `index.ts` that release the team from the pool, remove the worktrees and start it again. Same
+  reason as the banner below, and the same fix: somebody with a mouse, or a driver that can
+  click.
+- **What the user permitted is not recorded anywhere.** A permission is a runtime callback, not
+  an `AgentEvent`, so `SqliteRecorder` never sees it.
+- **The team-would-not-open banner has never been seen on screen.** `selectTeam` returns a
+  `TeamOpenResult` and `App.tsx` renders it, and both halves typecheck, but showing it needs a
+  mouse click and the screenshot harness cannot click. Every other path is tested.
+- **`session/load` is proven against Claude only**, including the changed-port case
+  (research 15 §7a). OpenCode inherits none of it: when tickets 03 + 16 come back, its resume
+  is unobserved, and so is a *changed server name* on either runtime.
 
 ### Settled, 2026-08-29: agents exist independently of teams
 

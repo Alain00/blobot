@@ -30,6 +30,12 @@ export interface UiTeamSummary {
   readonly id: string;
   readonly name: string;
   readonly workspacePath: string;
+  /**
+   * Which mechanism gave the agents their copies. The renderer never branches on a *provider*;
+   * this is a fact about the Workspace, and the delete confirm has to say what happens to the
+   * work — a branch that survives if it has commits on it, or a copy blobot will not delete.
+   */
+  readonly workspaceKind: 'git' | 'plain' | 'nested';
   readonly agentCount: number;
   /** When it last said anything. Undefined for a team that has never held a turn. */
   readonly lastActiveAt?: number;
@@ -52,6 +58,8 @@ export interface UiSnapshot {
   readonly messages: readonly Message[];
   /** The team's own words, so a restart shows a conversation rather than half of one. */
   readonly answers: readonly UiAgentMessage[];
+  /** Blocks nobody has answered yet, so a pane rebuilt mid-turn is not missing the question. */
+  readonly permissions: readonly UiPermissionRequest[];
   readonly turnsThisPrompt: number;
   /** Named so nobody mistakes the demo for real agents. */
   readonly demoMode: boolean;
@@ -61,6 +69,41 @@ export interface UiSnapshot {
    * from a genuine first run.
    */
   readonly openError?: string;
+}
+
+/**
+ * A tool call an agent is blocked on until you answer, as the transcript draws it.
+ *
+ * Ticket 14: exactly two answers, inline in the transcript. Two agents can be waiting at once
+ * and a modal would serialise them into whichever arrived first.
+ */
+export interface UiPermissionRequest {
+  readonly id: string;
+  readonly agentId: string;
+  /** The call this is about. The transcript already has a line for it, and this is that line. */
+  readonly toolCallId: string;
+  /** What the runtime says it is about to do, in its own words. */
+  readonly title: string;
+  /** False on a runtime that offers no single-use approval: the block can only reject. */
+  readonly canAllow: boolean;
+}
+
+/** How a permission block ends. `cancelled` is nobody answering, which is not a rejection. */
+export type UiPermissionOutcome = 'allowed' | 'rejected' | 'cancelled';
+
+/** What became of one agent's work when it left a team, or the team was deleted. */
+export interface UiAgentRemoval {
+  readonly agentName: string;
+  /** `unknown` is a workspace blobot could not reach, which is the ordinary reason to delete. */
+  readonly work: 'discarded' | 'kept' | 'unknown';
+  readonly detail?: string;
+}
+
+export interface TeamDeletionResult {
+  readonly ok: boolean;
+  readonly error?: string;
+  /** Said plainly rather than swallowed: a kept branch is work nobody else will mention. */
+  readonly removals?: readonly UiAgentRemoval[];
 }
 
 /**
@@ -184,6 +227,15 @@ export interface BlobotApi {
   createTeam(spec: NewTeamSpec): Promise<TeamCreationResult>;
   selectTeam(teamId: string): Promise<TeamOpenResult>;
   /**
+   * Change who is on a team. The whole roster, not a delta: the screen shows a set of ticks
+   * and this is what they say.
+   */
+  editTeam(teamId: string, profileIds: readonly string[]): Promise<TeamDeletionResult>;
+  /** Removes every agent's workspace, then the team. The transcript stays in the database. */
+  deleteTeam(teamId: string): Promise<TeamDeletionResult>;
+  /** Answering a permission block. `reject` is a refusal of this call, not a standing rule. */
+  answerPermission(requestId: string, choice: 'allow' | 'reject'): Promise<void>;
+  /**
    * Every stream leads with the team it belongs to.
    *
    * More than one team is live at a time — switching promotes a team rather than restarting
@@ -196,6 +248,11 @@ export interface BlobotApi {
   onMessage(listener: (teamId: string, message: Message) => void): () => void;
   onBudget(listener: (teamId: string, turnsUsed: number, turnBudget: number) => void): () => void;
   onTurns(listener: (teamId: string, turnsThisPrompt: number) => void): () => void;
+  /** An agent is blocked on you. Ticket 14's block, drawn where the turn stopped. */
+  onPermission(listener: (teamId: string, request: UiPermissionRequest) => void): () => void;
+  onPermissionSettled(
+    listener: (teamId: string, requestId: string, outcome: UiPermissionOutcome) => void,
+  ): () => void;
   /** The active team changed under the renderer: created, switched, or started at launch. */
   onTeamChanged(listener: () => void): () => void;
 }

@@ -257,3 +257,34 @@ The Agent SDK is explicit that this is a genuine bypass rather than a default we
 
 So this is a real hole if a server we inject is ever one we do not own. Today the only one is
 ticket 15's loopback endpoint, whose handler is a function in our own process.
+
+## Amendment (building the disclosure and the block, 2026-08-29)
+
+**The disclosure's verbatim text names commands blobot cannot name.** Its second paragraph
+promises a prompt before "a short list of commands that reach the network, change permissions,
+or publish — `rm`, `sudo`, `curl`, `git push`, package installs". That list is
+`OPENCODE_CONFIG_CONTENT`'s, and OpenCode is deferred (author, 2026-08-29). On the one runtime
+that ships, blobot's only lever is `session/set_mode("default")` and what counts as dangerous is
+Claude's own judgment. Printing the list would be blobot claiming a rule it did not write.
+
+The same sentence had already shipped as the conversation header's posture indicator, reading
+`asks before rm, git push, curl` over an agent none of it was true of. It now reads **asks
+before dangerous commands**, and the disclosure says the weaker thing in full:
+
+> Alice and Bob each get their own copy of `<folder>`, on their own branch. Inside that copy
+> they can read, edit and run commands without asking you.
+>
+> They ask before things that reach outside that copy or cannot be undone. blobot sets each
+> agent's runtime to prompt, and on Claude Code it is the CLI that decides what counts, not a
+> list blobot wrote. When you are asked, the question appears in the conversation and the agent
+> waits for you.
+>
+> They also have whatever tools your own MCP servers provide, and blobot does not prompt for
+> those.
+>
+> blobot is not a sandbox.
+
+Everything else this ticket decided stands: stated rather than consented to, no checkbox, at
+team creation before the first agent is spawned, and exactly **Allow once** and **Reject** on
+the block itself. The asymmetry paragraph comes back the day a second runtime does, and the
+list with it.

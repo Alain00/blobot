@@ -69,6 +69,8 @@ export { Orchestrator } from './orchestrator/orchestrator.js';
 export type {
   BudgetExhausted,
   OrchestratorOptions,
+  PendingPermission,
+  PermissionOutcome,
   TurnRecorder,
 } from './orchestrator/orchestrator.js';
 

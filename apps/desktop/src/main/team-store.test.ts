@@ -12,7 +12,13 @@ import {
   type WorkspaceInspection,
   type WorkspaceProvider,
 } from '@blobot/core';
-import { TeamCreationError, createTeam, hireAgent } from './team-store.js';
+import {
+  TeamCreationError,
+  createTeam,
+  deleteTeam,
+  editTeamRoster,
+  hireAgent,
+} from './team-store.js';
 
 const migrationsFolder = fileURLToPath(
   new URL('../../../../packages/core/migrations', import.meta.url),
@@ -53,8 +59,14 @@ class FakeWorkspaces implements WorkspaceProvider {
     return { state: 'absent' };
   }
 
-  async remove(): Promise<RemovalOutcome> {
-    return { work: 'discarded' };
+  /** What `remove` will say, and what it was asked to remove. Set per test. */
+  removal: RemovalOutcome | Error = { work: 'discarded' };
+  readonly removed: ProvisionRequest[] = [];
+
+  async remove(request: ProvisionRequest): Promise<RemovalOutcome> {
+    this.removed.push(request);
+    if (this.removal instanceof Error) throw this.removal;
+    return this.removal;
   }
 }
 
@@ -289,5 +301,112 @@ describe('agents that exist on their own', () => {
     expect(store.listProfiles().map((profile) => profile.id)).not.toContain(mara.id);
     // The team is a real team; ending it is a separate decision from retiring the agent.
     expect(store.agentsOfTeam(team.id)).toHaveLength(1);
+  });
+});
+
+describe('deleting a team', () => {
+  const deps = () => ({ store, clock, workspaces, inspect: () => workspaces.inspect() });
+
+  it('removes every agent workspace and takes the team out of the rail', async () => {
+    const team = await createTeam(spec, deps());
+    const deletion = await deleteTeam(team.id, deps());
+
+    expect(deletion.teamName).toBe('checkout');
+    expect(workspaces.removed.map((request) => request.agentName)).toEqual(['Alice', 'Bob']);
+    // The name it was removed under is the one the branch was made under.
+    expect(workspaces.removed.every((request) => request.teamName === 'checkout')).toBe(true);
+    expect(store.listTeams()).toHaveLength(0);
+    expect(store.agentsOfTeam(team.id)).toHaveLength(0);
+    expect(store.agentsOfTeam(team.id, { includeDeleted: true })).toHaveLength(2);
+  });
+
+  it('names the work that was kept, so unmerged commits are not silently abandoned', async () => {
+    const team = await createTeam(spec, deps());
+    workspaces.removal = { work: 'kept', detail: 'blobot/checkout/alice has unmerged commits' };
+
+    const deletion = await deleteTeam(team.id, deps());
+
+    expect(deletion.removals.map((removal) => removal.work)).toEqual(['kept', 'kept']);
+    expect(deletion.removals[0]?.detail).toContain('unmerged commits');
+  });
+
+  /**
+   * The case the author actually hit: a team pointed at a directory that has been cleaned up.
+   * It could never open again and could never be removed, so it sat in the rail failing.
+   */
+  it('deletes a team whose workspace is gone, and says what it could not clean up', async () => {
+    const team = await createTeam(spec, deps());
+    workspaces.removal = new Error('blobot cannot find /repo. The folder has been deleted.');
+
+    const deletion = await deleteTeam(team.id, deps());
+
+    expect(deletion.removals.map((removal) => removal.work)).toEqual(['unknown', 'unknown']);
+    expect(deletion.removals[0]?.detail).toContain('cannot find /repo');
+    expect(store.listTeams()).toHaveLength(0);
+  });
+
+  it('frees the name, so a team can be made again for the folder it was moved to', async () => {
+    const team = await createTeam(spec, deps());
+    await deleteTeam(team.id, deps());
+
+    const again = await createTeam(
+      teamOf({ name: 'Carol', role: 'frontend' }),
+      deps(),
+    );
+    expect(store.teamByName('checkout')?.id).toBe(again.id);
+  });
+});
+
+describe('editing a team', () => {
+  const deps = () => ({ store, clock, workspaces, inspect: () => workspaces.inspect() });
+
+  it('gives an agent who joins its own workspace, without touching the others', async () => {
+    const team = await createTeam(spec, deps());
+    const carol = hireAgent({ name: 'Carol', role: 'infra', runtimeId: 'claude-code' }, { store, clock });
+    workspaces.provisioned.length = 0;
+
+    await editTeamRoster(team.id, [...spec.profileIds, carol.id], deps());
+
+    expect(workspaces.provisioned.map((request) => request.agentName)).toEqual(['Carol']);
+    expect(store.agentsOfTeam(team.id).map((agent) => agent.name)).toEqual(['Alice', 'Bob', 'Carol']);
+  });
+
+  it('removes the workspace of an agent who leaves and reports what became of it', async () => {
+    const team = await createTeam(spec, deps());
+    workspaces.removal = { work: 'kept', detail: 'blobot/checkout/bob has unmerged commits' };
+
+    const removals = await editTeamRoster(team.id, [spec.profileIds[0] as string], deps());
+
+    expect(removals).toHaveLength(1);
+    expect(removals[0]?.agentName).toBe('Bob');
+    expect(removals[0]?.detail).toContain('unmerged commits');
+    expect(store.agentsOfTeam(team.id).map((agent) => agent.name)).toEqual(['Alice']);
+  });
+
+  it('refuses to empty a team, because a team is the agents on it', async () => {
+    const team = await createTeam(spec, deps());
+    await expect(editTeamRoster(team.id, [], deps())).rejects.toThrow(TeamCreationError);
+    expect(store.agentsOfTeam(team.id)).toHaveLength(2);
+  });
+
+  it('refuses two members whose names would share one branch', async () => {
+    const team = await createTeam(spec, deps());
+    // Two agents the user can tell apart and git cannot: both slug to `alice`.
+    const twin = hireAgent({ name: 'alice.', role: 'infra', runtimeId: 'claude-code' }, { store, clock });
+    await expect(editTeamRoster(team.id, [...spec.profileIds, twin.id], deps())).rejects.toThrow(
+      /one branch name/,
+    );
+    expect(store.agentsOfTeam(team.id)).toHaveLength(2);
+  });
+
+  it('changes nothing when the roster it is given is the roster it has', async () => {
+    const team = await createTeam(spec, deps());
+    workspaces.provisioned.length = 0;
+
+    const removals = await editTeamRoster(team.id, spec.profileIds, deps());
+
+    expect(removals).toHaveLength(0);
+    expect(workspaces.provisioned).toHaveLength(0);
+    expect(store.agentsOfTeam(team.id)).toHaveLength(2);
   });
 });

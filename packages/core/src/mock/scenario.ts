@@ -26,6 +26,12 @@ export interface ToolStep {
   /** How long the tool runs. A cancel landing inside this window exercises the trap. */
   readonly durationMs: number;
   readonly outcome: ToolOutcome;
+  /**
+   * Whether the runtime asks before running it (ticket 14's posture: `rm`, `git push`, `curl`
+   * and friends). The agent is `waiting` until a human answers, and a rejected call comes back
+   * as a *failed tool*, not as an error: the turn survives it and the model adapts.
+   */
+  readonly asks?: boolean;
 }
 
 export type ScenarioStep =
@@ -63,6 +69,8 @@ export interface CallToolOptions {
   readonly rawInput?: unknown;
   readonly durationMs?: number;
   readonly outcome?: ToolOutcome;
+  /** The tool prompts first. Unattended, nobody answers and the call is cancelled. */
+  readonly asks?: boolean;
 }
 
 /** Immutable: a scenario is a module-level constant, and a run must not mutate it. */
@@ -106,6 +114,7 @@ export class Scenario {
       kind,
       durationMs: options.durationMs ?? 400,
       outcome: options.outcome ?? { status: 'completed', exit: 0 },
+      ...(options.asks === undefined ? {} : { asks: options.asks }),
       ...(options.rawInput === undefined ? {} : { rawInput: options.rawInput }),
     };
     return this.#with({ kind: 'tool', tool });

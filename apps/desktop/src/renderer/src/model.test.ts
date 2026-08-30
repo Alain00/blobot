@@ -43,6 +43,7 @@ describe('a snapshot', () => {
     answers: [{ id: 'a1', agentId: 'bob', text: 'on it', at: 20 }],
     turnsThisPrompt: 0,
     demoMode: false,
+    permissions: [],
   };
 
   it('seeds the pane with the persisted transcript, so a restart is not an empty window', () => {
@@ -222,4 +223,116 @@ describe('the pending indicator', () => {
       expect(isPending(status, [], 'alice')).toBe(false);
     }
   });
+});
+
+describe('a permission block', () => {
+  const request = {
+    id: 'perm_1',
+    agentId: 'alice',
+    toolCallId: 'tool_1',
+    title: 'rm -rf dist',
+    canAllow: true,
+  };
+  const started: AgentEvent = {
+    ...identity,
+    at: 10,
+    type: 'tool_call_started',
+    toolCallId: 'tool_1',
+    title: 'rm -rf dist',
+    kind: 'execute',
+  };
+
+  it('takes over the tool line, so nothing says `running` while nothing is running', () => {
+    const asked = reduce(apply([started]), { type: 'permission', request, at: 20 });
+    expect(asked.items).toMatchObject([
+      { kind: 'tool', id: 'tool_1', status: 'asking' },
+      { kind: 'permission', id: 'perm_1', title: 'rm -rf dist', canAllow: true },
+    ]);
+  });
+
+  it('starts the call and records the answer once it is allowed', () => {
+    const asked = reduce(apply([started]), { type: 'permission', request, at: 20 });
+    const allowed = reduce(asked, { type: 'permissionSettled', id: 'perm_1', outcome: 'allowed' });
+    expect(allowed.items).toMatchObject([
+      { kind: 'tool', id: 'tool_1', status: 'running' },
+      { kind: 'permission', id: 'perm_1', outcome: 'allowed' },
+    ]);
+  });
+
+  it('leaves a rejected call for the failed tool event to clear, and says you rejected it', () => {
+    const asked = reduce(apply([started]), { type: 'permission', request, at: 20 });
+    const rejected = reduce(asked, { type: 'permissionSettled', id: 'perm_1', outcome: 'rejected' });
+    const failed = reduce(rejected, {
+      type: 'event',
+      event: {
+        ...identity,
+        at: 30,
+        type: 'tool_call_updated',
+        toolCallId: 'tool_1',
+        status: 'failed',
+        error: 'the user did not allow this',
+      },
+    });
+    expect(failed.items).toMatchObject([{ kind: 'permission', id: 'perm_1', outcome: 'rejected' }]);
+    expect(failed.feed[0]?.text).toContain('failed');
+  });
+
+  it('arrives once, however many times the same request is announced', () => {
+    const once = reduce(apply([started]), { type: 'permission', request, at: 20 });
+    const twice = reduce(once, { type: 'permission', request, at: 21 });
+    expect(twice.items.filter((item) => item.kind === 'permission')).toHaveLength(1);
+  });
+
+  it('comes back with the pane, because the turn behind it is still standing there', () => {
+    const state = reduce(initialState, {
+      type: 'snapshot',
+      snapshot: {
+        team: { id: 'team', name: 'checkout', workspacePath: '/repo', turnBudget: 10 },
+        teams: [],
+        agents: [],
+        statuses: {},
+        messages: [],
+        answers: [],
+        permissions: [request],
+        turnsThisPrompt: 0,
+        demoMode: false,
+      },
+    });
+    expect(state.items).toMatchObject([{ kind: 'permission', id: 'perm_1' }]);
+  });
+});
+
+/**
+ * The two announcements race: a permission request travels a callback, the tool's own event
+ * travels the turn's queue. Observed the wrong way round on the first run of the demo, where
+ * the block appeared under a line that said `running`.
+ */
+it('holds the tool line when the request arrives before the call it is about', () => {
+  const asked = reduce(initialState, {
+    type: 'permission',
+    request: {
+      id: 'perm_1',
+      agentId: 'alice',
+      toolCallId: 'tool_1',
+      title: 'rm -rf dist',
+      canAllow: true,
+    },
+    at: 20,
+  });
+  const state = reduce(asked, {
+    type: 'event',
+    event: {
+      agentId: 'alice',
+      sessionId: 'session_alice',
+      at: 21,
+      type: 'tool_call_started',
+      toolCallId: 'tool_1',
+      title: 'rm -rf dist',
+      kind: 'execute',
+    },
+  });
+  expect(state.items).toMatchObject([
+    { kind: 'permission', id: 'perm_1' },
+    { kind: 'tool', id: 'tool_1', status: 'asking' },
+  ]);
 });

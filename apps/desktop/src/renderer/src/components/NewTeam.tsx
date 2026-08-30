@@ -45,8 +45,10 @@ const READINESS_WORD: Record<UiRuntimeChoice['readiness'], string> = {
  * anything exists — so it is set like a page rather than a form, with a serif display face, its
  * steps numbered, and one question at a time.
  *
- * Ticket 14's disclosure belongs on this screen, once, before the first agent is spawned. It
- * is not here yet — see `build.md`.
+ * Ticket 14's disclosure is the last thing on it, above the button that spawns the first agent:
+ * stated, never consented to. There is no checkbox, because a checkbox implies the risk has
+ * been discharged onto the user, and what actually happened is that blobot picked a default and
+ * is telling them what it is.
  */
 export function NewTeam({
   onCancel,
@@ -271,6 +273,12 @@ export function NewTeam({
           </div>
         </Step>
 
+        <Disclosure
+          agents={roster.filter((agent) => chosen.includes(agent.id)).map((agent) => agent.name)}
+          path={path}
+          kind={inspection?.kind}
+        />
+
         {error !== undefined && <div className="refusal">{error}</div>}
 
         <div className="sheetfoot">
@@ -292,6 +300,63 @@ export function NewTeam({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * What the user is taking on, once, at the moment they point autonomous processes at a folder
+ * they care about.
+ *
+ * It is a statement and not a step: no number, no control, nothing to agree to. The one thing
+ * it must never do is claim more protection than blobot can deliver, so it says what blobot
+ * actually arranged (each runtime is set to prompt) rather than naming commands it can only name
+ * on some runtimes. See the 2026-08-29 amendment on ticket 14, which took a list of OpenCode's
+ * out of this copy.
+ */
+function Disclosure({
+  agents,
+  path,
+  kind,
+}: {
+  agents: readonly string[];
+  path: string;
+  kind: UiWorkspaceInspection['kind'] | undefined;
+}): React.JSX.Element {
+  // Named once anybody is chosen, because the sentence is about those two agents and a folder
+  // the user just picked, not about a product.
+  const who =
+    agents.length === 0
+      ? 'Every agent on this team'
+      : agents.length === 1
+        ? (agents[0] as string)
+        : `${agents.slice(0, -1).join(', ')} and ${agents.at(-1) as string}`;
+  const get = agents.length > 1 ? 'each get' : 'gets';
+  const where = path === '' ? 'this folder' : basename(path);
+  // A copy has no branch, and this is the sentence that would quietly promise one.
+  const copy = kind === 'plain' ? 'their own copy' : 'their own copy, on their own branch';
+
+
+  return (
+    <section className="disclosure">
+      <h2 className="subhead">Before you create this team</h2>
+      <p>
+        {who} {get} {copy} of <b>{where}</b>. Inside that copy they can read, edit and run
+        commands without asking you.
+      </p>
+      <p>
+        They ask before things that reach outside that copy or cannot be undone. blobot sets each
+        agent&apos;s runtime to prompt, and it is the runtime that decides what counts, not a
+        list blobot wrote. When you are asked, the question appears in the conversation and the
+        agent waits for you.
+      </p>
+      <p>
+        They also have whatever tools your own MCP servers provide, and blobot does not prompt
+        for those.
+      </p>
+      <p>
+        <b>blobot is not a sandbox.</b>
+      </p>
+    </section>
   );
 }
 

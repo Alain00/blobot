@@ -192,6 +192,27 @@ export class MockAgentRuntime implements AgentRuntime {
     return this.#permissionHandler;
   }
 
+  /**
+   * Both runtimes offer three options and blobot surfaces two, so the mock offers the three:
+   * a mock that offers only what the UI draws would never catch the UI drawing the wrong one.
+   */
+  async #askPermission(toolCallId: string, title: string): Promise<boolean> {
+    const handler = this.#permissionHandler;
+    if (handler === undefined) return false;
+    const chosen = await handler({
+      agentId: this.agentId,
+      sessionId: this.sessionId,
+      toolCallId,
+      title,
+      options: [
+        { optionId: 'allow', kind: 'allow_once', name: 'Yes' },
+        { optionId: 'allow_always', kind: 'allow_always', name: 'Yes, and don\'t ask again' },
+        { optionId: 'reject', kind: 'reject_once', name: 'No' },
+      ],
+    });
+    return chosen !== null && chosen.startsWith('allow');
+  }
+
   // ---------------------------------------------------------------- turn execution
 
   async #runTurn(
@@ -280,6 +301,22 @@ export class MockAgentRuntime implements AgentRuntime {
       kind: tool.kind,
       ...(tool.rawInput === undefined ? {} : { rawInput: tool.rawInput }),
     });
+    // Ticket 14's posture, reproduced rather than assumed away: some tools ask first, and the
+    // agent sits at `pending` until a human answers. A mock where everything runs unasked is a
+    // UI that meets its first `rm` prompt in production.
+    if (tool.asks === true) {
+      const allowed = await this.#askPermission(toolCallId, tool.title);
+      if (!allowed) {
+        this.#emitTo(queue, {
+          type: 'tool_call_updated',
+          toolCallId,
+          status: 'failed',
+          error: 'the user did not allow this',
+        });
+        return signal.aborted;
+      }
+    }
+
     this.#emitTo(queue, { type: 'tool_call_updated', toolCallId, status: 'in_progress' });
 
     await this.#clock.sleep(tool.durationMs, signal);

@@ -63,13 +63,20 @@ export class SqliteStore implements MessageStore {
   /**
    * Every team, newest first. The app reopens the same database on every launch, so this is
    * what turns "a team is a TypeScript file" into "a team is a row the user created".
+   *
+   * A deleted team is gone from here and stays in the database: its transcript is the only
+   * record of what those agents were told, and a cascade would tear holes in the rows a peer
+   * message leaves in *both* panes.
    */
-  listTeams(): (Team & { createdAt: number })[] {
+  listTeams(
+    options: { includeDeleted?: boolean } = {},
+  ): (Team & { createdAt: number; deletedAt?: number })[] {
     return this.#db
       .select()
       .from(teams)
       .orderBy(desc(teams.createdAt))
       .all()
+      .filter((row) => options.includeDeleted === true || row.deletedAt === null)
       .map((row) => ({
         id: row.id,
         name: row.name,
@@ -80,6 +87,7 @@ export class SqliteStore implements MessageStore {
           : { workspaceRepos: JSON.parse(row.workspaceRepos) as string[] }),
         turnBudget: row.turnBudget,
         createdAt: row.createdAt,
+        ...(row.deletedAt === null ? {} : { deletedAt: row.deletedAt }),
       }));
   }
 
@@ -90,6 +98,29 @@ export class SqliteStore implements MessageStore {
   /** The name is unique in the schema because it is half of a branch name. */
   teamByName(name: string): Team | undefined {
     return this.listTeams().find((team) => team.name === name);
+  }
+
+  /**
+   * Delete a team: a tombstone, and the name handed back.
+   *
+   * The name has to be released, and it cannot be released by keeping it. `teams.name` is
+   * unique because it is half of `blobot/<team>/<agent>`, so a tombstone that kept the string
+   * would refuse the next team of the same name while showing the user nothing to explain it,
+   * and the ordinary reason to delete a team is that it points at a folder that is gone and
+   * the user wants to point a new one at the folder they moved it to.
+   *
+   * Renaming a dead row is safe in a way renaming a live one is not: every branch name was
+   * written onto the agent rows when the team was formed, and this runs *after* the workspaces
+   * have been removed. Nothing derives anything from the name again.
+   */
+  tombstoneTeam(teamId: string, at: number): void {
+    const team = this.listTeams({ includeDeleted: true }).find((row) => row.id === teamId);
+    if (team === undefined || team.deletedAt !== undefined) return;
+    this.#db
+      .update(teams)
+      .set({ deletedAt: at, name: `${team.name} · deleted · ${team.id}` })
+      .where(eq(teams.id, teamId))
+      .run();
   }
 
   // --------------------------------------------------------------- agents, before any team

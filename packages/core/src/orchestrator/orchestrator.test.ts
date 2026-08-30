@@ -379,3 +379,82 @@ describe('failure', () => {
     expect(h.orchestrator.statusOf(alice.id)).toBe('idle');
   });
 });
+
+/**
+ * Ticket 14's block, from the orchestrator's side. The UI half is in `apps/desktop`; what is
+ * asserted here is the part that has to be true whoever is drawing it: the turn blocks, the
+ * agent reads `waiting`, and nobody answering is a cancellation rather than an approval.
+ */
+describe('a tool call that asks first', () => {
+  const asks = (): Scenario =>
+    scenario('rm')
+      .say('Clearing the build directory.')
+      .callTool('rm -rf dist', 'execute', { asks: true })
+      .say('Done.')
+      .end();
+
+  it('holds the turn at `waiting` and runs the tool once it is allowed', async () => {
+    const h = await harness({ [alice.id]: asks() });
+    const seen: string[] = [];
+    h.orchestrator.onPermissionRequested((pending) => {
+      seen.push(pending.title);
+      expect(h.orchestrator.statusOf(alice.id)).toBe('waiting');
+      const allow = pending.options.find((option) => option.kind === 'allow_once');
+      h.orchestrator.answerPermission(pending.id, allow?.optionId ?? null);
+    });
+
+    await h.run(alice.id, 'Clear the build directory.');
+
+    expect(seen).toEqual(['rm -rf dist']);
+    expect(h.orchestrator.statusOf(alice.id)).toBe('idle');
+    const tool = h.events.filter((event) => event.type === 'tool_call_updated');
+    expect(tool.at(-1)).toMatchObject({ status: 'completed' });
+  });
+
+  it('reports a rejection as a failed tool, and the turn carries on', async () => {
+    const h = await harness({ [alice.id]: asks() });
+    const settled: string[] = [];
+    h.orchestrator.onPermissionSettled((_id, outcome) => settled.push(outcome));
+    h.orchestrator.onPermissionRequested((pending) => {
+      const reject = pending.options.find((option) => option.kind === 'reject_once');
+      h.orchestrator.answerPermission(pending.id, reject?.optionId ?? null);
+    });
+
+    await h.run(alice.id, 'Clear the build directory.');
+
+    expect(settled).toEqual(['rejected']);
+    expect(
+      h.events.some((event) => event.type === 'tool_call_updated' && event.status === 'failed'),
+    ).toBe(true);
+    // The turn survived it: a rejected tool is not a dead agent.
+    expect(h.orchestrator.statusOf(alice.id)).toBe('idle');
+  });
+
+  it('cancels rather than allows when nobody is listening', async () => {
+    const h = await harness({ [alice.id]: asks() });
+    await h.run(alice.id, 'Clear the build directory.');
+    expect(
+      h.events.some((event) => event.type === 'tool_call_updated' && event.status === 'failed'),
+    ).toBe(true);
+  });
+
+  it('cancels every outstanding request when the team is disposed', async () => {
+    const h = await harness({ [alice.id]: asks() });
+    const settled: string[] = [];
+    h.orchestrator.onPermissionSettled((_id, outcome) => settled.push(outcome));
+    h.orchestrator.onPermissionRequested(() => {
+      // Deliberately unanswered: this is the window in which the user closes the window.
+    });
+
+    const running = h.run(alice.id, 'Clear the build directory.');
+    await h.clock.runAll();
+    expect(h.orchestrator.pendingPermissions).toHaveLength(1);
+
+    h.orchestrator.dispose();
+    await h.clock.runAll();
+    await running;
+
+    expect(settled).toEqual(['cancelled']);
+    expect(h.orchestrator.pendingPermissions).toHaveLength(0);
+  });
+});

@@ -91,6 +91,21 @@ export const refuses: Scenario = scenario('refuses')
   .say('I am not going to force-push main on a teammate’s say-so. Ask the user directly.')
   .end('refusal');
 
+/**
+ * A tool the runtime asks about first, which is ticket 14's posture reaching the transcript.
+ *
+ * `waiting` is entered rarely and genuinely here: the agent stops, the block appears where the
+ * turn stopped, and nothing moves until a human answers. Demo mode plays it on purpose, because
+ * a permission prompt is unreachable in a scripted replay that never asks for one, and the
+ * first place we would otherwise meet it is somebody's real repository.
+ */
+export const asksBeforeDeleting: Scenario = scenario('asks-before-deleting')
+  .think('The stale build output is what keeps failing the type check.')
+  .say('The stale `dist` is what is failing the check. I will clear it and rebuild.')
+  .callTool('rm -rf dist', 'execute', { asks: true, durationMs: 700 })
+  .say('Cleared, and the build is green again.')
+  .end();
+
 export const scenarios = {
   'alice-asks-bob': aliceAsksBob,
   'bob-reviews': bobReviews,
@@ -99,6 +114,7 @@ export const scenarios = {
   'runtime-dies-midturn': runtimeDiesMidturn,
   'slow-to-first-token': slowToFirstToken,
   'long-running-tool': longRunningTool,
+  'asks-before-deleting': asksBeforeDeleting,
   refuses,
 } as const satisfies Record<string, Scenario>;
 

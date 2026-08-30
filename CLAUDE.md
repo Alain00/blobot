@@ -132,18 +132,38 @@ up. Read it before starting work.
   behind the runtime picker — four honest states, never the word *authenticated*, gating
   nothing. With no flags the app is the product; `--demo` is the scripted team.
 
+- **A team can be deleted and its roster changed** — both on the team's own rail row. Deleting
+  removes every AgentWorkspace *before* tombstoning the rows (the branch is
+  `blobot/<team>/<agent>`, so the name has to still be true), reports what was kept, releases
+  the name, and keeps the transcript. A workspace it cannot reach is not a refusal: the
+  ordinary reason to delete a team is that the folder is gone. Editing takes the whole roster,
+  instantiates joiners exactly as creation does, and restarts the team, because a persona names
+  the roster.
+
+- **Ticket 14's posture is on screen** (14): a permission request is a channel on the
+  orchestrator, so `waiting` is the status fold's own answer; the block is inline in the
+  transcript with exactly **Allow once** and **Reject**, and `allow_always` has no path to the
+  UI. With nobody listening a request is **cancelled, never allowed**. The disclosure closes the
+  creation flow, stated rather than consented to — and it says blobot sets the runtime to
+  prompt rather than naming commands, which is ticket 14's 2026-08-29 amendment.
+
 - **Agents exist independently of teams** — `docs/adr/0001-agents-exist-independently-of-teams.md`,
   the repo's first ADR, and the reason `CONTEXT.md` now has an **AgentProfile**. An agent is
   hired once, on no team, and can be on several at the same time; joining a team instantiates an
   Agent from it, because a workspace, a session, a mailbox and a status are things a Team gives
   an Agent and none of them can be shared.
 
-Switching a team no longer restarts it: `TeamPool` keeps the last three live, LRU by
-selection, never evicting the active team or one that is mid-turn, and the Claude adapter
-resumes with `session/load` so a team that *was* evicted comes back knowing the conversation.
-Every stream channel leads with a team id, because several teams stream at once now.
+- **Switching a team no longer restarts it.** `TeamPool` (`apps/desktop/src/main/team-pool.ts`)
+  keeps the last three live, LRU by selection, never evicting the active team or one that is
+  mid-turn. The Claude adapter resumes with `session/load`, re-supplying `mcpServers` and muting
+  the transcript replay, so a team that *was* evicted comes back knowing the conversation; a
+  session the provider has forgotten falls back to a new one rather than failing the launch.
+  Every stream channel leads with a team id, because several teams stream at once now, and a
+  Workspace that has been moved or deleted says so instead of being called "not a git repository".
 
-Next: **ticket 14's disclosure and permission block**, then editing a team. OpenCode (03 + 16) is deferred by the author, 2026-08-29; the cost of proving
+Next: **a screen for *your agents*** (and what editing a profile means), surfacing whether an
+agent resumed or started fresh, and a backgrounded team that says nothing while it works.
+`build.md`'s *Next session* has the order and the reasons. OpenCode (03 + 16) is deferred by the author, 2026-08-29; the cost of proving
 `AgentRuntime` against one provider only is recorded in `build.md`.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that

@@ -136,6 +136,17 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    group to tell them apart from, and the rule under the group already closes it. Flush left
    also puts every blobatar on one column, where the team's mark is the wider one. */
 .teamgroup{border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:6px}
+/* Editing and deleting a team, on the row it is about. Hidden until the row is hovered or
+   something inside it takes focus: the rail is a list of teams to work in, and a delete button
+   sitting on every row at rest would be the loudest thing in a column whose job is quiet.
+   `:focus-within` is not a nicety here — hover-only would make both actions unreachable from
+   the keyboard. */
+.teamrowwrap{position:relative}
+.rowacts{position:absolute;right:10px;top:8px;display:flex;gap:4px;opacity:0;pointer-events:none}
+.teamrowwrap:hover .rowacts,.teamrowwrap:focus-within .rowacts{opacity:1;pointer-events:auto}
+/* The rail's own size for a chrome button: the 32px circle would be taller than the row's
+   second line and would push the name off centre. */
+.iconbtn.sm{width:24px;height:24px;background:var(--ground)}
 /* The team reads as one mark: its members packed into a square, arranged by how many there
    are. Members are laid out absolutely by `TeamMark`, which owns the arithmetic; the animation
    sits on the box, so the whole cluster moves as one thing. */
@@ -255,6 +266,19 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 @keyframes dot{0%,70%,100%{opacity:.28;transform:translateY(0)}35%{opacity:1;transform:translateY(-2px)}}
 @media (prefers-reduced-motion:reduce){.msg.pending .dots i{animation:none;opacity:.6}}
 .tool{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;gap:8px;align-items:baseline;margin-left:40px}
+/* Ticket 14's permission block. It stands where the in-flight tool line would have stood, in
+   the same gutter, because it is the same thing at a moment when it cannot proceed.
+   It carries an ink edge, which is `.refusal`'s device rather than a new one: the two are the
+   same kind of event, something has stopped and a human is the only way past it. It does not
+   invert, and neither button is armed — `waiting` already spends the app's one inversion on the
+   rail and the header, and blobot has no opinion about whether this call should run, which is
+   the entire reason it is asking. */
+.perm{margin-left:40px;border-left:2px solid var(--ink);padding:2px 0 2px 12px;display:flex;flex-direction:column;gap:6px}
+.perm .ask{font-size:13.5px}
+.perm .ask .mono{font-size:12.5px;color:var(--ink)}
+.perm .why{font-size:12px;color:var(--muted);line-height:1.5;max-width:52ch}
+.perm .acts{display:flex;gap:8px;margin-top:2px}
+.perm .btn{padding:5px 14px;font-size:12.5px}
 .tool .k{color:var(--ink)}
 .sysline{display:flex;align-items:center;gap:10px;color:var(--muted);font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
 /* The time between sittings: centred like the sysline it sits among, but without its rules —
@@ -319,6 +343,14 @@ textarea.field{resize:vertical;line-height:1.5}
 
 /* A refusal, not an error dialog: it says what is wrong where the user can act on it. */
 .refusal{border-left:2px solid var(--ink);padding:8px 0 8px 12px;font-size:13px}
+/* Ticket 14's disclosure: the last thing on the creation flow, above the button that spawns the
+   first agent. Set as prose rather than as a step, because it is the one thing on this page
+   that is not a question — an unnumbered block with an ink edge, the same device `.refusal`
+   uses, for the same reason: this is the sentence a reader is not allowed to skim past. */
+.disclosure{border-left:2px solid var(--ink);padding:2px 0 2px 14px;display:flex;flex-direction:column;gap:9px;max-width:62ch;font-size:13px;line-height:1.6}
+.disclosure p{margin:0;color:var(--muted)}
+.disclosure p b{color:var(--ink);font-weight:500}
+.disclosure .subhead{margin-bottom:2px}
 .sheetfoot{display:flex;justify-content:flex-end;padding-bottom:48px}
 
 /* ---------- your agents: a roster that exists before any team does ---------- */
@@ -370,6 +402,17 @@ textarea.field{resize:vertical;line-height:1.5}
 .fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .fields > .labelled:nth-child(n+3){grid-column:1 / -1}
 .modalfoot{display:flex;justify-content:flex-end;gap:10px}
+/* A note in a modal is a paragraph, not a row of labels: the flex line the creation flow's
+   notes need would put a sentence and the button beside it on one baseline. */
+.modal .note{display:block}
+.prose{font-size:13px;line-height:1.6;display:flex;flex-direction:column;gap:10px}
+.prose p{margin:0}
+/* A path is a value, so it is mono. Never bold: at the length a real path runs to, ink and bold
+   together make the folder the loudest thing in a dialog that is about deleting a team. */
+.prose .mono{font-size:12px;color:var(--ink);word-break:break-all}
+/* What became of each agent's work, in the provider's words. Kept branches are the reason this
+   screen exists after the fact: nothing else will ever mention them again. */
+.removals{display:flex;flex-direction:column;gap:10px}
 
 /* A listbox, not a native select: this platform paints its own light, which would put the
    brightest thing on the page on a dropdown. */

@@ -74,9 +74,15 @@ export async function createDemoTeam(
         peerMessageHandler: (call) => orchestrator.handleMessageAgent(call),
         script: [
           scenarios['alice-asks-bob'],
+          // The second turn is the one Bob's reply wakes, and it ends at a permission block:
+          // ticket 14's `waiting` is the demo's last frame on purpose, because it is the one
+          // state that needs a human and the one the scripted replay would otherwise never
+          // reach.
           scenario('alice-follows-up')
             .think('Bob is right about the backoff.')
-            .say('Good catch. I will add the backoff and push it to my branch.')
+            .say('Good catch. I will add the backoff, but the stale build output is in the way.')
+            .callTool('rm -rf dist', 'execute', { asks: true, durationMs: 700 })
+            .say('Cleared. Pushing the backoff to my branch now.')
             .end(),
         ],
       }),

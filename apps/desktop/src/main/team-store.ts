@@ -225,3 +225,160 @@ export async function initializeWorkspace(path: string): Promise<WorkspaceInspec
 }
 
 export { WorkspaceError };
+
+// ------------------------------------------------------------------ deleting and editing
+
+/**
+ * What became of one agent's work. The wording is the provider's, because only it knows what
+ * it did: a merged branch is deleted, a branch with commits on it is kept and named, and a
+ * copy is always kept because there is nothing behind it to recover it from.
+ */
+export interface AgentRemoval {
+  readonly agentName: string;
+  readonly work: 'discarded' | 'kept' | 'unknown';
+  /** Present whenever there is something the user has to know or do. */
+  readonly detail?: string;
+}
+
+export interface TeamDeletion {
+  readonly teamName: string;
+  readonly removals: readonly AgentRemoval[];
+}
+
+/**
+ * Delete a team.
+ *
+ * Two halves, and the order matters. The AgentWorkspaces go first, while the team still knows
+ * its own name — every branch is `blobot/<team>/<agent>` and the name is what finds it. Then
+ * the rows are tombstoned, which releases the name.
+ *
+ * **A workspace that cannot be reached is not a reason to refuse.** The ordinary reason to
+ * delete a team is that the folder it points at has been moved or deleted, which is exactly the
+ * case where `git worktree remove` cannot run: a team that could only be deleted while healthy
+ * would be undeletable precisely when the user wants it gone. So each removal is attempted,
+ * whatever it says is reported, and the rows go either way.
+ */
+export async function deleteTeam(teamId: string, deps: CreateTeamDeps): Promise<TeamDeletion> {
+  const team = deps.store.teamById(teamId);
+  if (team === undefined) throw new TeamCreationError('unknown_agent', 'That team is already gone.');
+  const workspaces = deps.workspaces ?? workspaceProviderFor(team.workspaceKind);
+  const records = deps.store.agentsOfTeam(team.id);
+
+  const removals: AgentRemoval[] = [];
+  for (const record of records) {
+    removals.push(await removeWorkspaceOf(record, team, workspaces));
+    deps.store.tombstoneAgent(record.id, deps.clock.now());
+  }
+  deps.store.tombstoneTeam(team.id, deps.clock.now());
+  return { teamName: team.name, removals };
+}
+
+/**
+ * Put agents that already exist on a team that already exists, and take others off it.
+ *
+ * The same instantiation as `createTeam` — a membership is an Agent row with its own workspace,
+ * session, mailbox and status — so this is deliberately the same code path rather than a
+ * cheaper one that skips provisioning.
+ *
+ * The refusals are the ones team creation already makes, for the same reasons: a team with
+ * nobody on it, and two members whose names slug to one branch.
+ */
+export async function editTeamRoster(
+  teamId: string,
+  profileIds: readonly string[],
+  deps: CreateTeamDeps,
+): Promise<readonly AgentRemoval[]> {
+  const team = deps.store.teamById(teamId);
+  if (team === undefined) throw new TeamCreationError('unknown_agent', 'That team is already gone.');
+  if (profileIds.length === 0) {
+    throw new TeamCreationError('no_agents', 'A team needs at least one agent.');
+  }
+
+  const members = deps.store.agentsOfTeam(team.id);
+  const wanted = new Set(profileIds);
+  const leaving = members.filter(
+    (member) => member.profileId === undefined || !wanted.has(member.profileId),
+  );
+  const staying = members.filter((member) => !leaving.includes(member));
+  const joining = profileIds
+    .filter((profileId) => !members.some((member) => member.profileId === profileId))
+    .map((profileId) => {
+      const profile = deps.store.profileById(profileId);
+      if (profile === undefined) {
+        throw new TeamCreationError('unknown_agent', 'One of the chosen agents no longer exists.');
+      }
+      return profile;
+    });
+
+  const slugs = [...staying.map((member) => refSlug(member.name)), ...joining.map((profile) => refSlug(profile.name))];
+  if (new Set(slugs).size !== slugs.length) {
+    throw new TeamCreationError('duplicate_agent', 'Two of those agents would share one branch name.');
+  }
+
+  // Provisioning first: an agent whose workspace cannot be made must not leave the team
+  // half-edited, with somebody already removed for them.
+  const workspaces = deps.workspaces ?? workspaceProviderFor(team.workspaceKind);
+  for (const profile of joining) {
+    const id = `${refSlug(profile.name)}_${randomBytes(3).toString('hex')}`;
+    const workspace = await workspaces.provision({
+      workspacePath: team.workspacePath,
+      teamName: team.name,
+      agentId: id,
+      agentName: profile.name,
+      ...(team.workspaceRepos === undefined ? {} : { repos: team.workspaceRepos }),
+    });
+    deps.store.createAgent({
+      id,
+      teamId: team.id,
+      profileId: profile.id,
+      name: profile.name,
+      role: profile.role,
+      runtimeId: profile.runtimeId,
+      ...(profile.instructions === undefined ? {} : { instructions: profile.instructions }),
+      ...(profile.hue === undefined ? {} : { hue: profile.hue }),
+      ...(profile.executablePath === undefined ? {} : { executablePath: profile.executablePath }),
+      ...(profile.model === undefined ? {} : { model: profile.model }),
+      workspacePath: workspace.path,
+      ...(workspace.branch === undefined ? {} : { branch: workspace.branch }),
+      createdAt: deps.clock.now(),
+    });
+  }
+
+  const removals: AgentRemoval[] = [];
+  for (const member of leaving) {
+    removals.push(await removeWorkspaceOf(member, team, workspaces));
+    // Tombstoned, never deleted: a peer message names two agents, and a cascade would tear a
+    // hole in a transcript that has nothing to do with the agent who left.
+    deps.store.tombstoneAgent(member.id, deps.clock.now());
+  }
+  return removals;
+}
+
+async function removeWorkspaceOf(
+  record: { readonly id: string; readonly name: string },
+  team: Team,
+  workspaces: WorkspaceProvider,
+): Promise<AgentRemoval> {
+  try {
+    const outcome = await workspaces.remove({
+      workspacePath: team.workspacePath,
+      teamName: team.name,
+      agentId: record.id,
+      agentName: record.name,
+      ...(team.workspaceRepos === undefined ? {} : { repos: team.workspaceRepos }),
+    });
+    return {
+      agentName: record.name,
+      work: outcome.work,
+      ...(outcome.work === 'kept' ? { detail: outcome.detail } : {}),
+    };
+  } catch (error) {
+    // The folder is gone, or git will not answer for it. Saying so is the whole job: whatever
+    // is left is somewhere the user can find it, and blobot is about to stop pointing at it.
+    return {
+      agentName: record.name,
+      work: 'unknown',
+      detail: error instanceof Error ? error.message : String(error),
+    };
+  }
+}

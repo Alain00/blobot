@@ -6,6 +6,8 @@ import type {
   AgentRuntime,
   PeerMessageAck,
   PeerMessageCall,
+  PermissionOption,
+  PermissionRequest,
   Prompt,
   Unsubscribe,
 } from '../runtime.js';
@@ -32,6 +34,28 @@ export interface OrchestratorOptions {
   /** Where the durable subset of the stream is written. Omit and nothing is persisted. */
   readonly recorder?: TurnRecorder;
 }
+
+/**
+ * A tool call an agent is blocked on until a human answers.
+ *
+ * The runtime's `PermissionRequest` with an id of ours on it. The id exists because the answer
+ * comes back from somewhere else entirely — a click in another process — and the promise the
+ * runtime is waiting on has to be found again by name.
+ */
+export interface PendingPermission {
+  readonly id: string;
+  readonly agentId: string;
+  readonly toolCallId: string;
+  readonly title: string;
+  readonly options: readonly PermissionOption[];
+}
+
+/**
+ * How a permission request ended. `cancelled` is nobody answering: the team was stopped, or
+ * the chosen option does not exist on this runtime. It is not the same as a rejection, and the
+ * transcript says which.
+ */
+export type PermissionOutcome = 'allowed' | 'rejected' | 'cancelled';
 
 export interface BudgetExhausted {
   readonly teamId: string;
@@ -65,6 +89,19 @@ export class Orchestrator {
   readonly #statusListeners = new Set<(agentId: string, status: AgentStatus) => void>();
   readonly #budgetListeners = new Set<(exhausted: BudgetExhausted) => void>();
   readonly #messageListeners = new Set<(message: Message) => void>();
+  readonly #permissionListeners = new Set<(pending: PendingPermission) => void>();
+  readonly #permissionSettledListeners = new Set<
+    (id: string, outcome: PermissionOutcome) => void
+  >();
+  /**
+   * Requests nobody has answered yet, by the id the answer will come back with — the question
+   * so a pane rebuilt mid-turn can draw the blocks it missed, and the resolver so the turn on
+   * the other end of it can be released.
+   */
+  readonly #pendingPermissions = new Map<
+    string,
+    { readonly pending: PendingPermission; readonly resolve: (optionId: string | null) => void }
+  >();
   readonly #subscriptions: Unsubscribe[] = [];
 
   /** The budget is per *user prompt*: it is the thing that bounds cost when agents ping-pong. */
@@ -88,6 +125,11 @@ export class Orchestrator {
 
       const runtime = this.#runtimes.get(agent.id);
       if (runtime === undefined) continue;
+      // The turn blocks here until somebody answers, which is why it is a callback and not an
+      // event: there is a reply channel and a correlation id, and ticket 04 kept both out of
+      // the event vocabulary. Installed for every agent whether or not anything is listening —
+      // `#askPermission` answers on its own when nobody is.
+      runtime.setPermissionHandler((request) => this.#askPermission(request));
       this.#subscriptions.push(
         runtime.onLifecycleChange((lifecycle) => tracker.lifecycleChanged(lifecycle)),
         // Events belonging to no turn — process death between turns.
@@ -135,6 +177,35 @@ export class Orchestrator {
     return () => this.#messageListeners.delete(listener);
   }
 
+  /**
+   * An agent is blocked on a human. Ticket 14: rendered inline in the transcript rather than as
+   * a modal, because two agents can be waiting at once and a modal serialises them into
+   * whichever arrived first.
+   */
+  onPermissionRequested(listener: (pending: PendingPermission) => void): Unsubscribe {
+    this.#permissionListeners.add(listener);
+    return () => this.#permissionListeners.delete(listener);
+  }
+
+  /** The same request, answered — by the user, or by nobody. */
+  onPermissionSettled(listener: (id: string, outcome: PermissionOutcome) => void): Unsubscribe {
+    this.#permissionSettledListeners.add(listener);
+    return () => this.#permissionSettledListeners.delete(listener);
+  }
+
+  /** Every request nobody has answered yet, so a pane rebuilt mid-turn still shows them. */
+  get pendingPermissions(): readonly PendingPermission[] {
+    return [...this.#pendingPermissions.values()].map((entry) => entry.pending);
+  }
+
+  /**
+   * Answer one. `null` cancels the tool call rather than rejecting it — the difference the
+   * runtimes draw, and the one the transcript repeats.
+   */
+  answerPermission(id: string, optionId: string | null): void {
+    this.#pendingPermissions.get(id)?.resolve(optionId);
+  }
+
   onBudgetExhausted(listener: (exhausted: BudgetExhausted) => void): Unsubscribe {
     this.#budgetListeners.add(listener);
     return () => this.#budgetListeners.delete(listener);
@@ -142,6 +213,10 @@ export class Orchestrator {
 
   dispose(): void {
     for (const unsubscribe of this.#subscriptions) unsubscribe();
+    // A request nobody will ever answer now: the window is closing or the team is being
+    // stopped. Cancelling releases the bridge's RPC instead of leaving the process wedged on
+    // a promise whose only resolver has just gone away.
+    for (const id of [...this.#pendingPermissions.keys()]) this.answerPermission(id, null);
   }
 
   /**
@@ -359,6 +434,56 @@ export class Orchestrator {
 
   #announceMessage(message: Message): void {
     for (const listener of this.#messageListeners) listener(message);
+  }
+
+  /**
+   * A runtime asking whether a tool call may go ahead.
+   *
+   * The agent is `waiting` from here until the answer, which is the one status ticket 12 spends
+   * a contrast inversion on: an agent blocked on a human sits there forever, and nothing else
+   * in the app has that property.
+   *
+   * With no listener the request is cancelled rather than allowed. An unattended team is the
+   * normal case for blobot, and approving on nobody's behalf is the one answer we may not give.
+   */
+  async #askPermission(request: PermissionRequest): Promise<string | null> {
+    const id = this.#createId(this.#clock.now());
+    const pending: PendingPermission = {
+      id,
+      agentId: request.agentId,
+      toolCallId: request.toolCallId,
+      title: request.title,
+      options: request.options,
+    };
+    if (this.#permissionListeners.size === 0) {
+      this.#settlePermission(id, null, request.options);
+      return null;
+    }
+
+    this.#trackers.get(request.agentId)?.permissionRequested();
+    const answer = await new Promise<string | null>((resolve) => {
+      this.#pendingPermissions.set(id, { pending, resolve });
+      for (const listener of this.#permissionListeners) listener(pending);
+    });
+    this.#pendingPermissions.delete(id);
+    this.#trackers.get(request.agentId)?.permissionResolved();
+    this.#settlePermission(id, answer, request.options);
+    return answer;
+  }
+
+  #settlePermission(
+    id: string,
+    optionId: string | null,
+    options: readonly PermissionOption[],
+  ): void {
+    const chosen = options.find((option) => option.optionId === optionId);
+    const outcome: PermissionOutcome =
+      chosen === undefined
+        ? 'cancelled'
+        : chosen.kind.startsWith('allow')
+          ? 'allowed'
+          : 'rejected';
+    for (const listener of this.#permissionSettledListeners) listener(id, outcome);
   }
 
   #publish(event: AgentEvent): void {

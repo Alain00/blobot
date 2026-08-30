@@ -1,3 +1,4 @@
+import { Pencil, Trash2 } from 'lucide-react';
 import type { AgentStatus } from '@blobot/core/domain';
 import type { UiAgent, UiTeam, UiTeamSummary } from '../../../shared/api.js';
 import { foldTeamStatus, lastLineOf, type Item, type Pane } from '../model.js';
@@ -25,6 +26,8 @@ export function Rail({
   onSelect,
   onSelectTeam,
   onNewTeam,
+  onEditTeam,
+  onDeleteTeam,
 }: {
   team: UiTeam;
   teams: readonly UiTeamSummary[];
@@ -36,12 +39,23 @@ export function Rail({
   /** Absent in demo mode, where there is exactly one team and it is scripted. */
   onSelectTeam?: (teamId: string) => void;
   onNewTeam?: () => void;
+  onEditTeam?: (teamId: string) => void;
+  onDeleteTeam?: (teamId: string) => void;
 }): React.JSX.Element {
   const teamStatus = foldTeamStatus(agents.map((agent) => statuses[agent.id] ?? 'idle'));
   // The running team may not be in the summary list at all — demo mode has no row for it —
   // so it is drawn from `team` and the list only supplies the others.
+  const open = teams.find((row) => row.id === team.id);
   const rows: readonly UiTeamSummary[] = [
-    { id: team.id, name: team.name, workspacePath: team.workspacePath, agentCount: agents.length },
+    {
+      id: team.id,
+      name: team.name,
+      workspacePath: team.workspacePath,
+      // The running team is drawn from `team`, which is the conversation's view of it and
+      // carries no kind. The summary row has one, and demo mode has no row at all.
+      workspaceKind: open?.workspaceKind ?? 'git',
+      agentCount: agents.length,
+    },
     ...teams.filter((other) => other.id !== team.id),
   ];
 
@@ -61,14 +75,15 @@ export function Rail({
         const running = row.id === team.id;
         if (!running) {
           return (
+            <TeamRow key={row.id} row={row} onEditTeam={onEditTeam} onDeleteTeam={onDeleteTeam}>
             <button
-              key={row.id}
               className="teamrow off"
-              // Switching stops this team's agents where they stand and starts the other's:
-              // one orchestrator at a time. Disabled rather than silently inert in demo mode.
+              // Switching no longer stops anything: `TeamPool` keeps the last few teams live,
+              // and a team that was evicted resumes its sessions when it comes back. Disabled
+              // rather than silently inert in demo mode, where there is only the one team.
               disabled={onSelectTeam === undefined}
               onClick={() => onSelectTeam?.(row.id)}
-              title={`Switch to ${row.name}. Stops ${team.name}'s agents`}
+              title={`Switch to ${row.name}`}
             >
               <span className="ghost" aria-hidden="true" />
               <span className="who">
@@ -87,11 +102,13 @@ export function Rail({
                 </span>
               </span>
             </button>
+            </TeamRow>
           );
         }
 
         return (
           <div key={row.id} className="teamgroup">
+            <TeamRow row={row} onEditTeam={onEditTeam} onDeleteTeam={onDeleteTeam}>
             <button
               className={`teamrow${pane.kind === 'team' ? ' sel' : ''}`}
               onClick={() => onSelect({ kind: 'team' })}
@@ -114,6 +131,7 @@ export function Rail({
                 )}
               </span>
             </button>
+            </TeamRow>
 
             {agents.map((agent) => {
               const status = statuses[agent.id] ?? 'idle';
@@ -160,6 +178,58 @@ export function Rail({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * One team row, and the two things you can do to it.
+ *
+ * The actions appear on hover and on keyboard focus rather than sitting there permanently: the
+ * rail is a list of teams to *work in*, and a delete button on every row at rest would be the
+ * loudest thing in a column whose job is to be quiet. They are icons because a label here would
+ * repeat the row it is on, which is the rule the composer's send button already follows.
+ *
+ * A row is a button, so these cannot live inside it: nesting them would make one unclickable
+ * control out of three.
+ */
+function TeamRow({
+  row,
+  onEditTeam,
+  onDeleteTeam,
+  children,
+}: {
+  row: UiTeamSummary;
+  onEditTeam: ((teamId: string) => void) | undefined;
+  onDeleteTeam: ((teamId: string) => void) | undefined;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  if (onEditTeam === undefined && onDeleteTeam === undefined) return <>{children}</>;
+  return (
+    <div className="teamrowwrap">
+      {children}
+      <span className="rowacts">
+        {onEditTeam !== undefined && (
+          <button
+            className="iconbtn sm"
+            onClick={() => onEditTeam(row.id)}
+            title={`Who is on ${row.name}`}
+            aria-label={`Who is on ${row.name}`}
+          >
+            <Pencil size={13} aria-hidden />
+          </button>
+        )}
+        {onDeleteTeam !== undefined && (
+          <button
+            className="iconbtn sm"
+            onClick={() => onDeleteTeam(row.id)}
+            title={`Delete ${row.name}`}
+            aria-label={`Delete ${row.name}`}
+          >
+            <Trash2 size={13} aria-hidden />
+          </button>
+        )}
+      </span>
     </div>
   );
 }

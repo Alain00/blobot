@@ -10,11 +10,15 @@ import { Markdown } from './Markdown.js';
 import { StatusWord } from './StatusWord.js';
 
 /**
- * Ticket 14's posture, in the one place both panes read it from. It is a statement about what
- * blobot configured, not about the runtime: every agent asks before these regardless of which
- * CLI is behind it, which is why nothing here branches on the provider.
+ * Ticket 14's posture, in the one place both panes read it from.
+ *
+ * A claim about what blobot arranged, and deliberately the *weakest* claim that is true on
+ * every runtime: blobot asks the runtime to prompt, and only some runtimes let it name the
+ * commands. It used to read "asks before rm, git push, curl", which is OpenCode's rule list
+ * printed over an agent whose prompting rules are Claude's own. Nothing here branches on the
+ * provider, so nothing here may promise something one provider cannot keep.
  */
-const POSTURE = 'asks before rm, git push, curl';
+const POSTURE = 'asks before dangerous commands';
 
 export function Conversation({
   pane,
@@ -22,12 +26,14 @@ export function Conversation({
   agents,
   statuses,
   items,
+  onAnswerPermission,
 }: {
   pane: Pane;
   team: UiTeam;
   agents: readonly UiAgent[];
   statuses: Record<string, AgentStatus>;
   items: readonly Item[];
+  onAnswerPermission: (requestId: string, choice: 'allow' | 'reject') => void;
 }): React.JSX.Element {
   const byId = new Map(agents.map((agent) => [agent.id, agent]));
   const focused = pane.kind === 'agent' ? byId.get(pane.agentId) : undefined;
@@ -96,6 +102,7 @@ export function Conversation({
                   byId={byId}
                   statuses={statuses}
                   grouped={grouped}
+                  onAnswerPermission={onAnswerPermission}
                 />
               </React.Fragment>
             );
@@ -141,12 +148,14 @@ function ItemView({
   byId,
   statuses,
   grouped,
+  onAnswerPermission,
 }: {
   item: Item;
   pane: Pane;
   byId: Map<string, UiAgent>;
   statuses: Record<string, AgentStatus>;
   grouped: boolean;
+  onAnswerPermission: (requestId: string, choice: 'allow' | 'reject') => void;
 }): React.JSX.Element | null {
   switch (item.kind) {
     // From you: a solid bubble on the right. There is only ever one "you", so the side is an
@@ -229,6 +238,8 @@ function ItemView({
     }
 
     case 'tool':
+      // Asked about but not started: the permission block below it is this call's line.
+      if (item.status === 'asking') return null;
       return (
         <div className="tool">
           <span className="k">{item.title}</span>
@@ -236,6 +247,62 @@ function ItemView({
           {item.exit === null && <span>exit null</span>}
         </div>
       );
+
+    /*
+     * Ticket 14's permission block: the agent has stopped, and it will stay stopped until this
+     * is answered.
+     *
+     * Inline in the transcript rather than in a modal, because two agents can be waiting at
+     * once and a modal serialises them into whichever arrived first. It sits where the tool
+     * line would have sat, and it is the same shape a moment later: answered, it collapses to
+     * one mono line saying what was asked and what you said.
+     *
+     * Neither button is armed. `.btn.primary` is the app's other inversion and it means "this
+     * is the thing to do here"; blobot has no opinion about whether an agent should run this,
+     * which is the entire reason it is asking.
+     */
+    case 'permission': {
+      const who = byId.get(item.agentId)?.name ?? item.agentId;
+      if (item.outcome !== undefined) {
+        return (
+          <div className="tool">
+            <span className="k">{item.title}</span>
+            <span>
+              {item.outcome === 'allowed'
+                ? 'you allowed this once'
+                : item.outcome === 'rejected'
+                  ? 'you rejected this'
+                  : 'nobody answered, so it was cancelled'}
+            </span>
+          </div>
+        );
+      }
+      return (
+        <div className="perm">
+          <div className="ask">
+            <b>{who}</b> wants to run <span className="mono">{item.title}</span>
+          </div>
+          {/* Said every time rather than once at team creation: this is the moment the sentence
+              is about something, and the block is where a user decides what blobot is. */}
+          <div className="why">
+            It is asking because this reaches outside its own workspace or cannot be undone.
+            Allowing it applies to this one call.
+          </div>
+          <div className="acts">
+            <button
+              className="btn"
+              disabled={!item.canAllow}
+              onClick={() => onAnswerPermission(item.id, 'allow')}
+            >
+              allow once
+            </button>
+            <button className="btn" onClick={() => onAnswerPermission(item.id, 'reject')}>
+              reject
+            </button>
+          </div>
+        </div>
+      );
+    }
 
     // A structural event, in the timeline rather than in the activity column — it is part of
     // what happened here, and a column the reader may not be watching is not where the reason

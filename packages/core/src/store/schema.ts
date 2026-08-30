@@ -25,6 +25,13 @@ export const teams = sqliteTable('teams', {
   workspaceRepos: text('workspace_repos'),
   turnBudget: integer('turn_budget').notNull().default(10),
   createdAt: integer('created_at').notNull(),
+  /**
+   * Tombstone, like an agent and a profile. A team owns a transcript, and `messages.team_id`
+   * points at this row from every line of it, so deleting a team deletes rows nothing else can
+   * reconstruct. The name is released when the tombstone is written, because `name` is unique
+   * and a user who deletes a broken team must be able to create it again.
+   */
+  deletedAt: integer('deleted_at'),
 });
 
 /**

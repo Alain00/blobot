@@ -84,6 +84,15 @@ Other transcript rules:
 - Three dots stand in for an agent that has been asked something and has not started streaming.
 - **Folding is for the peer voice only.** A message from you is yours and short; an agent's
   answer is the thing the pane exists to show, and folding it would be hiding the work.
+- **A permission block is a transcript item, not a modal.** An agent that has been asked to run
+  something dangerous stops until a human answers, and two agents can be stopped at once: a
+  modal would serialise them into whichever arrived first. It stands where that tool's line
+  would have stood, in the same gutter, wearing `.refusal`'s ink edge because it is the same
+  kind of event — something stopped, and a person is the only way past it. **Neither button is
+  armed**: `waiting` already spends the app's one inversion in the rail and the header, and
+  blobot has no opinion about whether the call should run, which is why it is asking. Exactly
+  two answers, **allow once** and **reject** (ticket 14), and the tool line does not print
+  `running` while nothing is running.
 - **The transcript follows its own height, not the item list.** Markdown lays out after it is
   handed its text, a code block is highlighted a frame later, and a fold opens by hundreds of
   pixels on a click — so the stick-to-bottom is a `ResizeObserver` on the column, and it lets go
@@ -162,12 +171,18 @@ One flat file, one flat namespace, no build step between it and the DOM.
 
 - **The rail** — every team, running or not, and the running team's agents under it. A row is a
   blobatar, a name, the last thing that agent said, and when. The role shows only until it has
-  said something. `idle` is not printed: it is the resting state of a quiet app.
+  said something. `idle` is not printed: it is the resting state of a quiet app. Editing and
+  deleting a team live on the team's own row as icon buttons, revealed on hover **and on
+  `:focus-within`** — hover-only would put both out of reach of the keyboard — because a delete
+  button sitting on every row at rest would be the loudest thing in a column whose job is quiet.
 - **The transcript** — the three voices above, in a centred column.
 - **The activity column** — the log. Tool calls and finished turns. Hideable from the chrome,
   remembered. Never auto-collapses: it would reappear on the first tool call and shove the
   conversation sideways mid-turn.
-- **The creation flow** — the one *editorial* page. A display line in the hand face, a
+- **The creation flow** — the one *editorial* page. It ends with ticket 14's disclosure: an
+  unnumbered block with an ink edge, above the button that spawns the first agent. Stated, never
+  consented to, and it may only claim what blobot actually arranged. It says the runtimes are
+  set to prompt; it does not name commands, because blobot can only name them on some runtimes. A display line in the hand face, a
   standfirst, numbered steps. It is read once, start to finish, before anything exists, which is
   a different job from every other surface. Do not spread this treatment; it works because it is
   the only one.

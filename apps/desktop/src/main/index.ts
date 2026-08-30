@@ -10,6 +10,7 @@ import {
   openDatabase,
   type AgentStatus,
   type OpenedDatabase,
+  type PendingPermission,
   type Team,
 } from '@blobot/core';
 import { createDemoTeam } from './demo-team.js';
@@ -17,18 +18,25 @@ import { startTeam } from './start-team.js';
 import {
   TeamCreationError,
   createTeam,
+  deleteTeam,
+  editTeamRoster,
   hireAgent,
   initializeWorkspace,
   inspectWorkspace,
+  type AgentRemoval,
   type NewAgentSpec,
   type NewTeamSpec,
 } from './team-store.js';
+import { choicesOf } from './permission-choices.js';
 import { runtimeLabel } from './runtime-labels.js';
 import { isWorking, type RunningTeam } from './running-team.js';
 import { TeamPool } from './team-pool.js';
 import type {
   HireResult,
   TeamCreationResult,
+  TeamDeletionResult,
+  UiAgentRemoval,
+  UiPermissionRequest,
   UiAgentProfile,
   UiRuntimeChoice,
   TeamOpenResult,
@@ -82,6 +90,21 @@ let openError: string | undefined;
  */
 const LIVE_TEAM_LIMIT = 3;
 
+/** Outstanding permission requests, so an answer can find the team that is blocked on it. */
+const permissions = new Map<string, { teamId: string; orchestrator: RunningTeam['orchestrator'] }>();
+
+/** A pending request in the words the transcript uses. The option ids never leave the main
+ *  process: the renderer answers `allow` or `reject`, which is all ticket 14 offers. */
+function asUiPermission(pending: PendingPermission): UiPermissionRequest {
+  return {
+    id: pending.id,
+    agentId: pending.agentId,
+    toolCallId: pending.toolCallId,
+    title: pending.title,
+    canAllow: choicesOf(pending).allowOptionId !== undefined,
+  };
+}
+
 /**
  * The live teams. Selecting one promotes it rather than restarting it, which is why switching
  * no longer costs a workspace reconcile, a process per agent and a transcript replay.
@@ -115,6 +138,7 @@ function teamSummaries(): UiTeamSummary[] {
       id: team.id,
       name: team.name,
       workspacePath: team.workspacePath,
+      workspaceKind: team.workspaceKind,
       agentCount: store?.agentsOfTeam(team.id).length ?? 0,
       ...(lastActiveAt === undefined ? {} : { lastActiveAt }),
     };
@@ -150,6 +174,7 @@ function snapshot(): UiSnapshot {
       statuses: {},
       messages: [],
       answers: [],
+      permissions: [],
       turnsThisPrompt: 0,
       demoMode: false,
       ...(openError === undefined ? {} : { openError }),
@@ -168,6 +193,7 @@ function snapshot(): UiSnapshot {
             id: team.team.id,
             name: team.team.name,
             workspacePath: team.team.workspacePath,
+            workspaceKind: team.team.workspaceKind,
             agentCount: team.agents.length,
           },
         ]
@@ -186,6 +212,9 @@ function snapshot(): UiSnapshot {
     ) as Record<string, AgentStatus>,
     messages: team.store.forTeam(team.team.id),
     answers: team.store.answersOfTeam(team.team.id),
+    // A block the user has not answered survives a re-snapshot, because the turn behind it is
+    // still standing there: a switch away and back must not lose the question.
+    permissions: team.orchestrator.pendingPermissions.map(asUiPermission),
     turnsThisPrompt: team.orchestrator.turnsThisPrompt,
     demoMode: team.demoMode,
   };
@@ -213,6 +242,17 @@ function attach(team: RunningTeam): void {
     if (!isWorking(team)) void pool.evictIdle();
   });
   orchestrator.onStatusChange((agentId, status) => send('blobot:status', teamId, agentId, status));
+  orchestrator.onPermissionRequested((pending) => {
+    // The answer arrives by id from another process, so the team it belongs to is remembered
+    // here rather than asked for: the renderer knows one team and must not be trusted with
+    // routing an approval to a different one.
+    permissions.set(pending.id, { teamId, orchestrator });
+    send('blobot:permission', teamId, asUiPermission(pending));
+  });
+  orchestrator.onPermissionSettled((id, outcome) => {
+    permissions.delete(id);
+    send('blobot:permission-settled', teamId, id, outcome);
+  });
   orchestrator.onMessage((message) => send('blobot:message', teamId, message));
   orchestrator.onBudgetExhausted((exhausted) =>
     send('blobot:budget', teamId, exhausted.turnsUsed, exhausted.turnBudget),
@@ -391,6 +431,84 @@ void app.whenReady().then(async () => {
       return { ok: false, error: describe(error) };
     }
   });
+  /**
+   * Change who is on a team.
+   *
+   * The team is stopped first and started again afterwards, rather than edited underneath its
+   * own orchestrator. A persona names the roster (ticket 06), the mailbox resolves recipients
+   * out of it, and an agent who has just left still holds a session and a loopback token — so
+   * a live team whose membership changed is a team disagreeing with itself. Restarting costs
+   * nothing that matters now that `session/load` resumes each agent where it was.
+   */
+  ipcMain.handle(
+    'blobot:editTeam',
+    async (_event, teamId: string, profileIds: readonly string[]): Promise<TeamDeletionResult> => {
+      if (store === undefined) return { ok: false, error: 'No database is open.' };
+      const wasLive = pool.find(teamId) !== undefined;
+      await pool.release(teamId);
+      try {
+        const removals = await editTeamRoster(teamId, profileIds, { store, clock });
+        return { ok: true, removals: removals.map(asUiRemoval) };
+      } catch (error) {
+        return { ok: false, error: describe(error) };
+      } finally {
+        // Whether the edit landed or was refused, a team that was running goes back to running:
+        // the user changed a roster, they did not ask for their agents to be stopped.
+        const team = store.teamById(teamId);
+        if (wasLive && team !== undefined) {
+          const restarted = await switchTo(team);
+          if (!restarted.ok) openError = `${team.name} did not open. ${restarted.error ?? ''}`.trim();
+        }
+        send('blobot:team');
+      }
+    },
+  );
+
+  /**
+   * Delete a team: its agents' workspaces, then the rows.
+   *
+   * Stopped before anything is removed — git will not take a worktree out from under a process
+   * sitting in it — and the app lands on the most recent surviving team, or on the creation
+   * flow when there is none, because a rail with a hole where the open team was is not a state
+   * the user asked for.
+   */
+  ipcMain.handle('blobot:deleteTeam', async (_event, teamId: string): Promise<TeamDeletionResult> => {
+    if (store === undefined) return { ok: false, error: 'No database is open.' };
+    const wasActive = pool.active?.team.id === teamId;
+    await pool.release(teamId);
+    try {
+      const deletion = await deleteTeam(teamId, { store, clock });
+      if (wasActive) {
+        openError = undefined;
+        const next = store.listTeams()[0];
+        if (next !== undefined) {
+          const opened = await switchTo(next);
+          if (!opened.ok) openError = `${next.name} did not open. ${opened.error ?? ''}`.trim();
+        }
+      }
+      return { ok: true, removals: deletion.removals.map(asUiRemoval) };
+    } catch (error) {
+      return { ok: false, error: describe(error) };
+    } finally {
+      send('blobot:team');
+    }
+  });
+
+  /**
+   * The answer to one permission block. Two choices reach here, and the option ids stay in this
+   * process: a renderer that could name an option could name `allow_always`.
+   */
+  ipcMain.handle('blobot:answerPermission', (_event, requestId: string, choice: 'allow' | 'reject') => {
+    const waiting = permissions.get(requestId);
+    const pending = waiting?.orchestrator.pendingPermissions.find((entry) => entry.id === requestId);
+    if (waiting === undefined || pending === undefined) return;
+    const choices = choicesOf(pending);
+    const optionId = choice === 'allow' ? choices.allowOptionId : choices.rejectOptionId;
+    // `null` cancels rather than approves: a runtime that offers neither option must not have
+    // one invented for it.
+    waiting.orchestrator.answerPermission(requestId, optionId ?? null);
+  });
+
   ipcMain.handle('blobot:selectTeam', async (_event, teamId: string): Promise<TeamOpenResult> => {
     const team = store?.teamById(teamId);
     if (team === undefined) return { ok: false, error: 'That team is no longer in the database.' };
@@ -435,6 +553,15 @@ async function reportInspection(
   } catch (error) {
     return { error: describe(error) };
   }
+}
+
+/** A removal in the renderer's words. The same three outcomes, no provider anywhere. */
+function asUiRemoval(removal: AgentRemoval): UiAgentRemoval {
+  return {
+    agentName: removal.agentName,
+    work: removal.work,
+    ...(removal.detail === undefined ? {} : { detail: removal.detail }),
+  };
 }
 
 function describe(error: unknown): string {

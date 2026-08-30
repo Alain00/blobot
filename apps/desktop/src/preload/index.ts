@@ -8,6 +8,9 @@ import type {
   UiAgentProfile,
   TeamCreationResult,
   TeamOpenResult,
+  TeamDeletionResult,
+  UiPermissionOutcome,
+  UiPermissionRequest,
   UiRuntimeChoice,
   UiSnapshot,
   UiWorkspaceInspection,
@@ -43,6 +46,12 @@ const api: BlobotApi = {
     ipcRenderer.invoke('blobot:createTeam', spec) as Promise<TeamCreationResult>,
   selectTeam: (teamId: string) =>
     ipcRenderer.invoke('blobot:selectTeam', teamId) as Promise<TeamOpenResult>,
+  editTeam: (teamId: string, profileIds: readonly string[]) =>
+    ipcRenderer.invoke('blobot:editTeam', teamId, profileIds) as Promise<TeamDeletionResult>,
+  deleteTeam: (teamId: string) =>
+    ipcRenderer.invoke('blobot:deleteTeam', teamId) as Promise<TeamDeletionResult>,
+  answerPermission: (requestId: string, choice: 'allow' | 'reject') =>
+    ipcRenderer.invoke('blobot:answerPermission', requestId, choice) as Promise<void>,
   onEvent: (listener) =>
     subscribe('blobot:event', (_e, teamId: string, event: AgentEvent) => listener(teamId, event)),
   onStatus: (listener) =>
@@ -59,6 +68,16 @@ const api: BlobotApi = {
     ),
   onTurns: (listener) =>
     subscribe('blobot:turns', (_e, teamId: string, turns: number) => listener(teamId, turns)),
+  onPermission: (listener) =>
+    subscribe('blobot:permission', (_e, teamId: string, request: UiPermissionRequest) =>
+      listener(teamId, request),
+    ),
+  onPermissionSettled: (listener) =>
+    subscribe(
+      'blobot:permission-settled',
+      (_e, teamId: string, requestId: string, outcome: UiPermissionOutcome) =>
+        listener(teamId, requestId, outcome),
+    ),
   onTeamChanged: (listener) => subscribe('blobot:team', () => listener()),
 };
 

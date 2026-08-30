@@ -349,3 +349,39 @@ describe('what a turn leaves behind', () => {
     expect(trigger?.fromAgentId).toBe(alice.id);
   });
 });
+
+describe('deleting a team', () => {
+  it('takes it out of the rail and leaves its transcript in the database', () => {
+    store.commit({
+      id: 'msg_1',
+      teamId: team.id,
+      fromAgentId: null,
+      toAgentId: alice.id,
+      body: 'go',
+      at: 5,
+    });
+
+    store.tombstoneTeam(team.id, 10);
+
+    expect(store.listTeams()).toHaveLength(0);
+    expect(store.teamById(team.id)).toBeUndefined();
+    expect(store.forTeam(team.id)).toHaveLength(1);
+    expect(store.listTeams({ includeDeleted: true })).toHaveLength(1);
+  });
+
+  it('releases the name, so the same team can be made again', () => {
+    store.tombstoneTeam(team.id, 10);
+    expect(store.teamByName('demo')).toBeUndefined();
+
+    store.createTeam({ ...team, id: 'team_2', createdAt: 11 });
+    expect(store.teamByName('demo')?.id).toBe('team_2');
+  });
+
+  it('is idempotent, so a second confirm cannot rename the row twice', () => {
+    store.tombstoneTeam(team.id, 10);
+    store.tombstoneTeam(team.id, 20);
+    const dead = store.listTeams({ includeDeleted: true })[0];
+    expect(dead?.deletedAt).toBe(10);
+    expect(dead?.name).toBe(`demo · deleted · ${team.id}`);
+  });
+});

@@ -1,5 +1,9 @@
 import type { AgentEvent, AgentStatus, Message } from '@blobot/core/domain';
-import type { UiSnapshot } from '../../shared/api.js';
+import type {
+  UiPermissionOutcome,
+  UiPermissionRequest,
+  UiSnapshot,
+} from '../../shared/api.js';
 
 /** What a conversation pane is showing: one agent's session, or the whole team's stream. */
 export type Pane = { readonly kind: 'team' } | { readonly kind: 'agent'; readonly agentId: string };
@@ -22,10 +26,33 @@ export type Item =
       at: number;
       agentId: string;
       title: string;
-      status: 'running' | 'completed' | 'failed';
+      /**
+       * `asking` is a call that has not started: the runtime is waiting for a human. The line
+       * is not drawn in that state, because the permission block underneath it *is* the line,
+       * and a tool that says `running` while nothing is running is the exact lie ticket 08
+       * spent a mock on.
+       */
+      status: 'asking' | 'running' | 'completed' | 'failed';
       exit?: number | null;
     }
-  | { kind: 'system'; id: string; at: number; agentId: string; text: string };
+  | { kind: 'system'; id: string; at: number; agentId: string; text: string }
+  /**
+   * A tool call an agent is blocked on. It is an item rather than a banner because it belongs
+   * where the turn stopped: two agents can be waiting at once, and the team pane has to say
+   * which one is asking and what about.
+   */
+  | {
+      kind: 'permission';
+      id: string;
+      at: number;
+      agentId: string;
+      /** The call this is about, which is the tool line it stands in for. */
+      toolCallId: string;
+      title: string;
+      canAllow: boolean;
+      /** Absent while it is still standing there. Present is a record of what you answered. */
+      outcome?: UiPermissionOutcome;
+    };
 
 /**
  * Two items in a row from the same voice are one turn, and a turn is labelled once. Only the
@@ -104,7 +131,9 @@ export type Action =
   | { type: 'status'; agentId: string; status: AgentStatus }
   | { type: 'message'; message: Message }
   | { type: 'budget'; used: number; budget: number }
-  | { type: 'turns'; turnsThisPrompt: number };
+  | { type: 'turns'; turnsThisPrompt: number }
+  | { type: 'permission'; request: UiPermissionRequest; at: number }
+  | { type: 'permissionSettled'; id: string; outcome: UiPermissionOutcome };
 
 export const initialState: AppState = {
   snapshot: undefined,
@@ -148,6 +177,19 @@ export function reduce(state: AppState, action: Action): AppState {
               live: false,
             }),
           ),
+          // A question nobody has answered is still being asked, so it comes back with the
+          // pane. It sorts to the end because that is where the turn is standing.
+          ...action.snapshot.permissions.map(
+            (request): Item => ({
+              kind: 'permission',
+              id: request.id,
+              at: Date.now(),
+              agentId: request.agentId,
+              toolCallId: request.toolCallId,
+              title: request.title,
+              canAllow: request.canAllow,
+            }),
+          ),
         ].sort((left, right) => left.at - right.at),
         feed: [],
         budget: undefined,
@@ -158,6 +200,46 @@ export function reduce(state: AppState, action: Action): AppState {
       return { ...state, statuses: { ...state.statuses, [action.agentId]: action.status } };
     case 'budget':
       return { ...state, budget: { used: action.used, budget: action.budget } };
+    case 'permission': {
+      if (state.items.some((item) => item.id === action.request.id)) return state;
+      return {
+        ...state,
+        items: [
+          ...state.items.map((item) =>
+            item.kind === 'tool' && item.id === action.request.toolCallId
+              ? { ...item, status: 'asking' as const }
+              : item,
+          ),
+          {
+            kind: 'permission',
+            id: action.request.id,
+            at: action.at,
+            agentId: action.request.agentId,
+            toolCallId: action.request.toolCallId,
+            title: action.request.title,
+            canAllow: action.request.canAllow,
+          },
+        ],
+      };
+    }
+    case 'permissionSettled': {
+      const index = state.items.findIndex(
+        (item) => item.kind === 'permission' && item.id === action.id,
+      );
+      if (index < 0) return state;
+      const existing = state.items[index] as Extract<Item, { kind: 'permission' }>;
+      // Allowed, the call finally starts, so its line comes back. Rejected, the runtime reports
+      // a failed tool a moment later and the line leaves the conversation the usual way.
+      const items = state.items.map((item) =>
+        item.kind === 'tool' && item.status === 'asking' && action.outcome === 'allowed'
+          ? { ...item, status: 'running' as const }
+          : item,
+      );
+      // Answered rather than removed: the transcript should still say a question was asked and
+      // what you said to it, in the place it interrupted.
+      items[index] = { ...existing, outcome: action.outcome };
+      return { ...state, items };
+    }
     case 'message':
       return applyMessage(state, action.message);
     case 'event':
@@ -227,6 +309,15 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
     }
     case 'tool_call_started': {
       if (OWN_TOOL.test(event.title)) return state;
+      // The two announcements race. A permission request travels a callback and the tool's own
+      // event travels the turn's queue, so either can reach the renderer first, and a call the
+      // user is being asked about must not print `running` whichever way round they land.
+      const asked = state.items.some(
+        (item) =>
+          item.kind === 'permission' &&
+          item.toolCallId === event.toolCallId &&
+          item.outcome === undefined,
+      );
       return {
         ...state,
         items: [
@@ -237,7 +328,7 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
             at: event.at,
             agentId: event.agentId,
             title: event.title,
-            status: 'running',
+            status: asked ? 'asking' : 'running',
           },
         ],
       };
