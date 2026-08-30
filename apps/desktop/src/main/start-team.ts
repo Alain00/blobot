@@ -27,16 +27,17 @@ export interface StartTeamOptions {
 }
 
 /**
- * Bring a persisted team back to life: reconcile every agent's workspace, spawn its runtime,
- * hand it the loopback `message_agent` tool, and put an orchestrator around the lot.
+ * Bring a persisted team back to life: reconcile every agent's workspace, resume or spawn its
+ * runtime, hand it the loopback `message_agent` tool, and put an orchestrator around the lot.
  *
  * This is the old `live-team.ts` with the hardcoded roster taken out — the roster is rows now.
  * The launch reconcile runs *here* rather than at creation because the interesting cases only
  * happen on the second launch: a directory deleted under us, or a branch that is gone.
  *
- * What does not come back is the agent's *context*: there is no `session/load` yet, so every
- * launch is a fresh session against the same transcript. The transcript survives; the agent's
- * memory of it does not.
+ * The agent's *context* comes back too, now that it can: each runtime is handed the provider
+ * session id its last session recorded, so a relaunched agent knows the conversation instead
+ * of reading its own transcript as a stranger's. When the provider has forgotten that session
+ * the adapter quietly starts a new one, which is exactly where this used to be every time.
  */
 export async function startTeam(options: StartTeamOptions): Promise<RunningTeam> {
   const { team, store, db, clock } = options;
@@ -98,10 +99,14 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     if (agent === undefined) continue;
     runtimeLabels[record.id] = runtimeLabel(record.runtimeId);
     const endpoint = mcp.endpointFor(agent.id);
+    // The whole difference between a relaunch and a resume. Undefined on a first launch, and
+    // a session the provider has forgotten is not fatal: the adapter falls back to a new one.
+    const resumeSessionId = store.lastProviderSessionOf(agent.id);
     const runtime = new ClaudeAgentRuntime({
       agentId: agent.id,
       cwd: agent.workspacePath,
       persona: personas.get(agent.id) ?? '',
+      ...(resumeSessionId === undefined ? {} : { resumeSessionId }),
       // Ticket 07: the user's own binary, never the bridge's bundled copy.
       ...(record.executablePath === undefined ? {} : { claudeExecutable: record.executablePath }),
       mcpServers: [
@@ -148,7 +153,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
   void Promise.all(
     agents.map(async (agent) => {
       if (!(await mcp.whenReady(agent.id, 30_000))) {
-        log(`[mcp] ${agent.id} has not handshaked yet — it may have no message_agent tool`);
+        log(`[mcp] ${agent.id} has not handshaked yet. It may have no message_agent tool`);
       }
     }),
   );
@@ -166,9 +171,10 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       'this repository is. Tell them you are looking at it from your side. Then wait.',
     close: async () => {
       orchestrator.dispose();
-      // Switching teams stops the bridges rather than leaving them running: `stop()` closes
-      // the session before the pipe, which is the difference between a routine shutdown and
-      // the bridge logging a cleanup failure.
+      // Eviction or quit, no longer every switch — `TeamPool` keeps the last few teams live.
+      // `stop()` closes the session before the pipe, which is the difference between a routine
+      // shutdown and the bridge logging a cleanup failure, and it does not cost the team its
+      // memory: a closed session still resumes (research 15 §7a).
       await Promise.all([...runtimes.values()].map((runtime) => runtime.stop().catch(() => {})));
       await mcp.stop();
     },

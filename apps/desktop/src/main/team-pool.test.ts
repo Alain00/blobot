@@ -1,0 +1,157 @@
+import { describe, expect, it } from 'vitest';
+import type { Team } from '@blobot/core';
+import { TeamPool } from './team-pool.js';
+
+interface Fake {
+  readonly team: { readonly id: string };
+  working: boolean;
+  closed: boolean;
+  close(): void;
+}
+
+function team(id: string): Team {
+  return {
+    id,
+    name: id,
+    workspacePath: `/tmp/${id}`,
+    workspaceKind: 'git',
+    turnBudget: 6,
+    createdAt: 0,
+  } as Team;
+}
+
+function pool(limit: number): {
+  readonly pool: TeamPool<Fake>;
+  readonly started: string[];
+  readonly evicted: string[];
+  live(id: string): Fake | undefined;
+} {
+  const started: string[] = [];
+  const evicted: string[] = [];
+  const instance = new TeamPool<Fake>({
+    limit,
+    start: async (row) => {
+      started.push(row.id);
+      const fake: Fake = {
+        team: { id: row.id },
+        working: false,
+        closed: false,
+        close: () => {
+          fake.closed = true;
+        },
+      };
+      return fake;
+    },
+    isWorking: (live) => live.working,
+    onEvict: (live) => evicted.push(live.team.id),
+  });
+  return { pool: instance, started, evicted, live: (id) => instance.find(id) };
+}
+
+describe('the live teams', () => {
+  it('starts a team the first time it is selected', async () => {
+    const { pool: teams, started } = pool(3);
+    const alpha = await teams.select(team('alpha'));
+    expect(started).toEqual(['alpha']);
+    expect(teams.active).toBe(alpha);
+  });
+
+  it('does not restart a team that is already live', async () => {
+    const { pool: teams, started } = pool(3);
+    const first = await teams.select(team('alpha'));
+    await teams.select(team('beta'));
+    const again = await teams.select(team('alpha'));
+
+    // The point of the whole exercise: switching back is free, and the agents are the same
+    // objects, so nothing was reconciled, respawned or replayed.
+    expect(again).toBe(first);
+    expect(started).toEqual(['alpha', 'beta']);
+    expect(first.closed).toBe(false);
+  });
+
+  it('evicts the least recently selected once the limit is passed', async () => {
+    const { pool: teams, evicted, live } = pool(2);
+    await teams.select(team('alpha'));
+    await teams.select(team('beta'));
+    await teams.select(team('gamma'));
+
+    expect(evicted).toEqual(['alpha']);
+    expect(live('alpha')).toBeUndefined();
+    expect(teams.live.map((entry) => entry.team.id)).toEqual(['gamma', 'beta']);
+  });
+
+  it('counts a re-selection as recent, so the one you keep returning to survives', async () => {
+    const { pool: teams, evicted } = pool(2);
+    await teams.select(team('alpha'));
+    await teams.select(team('beta'));
+    await teams.select(team('alpha'));
+    await teams.select(team('gamma'));
+
+    expect(evicted).toEqual(['beta']);
+  });
+
+  it('never evicts a team that is mid-turn', async () => {
+    const { pool: teams, evicted, live } = pool(1);
+    const alpha = await teams.select(team('alpha'));
+    alpha.working = true;
+    await teams.select(team('beta'));
+
+    // Over the limit on purpose. Killing an agent between a tool call and its result loses
+    // work nobody can see and nobody can redo.
+    expect(evicted).toEqual([]);
+    expect(teams.live).toHaveLength(2);
+
+    // And it goes as soon as it is quiet.
+    alpha.working = false;
+    await teams.evictIdle();
+    expect(evicted).toEqual(['alpha']);
+    expect(live('alpha')).toBeUndefined();
+  });
+
+  it('never evicts the team the user is looking at', async () => {
+    const { pool: teams, evicted } = pool(1);
+    await teams.select(team('alpha'));
+    const beta = await teams.select(team('beta'));
+    expect(evicted).toEqual(['alpha']);
+    expect(teams.active).toBe(beta);
+    expect(beta.closed).toBe(false);
+  });
+
+  it('starts one set of agents when the same team is selected twice at once', async () => {
+    const { pool: teams, started } = pool(3);
+    const [first, second] = await Promise.all([
+      teams.select(team('alpha')),
+      teams.select(team('alpha')),
+    ]);
+    expect(started).toEqual(['alpha']);
+    expect(first).toBe(second);
+  });
+
+  it('closes a released team and forgets it', async () => {
+    const { pool: teams, live } = pool(3);
+    const alpha = await teams.select(team('alpha'));
+    await teams.release('alpha');
+    expect(alpha.closed).toBe(true);
+    expect(live('alpha')).toBeUndefined();
+  });
+
+  it('stops everything on the way out, working or not', async () => {
+    const { pool: teams } = pool(3);
+    const alpha = await teams.select(team('alpha'));
+    const beta = await teams.select(team('beta'));
+    alpha.working = true;
+    await teams.closeAll();
+    expect([alpha.closed, beta.closed]).toEqual([true, true]);
+    expect(teams.live).toEqual([]);
+  });
+
+  it('survives a team that throws on the way out', async () => {
+    const { pool: teams } = pool(1);
+    const alpha = await teams.select(team('alpha'));
+    alpha.close = () => {
+      throw new Error('the bridge is already gone');
+    };
+    await expect(teams.select(team('beta'))).resolves.toBeDefined();
+    expect(teams.active?.team.id).toBe('beta');
+  });
+});

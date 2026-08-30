@@ -28,6 +28,13 @@ export function Feed({
       <div className="feedhead">
         <span className="mono muted">ACTIVITY</span>
       </div>
+      {entries.length === 0 && (
+        // A header over nothing is what a fifth of the window looked like on a quiet team.
+        // The column keeps its width rather than collapsing: it would reappear on the first
+        // tool call and shove the conversation sideways mid-turn, which is worse than a line
+        // of type saying what will land here.
+        <div className="feedempty">nothing yet. tool calls and finished turns land here</div>
+      )}
       {mine.map((entry) => (
         <FeedLine key={entry.id} entry={entry} who={name(entry.agentId)} />
       ))}

@@ -20,7 +20,7 @@ export const aliceAsksBob: Scenario = scenario('alice-asks-bob')
     'Can you review the session refresh in src/auth.ts on my branch? I am worried about the retry loop.',
     'I rewrote refresh() to retry twice; committed on blobot/demo/alice.',
   )
-  .say(' Bob has it — I will keep going on the token store meanwhile.')
+  .say(' Bob has it. I will keep going on the token store meanwhile.')
   .end();
 
 /** Bob, woken by Alice's message, does the review and answers her. */
@@ -31,7 +31,7 @@ export const bobReviews: Scenario = scenario('bob-reviews')
     durationMs: 260,
     outcome: { status: 'completed', output: 'export async function refresh() { /* … */ }\n', exit: 0 },
   })
-  .say('The retry loop has no backoff — two immediate retries will hit the same rate limit.')
+  .say('The retry loop has no backoff, so two immediate retries hit the same rate limit.')
   .messageAgent('Alice', 'Reviewed: the retry loop needs a backoff, otherwise both attempts hit the same 429.')
   .end();
 
@@ -70,7 +70,7 @@ export const runtimeDiesMidturn: Scenario = scenario('runtime-dies-midturn')
 /** Ninety seconds before a single token. blobot must not look broken for a minute and a half. */
 export const slowToFirstToken: Scenario = scenario('slow-to-first-token')
   .wait(90_000)
-  .think('Sorry — that took a while to load.', { overMs: 2_000 })
+  .think('Sorry, that took a while to load.', { overMs: 2_000 })
   .say('Ready now. What would you like me to look at first?')
   .end();
 

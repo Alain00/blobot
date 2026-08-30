@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { inspectWorkspace } from './inspect.js';
 import {
   refSlug,
+  requireWorkspaceExists,
   WorkspaceError,
   type AgentWorkspace,
   type ProvisionRequest,
@@ -60,9 +61,8 @@ export class CopiedDirectoryWorkspaces implements WorkspaceProvider {
       // of the same name in the same team is ordinary, and its copy is where its work is.
       return workspace;
     }
-    if (!existsSync(request.workspacePath)) {
-      throw new WorkspaceError('copy_failed', `${request.workspacePath} does not exist.`);
-    }
+    // A copy has no branch and no recovery, so a Workspace that is gone is the end of it.
+    requireWorkspaceExists(request.workspacePath);
 
     await mkdir(dirname(workspace.path), { recursive: true });
     await copyTree(request.workspacePath, workspace.path);

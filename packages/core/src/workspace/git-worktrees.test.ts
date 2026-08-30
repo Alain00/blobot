@@ -167,6 +167,16 @@ describe('refusing narrowly', () => {
     });
   });
 
+  it('says a Workspace is gone rather than blaming it for not being a repository', async () => {
+    // The trap: `inspect` reads a missing path as `plain`, so the refusal above would send
+    // the user off to run `git init` on a directory that is not there any more.
+    const deleted = join(scratch('deleted'), 'moved-away');
+    await expect(provider().provision(request(deleted))).rejects.toMatchObject({
+      code: 'missing',
+      message: expect.stringContaining('moved, renamed or deleted'),
+    });
+  });
+
   it('refuses a repository with no commits, because there is nothing to branch from', async () => {
     await expect(provider().provision(request(repository({ commit: false })))).rejects.toMatchObject(
       { code: 'no_commits' },

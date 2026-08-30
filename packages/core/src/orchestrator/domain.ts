@@ -42,6 +42,14 @@ export interface AgentProfile {
   readonly model?: string;
   /** Standing instructions, folded into every persona composed for it. */
   readonly instructions?: string;
+  /**
+   * The blobatar's hue, 0 to 359, when the user picked one. Absent means the name derives it.
+   *
+   * The one thing in this file that only the UI reads, and it is here rather than in the
+   * renderer because the face has to follow the agent onto every team it joins. It is not a
+   * provider fact: nothing may branch on it, and nothing does.
+   */
+  readonly hue?: number;
 }
 
 export interface Agent {
@@ -53,6 +61,8 @@ export interface Agent {
   readonly role: string;
   /** Copied from the profile at creation, so the persona stays auditable after an edit. */
   readonly instructions?: string;
+  /** Copied for the same reason: a transcript shows the face this agent wore at the time. */
+  readonly hue?: number;
   /** The Agent's own isolated copy of the Workspace. A git worktree today. */
   readonly workspacePath: string;
 }

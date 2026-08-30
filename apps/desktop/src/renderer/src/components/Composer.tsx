@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ArrowUp } from 'lucide-react';
 import { findAgentByName } from '@blobot/core/domain';
 import type { Agent } from '@blobot/core/domain';
 import type { UiAgent } from '../../../shared/api.js';
@@ -17,6 +18,11 @@ import { Blob } from './Blob.js';
  * Resolution goes through `findAgentByName`, the same function the orchestrator validates
  * `message_agent` with: the unresolved-mention state is the human-facing twin of its
  * "no such teammate" error.
+ *
+ * The send control says who it resolved to only where that is a live question. In an agent's
+ * pane the pane *is* the recipient, so `send to Alice` under a transcript of Alice was the
+ * third time the screen said Alice; it is an arrow. In the team pane the button wears the
+ * resolved agent's blobatar instead, because there the answer is not on screen anywhere else.
  */
 export function Composer({
   agents,
@@ -53,6 +59,7 @@ export function Composer({
 
   return (
     <div className="composer">
+      <div className="pill">
       <div className="mentionwrap">
         {suggestions.length > 0 && (
           <div className="suggest">
@@ -61,7 +68,7 @@ export function Composer({
                 key={agent.id}
                 onClick={() => setDraft(draft.replace(/@[\w-]*$/, `@${agent.name} `))}
               >
-                <Blob name={agent.id} size={18} />
+                <Blob name={agent.id} size={18} hue={agent.hue} />
                 <span>{agent.name}</span>
                 <span className="r">{agent.role}</span>
               </button>
@@ -72,7 +79,7 @@ export function Composer({
           {draft === '' ? (
             <span className="ph">
               {pane.kind === 'team'
-                ? 'Message the team — start with @ to say who'
+                ? 'Message the team. Start with @ to say who'
                 : `Message ${recipient?.name ?? ''}`}
             </span>
           ) : (
@@ -87,10 +94,20 @@ export function Composer({
           }}
         />
       </div>
-      <button className="send" disabled={recipientId === undefined || draft.trim() === ''} onClick={send}>
-        {recipient !== undefined && <Blob name={recipient.id} size={14} />}
-        send{recipient === undefined ? '' : ` to ${recipient.name}`}
+      <button
+        className="send"
+        disabled={recipientId === undefined || draft.trim() === ''}
+        onClick={send}
+        title={recipient === undefined ? 'Say who with @' : `Send to ${recipient.name}`}
+        aria-label={recipient === undefined ? 'Send' : `Send to ${recipient.name}`}
+      >
+        {pane.kind === 'team' && recipient !== undefined ? (
+          <Blob name={recipient.id} size={17} hue={recipient.hue} />
+        ) : (
+          <ArrowUp size={16} strokeWidth={2.25} aria-hidden />
+        )}
       </button>
+      </div>
     </div>
   );
 }

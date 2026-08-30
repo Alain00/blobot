@@ -70,12 +70,13 @@ const SKIP = new Set(['node_modules', '.git', 'dist', 'build', 'target', 'vendor
 async function findNestedRepos(
   root: string,
 ): Promise<{ repos: NestedRepo[]; looseFiles: boolean }> {
-  const repos: NestedRepo[] = [];
+  const found: string[] = [];
   let looseFiles = false;
 
   const walk = async (relative: string, depth: number): Promise<void> => {
     const absolute = relative === '' ? root : join(root, relative);
     const entries = await readdir(absolute, { withFileTypes: true }).catch(() => []);
+    const deeper: Promise<void>[] = [];
     for (const entry of entries) {
       if (entry.isFile() || entry.isSymbolicLink()) {
         // A file at any level that is not inside a repository is a loose file, and the
@@ -87,15 +88,20 @@ async function findNestedRepos(
 
       const childRelative = relative === '' ? entry.name : `${relative}/${entry.name}`;
       if (existsSync(join(root, childRelative, '.git'))) {
-        repos.push(await describeRepo(root, childRelative));
+        found.push(childRelative);
         continue;
       }
-      if (depth + 1 < MAX_DEPTH) await walk(childRelative, depth + 1);
+      if (depth + 1 < MAX_DEPTH) deeper.push(walk(childRelative, depth + 1));
       else looseFiles = true;
     }
+    await Promise.all(deeper);
   };
 
   await walk('', 0);
+  // Every repository is described at once. Sequentially, a folder holding a dozen projects
+  // spends a dozen `git status` calls in a row and the folder picker looks like it did
+  // nothing — twelve seconds on a home directory, measured, before this was parallel.
+  const repos = await Promise.all(found.map((relative) => describeRepo(root, relative)));
   repos.sort((left, right) => left.path.localeCompare(right.path));
   return { repos, looseFiles };
 }

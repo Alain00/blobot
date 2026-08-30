@@ -82,7 +82,7 @@ describe('the wake prompt', () => {
       () => alice,
       [alice],
     );
-    expect(prompt).toContain('From Alice (frontend) — a teammate, not the operator:');
+    expect(prompt).toContain('From Alice (frontend), a teammate, not the operator:');
     expect(prompt).toContain('Their context: I rewrote refresh()');
     expect(prompt).toContain('Review the refresh path.');
   });

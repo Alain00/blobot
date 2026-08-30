@@ -12,7 +12,9 @@ import type { SessionUpdate } from './wire.js';
  * is `live.test.ts`'s job, and the transcripts in `research/02-claude-code-acp.md`.
  */
 export class FakeBridge implements LineTransport {
-  readonly sessionId: string;
+  /** The session it is currently serving. A `session/load` adopts the id it was asked for,
+   *  because that is the id the real bridge then stamps on every notification. */
+  sessionId: string;
   readonly received: JsonRpcMessage[] = [];
 
   readonly #out = new AsyncQueue<string>();
@@ -24,14 +26,30 @@ export class FakeBridge implements LineTransport {
   #closed = false;
   #version: string;
   #authMethods: unknown[];
+  #loadSession: boolean;
+  #failLoad: string | undefined;
+  #replayOnLoad: readonly SessionUpdate[];
   #agentRequestId = 0;
 
   constructor(
-    options: { sessionId?: string; version?: string; authMethods?: unknown[] } = {},
+    options: {
+      sessionId?: string;
+      version?: string;
+      authMethods?: unknown[];
+      /** What `initialize` advertises. A bridge that cannot resume is a real deployment. */
+      loadSession?: boolean;
+      /** `session/load` refuses with this message: the session the provider has forgotten. */
+      failLoad?: string;
+      /** What a load replays before it answers, the way the real bridge replays a transcript. */
+      replayOnLoad?: readonly SessionUpdate[];
+    } = {},
   ) {
     this.sessionId = options.sessionId ?? 'session_fake';
     this.#version = options.version ?? BRIDGE_VERSION;
     this.#authMethods = options.authMethods ?? [];
+    this.#loadSession = options.loadSession ?? true;
+    this.#failLoad = options.failLoad;
+    this.#replayOnLoad = options.replayOnLoad ?? [];
   }
 
   // ------------------------------------------------------------------ LineTransport
@@ -129,6 +147,7 @@ export class FakeBridge implements LineTransport {
           protocolVersion: 1,
           agentInfo: { name: '@agentclientprotocol/claude-agent-acp', version: this.#version },
           authMethods: this.#authMethods,
+          agentCapabilities: { loadSession: this.#loadSession },
         });
         return;
       case 'session/new':
@@ -137,6 +156,26 @@ export class FakeBridge implements LineTransport {
           modes: { currentModeId: 'auto', availableModes: [] },
         });
         return;
+      case 'session/load': {
+        if (this.#failLoad !== undefined) {
+          this.#send({
+            jsonrpc: '2.0',
+            id: message.id as number,
+            error: { code: -32603, message: this.#failLoad },
+          });
+          return;
+        }
+        // The transcript comes back *before* the reply, which is the ordering that makes
+        // replay suppression a real problem rather than a theoretical one.
+        const asked = (message.params as { sessionId?: string } | undefined)?.sessionId;
+        if (asked !== undefined) this.sessionId = asked;
+        for (const update of this.#replayOnLoad) this.update(update);
+        this.#reply(message, {
+          sessionId: asked,
+          modes: { currentModeId: 'auto', availableModes: [] },
+        });
+        return;
+      }
       case 'session/set_mode':
         this.#reply(message, {});
         return;

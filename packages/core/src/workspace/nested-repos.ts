@@ -8,6 +8,7 @@ import { inspectWorkspace } from './inspect.js';
 import {
   branchNameFor,
   refSlug,
+  requireWorkspaceExists,
   WorkspaceError,
   type AgentWorkspace,
   type ProvisionRequest,
@@ -68,6 +69,7 @@ export class NestedRepoWorkspaces implements WorkspaceProvider {
   }
 
   async provision(request: ProvisionRequest): Promise<AgentWorkspace> {
+    requireWorkspaceExists(request.workspacePath);
     const workspace = this.workspaceFor(request);
     const branch = branchNameFor(request.teamName, request.agentName);
     const chosen = await this.#chosenRepos(request);

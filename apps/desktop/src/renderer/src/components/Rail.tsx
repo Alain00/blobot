@@ -1,7 +1,9 @@
 import type { AgentStatus } from '@blobot/core/domain';
 import type { UiAgent, UiTeam, UiTeamSummary } from '../../../shared/api.js';
-import type { Pane } from '../model.js';
+import { foldTeamStatus, lastLineOf, type Item, type Pane } from '../model.js';
+import { lastActive } from '../time.js';
 import { Blob } from './Blob.js';
+import { TeamMark } from './TeamMark.js';
 import { StatusWord } from './StatusWord.js';
 
 /**
@@ -18,6 +20,7 @@ export function Rail({
   teams,
   agents,
   statuses,
+  items,
   pane,
   onSelect,
   onSelectTeam,
@@ -27,6 +30,7 @@ export function Rail({
   teams: readonly UiTeamSummary[];
   agents: readonly UiAgent[];
   statuses: Record<string, AgentStatus>;
+  items: readonly Item[];
   pane: Pane;
   onSelect: (pane: Pane) => void;
   /** Absent in demo mode, where there is exactly one team and it is scripted. */
@@ -64,7 +68,7 @@ export function Rail({
               // one orchestrator at a time. Disabled rather than silently inert in demo mode.
               disabled={onSelectTeam === undefined}
               onClick={() => onSelectTeam?.(row.id)}
-              title={`Switch to ${row.name} — stops ${team.name}'s agents`}
+              title={`Switch to ${row.name}. Stops ${team.name}'s agents`}
             >
               <span className="ghost" aria-hidden="true" />
               <span className="who">
@@ -72,7 +76,12 @@ export function Rail({
                   <b>{row.name}</b>
                 </span>
                 <span className="sub">
-                  <span className="n">{row.agentCount} agents</span>
+                  {/* `stopped` says it is not running; it does not say which of two stopped
+                      teams you were last in. That is what a human picks between. */}
+                  <span className="n">
+                    {row.agentCount} agents
+                    {row.lastActiveAt === undefined ? '' : ` · ${lastActive(row.lastActiveAt)}`}
+                  </span>
                   <span style={{ flex: 1 }} />
                   <span className="stat">stopped</span>
                 </span>
@@ -87,27 +96,28 @@ export function Rail({
               className={`teamrow${pane.kind === 'team' ? ' sel' : ''}`}
               onClick={() => onSelect({ kind: 'team' })}
             >
-              <span className="group">
-                {agents.map((agent) => (
-                  <span key={agent.id}>
-                    <Blob name={agent.id} size={28} status={statuses[agent.id] ?? 'idle'} />
-                  </span>
-                ))}
-              </span>
+              <TeamMark agents={agents} status={teamStatus.status} size={46} />
               <span className="who">
                 <span className="nm">
                   <b>{row.name}</b>
                 </span>
-                <span className="sub">
-                  <span className="n">{row.agentCount} agents</span>
-                  <span style={{ flex: 1 }} />
-                  <StatusWord status={teamStatus.status} label={teamStatus.label} />
-                </span>
+                {/* No count on the running team: its members are enumerated directly beneath
+                    it, and the folded status is the thing that needs the width. */}
+                {/* Silent while every member is idle, for the same reason the rows are: a
+                    team that says ALL IDLE over four rows saying IDLE is four words of
+                    nothing. It speaks the moment one member is not. */}
+                {teamStatus.status !== 'idle' && (
+                  <span className="sub">
+                    <span style={{ flex: 1 }} />
+                    <StatusWord status={teamStatus.status} label={teamStatus.label} />
+                  </span>
+                )}
               </span>
             </button>
 
             {agents.map((agent) => {
               const status = statuses[agent.id] ?? 'idle';
+              const last = lastLineOf(items, agent.id);
               const selected = pane.kind === 'agent' && pane.agentId === agent.id;
               return (
                 <button
@@ -115,15 +125,33 @@ export function Rail({
                   className={`agentrow${selected ? ' sel' : ''}`}
                   onClick={() => onSelect({ kind: 'agent', agentId: agent.id })}
                 >
-                  <Blob name={agent.id} size={34} status={status} />
+                  <Blob name={agent.id} size={34} status={status} hue={agent.hue} />
                   <span className="who">
                     <span className="nm">
                       <b>{agent.name}</b>
+                      <span className="grow" />
+                      {/* When it last spoke, where a chat app puts it. Absent, rather than
+                          zero, for an agent that has not said anything yet. */}
+                      {last !== undefined && (
+                        <span className="when">{lastActive(last.at)}</span>
+                      )}
                     </span>
                     <span className="sub">
-                      <span className="role">{agent.role}</span>
+                      {/* The last thing it said, and the role only until it has said
+                          something. The role cannot simply go: blobot's names are the user's
+                          own ("Alice"), not job titles like Grok's "Inbox Manager", so on a
+                          fresh team nothing else on the row says what this agent is for. */}
+                      {last === undefined ? (
+                        <span className="role">{agent.role}</span>
+                      ) : (
+                        <span className="preview">{last.text}</span>
+                      )}
                       <span style={{ flex: 1 }} />
-                      <StatusWord status={status} />
+                      {/* Idle is the resting state of every row on a quiet team, so spelling it
+                          out four times says nothing. The word appears when there is something
+                          to say — and `waiting` still inverts, which is the whole point of
+                          keeping a word rather than a dot. */}
+                      {status !== 'idle' && <StatusWord status={status} />}
                     </span>
                   </span>
                 </button>
@@ -134,22 +162,4 @@ export function Rail({
       })}
     </div>
   );
-}
-
-/**
- * A team has a status too, folded from its members with ticket 09's precedence — so the team
- * item shouts when any agent is blocked on the user, even with the rail out of attention.
- */
-function foldTeamStatus(statuses: readonly AgentStatus[]): {
-  status: AgentStatus;
-  label: string;
-} {
-  const count = (wanted: AgentStatus): number =>
-    statuses.filter((status) => status === wanted).length;
-  const order: AgentStatus[] = ['waiting', 'failed', 'working', 'responding', 'thinking', 'starting'];
-  for (const status of order) {
-    const n = count(status);
-    if (n > 0) return { status, label: `${n} ${status}` };
-  }
-  return { status: 'idle', label: 'all idle' };
 }

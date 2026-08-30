@@ -174,6 +174,27 @@ describe('a plain folder: a copy per agent', () => {
   });
 });
 
+describe('a Workspace that is gone', () => {
+  // Both kinds answer the same way, because the user's question is the same one: the folder
+  // this team points at is not where it was.
+  it('is named as missing by the copying provider', async () => {
+    const gone = join(scratch('gone'), 'moved-away');
+    const copies = new CopiedDirectoryWorkspaces(scratch('copies'));
+    await expect(copies.provision(request(gone))).rejects.toMatchObject({
+      code: 'missing',
+      message: expect.stringContaining('moved, renamed or deleted'),
+    });
+  });
+
+  it('is named as missing by the mirrored tree', async () => {
+    const gone = join(scratch('gone'), 'moved-away');
+    const trees = new NestedRepoWorkspaces(scratch('trees'), new GitWorktreeWorkspaces(scratch('unused')));
+    await expect(trees.provision(request(gone))).rejects.toMatchObject({
+      code: 'missing',
+    });
+  });
+});
+
 describe('a folder of repositories: the mirrored tree', () => {
   const provider = (): NestedRepoWorkspaces =>
     new NestedRepoWorkspaces(scratch('trees'), new GitWorktreeWorkspaces(scratch('unused')));

@@ -27,6 +27,60 @@ export type Item =
     }
   | { kind: 'system'; id: string; at: number; agentId: string; text: string };
 
+/**
+ * Two items in a row from the same voice are one turn, and a turn is labelled once. Only the
+ * agent voice groups: `user` is right-aligned and needs no name, and a peer enclosure carries a
+ * route header that is the whole point of the container.
+ */
+export function continuesSpeaker(item: Item, previous: Item | undefined): boolean {
+  if (previous === undefined) return false;
+  if (item.kind !== 'agent') return false;
+  return previous.kind === 'agent' && previous.agentId === item.agentId;
+}
+
+/**
+ * Whether the transcript should show this agent as about to speak.
+ *
+ * Sending used to change nothing in the conversation: the blobatar started moving and the rail
+ * changed a word, but the stream sat exactly as it was until the first delta landed, which on a
+ * real runtime is several seconds of a screen that looks like the message went nowhere.
+ *
+ * It stops the moment there is a live message to watch instead, so the dots never sit under
+ * text that is already streaming. `responding` is excluded for that reason, and `waiting` and
+ * `failed` are excluded because those are states a human has to act on, not wait through.
+ */
+export function isPending(
+  status: AgentStatus,
+  items: readonly Item[],
+  agentId: string,
+): boolean {
+  if (status !== 'starting' && status !== 'thinking' && status !== 'working') return false;
+  return !items.some((item) => item.kind === 'agent' && item.agentId === agentId && item.live);
+}
+
+/** What an agent last said, for the rail's preview line. Undefined until it has spoken. */
+export interface LastLine {
+  readonly text: string;
+  readonly at: number;
+}
+
+/**
+ * The last thing this agent said, in its own words — never the user's, and never a peer's.
+ * The rail row is that agent, so a line on it that somebody else wrote would be read as theirs.
+ * Collapsed to one line here rather than in CSS: a preview of markdown that keeps its newlines
+ * is a preview with a blank second half.
+ */
+export function lastLineOf(items: readonly Item[], agentId: string): LastLine | undefined {
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const item = items[index] as Item;
+    if (item.kind !== 'agent' || item.agentId !== agentId) continue;
+    const text = item.text.replace(/\s+/g, ' ').trim();
+    if (text === '') continue;
+    return { text, at: item.at };
+  }
+  return undefined;
+}
+
 export interface FeedEntry {
   readonly id: string;
   readonly at: number;
@@ -211,17 +265,35 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
         }),
       };
     }
-    case 'turn_ended':
+    case 'turn_ended': {
+      // A turn that ended the ordinary way is log, and the log is the feed. A turn that
+      // stopped for any other reason is part of the conversation — the reader is looking at
+      // an answer that just stopped being written, and the reason belongs next to it rather
+      // than in a column they may not be watching.
+      const unusual = event.stopReason !== 'end_turn';
       return {
         ...state,
+        items: unusual
+          ? [
+              ...state.items,
+              {
+                kind: 'system',
+                id: `${event.turnId}:${event.agentId}:${event.at}:stopped`,
+                at: event.at,
+                agentId: event.agentId,
+                text: `turn stopped · ${event.stopReason.replace(/_/g, ' ')}`,
+              },
+            ]
+          : state.items,
         feed: pushFeed(state.feed, {
           id: `${event.turnId}:${event.agentId}:${event.at}`,
           at: event.at,
           agentId: event.agentId,
           text: `turn ended · ${event.stopReason}`,
-          emphasis: event.stopReason !== 'end_turn',
+          emphasis: unusual,
         }),
       };
+    }
     case 'error':
       return {
         ...state,
@@ -280,4 +352,22 @@ export function itemsFor(items: readonly Item[], pane: Pane): Item[] {
             : item.agentId === pane.agentId,
         );
   return visible.sort((left, right) => left.at - right.at);
+}
+
+/**
+ * A team has a status too, folded from its members with ticket 09's precedence — so the team
+ * item shouts when any agent is blocked on the user, even with the rail out of attention.
+ */
+export function foldTeamStatus(statuses: readonly AgentStatus[]): {
+  status: AgentStatus;
+  label: string;
+} {
+  const count = (wanted: AgentStatus): number =>
+    statuses.filter((status) => status === wanted).length;
+  const order: AgentStatus[] = ['waiting', 'failed', 'working', 'responding', 'thinking', 'starting'];
+  for (const status of order) {
+    const n = count(status);
+    if (n > 0) return { status, label: `${n} ${status}` };
+  }
+  return { status: 'idle', label: 'all idle' };
 }

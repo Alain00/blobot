@@ -18,3 +18,17 @@ export interface RunningTeam {
   readonly autoplayPrompt: string;
   close(): Promise<void> | void;
 }
+
+/**
+ * Whether anyone on the team is mid-turn.
+ *
+ * Derived from the status fold rather than tracked separately, so it cannot disagree with the
+ * blobatar the user is looking at. `failed` counts as quiet: a dead agent is not doing work
+ * that evicting the team would throw away.
+ */
+export function isWorking(live: RunningTeam): boolean {
+  return live.agents.some((agent) => {
+    const status = live.orchestrator.statusOf(agent.id);
+    return status !== 'idle' && status !== 'failed';
+  });
+}

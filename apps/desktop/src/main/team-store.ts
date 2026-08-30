@@ -21,6 +21,8 @@ export interface NewAgentSpec {
   readonly runtimeId: string;
   readonly instructions?: string;
   readonly executablePath?: string;
+  /** The blobatar hue the user picked, 0 to 359. Absent means the name derives it. */
+  readonly hue?: number;
 }
 
 /** Forming a team out of agents that already exist. */
@@ -96,6 +98,7 @@ export function hireAgent(spec: NewAgentSpec, deps: CreateTeamDeps): AgentProfil
       ? {}
       : { instructions: spec.instructions.trim() }),
     ...(spec.executablePath === undefined ? {} : { executablePath: spec.executablePath }),
+    ...(spec.hue === undefined ? {} : { hue: spec.hue }),
     createdAt: now,
   });
 }
@@ -193,6 +196,7 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
       role: profile.role,
       runtimeId: profile.runtimeId,
       ...(profile.instructions === undefined ? {} : { instructions: profile.instructions }),
+      ...(profile.hue === undefined ? {} : { hue: profile.hue }),
       ...(profile.executablePath === undefined ? {} : { executablePath: profile.executablePath }),
       ...(profile.model === undefined ? {} : { model: profile.model }),
       workspacePath: workspace.path,

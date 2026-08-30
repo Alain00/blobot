@@ -158,6 +158,90 @@ sent this agent", so a solid container would make them siblings; dashed against 
 lower authority before a single word is parsed — which is the visual form of ticket 06's
 decision that a peer message is refusable rather than authoritative.
 
+## Amendment, 2026-08-29: the user's turn is a bubble on the right
+
+Reopened by the author after comparing the transcript with Grok's, which is friendlier to a
+user who has never seen an agent before. **The three voices stand; what changed is the form of
+one of them.**
+
+- **From you** — a solid filled bubble, right-aligned, no name. Right *is* the label: there is
+  only ever one "you", so the side stays unambiguous however many agents share the pane, which
+  is exactly why this survives here when Grok's two-sided layout would not. The `to Alice`
+  routing tag moves under the bubble, and only in the team pane.
+- **From the agent** — unchanged. No container. Boxing it would put a solid enclosure in the
+  same column as the dashed peer and cost the contrast below.
+- **From a peer** — unchanged, and the reason is unchanged: dashed against solid still reads as
+  lower authority before a word is parsed. The user's bubble being solid *sharpens* that pair
+  rather than blurring it.
+
+Two things came with it, neither of which needed this decision reopened:
+
+- **The transcript is a column, not a left margin.** It was `max-width:680px` flush left in a
+  pane twice that wide, so every message hung off the rail with half the window empty. It now
+  fills the pane to a 900px measure and centres in what is left.
+- **A turn is labelled once.** Consecutive answers from the same agent drop the repeated
+  blobatar and name and sit closer to the line above them. A time rule reopens the turn.
+
+## Amendment, 2026-08-29: the composer, the pending turn, and the activity column
+
+Same pass, all author-directed.
+
+- **The send control is an arrow, not a sentence.** `send to Alice`, under a transcript of
+  Alice, in her pane, was the third time the screen said Alice. It is a round icon button in a
+  pill composer now. In the *team* pane it wears the resolved agent's blobatar instead of the
+  arrow, because there the recipient is a live question and nothing else answers it. The
+  `@mention` is still the address and send is still disabled until one resolves.
+- **A sent message shows the agent about to answer.** There was nothing in the stream between
+  sending and the first delta: the blobatar moved and the rail changed a word, but the
+  transcript sat unchanged, which on a real runtime is several seconds that look like the
+  message went nowhere. Three dots under the agent's name, gone the moment there is streaming
+  text to watch instead. `isPending` in `model.ts`, tested.
+- **The activity column can be hidden**, from an icon in the chrome. This does not reopen the
+  rejection of *auto*-collapsing it: that failed because the column would come back on the first
+  tool call and shove the conversation sideways mid-turn. A toggle only ever moves when the user
+  asks. Remembered in `localStorage`, like the rail's width.
+- **Selection in the rail is the raised ground alone.** The 2px ink rule was a third emphasis on
+  a row that already lifts and brightens, and it cut into the blobatar's column.
+- **The team mark's members overlap by about a third** rather than by a few pixels, so the mark
+  reads as one clump instead of a constellation. `markLayout` has a test for it.
+- **Icons are Lucide**, at the author's direction. First use in the app.
+
+## Amendment, 2026-08-29: the creation flow is editorial, and an agent has a colour
+
+Author-directed, after the fourth pass.
+
+- **The add-team screen is the one editorial page in the app.** A display line in the hand face
+  the page already had, a standfirst, four numbered steps. Nowhere else changes: it is the only
+  surface that is read once, start to finish, before anything exists.
+- **Its controls are the composer's, generalised.** `.field` is the composer's pill; `.btn` is
+  the same shape; the primary button inverts to ink when armed, as send does.
+- **Hiring is a modal**, because the agent outlives the team being made. The blobatar preview is
+  the subject of it: centred, on the page rather than in a card, with no name under it, since
+  the name is in the field below being typed.
+- **An agent has a colour**, chosen from thirteen in a block, defaulting to the one its name
+  gives it. Persisted on the profile and copied onto the Agent, because the face has to follow
+  it onto every team. This does not spend the palette: the blobatars were always the saturated
+  thing, and this only says which saturated thing.
+- **Radix supplies the dialog and the select.** Behaviour only. shadcn was considered and
+  rejected: the design system exists, and its value would have been the defaults we override.
+
+## Amendment, 2026-08-29: what an agent's rail row says
+
+Also from the Grok comparison, and it reverses the earlier rejection of a preview line.
+
+- **The last thing the agent said, and when.** Its own words only, collapsed to one line, with a
+  terse timestamp on the name line. A peer's message and the user's are not that agent speaking.
+- **The role stays, as the fallback.** Grok can drop it because its names *are* roles ("Inbox
+  Manager"). blobot's are the user's own, so `Alice` alone says nothing about what she is for.
+  The row shows the role until she has said something, and the preview after.
+- **`idle` is no longer spelled out.** A quiet team said IDLE on every row under ALL IDLE, which
+  is the one state that needs no words. Every other state still gets its word, and `waiting`
+  still inverts.
+- **Still no coloured dot**, and this is the part of the request not taken. Colour is spent on
+  the blobatars by this ticket's governing rule, and seven states cannot be told apart by one
+  anyway. Motion on the blobatar plus a word on the states that are not resting is the same
+  information without spending the palette.
+
 ### The recipient is an `@mention`, not a picker
 
 The team pane originally had a `to Alice ▾` picker. It is gone, replaced by addressing inside

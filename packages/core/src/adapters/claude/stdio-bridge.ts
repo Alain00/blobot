@@ -132,7 +132,7 @@ export function bridgeEntryPath(): string {
   throw new Error(
     `${BRIDGE_PACKAGE}@${BRIDGE_VERSION} could not be resolved, so no Claude agent can start. ` +
       'Install it beside the running bundle, or point BLOBOT_CLAUDE_BRIDGE at its dist/index.js. ' +
-      `Tried — ${failures.join('; ')}`,
+      `Tried: ${failures.join('; ')}`,
   );
 }
 

@@ -343,6 +343,34 @@ blobot's port may change across orchestrator restarts, verify this before relyin
 `session/load` request never echoes the server set back, so a mismatch would be silent (§4
 again).
 
+### 7a. A *changed* URL and token on `session/load` — now OBSERVED, on Claude
+
+**OBSERVED, 2026-08-29**, and it is what the inference above expected. The live test is
+`packages/core/src/adapters/claude/live.test.ts`, *"resumes across processes onto a new
+loopback port, keeping both memory and its tool"*, so this stays honest as the bridge moves.
+
+A first `PeerMessageServer` on an ephemeral port minted a token for `alice`; the agent was told
+a codeword; then **`stop()` and the process both went away** — the same shutdown a team switch
+performs, `session/close` included. A second server came up on a **different port with a
+different token**, and a brand-new bridge process did `session/load` with that new entry:
+
+```
+[session/query] sessionId=bfe9921f-… resume=bfe9921f-… apiType=native baseUrl=native
+```
+
+Three things fall out of one run:
+
+1. **A changed HTTP entry is honoured, not rejected or ignored.** The resumed agent called
+   `message_agent` and the call arrived at the *second* server. So the ephemeral port is not a
+   reason to avoid resuming, which is what §7 left open.
+2. **`session/close` does not end a session for good.** Resume works after a clean shutdown,
+   so blobot need not choose between a tidy stop and a resumable one.
+3. **The transcript replay must be muted by the client.** The load replays the whole prior
+   conversation as `session/update` notifications before it answers; the adapter drops them
+   (`#replaying`), or every relaunch would repeat everything the agent has ever said.
+
+Still **not** observed: a changed *server name*, and any of this against OpenCode.
+
 ---
 
 ## 8. Namespacing — identical to stdio, no HTTP-specific difference

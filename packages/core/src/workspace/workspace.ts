@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+
 /**
  * Workspaces, in the domain's words rather than git's.
  *
@@ -128,11 +130,34 @@ export function refSlug(name: string): string {
 }
 
 export class WorkspaceError extends Error {
-  readonly code: 'not_git' | 'no_commits' | 'git_failed' | 'empty_workspace' | 'copy_failed';
+  readonly code:
+    | 'missing'
+    | 'not_git'
+    | 'no_commits'
+    | 'git_failed'
+    | 'empty_workspace'
+    | 'copy_failed';
 
   constructor(code: WorkspaceError['code'], message: string) {
     super(message);
     this.name = 'WorkspaceError';
     this.code = code;
   }
+}
+
+/**
+ * The folder a team points at is not there any more.
+ *
+ * Its own failure, and every provider raises it before anything else, because `inspect` calls
+ * a path that does not exist `plain` — a sane answer for the folder picker, where the user is
+ * about to create the thing, and a lie everywhere else. Without this check the git provider
+ * greets a deleted Workspace with "is not a git repository", which sends the user off to run
+ * `git init` on a directory that no longer exists.
+ */
+export function requireWorkspaceExists(workspacePath: string): void {
+  if (existsSync(workspacePath)) return;
+  throw new WorkspaceError(
+    'missing',
+    `blobot cannot find ${workspacePath}. The folder this team points at has been moved, renamed or deleted.`,
+  );
 }

@@ -95,6 +95,12 @@ export interface ClaudeAgentRuntimeOptions {
   readonly cwd: string;
   /** Composed by core (`composePersona`); injected here by the mechanism Claude offers. */
   readonly persona?: string;
+  /**
+   * Bring this agent back with its memory rather than as a stranger. The provider's own
+   * session id, stored when the agent last ran. A session the provider no longer has is not
+   * an error: the runtime falls back to a new one, which is exactly where it was before.
+   */
+  readonly resumeSessionId?: string;
   readonly model?: string;
   readonly mcpServers?: readonly McpServerConfig[];
   readonly clock?: Clock;
@@ -130,6 +136,8 @@ export class ClaudeAgentRuntime implements AgentRuntime {
   #permissionHandler: PermissionHandler | undefined;
   #turnIndex = 0;
   #modeId: string | undefined;
+  #replaying = false;
+  #resumed = false;
 
   constructor(options: ClaudeAgentRuntimeOptions) {
     this.agentId = options.agentId;
@@ -149,6 +157,12 @@ export class ClaudeAgentRuntime implements AgentRuntime {
   /** The mode the bridge says it is in. `default`, or this adapter has a bug worth seeing. */
   get permissionMode(): string | undefined {
     return this.#modeId;
+  }
+
+  /** Whether the agent came back with its memory. False after a fallback to a new session,
+   *  which is the difference between a teammate who remembers yesterday and one who does not. */
+  get resumed(): boolean {
+    return this.#resumed;
   }
 
   async start(): Promise<void> {
@@ -197,7 +211,65 @@ export class ClaudeAgentRuntime implements AgentRuntime {
     assertBridgeVersion(initialized);
     assertAuthenticated(initialized);
 
-    const session = await connection.request<NewSessionResult>('session/new', {
+    const wanted = this.#options.resumeSessionId;
+    const canLoad = initialized.agentCapabilities?.loadSession === true;
+    const session =
+      wanted === undefined || wanted === '' || !canLoad
+        ? await this.#newSession(connection)
+        : await this.#loadSession(connection, wanted);
+    if (session.sessionId === undefined) {
+      throw new Error(`${this.agentId}: the bridge returned no sessionId`);
+    }
+    this.#sessionId = session.sessionId;
+    this.#modeId = session.modes?.currentModeId;
+    await this.#applyPermissionMode();
+  }
+
+  #newSession(connection: JsonRpcConnection): Promise<NewSessionResult> {
+    return connection.request<NewSessionResult>('session/new', this.#sessionParams());
+  }
+
+  /**
+   * Resume, with two traps that are both observed rather than guessed (research 02 §2.8 and
+   * research 15 §7).
+   *
+   * `mcpServers` must be re-supplied. Omit it and `message_agent` is simply gone, while the
+   * replayed transcript still shows the agent using it successfully a moment ago — so it reads
+   * as the tool breaking rather than as a tool never offered.
+   *
+   * And the load replays the whole prior transcript back as `session/update` notifications
+   * before it returns. That transcript is already in the store and already on screen, so the
+   * stream is muted while the load runs. Letting it through would double every message the
+   * agent has ever said, once per launch.
+   */
+  async #loadSession(connection: JsonRpcConnection, sessionId: string): Promise<NewSessionResult> {
+    this.#replaying = true;
+    try {
+      const loaded = await connection.request<NewSessionResult>('session/load', {
+        sessionId,
+        ...this.#sessionParams(),
+      });
+      this.#resumed = true;
+      // `session/load` answers with `modes` and, in the runs we have seen, the id we asked
+      // for. Trusting our own id if it answers with none keeps a resumed agent addressable.
+      return { sessionId, ...loaded };
+    } catch (error) {
+      // A session the provider has forgotten, or a transcript that has aged out. The agent
+      // starts fresh against a transcript the store still has: worse than resuming, and far
+      // better than a team that will not launch.
+      this.#options.onStderr?.(
+        `blobot: could not resume ${sessionId} (${error instanceof Error ? error.message : String(error)}); starting a new session`,
+      );
+      return this.#newSession(connection);
+    } finally {
+      this.#replaying = false;
+    }
+  }
+
+  /** Identical on `session/new` and `session/load`, because the second is a resume of the
+   *  first and the bridge fingerprints these params to decide whether to tear the query down. */
+  #sessionParams(): Record<string, unknown> {
+    return {
       cwd: this.#options.cwd,
       mcpServers: (this.#options.mcpServers ?? []).map(toAcpMcpServer),
       _meta: {
@@ -211,13 +283,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
           },
         },
       },
-    });
-    if (session.sessionId === undefined) {
-      throw new Error(`${this.agentId}: session/new returned no sessionId`);
-    }
-    this.#sessionId = session.sessionId;
-    this.#modeId = session.modes?.currentModeId;
-    await this.#applyPermissionMode();
+    };
   }
 
   /**
@@ -316,6 +382,8 @@ export class ClaudeAgentRuntime implements AgentRuntime {
   }
 
   #onSessionUpdate(notification: SessionNotification): void {
+    // The replay of a resumed transcript, which every listener already has. See `#loadSession`.
+    if (this.#replaying) return;
     if (notification.sessionId !== this.#sessionId) return;
     const update = notification.update;
     if (update === undefined) return;

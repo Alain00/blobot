@@ -26,6 +26,9 @@ and raise it rather than working around it.
   wherever git can hold the Workspace, a plain copy where it cannot. Never a shared directory.
 - **The orchestrator owns agent-to-agent communication.** It is our concern, not ACP's, and
   never a full context copy between agents — always compact context.
+- **The blobatars are the only saturated thing on screen.** Status is monochrome, carried by
+  motion, a mono word and a hairline. The rest of the interface's rules, and the reason behind
+  each, live in `DESIGN.md` at the repo root. **Read it before changing anything a user sees.**
 
 ## Engineering constraints
 
@@ -48,6 +51,13 @@ The five canonical triage roles, each label string equal to its name. See `docs/
 ### Domain docs
 
 Single-context — one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+### Interface
+
+`DESIGN.md` at the repo root is the standard: tokens, the three transcript voices, controls,
+icons, motion, product copy, and what the stylesheet's one flat namespace demands of you. It is
+binding the way the architectural rules are — contradicting a rule is a ticket 12 reopen and a
+note in `build.md`, adding to it is ordinary work.
 
 ## Current work
 
@@ -128,8 +138,12 @@ up. Read it before starting work.
   Agent from it, because a workspace, a session, a mailbox and a status are things a Team gives
   an Agent and none of them can be shared.
 
-Next: **ticket 14's disclosure and permission block**, then one orchestrator per team and
-editing a team. OpenCode (03 + 16) is deferred by the author, 2026-08-29; the cost of proving
+Switching a team no longer restarts it: `TeamPool` keeps the last three live, LRU by
+selection, never evicting the active team or one that is mid-turn, and the Claude adapter
+resumes with `session/load` so a team that *was* evicted comes back knowing the conversation.
+Every stream channel leads with a team id, because several teams stream at once now.
+
+Next: **ticket 14's disclosure and permission block**, then editing a team. OpenCode (03 + 16) is deferred by the author, 2026-08-29; the cost of proving
 `AgentRuntime` against one provider only is recorded in `build.md`.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that

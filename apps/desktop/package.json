@@ -15,7 +15,10 @@
     "@agentclientprotocol/claude-agent-acp": "0.70.0",
     "@blobatar/react": "^2.7.0",
     "@blobot/core": "workspace:*",
+    "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-select": "^2.3.7",
     "better-sqlite3": "^13.0.3",
+    "lucide-react": "^1.37.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "streamdown": "^2.6.0"

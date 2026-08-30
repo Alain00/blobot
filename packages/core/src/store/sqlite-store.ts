@@ -107,6 +107,7 @@ export class SqliteStore implements MessageStore {
       executablePath: profile.executablePath ?? null,
       model: profile.model ?? null,
       instructions: profile.instructions ?? null,
+      hue: profile.hue ?? null,
       createdAt: profile.createdAt,
       deletedAt: profile.deletedAt ?? null,
     }).run();
@@ -164,6 +165,7 @@ export class SqliteStore implements MessageStore {
       name: agent.name,
       role: agent.role,
       instructions: agent.instructions ?? null,
+      hue: agent.hue ?? null,
       runtimeId: agent.runtimeId,
       executablePath: agent.executablePath ?? null,
       model: agent.model ?? null,
@@ -189,6 +191,23 @@ export class SqliteStore implements MessageStore {
     return rows
       .filter((row) => options.includeDeleted === true || row.deletedAt === null)
       .map(toAgentRecord);
+  }
+
+  /**
+   * The provider's own session id from this agent's most recent session, if it had one.
+   *
+   * This is what turns a relaunch into a resume: hand it back to the runtime and the agent
+   * comes back knowing the conversation, instead of reading its own transcript as a stranger.
+   * `undefined` is ordinary — a first launch, or a runtime that names no session.
+   */
+  lastProviderSessionOf(agentId: string): string | undefined {
+    const row = this.#db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.agentId, agentId))
+      .orderBy(desc(sessions.startedAt), desc(sessions.id))
+      .get();
+    return row?.providerSessionId ?? undefined;
   }
 
   startSession(session: SessionRecord): SessionRecord {
@@ -297,6 +316,34 @@ export class SqliteStore implements MessageStore {
       .map((row) => ({ id: row.id, agentId: row.agentId, text: row.text, at: row.at }));
   }
 
+  /**
+   * When this team last said anything: the latest of a user or peer message and an agent's own
+   * words. The rail draws it on a stopped team, which otherwise carries no reason to prefer one
+   * over another. Undefined for a team that has never held a turn.
+   */
+  lastActiveAt(teamId: string): number | undefined {
+    const said = this.#db
+      .select({ at: messages.at })
+      .from(messages)
+      .where(eq(messages.teamId, teamId))
+      .orderBy(desc(messages.at))
+      .limit(1)
+      .get()?.at;
+    const answers = this.agentsOfTeam(teamId, { includeDeleted: true }).map((agent) => agent.id);
+    const answered =
+      answers.length === 0
+        ? undefined
+        : this.#db
+            .select({ at: agentMessages.at })
+            .from(agentMessages)
+            .where(inArray(agentMessages.agentId, answers))
+            .orderBy(desc(agentMessages.at))
+            .limit(1)
+            .get()?.at;
+    const times = [said, answered].filter((at): at is number => at !== undefined);
+    return times.length === 0 ? undefined : Math.max(...times);
+  }
+
   /** A row count per table, for the demo's closing line and for eyeballing a transcript. */
   transcriptCounts(): Record<string, number> {
     const tables = ['turns', 'agent_messages', 'tool_calls', 'messages', 'events'];
@@ -323,6 +370,7 @@ function toProfileRecord(row: AgentProfileRow): AgentProfileRecord {
     ...(row.executablePath === null ? {} : { executablePath: row.executablePath }),
     ...(row.model === null ? {} : { model: row.model }),
     ...(row.instructions === null ? {} : { instructions: row.instructions }),
+    ...(row.hue === null ? {} : { hue: row.hue }),
     ...(row.deletedAt === null ? {} : { deletedAt: row.deletedAt }),
   };
 }
@@ -352,6 +400,7 @@ function toAgentRecord(row: AgentRow): AgentRecord {
     createdAt: row.createdAt,
     ...(row.profileId === null ? {} : { profileId: row.profileId }),
     ...(row.instructions === null ? {} : { instructions: row.instructions }),
+    ...(row.hue === null ? {} : { hue: row.hue }),
     ...(row.executablePath === null ? {} : { executablePath: row.executablePath }),
     ...(row.model === null ? {} : { model: row.model }),
     ...(row.branch === null ? {} : { branch: row.branch }),

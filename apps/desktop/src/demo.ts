@@ -61,7 +61,7 @@ const runtimes = new Map<string, AgentRuntime>([
       agentId: alice.id,
       clock,
       peerMessageHandler: (call) => orchestrator.handleMessageAgent(call),
-      script: [scenarios['alice-asks-bob'], scenario('after').say('Good catch — fixing.').end()],
+      script: [scenarios['alice-asks-bob'], scenario('after').say('Good catch, fixing.').end()],
     }),
   ],
   [
@@ -108,7 +108,7 @@ orchestrator.onStatusChange((agentId, status: AgentStatus) => {
   write(clock.now(), name(agentId), `status    ${status}`);
 });
 orchestrator.onBudgetExhausted((exhausted) => {
-  write(clock.now(), 'team ', `budget    ${exhausted.turnsUsed}/${exhausted.turnBudget} — continue?`);
+  write(clock.now(), 'team ', `budget    ${exhausted.turnsUsed}/${exhausted.turnBudget} · continue?`);
 });
 
 function write(at: number, who: string, line: string): void {

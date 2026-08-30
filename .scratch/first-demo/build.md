@@ -282,6 +282,237 @@ the previous team's live agents without asking is acceptable or alarming. The cr
 now been used with a mouse; whether it reads in the right order with agents before the team was
 not reported on.
 
+### UI, 2026-08-29: read against Grok's agent app
+
+The author put a screenshot of blobot beside one of Grok's multi-agent app and asked what to
+take. Three things landed; the rest of the comparison is written up in the session, not here.
+
+- **The activity column was a header over nothing.** On a quiet team a fifth of the window was
+  an `ACTIVITY` label and blank space. Grok has no such column at all: its one structural event
+  ("Created routine") sits inline in the timeline. The split adopted is by *kind*, not by
+  wholesale move. A turn that ends `end_turn` is log and stays in the feed. A turn that stops
+  for any other reason (`cancelled`, `max_tokens`, `refusal`) is now also a `system` item in the
+  conversation, because the reader is looking at an answer that just stopped being written and
+  the reason belongs beside it, not in a column they may not be watching. The feed keeps its
+  width when empty and says what will land there. Collapsing it was rejected: it would reappear
+  on the first tool call and shove the conversation sideways mid-turn.
+- **There was no time anywhere in the transcript**, while the feed timestamped every line. It
+  matters more here than in Grok's app: a launch restores a persisted transcript verbatim, so
+  yesterday's conversation was pixel-identical to one thirty seconds old, and the agent does not
+  remember it either. A muted mono rule now appears before the first item and wherever the gap
+  since the previous one is over fifteen minutes. `1:16 PM` today, `Yesterday 1:16 PM`, then
+  `Aug 20 1:16 PM`. A burst of replies inside one turn gets none.
+- **A short conversation hangs from the bottom** rather than stranding three lines at the top of
+  an empty column. `.stream > :first-child{margin-top:auto}`: the auto margin absorbs free space
+  and resolves to zero once the transcript overflows, so `useStickToBottom` is untouched.
+
+A `system` line now carries the agent's name in the team pane, where several agents share one
+stream. That applies to error lines too, which were anonymous before.
+
+What was looked at and deliberately **not** taken: Grok's bubbles and right-aligned user turns
+encode two sides, and blobot has three voices, one of which (the dashed peer enclosure) exists
+to read as lower authority. Also skipped: its search field, its account row, its reactions, and
+its last-message preview under each row, which was already rejected once in favour of the role.
+
+Still open from that comparison, in rough order of value: the conversation header repeats the
+topbar's team name and path in the team pane, and that line is where ticket 14's posture
+indicator wants to go; stopped teams in the rail carry no recency, so there is nothing to choose
+between two of them; the composer's `send` is the weakest control on the page.
+
+### UI, second pass, 2026-08-29
+
+Follow-ups from the same comparison, plus three things the author asked for while looking at it.
+
+- **The conversation header stopped repeating the topbar.** In the team pane its second line was
+  the workspace path, which the topbar already carries. It is now ticket 14's quiet posture
+  indicator, so what the agents may do without asking is on screen permanently rather than only
+  in the creation disclosure. One `POSTURE` constant feeds both panes. The line wraps rather than
+  shrinks, and the posture is the half that never truncates: a branch name is recoverable by
+  looking, an indicator nobody can read is noise.
+- **Stopped teams carry recency**, from a new `SqliteStore.lastActiveAt` (the later of a message
+  and an agent's own words). Terse on purpose (`32m`, `3h`, `yesterday`, `Aug 20`), because `ago`
+  is the word that gets the line truncated. Rail and transcript time copy now share `time.ts`.
+- **The composer's send takes an ink border once armed.** It shared the grey of every secondary
+  button, so the border now answers "will this go anywhere?".
+- **The team mark replaced the overlapped blobatar row.** Members are packed into one square and
+  arranged by how many there are: one fills the box, a pair sits corner to corner, three make a
+  triangle, four a square, and past four the last slot is a `+N`. `markLayout` is a pure function
+  with its own tests, so the arrangement is assertable without a DOM.
+
+  Two decisions inside it. The box **grew** to 46px in the rail and 48 in the header rather than
+  packing members into the old 28px footprint: the blobatar is ticket 09's motion channel, and
+  breathing at `scale(1.035)` on a 13px blob is half a pixel, which is the regression the 26→34
+  pass had just fixed. And the mark animates the **folded team status once, for the whole
+  cluster**, rather than each member separately, because four members bobbing out of phase is
+  four things fidgeting where one animation is one thing moving. Members overlap by a few pixels
+  and keep the drop-shadow cut, since a gutter leaves air an irregular silhouette cannot fill.
+- **The agent rows are no longer indented** under their team. Only one team runs at a time, so
+  there is never a second group to tell them apart from, and the rule under the group already
+  closes it. Every blobatar now sits on one column, with the team's mark as the wider one. The
+  stopped teams' ghost grew to hold the same box, so the names stay on one left edge.
+- **The running team's row dropped its agent count.** Its members are enumerated directly
+  beneath it, and `1 responding` needs the width more than `2 agents` does.
+- **The rail is resizable and remembers its width** (`useRailWidth`, `localStorage`, 180 to 460).
+  Pointer capture rather than window listeners: the pointer leaves the 9px handle on the first
+  frame of any real drag. The width is a preference about this screen, so it does not go in the
+  database, which is for things the orchestrator can act on.
+
+Fixed on the way: **`--pane=<agentId>` had stopped working.** The first snapshot reset the pane
+to the team unconditionally; resetting now belongs to a team *change*, which is the only case
+that needs it, since the agent it was showing belongs to the team that just went away.
+
+### UI, third pass, 2026-08-29: message containers and the rail row
+
+The author put the two transcripts side by side again and asked the direct question: Grok's is
+friendlier to someone who has never used this. It is, and the reasons separate cleanly into
+three, only one of which was a decision ticket 12 had made.
+
+**Ticket 12 is amended, not contradicted** (two `## Amendment` sections on it). What changed:
+
+- **The user's turn is a solid bubble on the right, with no name.** The earlier note in this file
+  rejected exactly this, on the grounds that bubbles encode two sides and blobot has three
+  voices. That reasoning was half right: right-alignment does not encode two sides, it encodes
+  *one* side, and there is only ever one "you" no matter how many agents share the pane. The
+  agent voice stays uncontained and the peer stays dashed, so the authority ordering the dashed
+  border exists for is untouched. The `to Alice` tag moved under the bubble, team pane only.
+- **The transcript is a column rather than a left margin.** `max-width:680px` flush left in a
+  1300px pane put every message against the rail with half the window empty, which is what made
+  it read as a log. A `.col` wrapper fills the pane to 900px and centres. This was the largest
+  single difference between the two screenshots and it cost no decision at all.
+- **A turn is labelled once.** Consecutive answers from one agent drop the repeated blobatar and
+  name and tighten to an 8px gap, so the speaker gap is the wider one. `continuesSpeaker` in
+  `model.ts`, with tests: only the agent voice groups.
+- **An agent's rail row carries its last line and when it said it**, reversing the earlier
+  rejection of a preview. `lastLineOf` takes that agent's own words only, collapsed to one line,
+  and is tested against the case that matters: a peer message addressed to Bob is not Bob
+  speaking, so it never becomes his preview.
+- **The role stays as the fallback**, against the author's first instinct. Grok can drop it
+  because its names *are* roles ("Inbox Manager", "Expense Manager"); blobot's are the user's
+  own, so `Alice` alone says nothing about what she is for. Role until she speaks, preview
+  after.
+- **`idle` is no longer printed**, on the rows or on the team fold. Four rows saying IDLE under
+  a team saying ALL IDLE is the resting state of a quiet app spelled out five times. Every other
+  state keeps its word, so `waiting` still inverts and `failed` still strikes through.
+- **Not taken: a coloured status dot.** Ticket 12's governing rule spends colour on the
+  blobatars, and seven states do not fit in one dot regardless. Raised with the author rather
+  than silently dropped.
+
+Not verified visually: the 900px column at a wide window. This machine's display caps near
+945px, so the screenshots only exercise the narrow case, where the column fills.
+
+### UI, fourth pass, 2026-08-29: the composer and the wait
+
+Author-directed, from the running app rather than from Grok's screenshot this time. Ticket 12
+carries a third `## Amendment`; the details are there. In short:
+
+- The composer is a pill with a round **Lucide** `ArrowUp` (the app's first icon dependency,
+  `lucide-react`). `send to Alice` is gone from an agent's pane, where the pane is the
+  recipient; the team pane's button wears the resolved blobatar instead.
+- **The gap between sending and the first delta had no indicator at all.** Three dots under the
+  agent's name now fill it, and stop the instant there is streaming text. `isPending` covers the
+  cases that matter: it never runs alongside a live message, and never stands in for `waiting`
+  or `failed`, which are states a human has to clear rather than wait through.
+- The activity column has a toggle in the chrome (`useFeedVisible`, `localStorage`). This is not
+  the auto-collapse that was rejected: a toggle never moves the conversation mid-turn.
+- Scrollbars were the platform's light grey with stepper arrows, which made them the brightest
+  thing on a monochrome page. Now a hairline that takes ink on hover.
+- Rail selection dropped its ink rule; the team mark's members overlap by a third.
+
+### UI, fifth pass, 2026-08-29: the creation flow, and a hue that persists
+
+The add-team screen was a form with mono labels; it is now the one **editorial** page in the
+app. It is read once, start to finish, before anything exists, which is a different job from
+every other surface, where the blobatars are the loudest thing and the user is working rather
+than reading. So: a display line in the hand face the page already had (Caveat, at 58px, no new
+family — an Instrument Serif was tried and the author rejected it), a standfirst, and four
+numbered steps. It still spends no colour.
+
+**Controls are the composer's, generalised.** `.field` is the composer's pill with a 12px
+radius; `.btn` is the same pill; `.btn.primary` inverts to ink when armed, exactly as send does.
+The old `.textfield` / `.agentdraft` / `.hire` vocabulary is gone. A roster row is a bordered
+card with the agent's **blobatar** on it and a circular tick, so the list of agents is
+recognisably the same set of faces that will appear in the rail.
+
+**Hiring is a modal.** Not because the form is long, but because hiring is not a step of making
+a team: the agent exists afterwards whether or not this team is created, and can join any other.
+A dialog says "its own thing" in a language every user already reads. Escape and the scrim close
+it; the blobatar preview is 104px, seeded by the name as it is typed, because this is the only
+moment the user meets that face.
+
+**A blobatar hue is now a persisted fact about an agent** (migration `0003`, nullable `hue` on
+`agent_profiles` and on `agents`, copied at team creation like name and role so a transcript
+shows the face the agent wore at the time). NULL means the name derives it, which is the default
+and stays the default. `AgentProfile.hue` is the one field in `orchestrator/domain.ts` that only
+the UI reads; it is there rather than in the renderer because the face has to follow the agent
+onto every team it joins. Nothing branches on it.
+
+**Thirteen colours in a block, not a slider.** The first pass was a hue slider, and the author
+replaced it: 360 answers to a question with about a dozen useful ones, and two agents a few
+degrees apart are two agents nobody can tell apart in a 20px rail. `HUES` is spaced so every
+pair is distinguishable at blobatar size, which is the only size that matters, and the grid is
+seven by two exactly filled — a ragged wrap reads as a list that ran out of room. The first cell
+is the name's own colour, drawn as the dashed silhouette the app already uses for "not drawn,
+and that is fine", so the default is inside the set rather than a reset button beside it. It is
+a `radiogroup`, because that is what it is.
+
+**Radix owns the dialog and the select** (`@radix-ui/react-dialog`, `-select`), at the author's
+direction, after asking whether shadcn was worth adopting. It is not: the design system already
+exists and shadcn's value is mostly the visual defaults it would have to override, plus Tailwind
+in the build. What was genuinely missing is the half nobody screenshots — a focus trap, focus
+returned to the button that opened the dialog, `aria-modal`, and a listbox with arrow keys and
+type-ahead. Those come from the primitives; every rule of the look is still this app's own.
+Icons are Lucide (`lucide-react`), added in the fourth pass.
+
+**A collision worth remembering:** the modal's `.preview` class silently restyled the *rail's*
+preview line, which had the same name, and put a bordered box around every agent's last message.
+The stylesheet is one flat namespace with no build step between it and the DOM, so a generic
+class name in a new screen is a live grenade. The modal's is `.hirepreview` now.
+
+### The interface is written down: `DESIGN.md`
+
+Asked for by the author, 2026-08-29, once the fifth pass settled. `DESIGN.md` at the repo root
+is now the standard: the governing rule and its two consequences, the tokens, the type rules,
+the three transcript voices and why the peer's border is dashed, the controls as descendants of
+the composer, Lucide, Radix-for-behaviour-never-for-looks, motion behind
+`prefers-reduced-motion`, the product-copy rules (no em dashes, never *authenticated*, a refusal
+is not a dialog), and what one flat stylesheet namespace demands of a new screen.
+
+It is written as rules with the reason attached to each, because a rule whose reason is lost
+gets worked around by the next session. `CLAUDE.md` points at it twice: once in the permanent
+architectural rules (the blobatars are the only saturated thing) and once under agent skills.
+Contradicting a rule in it is a ticket 12 reopen and an entry here; adding to it is ordinary
+work.
+
+### UI, sixth pass, 2026-08-29: the peer enclosure, and following the transcript
+
+- **The peer enclosure is one dashed edge, unfilled.** Four dashed sides on a raised ground was
+  fine at demo length and wrong at real length: a peer message is often a whole turn quoted
+  back, and the box made it the heaviest thing in the transcript, with the reply it was about
+  reading as a footnote to it. The dashed-against-solid signal is untouched, which is the part
+  ticket 12 actually decided. Its context line lost the mono box it sat in as well: that is
+  prose the agent wrote, and a mono frame made it look like a payload.
+- **Long peer messages fold**, to about eight lines, with a fade and a `more` toggle. The fade
+  is applied only when something is actually cut, so a message that fits never looks truncated;
+  `overflows` is measured from the DOM, because it depends on the rendered width and on markdown
+  nobody can count in advance, and it is re-measured on resize since the rail is draggable.
+  Only the peer voice folds. An agent's answer is the thing the pane exists to show.
+- **The transcript follows its own height now.** `useStickToBottom` keyed on the item list,
+  which missed every other way the column gets taller: markdown laying out after it is handed
+  the text, a code block highlighted a frame later, an image, a fold opening. A long answer
+  would stream off the bottom of the screen and stay there. It is a `ResizeObserver` on the
+  column, and it still lets go the moment the reader scrolls away from the bottom.
+
+`DESIGN.md` carries all three, since it states the peer rule.
+
+### Copy: no em dashes
+
+Asked for by the author, 2026-08-29: em dashes read as AI slop. Product copy uses a period, a
+comma, a colon, or the app's `·` separator. This covers UI strings, placeholders, tooltips, the
+spoken lines in the demo and mock scenarios, and the prompt text in `orchestrator/envelope.ts`
+that agents read. The persona also carries one line of house style, `Write plainly. Do not use
+em dashes.`, placed last so it can never outweigh the refusability framing above it. It does not cover code comments, this file, or internal invariant throws,
+which are in the author's own voice.
+
 ### Settled, 2026-08-29: a Workspace need not be a git repository
 
 Raised by the author while driving the app, and now an `## Amendment` on ticket 10. A Workspace
@@ -344,7 +575,8 @@ Items 1 and 2 of the previous handoff are done. What is left of it, in the same 
    repos: an agent that asks about `rm` or `git push` currently stalls, because
    `setPermissionHandler` is never called by the app. Inline in the transcript, exactly **Allow
    once** and **Reject**.
-3. **One orchestrator per team**, so switching stops being a restart.
+3. ~~**One orchestrator per team**, so switching stops being a restart.~~ Done, 2026-08-29 —
+   see *Settled: switching a team no longer restarts it* below.
 4. **Editing a team**: add or remove an agent, and the `remove` path that finally exercises
    ticket 10's `-d`-versus-`-D` rule.
 
@@ -395,3 +627,58 @@ headers}`, with the tool arriving as `blobot_message_agent` rather than
 
 **Do not** subscribe to subagent transcripts (07), store anything resembling a credential (13),
 or let the UI learn which provider an agent is (the permanent rules in `CLAUDE.md`).
+
+## Settled, 2026-08-29: switching a team no longer restarts it
+
+Raised by the author, who asked what keeping every team alive would cost and whether teams
+should instead sleep after some idle time. Neither, in the end. What the reading turned up:
+
+- **An idle team costs only memory.** A live team is a bridge process per agent plus one
+  loopback port; between turns it spends nothing. So an inactivity timer evicts exactly the
+  teams that are cheap and keeps exactly the ones that are spending the user's quota, which is
+  backwards. It also makes the moment an agent loses its memory depend on how long the user
+  looked somewhere else, and nobody can hold that rule in their head.
+- **The real cost of a switch was never latency, it was amnesia** — `startTeam` said so in a
+  comment: no `session/load`, so every launch was a fresh session against the same transcript.
+
+So the fix went in that order: resume first, then a count.
+
+**`session/load` in the Claude adapter.** `resumeSessionId` on `ClaudeAgentRuntime`; the
+provider's session id is read back out of the `sessions` table (`lastProviderSessionOf`) and
+handed to the runtime at launch. Three things it has to get right, all of them observed rather
+than assumed:
+
+- `mcpServers` must be re-supplied on the load (research 15 §7), or `message_agent` is gone
+  while the replayed transcript still shows the agent using it a moment earlier.
+- The load replays the entire prior transcript as `session/update` notifications *before* it
+  answers, so the adapter mutes its stream while it runs (`#replaying`). Unmuted, every launch
+  repeats everything the agent has ever said.
+- A session the provider has forgotten falls back to `session/new` rather than failing the
+  launch. `runtime.resumed` says which happened.
+
+**Research 15 §7 had left the load-onto-a-different-port question inferred**, and blobot's
+loopback port is ephemeral, so it mattered. It is now §7a and **observed**: a resumed session
+accepts a *changed* URL and bearer token, and `session/close` does not end a session for good,
+so a tidy shutdown and a resumable one are the same shutdown.
+
+**`TeamPool`** (`apps/desktop/src/main/team-pool.ts`) keeps the last three teams live, LRU by
+selection. Two rules beyond the plain LRU, both about not destroying work: the active team is
+never evicted, and **a team that is mid-turn is never evicted** — the limit is a target, not a
+cap, and `evictIdle()` collects it once it is quiet. Selecting a live team promotes it, so
+going back to a team you were just in costs nothing.
+
+**Every stream channel now leads with a team id** (`blobot:event`, `:status`, `:message`,
+`:turns`, `:budget`). Several teams stream at once, and `model.ts` holds one flat item list
+that the rail reads each agent's preview line out of, so the renderer drops what is not the
+team on screen — a ref, not state, because the listeners are registered once.
+
+Three levels of test, because no one of them can cover this: `team-pool.test.ts` pins the
+eviction rule against a fake; core's `live.test.ts` pins the resume against a real `claude` on
+a new port; `apps/desktop/src/main/live-switch.test.ts` puts the two together through the real
+`startTeam` with two real teams (`BLOBOT_LIVE_CLAUDE=1`) — select, prompt, evict, come back,
+and the agent still knows the codeword.
+
+**What this does not decide:** whether a backgrounded team should keep *working* while the user
+is looking elsewhere. It can, and the turn budget is the only thing bounding it; nothing
+surfaces that in the rail yet. That is a product question, and it should be a property of the
+team rather than a side effect of how recently it was clicked.

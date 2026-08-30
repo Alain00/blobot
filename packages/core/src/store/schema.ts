@@ -45,6 +45,14 @@ export const agentProfiles = sqliteTable('agent_profiles', {
   model: text('model'),
   /** Standing instructions, folded into the persona. Never a credential. */
   instructions: text('instructions'),
+  /**
+   * The blobatar's hue, 0 to 359, when the user has chosen one. NULL means the name derives it,
+   * which is the default and is what every agent hired before this column had.
+   *
+   * It is a fact about the agent rather than a preference about a screen — the same face has to
+   * follow it onto every team it joins — so it lives here and not in `localStorage`.
+   */
+  hue: integer('hue'),
   createdAt: integer('created_at').notNull(),
   /** Tombstone, like an agent: teams that used it keep pointing at the row. */
   deletedAt: integer('deleted_at'),
@@ -70,6 +78,8 @@ export const agents = sqliteTable(
     role: text('role').notNull(),
     /** Copied from the profile too, and for the same reason: the persona is auditable. */
     instructions: text('instructions'),
+    /** Copied as well: a transcript should show the face the agent wore at the time. */
+    hue: integer('hue'),
     runtimeId: text('runtime_id').notNull(),
     /** Ticket 07 pins CLAUDE_CODE_EXECUTABLE to the user's own binary. */
     executablePath: text('executable_path'),
@@ -89,7 +99,8 @@ export const sessions = sqliteTable('sessions', {
   agentId: text('agent_id')
     .notNull()
     .references(() => agents.id),
-  /** Stored, used by nothing. The difference between turning resume on later and not. */
+  /** The provider's own id for this conversation. Read back on the next launch, which is
+   *  what lets an agent come back remembering it. See `lastProviderSessionOf`. */
   providerSessionId: text('provider_session_id'),
   /** What this agent was actually told — the recoverable explanation of a strange turn. */
   personaText: text('persona_text').notNull(),

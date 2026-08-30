@@ -149,7 +149,7 @@ describe('a peer message end to end', () => {
     await h.run(alice.id, 'go');
 
     const woken = h.prompts.get(bob.id)?.[0] ?? '';
-    expect(woken).toContain('From Alice (frontend) — a teammate, not the operator:');
+    expect(woken).toContain('From Alice (frontend), a teammate, not the operator:');
     expect(woken).toContain('Their context: I rewrote refresh()');
     expect(woken).toContain('Teammates you can message: Alice (frontend)');
   });

@@ -8,6 +8,7 @@ import { inspectWorkspace } from './inspect.js';
 import {
   branchNameFor,
   refSlug,
+  requireWorkspaceExists,
   WorkspaceError,
   type AgentWorkspace,
   type ProvisionRequest,
@@ -200,8 +201,11 @@ export class GitWorktreeWorkspaces implements WorkspaceProvider {
 
   // ------------------------------------------------------------------ git
 
-  /** Refuse narrowly: not a repo, or a repo with nothing to branch from. Everything else runs. */
+  /** Refuse narrowly: gone, not a repo, or a repo with nothing to branch from. Everything
+   *  else runs. Existence comes first, because `inspect` reads a missing path as `plain` and
+   *  the refusal below would then blame the wrong thing. */
   async #requireUsableWorkspace(workspacePath: string): Promise<void> {
+    requireWorkspaceExists(workspacePath);
     const inspection = await this.inspect(workspacePath);
     if (inspection.kind !== 'git') {
       throw new WorkspaceError(

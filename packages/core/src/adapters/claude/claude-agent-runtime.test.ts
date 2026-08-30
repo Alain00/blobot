@@ -101,6 +101,106 @@ describe('starting', () => {
   });
 });
 
+describe('resuming', () => {
+  /** As `startTeam` does it: the provider's own session id, read back out of the store. */
+  async function resuming(
+    bridgeOptions: ConstructorParameters<typeof FakeBridge>[0] = {},
+  ): Promise<Started> {
+    const bridge = new FakeBridge(bridgeOptions);
+    const runtime = new ClaudeAgentRuntime({
+      agentId: 'bob',
+      cwd: '/tmp/blobot/bob',
+      persona: 'You are Bob.',
+      resumeSessionId: 'session_yesterday',
+      mcpServers: [{ type: 'http', name: 'blobot', url: 'http://127.0.0.1:41234/agents/bob/mcp' }],
+      spawn: () => bridge,
+    });
+    const lifecycles: RuntimeLifecycle[] = [];
+    const outOfBand: AgentEvent[] = [];
+    runtime.onLifecycleChange((lifecycle) => lifecycles.push(lifecycle));
+    runtime.onEvent((event) => outOfBand.push(event));
+    await runtime.start();
+    return { runtime, bridge, lifecycles, outOfBand };
+  }
+
+  it('loads the stored session and re-supplies the MCP servers', async () => {
+    const { runtime, bridge } = await resuming();
+
+    const methods = bridge.received.map((message) => message.method);
+    expect(methods).toEqual(['initialize', 'session/load', 'session/set_mode']);
+    expect(runtime.resumed).toBe(true);
+    expect(runtime.sessionId).toBe('session_yesterday');
+
+    // Research 15 §7: omit these and `message_agent` is gone, while the replayed transcript
+    // still shows the agent using it a moment ago.
+    const load = bridge.received[1]?.params as {
+      sessionId: string;
+      cwd: string;
+      mcpServers: { name: string; url: string }[];
+      _meta: { systemPrompt: string };
+    };
+    expect(load.sessionId).toBe('session_yesterday');
+    expect(load.cwd).toBe('/tmp/blobot/bob');
+    expect(load.mcpServers).toHaveLength(1);
+    expect(load.mcpServers[0]?.url).toBe('http://127.0.0.1:41234/agents/bob/mcp');
+    expect(load._meta.systemPrompt).toBe('You are Bob.');
+  });
+
+  it('re-forces the permission mode, because a session comes back in the mode it was saved in', async () => {
+    const { runtime, bridge } = await resuming();
+    const setMode = bridge.received[2]?.params as { modeId: string };
+    expect(setMode.modeId).toBe('default');
+    expect(runtime.permissionMode).toBe('default');
+  });
+
+  it('swallows the replayed transcript, so a restored team is not said twice', async () => {
+    const { outOfBand } = await resuming({
+      replayOnLoad: [
+        { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'said yesterday' } },
+        { sessionUpdate: 'user_message_chunk', content: { type: 'text', text: 'asked yesterday' } },
+      ],
+    });
+    expect(outOfBand).toEqual([]);
+  });
+
+  it('hears the agent again once the replay is over', async () => {
+    const { runtime, bridge } = await resuming({
+      replayOnLoad: [
+        { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'said yesterday' } },
+      ],
+    });
+    const { events, done } = consume(runtime.sendPrompt({ text: 'ping', from: 'user' }));
+    await tick();
+    bridge.update({ sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'today' } });
+    bridge.endTurn('end_turn');
+    await done;
+
+    const completed = events.filter((event) => event.type === 'agent_message_completed');
+    expect(completed.map((event) => (event as { text: string }).text)).toEqual(['today']);
+  });
+
+  it('starts a new session when the provider has forgotten the old one', async () => {
+    const { runtime, bridge } = await resuming({ failLoad: 'no conversation found with session ID' });
+
+    const methods = bridge.received.map((message) => message.method);
+    expect(methods).toEqual(['initialize', 'session/load', 'session/new', 'session/set_mode']);
+    // The team launches. It launches without its memory, and `resumed` is how the app knows.
+    expect(runtime.lifecycle).toBe('ready');
+    expect(runtime.resumed).toBe(false);
+    expect(runtime.sessionId).toBe('session_fake');
+  });
+
+  it('starts a new session against a bridge that cannot load one', async () => {
+    const { runtime, bridge } = await resuming({ loadSession: false });
+    expect(bridge.received.map((message) => message.method)).toEqual([
+      'initialize',
+      'session/new',
+      'session/set_mode',
+    ]);
+    expect(runtime.resumed).toBe(false);
+  });
+});
+
 describe('a turn', () => {
   it('assembles ragged deltas and ends on the RPC reply', async () => {
     const { runtime, bridge } = await started();

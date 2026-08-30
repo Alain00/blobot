@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentEvent, Message } from '@blobot/core/domain';
-import { initialState, itemsFor, reduce, type AppState } from './model.js';
+import {
+  continuesSpeaker,
+  initialState,
+  isPending,
+  lastLineOf,
+  itemsFor,
+  reduce,
+  type AppState,
+  type Item,
+} from './model.js';
 
 const identity = { agentId: 'alice', sessionId: 'session_alice' } as const;
 
@@ -94,6 +103,22 @@ describe('the conversation model', () => {
     expect(done.feed[0]?.text).toContain('read src/auth.ts');
   });
 
+  it('leaves an ordinary turn end in the feed alone', () => {
+    const state = apply([
+      { type: 'turn_ended', turnId: 't1', stopReason: 'end_turn', at: 3, ...identity },
+    ]);
+    expect(state.items).toHaveLength(0);
+    expect(state.feed).toHaveLength(1);
+  });
+
+  it('puts a turn that stopped for any other reason in the conversation as well', () => {
+    const state = apply([
+      { type: 'turn_ended', turnId: 't1', stopReason: 'max_tokens', at: 3, ...identity },
+    ]);
+    expect(state.items[0]).toMatchObject({ kind: 'system', text: 'turn stopped · max tokens' });
+    expect(state.feed[0]?.emphasis).toBe(true);
+  });
+
   it('does not render blobot\'s own tool as a tool call', () => {
     const state = apply([
       {
@@ -121,5 +146,80 @@ describe('the conversation model', () => {
       { type: 'agent_message_sent', to: 'Bob', message: 'review this', at: 10, ...identity },
     ]);
     expect(state.items).toHaveLength(1);
+  });
+});
+
+describe('one turn, labelled once', () => {
+  const answer = (agentId: string): Item => ({
+    kind: 'agent',
+    id: `${agentId}-${Math.random()}`,
+    at: 1,
+    agentId,
+    text: 'hi',
+    live: false,
+  });
+  const asked: Item = { kind: 'user', id: 'u', at: 0, agentId: 'alice', text: 'who are u?' };
+
+  it('groups a second answer from the same agent', () => {
+    expect(continuesSpeaker(answer('alice'), answer('alice'))).toBe(true);
+  });
+
+  it('does not group across agents, or after anything else', () => {
+    expect(continuesSpeaker(answer('bob'), answer('alice'))).toBe(false);
+    expect(continuesSpeaker(answer('alice'), asked)).toBe(false);
+    expect(continuesSpeaker(answer('alice'), undefined)).toBe(false);
+  });
+
+  it('never groups the other voices: they carry their own container', () => {
+    expect(continuesSpeaker(asked, asked)).toBe(false);
+  });
+});
+
+describe('the rail preview', () => {
+  it('is the agent\'s own last line, collapsed to one', () => {
+    const state = apply([
+      { type: 'agent_message_delta', messageId: 'a1', text: 'first\nanswer', at: 1, ...identity },
+      { type: 'agent_message_completed', messageId: 'a1', text: 'first\nanswer', at: 1, ...identity },
+      { type: 'agent_message_delta', messageId: 'a2', text: 'second\n\nanswer', at: 2, ...identity },
+      {
+        type: 'agent_message_completed',
+        messageId: 'a2',
+        text: 'second\n\nanswer',
+        at: 2,
+        ...identity,
+      },
+    ]);
+    expect(lastLineOf(state.items, 'alice')).toEqual({ text: 'second answer', at: 2 });
+  });
+
+  it('never borrows another voice: a peer message is not Bob speaking', () => {
+    const state = apply([peerMessage]);
+    expect(lastLineOf(state.items, 'bob')).toBeUndefined();
+  });
+
+  it('is undefined for an agent that has not said anything', () => {
+    expect(lastLineOf([], 'alice')).toBeUndefined();
+  });
+});
+
+describe('the pending indicator', () => {
+  const live: Item = { kind: 'agent', id: 'a', at: 1, agentId: 'alice', text: 'so', live: true };
+
+  it('shows while the agent is starting, thinking or working', () => {
+    for (const status of ['starting', 'thinking', 'working'] as const) {
+      expect(isPending(status, [], 'alice')).toBe(true);
+    }
+  });
+
+  it('stops once there is a live message to watch instead', () => {
+    expect(isPending('working', [live], 'alice')).toBe(false);
+    // Another agent streaming says nothing about this one.
+    expect(isPending('working', [live], 'bob')).toBe(true);
+  });
+
+  it('never shows for the states a human has to clear', () => {
+    for (const status of ['idle', 'responding', 'waiting', 'failed'] as const) {
+      expect(isPending(status, [], 'alice')).toBe(false);
+    }
   });
 });

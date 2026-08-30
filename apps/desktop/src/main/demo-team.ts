@@ -76,7 +76,7 @@ export async function createDemoTeam(
           scenarios['alice-asks-bob'],
           scenario('alice-follows-up')
             .think('Bob is right about the backoff.')
-            .say('Good catch — I will add the backoff and push it to my branch.')
+            .say('Good catch. I will add the backoff and push it to my branch.')
             .end(),
         ],
       }),

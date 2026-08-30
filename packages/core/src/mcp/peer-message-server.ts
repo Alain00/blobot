@@ -321,7 +321,7 @@ export class PeerMessageServer {
   #markReady(agentId: string): void {
     if (this.#handshaked.has(agentId)) return;
     this.#handshaked.add(agentId);
-    this.#log(`${agentId} handshaked — it has the message_agent tool`);
+    this.#log(`${agentId} handshaked. It has the message_agent tool`);
     for (const waiter of this.#handshakeWaiters.get(agentId) ?? []) waiter();
     this.#handshakeWaiters.delete(agentId);
   }

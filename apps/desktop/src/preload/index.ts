@@ -7,6 +7,7 @@ import type {
   NewTeamSpec,
   UiAgentProfile,
   TeamCreationResult,
+  TeamOpenResult,
   UiRuntimeChoice,
   UiSnapshot,
   UiWorkspaceInspection,
@@ -40,17 +41,24 @@ const api: BlobotApi = {
     ipcRenderer.invoke('blobot:retireAgent', profileId) as Promise<void>,
   createTeam: (spec: NewTeamSpec) =>
     ipcRenderer.invoke('blobot:createTeam', spec) as Promise<TeamCreationResult>,
-  selectTeam: (teamId: string) => ipcRenderer.invoke('blobot:selectTeam', teamId) as Promise<void>,
-  onEvent: (listener) => subscribe('blobot:event', (_e, event: AgentEvent) => listener(event)),
+  selectTeam: (teamId: string) =>
+    ipcRenderer.invoke('blobot:selectTeam', teamId) as Promise<TeamOpenResult>,
+  onEvent: (listener) =>
+    subscribe('blobot:event', (_e, teamId: string, event: AgentEvent) => listener(teamId, event)),
   onStatus: (listener) =>
-    subscribe('blobot:status', (_e, agentId: string, status: AgentStatus) =>
-      listener(agentId, status),
+    subscribe('blobot:status', (_e, teamId: string, agentId: string, status: AgentStatus) =>
+      listener(teamId, agentId, status),
     ),
   onMessage: (listener) =>
-    subscribe('blobot:message', (_e, message: Message) => listener(message)),
+    subscribe('blobot:message', (_e, teamId: string, message: Message) =>
+      listener(teamId, message),
+    ),
   onBudget: (listener) =>
-    subscribe('blobot:budget', (_e, used: number, budget: number) => listener(used, budget)),
-  onTurns: (listener) => subscribe('blobot:turns', (_e, turns: number) => listener(turns)),
+    subscribe('blobot:budget', (_e, teamId: string, used: number, budget: number) =>
+      listener(teamId, used, budget),
+    ),
+  onTurns: (listener) =>
+    subscribe('blobot:turns', (_e, teamId: string, turns: number) => listener(teamId, turns)),
   onTeamChanged: (listener) => subscribe('blobot:team', () => listener()),
 };
 

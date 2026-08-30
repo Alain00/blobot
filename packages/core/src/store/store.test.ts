@@ -66,6 +66,7 @@ describe('the schema', () => {
         'created_at',
         'deleted_at',
         'executable_path',
+        'hue',
         'id',
         'instructions',
         'model',
@@ -83,6 +84,7 @@ describe('the schema', () => {
         'created_at',
         'deleted_at',
         'executable_path',
+        'hue',
         'id',
         'instructions',
         'model',
@@ -140,6 +142,35 @@ describe('reading teams back', () => {
   it('finds a team by id and returns the turn budget it was created with', () => {
     expect(store.teamById('team_1')?.turnBudget).toBe(10);
     expect(store.teamById('missing')).toBeUndefined();
+  });
+});
+
+describe('resuming a session', () => {
+  it('reads back the newest provider session id, so an agent comes back remembering', () => {
+    store.startSession({
+      id: 's1',
+      agentId: 'agent_bob',
+      providerSessionId: 'claude_yesterday',
+      personaText: 'You are Bob.',
+      startedAt: 100,
+    });
+    store.startSession({
+      id: 's2',
+      agentId: 'agent_bob',
+      providerSessionId: 'claude_today',
+      personaText: 'You are Bob.',
+      startedAt: 200,
+    });
+    expect(store.lastProviderSessionOf('agent_bob')).toBe('claude_today');
+  });
+
+  it('says nothing for an agent that has never run, which is a first launch', () => {
+    expect(store.lastProviderSessionOf('agent_alice')).toBeUndefined();
+  });
+
+  it('says nothing when the runtime named no session, rather than resuming a blank', () => {
+    store.startSession({ id: 's3', agentId: 'agent_bob', personaText: 'x', startedAt: 300 });
+    expect(store.lastProviderSessionOf('agent_bob')).toBeUndefined();
   });
 });
 

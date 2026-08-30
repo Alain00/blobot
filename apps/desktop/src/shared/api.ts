@@ -14,6 +14,8 @@ export interface UiAgent {
   readonly runtimeLabel: string;
   readonly workspacePath: string;
   readonly branch?: string;
+  /** The blobatar's hue, when the user chose one. Absent means the name derives it. */
+  readonly hue?: number;
 }
 
 export interface UiTeam {
@@ -29,6 +31,8 @@ export interface UiTeamSummary {
   readonly name: string;
   readonly workspacePath: string;
   readonly agentCount: number;
+  /** When it last said anything. Undefined for a team that has never held a turn. */
+  readonly lastActiveAt?: number;
 }
 
 /** One thing an agent said, as a restored pane draws it. Answers only — never thinking. */
@@ -51,6 +55,12 @@ export interface UiSnapshot {
   readonly turnsThisPrompt: number;
   /** Named so nobody mistakes the demo for real agents. */
   readonly demoMode: boolean;
+  /**
+   * Why the team this launch tried to open did not open, if one did not. Present with `team`
+   * undefined and `teams` non-empty, which is the shape the empty state has to tell apart
+   * from a genuine first run.
+   */
+  readonly openError?: string;
 }
 
 /**
@@ -109,6 +119,8 @@ export interface UiAgentProfile {
    *  `UiAgent`: the renderer would eventually branch on it. */
   readonly runtimeLabel: string;
   readonly instructions?: string;
+  /** The blobatar's hue, when the user chose one. Absent means the name derives it. */
+  readonly hue?: number;
   /** The teams it is currently on, by name. Empty for an agent nobody has put to work yet. */
   readonly teams: readonly string[];
 }
@@ -119,6 +131,8 @@ export interface NewAgentSpec {
   readonly role: string;
   readonly runtimeId: string;
   readonly instructions?: string;
+  /** 0 to 359. Omitted when the user kept the face the name gave it. */
+  readonly hue?: number;
 }
 
 export interface NewTeamSpec {
@@ -129,6 +143,15 @@ export interface NewTeamSpec {
   readonly profileIds: readonly string[];
   /** `nested` only: the repositories the user ticked. Omitted means every one of them. */
   readonly repoPaths?: readonly string[];
+}
+
+/**
+ * Why a team would not open. A Workspace that has been moved or deleted is the ordinary case,
+ * and it has to reach the rail: a click that silently does nothing is the worst version of it.
+ */
+export interface TeamOpenResult {
+  readonly ok: boolean;
+  readonly error?: string;
 }
 
 /** A refusal a flow renders in place, rather than an exception it throws away. */
@@ -159,12 +182,20 @@ export interface BlobotApi {
   /** Retires the agent. Teams it is on keep working — ending one is a separate decision. */
   retireAgent(profileId: string): Promise<void>;
   createTeam(spec: NewTeamSpec): Promise<TeamCreationResult>;
-  selectTeam(teamId: string): Promise<void>;
-  onEvent(listener: (event: AgentEvent) => void): () => void;
-  onStatus(listener: (agentId: string, status: AgentStatus) => void): () => void;
-  onMessage(listener: (message: Message) => void): () => void;
-  onBudget(listener: (turnsUsed: number, turnBudget: number) => void): () => void;
-  onTurns(listener: (turnsThisPrompt: number) => void): () => void;
+  selectTeam(teamId: string): Promise<TeamOpenResult>;
+  /**
+   * Every stream leads with the team it belongs to.
+   *
+   * More than one team is live at a time — switching promotes a team rather than restarting
+   * it — so a listener that assumes these are all about the team on screen would eventually
+   * draw a backgrounded team's words into the open transcript. The renderer keeps the ones it
+   * is showing; nothing here decides that for it.
+   */
+  onEvent(listener: (teamId: string, event: AgentEvent) => void): () => void;
+  onStatus(listener: (teamId: string, agentId: string, status: AgentStatus) => void): () => void;
+  onMessage(listener: (teamId: string, message: Message) => void): () => void;
+  onBudget(listener: (teamId: string, turnsUsed: number, turnBudget: number) => void): () => void;
+  onTurns(listener: (teamId: string, turnsThisPrompt: number) => void): () => void;
   /** The active team changed under the renderer: created, switched, or started at launch. */
   onTeamChanged(listener: () => void): () => void;
 }

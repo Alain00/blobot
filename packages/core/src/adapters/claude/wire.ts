@@ -13,6 +13,13 @@ export interface InitializeResult {
   readonly agentInfo?: { readonly name?: string; readonly version?: string };
   /** Empty when the user's own `claude` login already covers us — the whole credential story. */
   readonly authMethods?: readonly AuthMethod[];
+  readonly agentCapabilities?: AgentCapabilities;
+}
+
+export interface AgentCapabilities {
+  /** Whether `session/load` exists at all. Checked rather than assumed: a bridge without it
+   *  would otherwise turn every resumed agent into a JSON-RPC error at launch. */
+  readonly loadSession?: boolean;
 }
 
 export interface AuthMethod {

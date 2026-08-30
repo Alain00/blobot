@@ -12,6 +12,8 @@
   --ground:#0a0a0b; --raised:#131315; --ink:#fafaf8; --muted:#8a8a93; --line:#232327;
   --sans:"Geist",ui-sans-serif,system-ui,sans-serif;
   --mono:"Geist Mono",ui-monospace,monospace;
+  /* The display face of the one page that is read rather than worked in. It was already here
+     for one line on that page; it now carries the page. No second family was added for it. */
   --hand:"Caveat","Segoe Print",cursive;
   color-scheme:dark;
 }
@@ -20,6 +22,16 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
 ::selection{background:var(--ink);color:var(--ground)}
 :focus-visible{outline:2px solid var(--ink);outline-offset:3px}
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+/* The platform scrollbar arrived light grey with stepper arrows, which made it the brightest
+   thing on the page and put two clickable buttons next to a transcript nobody clicks. It is a
+   hairline that only takes ink when the pointer is on it. */
+*{scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--muted);background-clip:content-box}
+::-webkit-scrollbar-corner{background:transparent}
+::-webkit-scrollbar-button{display:none}
 .mono{font-family:var(--mono);font-size:11px;letter-spacing:.02em}
 .muted{color:var(--muted)}
 .hand{font-family:var(--hand);font-size:20px;color:var(--muted)}
@@ -32,6 +44,10 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .crumb{color:var(--muted);font-family:var(--mono);font-size:11px}
 .crumb b{color:var(--ink);font-weight:500}
 .topbar .spacer{flex:1}
+/* The activity column is a preference, not a mode, so its control is an icon in the chrome
+   rather than anything the conversation has to make room for. */
+.paneltoggle{display:inline-flex;align-items:center;color:var(--muted);padding:4px}
+.paneltoggle:hover{color:var(--ink)}
 .budget{display:flex;align-items:center;gap:6px}
 .budget .pips{display:flex;gap:2px}
 .pip{width:4px;height:12px;background:var(--line)}
@@ -72,12 +88,18 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* `minmax(0,1fr)` on the row and `min-height:0` on the column are what make `.stream`
    scroll: a grid item's automatic minimum is its content, so without them the conversation
    grows the row past the viewport instead of overflowing inside it. */
-.vA{flex:1;display:grid;grid-template-columns:232px minmax(0,1fr) 288px;grid-auto-rows:minmax(0,1fr);min-height:0;overflow:hidden}
+.vA{position:relative;flex:1;display:grid;grid-template-columns:232px minmax(0,1fr) 288px;grid-auto-rows:minmax(0,1fr);min-height:0;overflow:hidden}
 .vA .rail{border-right:1px solid var(--line);overflow:auto;padding:10px 0}
+/* Drag to resize the rail. Out of flow so it does not become a fourth grid column, and wider
+   than the hairline it sits on because a 1px target is a target nobody hits. */
+.railgrab{position:absolute;top:0;bottom:0;width:9px;margin-left:-4px;cursor:col-resize;z-index:10}
+.railgrab:hover::after,.railgrab.on::after{content:"";position:absolute;top:0;bottom:0;left:4px;width:1px;background:var(--ink)}
 .railhead{padding:6px 14px 10px;display:flex;align-items:baseline;gap:8px}
-.agentrow{display:flex;gap:11px;align-items:center;padding:9px 14px;width:100%;text-align:left;border-left:2px solid transparent}
+/* Selection is the raised ground alone. The 2px ink rule that used to mark it was a third
+   emphasis on a row that already lifts and brightens, and it cut into the blobatar's column. */
+.agentrow{display:flex;gap:11px;align-items:center;padding:9px 14px;width:100%;text-align:left}
 .agentrow:hover{background:var(--raised)}
-.agentrow.sel{background:var(--raised);border-left-color:var(--ink)}
+.agentrow.sel{background:var(--raised)}
 .agentrow .who{min-width:0;flex:1}
 .agentrow .nm{display:flex;align-items:baseline;gap:6px}
 .agentrow .nm .grow{flex:1}
@@ -85,44 +107,83 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .agentrow .nm b{font-weight:500}
 .agentrow .role{color:var(--muted);font-size:12px;flex:0 0 auto}
 .agentrow .stat{font-size:10px}
-.teamrow{display:flex;gap:11px;align-items:center;padding:10px 14px 10px 12px;width:100%;text-align:left;border-left:2px solid transparent}
+/* When it last spoke, and the line it spoke. The preview takes the width and truncates; the
+   status word beside it never does, because a half-printed state is worse than none. */
+.agentrow .when{font-family:var(--mono);font-size:10px;color:var(--muted);flex:0 0 auto}
+.agentrow .preview{color:var(--muted);font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agentrow .sub .stat{flex:0 0 auto}
+.agentrow.sel .preview,.agentrow:hover .preview{color:var(--ink)}
+.teamrow{display:flex;gap:11px;align-items:center;padding:10px 14px 10px 12px;width:100%;text-align:left}
 .teamrow:hover{background:var(--raised)}
-.teamrow.sel{background:var(--raised);border-left-color:var(--ink)}
+.teamrow.sel{background:var(--raised)}
 .teamrow .who{min-width:0;flex:1}
 .teamrow .nm{display:flex;align-items:baseline;gap:6px}
 .teamrow .nm b{font-weight:500}
 .teamrow .sub{display:flex;align-items:baseline;gap:6px;line-height:1.35}
-.teamrow .n{color:var(--muted);font-size:12px}
+.teamrow .n{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
+.teamrow .sub .stat{flex:0 0 auto}
 .teamrow .stat{font-size:10px}
 /* A team nobody is running: no blobatars, because it has no live agents to draw. The ghost
-   holds the group's width so the names stay on one left edge. */
-.teamrow.off .ghost{width:28px;height:28px;flex:0 0 auto;border:1px dashed var(--line);border-radius:40% 60% 55% 45%}
+   holds the mark's whole box so the names stay on one left edge, and draws a single silhouette
+   inside it at the size a team of one would be. */
+.teamrow.off .ghost{position:relative;width:46px;height:46px;flex:0 0 auto}
+.teamrow.off .ghost::after{content:"";position:absolute;left:7px;top:7px;width:32px;height:32px;border:1px dashed var(--line);border-radius:40% 60% 55% 45%}
 .teamrow.off b{font-weight:400;color:var(--muted)}
 .teamrow.off:hover b{color:var(--ink)}
 .teamrow.off:disabled{cursor:default}
 .teamrow.off:disabled:hover{background:none}
-/* The running team's agents belong to it, so they are indented under its row. */
-.teamgroup .agentrow{padding-left:24px}
+/* Not indented under their team: only one team runs at a time, so there is never a second
+   group to tell them apart from, and the rule under the group already closes it. Flush left
+   also puts every blobatar on one column, where the team's mark is the wider one. */
 .teamgroup{border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:6px}
-/* the team reads as a group: its members, overlapped, cut out of the ground */
-.group{display:flex;flex:0 0 auto;--cut:var(--ground)}
-/* the cut follows the silhouette, not a circle — these are blobs, not headshots */
-.group > span{margin-left:-9px;filter:drop-shadow(1.5px 0 0 var(--cut)) drop-shadow(-1.5px 0 0 var(--cut)) drop-shadow(0 1.5px 0 var(--cut)) drop-shadow(0 -1.5px 0 var(--cut))}
-.group > span:first-child{margin-left:0}
-.teamrow.sel .group,.teamrow:hover .group,.convhead .group{--cut:var(--raised)}
-.convhead .group{--cut:var(--ground)}
+/* The team reads as one mark: its members packed into a square, arranged by how many there
+   are. Members are laid out absolutely by `TeamMark`, which owns the arithmetic; the animation
+   sits on the box, so the whole cluster moves as one thing. */
+.mark{position:relative;flex:0 0 auto;display:block;--cut:var(--ground)}
+/* Members overlap, so each is cut out of the ground behind it. The cut follows the silhouette
+   rather than a circle, because these are blobs and not headshots. */
+.mark > .blob{position:absolute;filter:drop-shadow(1.5px 0 0 var(--cut)) drop-shadow(-1.5px 0 0 var(--cut)) drop-shadow(0 1.5px 0 var(--cut)) drop-shadow(0 -1.5px 0 var(--cut))}
+.teamrow.sel .mark,.teamrow:hover .mark{--cut:var(--raised)}
+/* the same dashed silhouette a stopped team's ghost wears, so `+2` reads as members not drawn */
+.more{position:absolute;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--muted);border:1px dashed var(--line);border-radius:40% 60% 55% 45%}
+.railadd{color:var(--muted)}
+.railadd:hover{color:var(--ink)}
 .raillabel{padding:12px 14px 6px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .badge{font-family:var(--mono);font-size:10px;border:1px solid var(--ink);padding:0 4px;line-height:14px}
 .vA .conv{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
 .convhead{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line)}
 .convhead .meta{flex:1;min-width:0}
-.convhead .wt{font-family:var(--mono);font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.stream{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:20px 20px 8px;display:flex;flex-direction:column;gap:16px}
-.composer{flex:0 0 auto;border-top:1px solid var(--line);padding:12px 20px;display:flex;gap:10px;align-items:center}
+/* Wraps rather than shrinks: in a narrow window the posture drops to its own line instead of
+   squeezing the branch down to an ellipsis. `min-width` on the branch is what forces the wrap,
+   since flex would otherwise shrink it to nothing and never break the line. */
+.convhead .wt{font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:0;min-width:0}
+.convhead .wt .where{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:10em}
+/* the separator rides the half that cannot truncate, or it disappears with the path */
+.convhead .wt .posture{flex:0 0 auto;white-space:nowrap}
+.convhead .wt .posture::before{content:"· "}
+.stream{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:20px 20px 28px;display:flex;flex-direction:column}
+/* The transcript is a column, not a left margin. It fills the pane up to a measure a paragraph
+   can still be read at and centres in whatever is left, so a wide window widens the reading
+   column instead of stranding every message against the rail.
+   A short conversation hangs from the bottom, next to the composer and the cursor, instead of
+   stranding three lines at the top of an empty column. An auto margin absorbs free space and
+   resolves to zero once the transcript overflows, so scrolling is untouched. */
+.col{width:100%;max-width:900px;margin:auto auto 0;display:flex;flex-direction:column;gap:16px}
+/* One pill, centred over the same column as the transcript, with a round send inside it. The
+   bar it replaced was a full-width rule with a mono button pinned to the far right, which put
+   the control furthest from the words being typed. */
+.composer{flex:0 0 auto;padding:12px 20px 16px;display:flex;justify-content:center}
+.pill{width:100%;max-width:900px;display:flex;gap:10px;align-items:center;background:var(--raised);border:1px solid var(--line);border-radius:22px;padding:8px 8px 8px 16px}
+.pill:focus-within{border-color:var(--muted)}
 .composer input{flex:1;background:transparent;border:none;color:var(--ink);font:inherit;outline:none}
 .composer input::placeholder{color:var(--muted)}
 .send{border:1px solid var(--line);padding:4px 10px;font-family:var(--mono);font-size:11px;display:inline-flex;align-items:center;gap:6px}
 .send[disabled]{opacity:.35;cursor:not-allowed}
+/* Send is the page's primary action and it shared the grey of every secondary button. Once it
+   is armed it inverts, which answers "will this go anywhere?" before it is read. */
+.composer .send{flex:0 0 auto;width:32px;height:32px;padding:0;border-radius:50%;justify-content:center;color:var(--muted)}
+.composer .send:not([disabled]){background:var(--ink);border-color:var(--ink);color:var(--ground)}
+.composer .send[disabled]{opacity:.55}
 
 /* the address is the @mention — there is no recipient picker */
 .mentionwrap{position:relative;flex:1;min-width:0}
@@ -142,78 +203,186 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .fev .t{opacity:.5;flex:0 0 auto}
 .fev .who{color:var(--ink);flex:0 0 auto}
 .fev.hi{background:var(--raised)}
+.feedempty{padding:2px 14px;font-family:var(--mono);font-size:10.5px;line-height:1.5;color:var(--muted);opacity:.6}
 
 /* ---------- messages ---------- */
-.msg{display:flex;gap:12px;max-width:680px}
+.msg{display:flex;gap:12px}
 .msg .body{min-width:0}
+.msg .gutter{width:28px;flex:0 0 auto}
 .msg .hdr{display:flex;align-items:baseline;gap:8px;margin-bottom:3px}
 .msg .hdr .nm{font-weight:500}
 .msg .hdr .tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .msg .txt{white-space:pre-wrap}
-/* from you: solid ink rule, flush left, no ornament */
-.msg.user{border-left:2px solid var(--ink);padding-left:12px}
-/* from the agent: no rule at all — it is the default voice of the pane */
-/* from a peer: dashed enclosure, inset, two blobatars in the header. never a bubble. */
-.peer{border:1px dashed var(--line);padding:12px 14px;margin-left:40px;max-width:620px;background:var(--raised)}
+/* A continued turn is closer to the line above it than to the next speaker: the gap is the
+   only thing left saying where one turn ends once the name is gone. */
+.msg.grouped{margin-top:-8px}
+/* From you: a solid bubble on the right. Right is the label — there is only ever one "you" —
+   so the bubble carries no name, and the routing tag hangs under it in the team pane.
+   Solid against the peer enclosure's dashed border is deliberate and unchanged: a peer message
+   still has to read as the lower-authority one of the two things someone sent this agent. */
+.msg.user{flex-direction:column;align-items:flex-end;gap:4px;align-self:flex-end;max-width:min(560px,78%)}
+.msg.user .bubble{background:var(--raised);border:1px solid var(--line);border-radius:14px;padding:7px 13px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.user .tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+/* from the agent: no container at all — it is the default voice of the pane */
+/* From a peer: one dashed edge, inset, two blobatars in the header. Never a bubble and never
+   filled. It was a full dashed box on a raised ground, and at the length a peer message
+   actually runs to that made it the heaviest thing in the transcript — the reply it was about
+   read as a footnote to it. Dashed against the user's solid bubble is what carries the lower
+   authority, and one edge carries that as well as four did. */
+.peer{border-left:1px dashed var(--line);padding:2px 0 2px 14px;margin-left:40px;max-width:min(620px,100%)}
 .peer .route{display:flex;align-items:center;gap:7px;margin-bottom:7px}
 .peer .route .arrow{color:var(--muted);font-family:var(--mono)}
 .peer .route .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
-.peer .ctx{font-family:var(--mono);font-size:11.5px;color:var(--muted);border-left:1px solid var(--line);padding-left:8px;margin-bottom:7px}
+/* The sender's own summary of what they are asking about. A quiet line, not a code block: it
+   is prose the agent wrote, and the mono box it used to sit in read as a payload. */
+.peer .ctx{font-size:12.5px;color:var(--muted);margin-bottom:8px}
 .peer .txt{white-space:pre-wrap}
 .peer .foot{margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--muted)}
+/* Folded to about eight lines, with the last of them fading out so the cut is legible as a cut
+   rather than as a message that ends mid-sentence. */
+.fold{max-height:184px;overflow:hidden;position:relative}
+.fold.cut{-webkit-mask-image:linear-gradient(#000 74%,transparent)}
+.fold.open{max-height:none;overflow:visible}
+.foldtoggle{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.foldtoggle:hover{color:var(--ink)}
+.foldtoggle svg.up{transform:rotate(180deg)}
+/* Something landed and an answer is coming. Muted, small, and gone the moment there is text
+   to watch instead. */
+.msg.pending .dots{display:flex;gap:4px;align-items:center;height:21px}
+.msg.pending .dots i{width:5px;height:5px;border-radius:50%;background:var(--muted);animation:dot 1.25s ease-in-out infinite}
+.msg.pending .dots i:nth-child(2){animation-delay:.16s}
+.msg.pending .dots i:nth-child(3){animation-delay:.32s}
+@keyframes dot{0%,70%,100%{opacity:.28;transform:translateY(0)}35%{opacity:1;transform:translateY(-2px)}}
+@media (prefers-reduced-motion:reduce){.msg.pending .dots i{animation:none;opacity:.6}}
 .tool{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;gap:8px;align-items:baseline;margin-left:40px}
 .tool .k{color:var(--ink)}
 .sysline{display:flex;align-items:center;gap:10px;color:var(--muted);font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
+/* The time between sittings: centred like the sysline it sits among, but without its rules —
+   two ruled lines in a row would read as one enclosure. */
+.timerule{text-align:center;color:var(--muted);font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;opacity:.65;margin:2px 0 -4px}
 .sysline::before,.sysline::after{content:"";height:1px;background:var(--line);flex:1}
 
 
 /* ---------- creating a team ----------
- * The same monochrome vocabulary as the rest of the app: mono labels, hairline rules, and no
- * colour anywhere — there are no blobatars on this screen, so nothing on it is saturated.
+ * The one editorial page in the app. Everywhere else is a working surface where the blobatars
+ * are the loudest thing; this is read once, start to finish, before anything exists. So it gets
+ * a serif display face, numbered steps and a standfirst, and it still spends no colour: the
+ * only saturated things on it are the blobatars in the roster and the one being made.
+ *
+ * The controls are the composer's, generalised. A field is the composer's pill with square
+ * corners softened; a button is the same pill; the primary one inverts to ink when it is armed,
+ * exactly as send does.
  */
-.newteam{flex:1;overflow:auto;display:flex;justify-content:center;padding:40px 20px}
-.sheet{width:100%;max-width:620px;display:flex;flex-direction:column;gap:26px}
-.sheethead{display:flex;align-items:baseline;gap:12px}
-.sheethead .hand{line-height:1}
-.sheethead .mono{letter-spacing:.1em}
-.sheethead .send{margin-left:auto}
-.sheet section{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
-.sheet section > .textfield,.sheet section > .note,.sheet section > .refusal,.sheet section > .agentdraft{align-self:stretch}
-.fieldlabel{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.sheet .row{display:flex;align-items:center;gap:10px}
-.pathline{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.textfield{background:transparent;border:none;border-bottom:1px solid var(--line);color:var(--ink);font:inherit;padding:5px 0;outline:none;min-width:0}
-.textfield:focus{border-bottom-color:var(--ink)}
-.textfield::placeholder{color:var(--muted)}
-.textfield.narrow{width:64px}
-/* A native select paints itself light on this platform, which would put the brightest thing
-   on the page on a dropdown. Appearance is reset and the chevron is drawn as a background. */
-select.textfield{appearance:none;border:1px solid var(--line);border-bottom:1px solid var(--line);padding:5px 22px 5px 8px;background-color:var(--raised);color:var(--ink);background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 12px) 52%,calc(100% - 7px) 52%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
-select.textfield option{background:var(--raised);color:var(--ink)}
-.note{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:8px}
-.agentdraft{display:grid;grid-template-columns:1fr 1fr minmax(150px,auto) auto;gap:10px;align-items:center}
-.runtimenote{grid-column:1 / -1;margin-top:-2px}
-.budgetrow{flex-direction:row!important;align-items:center;gap:12px}
+.newteam{flex:1;overflow:auto;display:flex;justify-content:center;padding:56px 24px 24px}
+.sheet{width:100%;max-width:660px;display:flex;flex-direction:column;gap:34px}
+/* Caveat sets small for its point size, so the display runs larger than a serif would at the
+   same rank, and the standfirst under it does the work of setting the measure. */
+.display{font-family:var(--hand);font-weight:500;font-size:58px;line-height:1;letter-spacing:0;margin:4px 0 0}
+.display.sm{font-size:38px}
+/* The step titles stay sans. The hand is one voice on this page, spent on the one line that is
+   the page's question; handwriting on every subhead would make the steps look optional. */
+.subhead{font-weight:500;font-size:17px;line-height:1.3;margin:0;letter-spacing:-.01em}
+.eyebrow{font-size:10px;letter-spacing:.16em;color:var(--muted)}
+.standfirst{max-width:46ch;color:var(--muted);font-size:14.5px;line-height:1.6;margin:12px 0 0}
+.sheethead{display:flex;align-items:flex-start;gap:16px}
+.sheethead > div{flex:1;min-width:0}
+
+/* A step is its numeral, its question, and the controls under both. The numeral hangs in the
+   left margin on a wide sheet and folds inline when there is no margin to hang in. */
+.step{display:flex;flex-direction:column;gap:12px}
+.stephead{display:flex;align-items:baseline;gap:14px}
+.stepn{font-size:11px;color:var(--muted);letter-spacing:.1em}
+.stepaside{margin-left:auto}
+.stepbody{display:flex;flex-direction:column;gap:10px;align-items:flex-start;padding-left:35px}
+.stepbody > .field,.stepbody > .note,.stepbody > .refusal,.stepbody > .roster,.stepbody > .reposcope{align-self:stretch}
+.sheet .row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pathline{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+.note{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:10px;flex-wrap:wrap;line-height:1.5}
+.fieldlabel{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+/* ---------- fields and buttons, after the composer ---------- */
+.field{background:var(--raised);border:1px solid var(--line);border-radius:12px;color:var(--ink);font:inherit;padding:9px 14px;outline:none;min-width:0;width:100%}
+.field::placeholder{color:var(--muted)}
+.field:focus{border-color:var(--muted)}
+.field.narrow{width:84px;text-align:center}
+textarea.field{resize:vertical;line-height:1.5}
+.labelled{display:flex;flex-direction:column;gap:6px;min-width:0}
+
+.btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--raised);border-radius:999px;padding:7px 16px;font-size:13px;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.btn[disabled]:hover{border-color:var(--line)}
+/* The one armed action on the page, inverted exactly like the composer's send. */
+.btn.primary:not([disabled]){background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.iconbtn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);color:var(--muted);flex:0 0 auto}
+.iconbtn:hover{color:var(--ink);border-color:var(--muted)}
+
 /* A refusal, not an error dialog: it says what is wrong where the user can act on it. */
 .refusal{border-left:2px solid var(--ink);padding:8px 0 8px 12px;font-size:13px}
-.sheetfoot{display:flex;justify-content:flex-end;padding-bottom:40px}
-.railadd{color:var(--muted)}
-.railadd:hover{color:var(--ink)}
-.teamswitch{display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;padding:6px 14px}
-.teamswitch:hover{background:var(--raised)}
-.teamswitch .n{margin-left:auto}
+.sheetfoot{display:flex;justify-content:flex-end;padding-bottom:48px}
 
-/* your agents: a roster that exists before any team does */
-.rosterrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:7px 10px;border:1px solid transparent}
+/* ---------- your agents: a roster that exists before any team does ---------- */
+.roster{display:flex;flex-direction:column;gap:6px}
+.rosterrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:9px 12px;border:1px solid var(--line);border-radius:14px;background:transparent}
 .rosterrow:hover{background:var(--raised)}
-.rosterrow.on{border-color:var(--line);background:var(--raised)}
-.rosterrow .tick{width:12px;flex:0 0 auto;color:var(--ink)}
+.rosterrow.on{background:var(--raised);border-color:var(--muted)}
 .rosterrow .who{min-width:0;flex:1;display:flex;flex-direction:column}
 .rosterrow .nm b{font-weight:500}
-.rosterrow .sub{line-height:1.4}
-.hire{align-self:stretch;display:flex;flex-direction:column;gap:8px;border-left:1px solid var(--line);padding-left:12px}
-.hire .agentdraft{grid-template-columns:1fr 1fr minmax(150px,auto) auto}
-textarea.textfield{border:1px solid var(--line);padding:6px 8px;resize:vertical;font-family:var(--sans)}
+.rosterrow .sub{line-height:1.4;font-size:11px}
+/* An empty circle rather than a blank column: the row has to look ticked *or* untickable, and
+   a checkmark that appears out of nothing reads as the row having changed shape. */
+.rosterrow .tick{width:20px;height:20px;flex:0 0 auto;border:1px solid var(--line);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ground)}
+.rosterrow .tick.on{background:var(--ink);border-color:var(--ink)}
+.rosterrow:disabled{opacity:.45;cursor:default}
+.rosterrow:disabled:hover{background:none}
+
+/* the repositories in a folder of repositories, ticked into scope */
+.reposcope{display:flex;flex-direction:column;gap:6px}
+.reposcope .fieldlabel{margin-bottom:2px}
+
+/* ---------- hiring an agent: a modal, because the agent outlives this team ----------
+ * Radix owns the dialog, the select and the slider; every rule here is this app's own. The
+ * behaviour it brings is the half nobody screenshots: a focus trap, focus returned to the
+ * button that opened it, Escape, and keyboard-driven listbox and slider.
+ */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.66);z-index:60}
+.modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(560px,calc(100vw - 48px));max-height:calc(100vh - 48px);overflow:auto;background:var(--ground);border:1px solid var(--line);border-radius:20px;padding:24px 26px 22px;display:flex;flex-direction:column;gap:22px;box-shadow:0 30px 90px rgba(0,0,0,.7);z-index:61}
+.modalhead{display:flex;align-items:flex-start;gap:16px}
+.modalhead > div{flex:1;min-width:0}
+.modalhead .display{margin-top:2px}
+/* The only moment the user meets this agent's face, so it is the subject: centred, on the page
+   rather than in a card, and with no name under it. The name is in the field below being typed,
+   and printing it twice makes the preview look like a record that already exists. */
+.hirepreview{display:flex;flex-direction:column;align-items:center;gap:20px}
+/* One colour out of a fixed set. The first cell is the default the name gives it, drawn as the
+   dashed silhouette the rest of the app already uses for "not drawn, and that is fine". The
+   selected cell takes an ink ring, which is the one emphasis this page spends. */
+/* Seven by two, exactly filled: a ragged wrap reads as a list that ran out of room, and a
+   fixed block reads as a set that was chosen. */
+.swatches{display:grid;grid-template-columns:repeat(7,26px);gap:10px;justify-content:center}
+.swatch{width:26px;height:26px;border-radius:50%;flex:0 0 auto;padding:0;border:1px solid transparent}
+.swatch:hover{transform:scale(1.08)}
+.swatch.on{box-shadow:0 0 0 2px var(--ground),0 0 0 3px var(--ink)}
+.swatch.auto{background:transparent;border:1px dashed var(--line);color:var(--muted);display:flex;align-items:center;justify-content:center}
+.swatch.auto:hover{border-color:var(--muted);color:var(--ink)}
+.swatch:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+@media (prefers-reduced-motion:reduce){.swatch:hover{transform:none}}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fields > .labelled:nth-child(n+3){grid-column:1 / -1}
+.modalfoot{display:flex;justify-content:flex-end;gap:10px}
+
+/* A listbox, not a native select: this platform paints its own light, which would put the
+   brightest thing on the page on a dropdown. */
+.selecttrigger{display:flex;align-items:center;gap:10px;text-align:left;cursor:pointer}
+.selecttrigger > span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.selecttrigger[data-state=open]{border-color:var(--muted)}
+.selecttrigger svg{color:var(--muted);flex:0 0 auto}
+.selectmenu{background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:5px;min-width:var(--radix-select-trigger-width);box-shadow:0 20px 60px rgba(0,0,0,.65);z-index:62}
+.selectitem{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;font-size:13px;cursor:pointer;outline:none}
+.selectitem[data-highlighted]{background:var(--ground)}
+.selectitem[data-disabled]{color:var(--muted);cursor:default}
+.selecttick{margin-left:auto;display:flex;color:var(--muted)}
+
 
 /* ---------- markdown in the transcript ----------
  * Agents write markdown and Streamdown renders it (see `components/Markdown.tsx`). It ships
@@ -264,3 +433,9 @@ textarea.textfield{border:1px solid var(--line);padding:6px 8px;resize:vertical;
 .reposcope .fieldlabel{margin-bottom:4px}
 .reposcope .rosterrow:disabled{opacity:.45;cursor:default}
 .reposcope .rosterrow:disabled:hover{background:none}
+
+/* A team that would not open. A line the user can read and dismiss, not a dialog to clear:
+   whatever was on screen is still there and still correct. */
+.openerror{display:flex;align-items:center;gap:12px;margin:0 20px 10px;padding:9px 14px;border:1px solid var(--line);border-left:2px solid var(--ink);border-radius:0 12px 12px 0;background:var(--raised);font-size:13px;line-height:1.45}
+.openerror .dismiss{margin-left:auto;flex:0 0 auto;color:var(--muted);font-size:16px;line-height:1;padding:0 4px}
+.openerror .dismiss:hover{color:var(--ink)}

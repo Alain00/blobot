@@ -24,12 +24,14 @@ import {
   type NewTeamSpec,
 } from './team-store.js';
 import { runtimeLabel } from './runtime-labels.js';
-import type { RunningTeam } from './running-team.js';
+import { isWorking, type RunningTeam } from './running-team.js';
+import { TeamPool } from './team-pool.js';
 import type {
   HireResult,
   TeamCreationResult,
   UiAgentProfile,
   UiRuntimeChoice,
+  TeamOpenResult,
   UiSnapshot,
   UiTeamSummary,
   UiWorkspaceInspection,
@@ -62,17 +64,61 @@ const liveClaudePath = process.argv
 
 let opened: OpenedDatabase | undefined;
 let store: SqliteStore | undefined;
-let running: RunningTeam | undefined;
 let window: BrowserWindow | undefined;
+/** `--demo` only: the scripted team, which lives outside the pool because it has no peers. */
+let demo: RunningTeam | undefined;
+/**
+ * Why the team this launch tried to open did not open. Kept because the empty state is the
+ * only screen a failed launch can land on, and "create your first team" is a lie to someone
+ * who has three.
+ */
+let openError: string | undefined;
+
+/**
+ * How many teams stay loaded. Three is the smallest number that makes the common shape — a
+ * team you are working in, one you are waiting on, one you keep glancing at — cost nothing to
+ * move between. Every extra live team is a bridge process per agent, so this is a real cost
+ * and not a free cache.
+ */
+const LIVE_TEAM_LIMIT = 3;
+
+/**
+ * The live teams. Selecting one promotes it rather than restarting it, which is why switching
+ * no longer costs a workspace reconcile, a process per agent and a transcript replay.
+ */
+const pool = new TeamPool<RunningTeam>({
+  limit: LIVE_TEAM_LIMIT,
+  start: async (team) => {
+    if (store === undefined || opened === undefined) throw new Error('No database is open.');
+    const live = await startTeam({ team, store, db: opened.db, clock });
+    attach(live);
+    return live;
+  },
+  isWorking,
+  onEvict: (live, reason) => {
+    if (reason === 'over_limit') {
+      process.stderr.write(`[teams] ${live.team.name} stopped: ${LIVE_TEAM_LIMIT} teams stay live\n`);
+    }
+  },
+});
+
+/** The team on screen. Everything the renderer asks about is about this one. */
+function current(): RunningTeam | undefined {
+  return demo ?? pool.active;
+}
 
 function teamSummaries(): UiTeamSummary[] {
   if (store === undefined) return [];
-  return store.listTeams().map((team) => ({
-    id: team.id,
-    name: team.name,
-    workspacePath: team.workspacePath,
-    agentCount: store?.agentsOfTeam(team.id).length ?? 0,
-  }));
+  return store.listTeams().map((team) => {
+    const lastActiveAt = store?.lastActiveAt(team.id);
+    return {
+      id: team.id,
+      name: team.name,
+      workspacePath: team.workspacePath,
+      agentCount: store?.agentsOfTeam(team.id).length ?? 0,
+      ...(lastActiveAt === undefined ? {} : { lastActiveAt }),
+    };
+  });
 }
 
 /** Every hired agent, and which teams it is on — a membership query, never a stored count. */
@@ -85,6 +131,7 @@ function agentProfiles(): UiAgentProfile[] {
     role: profile.role,
     runtimeLabel: runtimeLabel(profile.runtimeId),
     ...(profile.instructions === undefined ? {} : { instructions: profile.instructions }),
+    ...(profile.hue === undefined ? {} : { hue: profile.hue }),
     teams: store
       ? store
           .membershipsOf(profile.id)
@@ -95,7 +142,7 @@ function agentProfiles(): UiAgentProfile[] {
 }
 
 function snapshot(): UiSnapshot {
-  const team = running;
+  const team = current();
   if (team === undefined) {
     return {
       teams: teamSummaries(),
@@ -105,6 +152,7 @@ function snapshot(): UiSnapshot {
       answers: [],
       turnsThisPrompt: 0,
       demoMode: false,
+      ...(openError === undefined ? {} : { openError }),
     };
   }
   return {
@@ -130,6 +178,7 @@ function snapshot(): UiSnapshot {
       role: agent.role,
       runtimeLabel: team.runtimeLabels[agent.id] ?? 'unknown',
       workspacePath: agent.workspacePath,
+      ...(agent.hue === undefined ? {} : { hue: agent.hue }),
       ...(team.branches[agent.id] === undefined ? {} : { branch: team.branches[agent.id] }),
     })),
     statuses: Object.fromEntries(
@@ -146,33 +195,51 @@ const send = (channel: string, ...args: unknown[]): void => {
   if (window !== undefined && !window.isDestroyed()) window.webContents.send(channel, ...args);
 };
 
-/** Wire one running team's streams to the renderer. Re-run on every team switch. */
+/**
+ * Wire one running team's streams to the renderer. Once per team, when it starts — not on
+ * every switch, because a team that is already live keeps the listeners it had.
+ *
+ * Every message leads with the team id. Several teams stream at once now, and a backgrounded
+ * team's words drawn into the open transcript would be a worse bug than the restart this
+ * replaced.
+ */
 function attach(team: RunningTeam): void {
+  const teamId = team.team.id;
   const orchestrator = team.orchestrator;
   orchestrator.onEvent((event) => {
-    send('blobot:event', event);
-    send('blobot:turns', orchestrator.turnsThisPrompt);
+    send('blobot:event', teamId, event);
+    send('blobot:turns', teamId, orchestrator.turnsThisPrompt);
+    // A team kept past the limit only because it was mid-turn is collected once it is quiet.
+    if (!isWorking(team)) void pool.evictIdle();
   });
-  orchestrator.onStatusChange((agentId, status) => send('blobot:status', agentId, status));
-  orchestrator.onMessage((message) => send('blobot:message', message));
+  orchestrator.onStatusChange((agentId, status) => send('blobot:status', teamId, agentId, status));
+  orchestrator.onMessage((message) => send('blobot:message', teamId, message));
   orchestrator.onBudgetExhausted((exhausted) =>
-    send('blobot:budget', exhausted.turnsUsed, exhausted.turnBudget),
+    send('blobot:budget', teamId, exhausted.turnsUsed, exhausted.turnBudget),
   );
 }
 
 /**
- * Stop whatever is running and start this team instead. One orchestrator at a time: the
- * orchestrator is per-team already, so holding several is wiring rather than surgery — but a
- * second live team is a second set of agent processes, and nobody has asked for that yet.
+ * Put this team on screen, starting it only if it is not already live.
+ *
+ * This used to stop the previous team, which made every switch a restart — a process per
+ * agent, a workspace reconcile, and, before `session/load`, an agent who had forgotten the
+ * conversation it was in the middle of. The pool keeps the last few, so going back to a team
+ * you were just in costs nothing and loses nothing.
  */
-async function switchTo(team: Team): Promise<void> {
-  if (store === undefined || opened === undefined) return;
-  const previous = running;
-  running = undefined;
-  await previous?.close();
-  running = await startTeam({ team, store, db: opened.db, clock });
-  attach(running);
+async function switchTo(team: Team): Promise<TeamOpenResult> {
+  if (store === undefined || opened === undefined) return { ok: false, error: 'No database is open.' };
+  try {
+    await pool.select(team);
+    openError = undefined;
+  } catch (error) {
+    // A Workspace that has been moved or deleted is the ordinary case here, and it used to
+    // reach nobody: the handler rejected, the terminal got a stack trace, and the user got a
+    // team that would not open for no stated reason. Whatever was on screen stays on screen.
+    return { ok: false, error: describe(error) };
+  }
   send('blobot:team');
+  return { ok: true };
 }
 
 async function createWindow(): Promise<void> {
@@ -188,8 +255,6 @@ async function createWindow(): Promise<void> {
     },
   });
 
-  if (running !== undefined) attach(running);
-
   const pane = process.argv.find((arg) => arg.startsWith('--pane='))?.slice('--pane='.length);
   const hash = pane === undefined ? undefined : `pane=${pane}`;
   const devServer = process.env['ELECTRON_RENDERER_URL'];
@@ -204,7 +269,7 @@ async function createWindow(): Promise<void> {
   if (autoplay) {
     // `loadFile` already resolved, so a `did-finish-load` listener attached here never fires.
     setTimeout(() => {
-      const team = running;
+      const team = current();
       if (team !== undefined) {
         void team.orchestrator.promptFromUser(team.agents[0]?.id ?? '', team.autoplayPrompt);
       }
@@ -234,27 +299,44 @@ void app.whenReady().then(async () => {
   if (demoMode) {
     // The one team whose database is thrown away, because it is the same scripted replay
     // every time and stacking it would only grow a transcript nobody reads twice.
-    running = await createDemoTeam(':memory:', migrations);
+    // The demo is one team and stays one team: it never reaches the pool, because there is
+    // nothing to switch to and its database is thrown away.
+    demo = await createDemoTeam(':memory:', migrations);
+    attach(demo);
   } else {
     // Everything else lives in one file under `userData`, which is what makes a team a thing
     // the user created rather than a thing this process happens to be holding.
     opened = openDatabase({ path: join(app.getPath('userData'), 'blobot.db'), migrationsFolder: migrations });
     store = new SqliteStore(opened.db);
     const team = liveClaudePath === undefined ? store.listTeams()[0] : await liveTeam(liveClaudePath);
-    if (team !== undefined) await switchTo(team);
+    // A launch that cannot open the newest team is not a launch that fails: the window comes
+    // up on the rail, where the user can pick another one and read what went wrong.
+    if (team !== undefined) {
+      const first = await switchTo(team);
+      if (!first.ok) {
+        openError = `${team.name} did not open. ${first.error ?? ''}`.trim();
+        process.stderr.write(`[teams] ${openError}\n`);
+      }
+    }
   }
 
   ipcMain.handle('blobot:snapshot', () => snapshot());
   ipcMain.handle('blobot:prompt', async (_event, agentId: string, text: string) => {
-    await running?.orchestrator.promptFromUser(agentId, text);
+    await current()?.orchestrator.promptFromUser(agentId, text);
   });
-  ipcMain.handle('blobot:resume', () => running?.orchestrator.resumeAfterBudget());
+  ipcMain.handle('blobot:resume', () => current()?.orchestrator.resumeAfterBudget());
 
   ipcMain.handle('blobot:chooseWorkspace', async () => {
-    const result = await dialog.showOpenDialog({
+    // Attached to the window rather than free-floating, so the picker cannot end up behind
+    // the app with the app looking unresponsive.
+    const options = {
       title: 'Choose a Workspace',
-      properties: ['openDirectory', 'createDirectory'],
-    });
+      properties: ['openDirectory', 'createDirectory'] as const,
+    };
+    const result =
+      window === undefined
+        ? await dialog.showOpenDialog({ ...options, properties: [...options.properties] })
+        : await dialog.showOpenDialog(window, { ...options, properties: [...options.properties] });
     return result.canceled ? undefined : result.filePaths[0];
   });
   ipcMain.handle('blobot:inspectWorkspace', (_event, path: string) => reportInspection(() => inspectWorkspace(path)));
@@ -298,15 +380,22 @@ void app.whenReady().then(async () => {
     if (store === undefined) return { ok: false, error: 'No database is open.' };
     try {
       const team = await createTeam(spec, { store, clock });
-      await switchTo(team);
+      const launched = await switchTo(team);
+      // The row exists either way, but a flow that says "created" while nothing opened is
+      // worse than one that says what stopped it.
+      if (!launched.ok) {
+        return { ok: false, ...(launched.error === undefined ? {} : { error: launched.error }) };
+      }
       return { ok: true, teamId: team.id };
     } catch (error) {
       return { ok: false, error: describe(error) };
     }
   });
-  ipcMain.handle('blobot:selectTeam', async (_event, teamId: string) => {
+  ipcMain.handle('blobot:selectTeam', async (_event, teamId: string): Promise<TeamOpenResult> => {
     const team = store?.teamById(teamId);
-    if (team !== undefined && team.id !== running?.team.id) await switchTo(team);
+    if (team === undefined) return { ok: false, error: 'That team is no longer in the database.' };
+    if (team.id === current()?.team.id) return { ok: true };
+    return switchTo(team);
   });
 
   await createWindow();
@@ -354,7 +443,8 @@ function describe(error: unknown): string {
 }
 
 app.on('window-all-closed', () => {
-  void running?.close();
+  void pool.closeAll();
+  void demo?.close();
   opened?.close();
   if (process.platform !== 'darwin') app.quit();
 });
