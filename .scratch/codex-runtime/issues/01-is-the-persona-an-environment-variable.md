@@ -1,5 +1,5 @@
 Type: research
-Status: open
+Status: resolved
 
 # Is the persona an environment variable?
 
@@ -48,3 +48,36 @@ fallback ladder is worse at every rung.
   question with higher stakes.
 - **The persona in the first prompt.** Always available, always the weakest, and the one to
   choose over anything that touches a credential.
+
+## Answer
+
+**Yes, and it is durable.** Observed 2026-08-30 against codex-cli 0.148.0 behind codex-acp 1.7.0,
+on a real signed-in account. Full findings and transcripts:
+[`research/01-codex-persona.md`](../research/01-codex-persona.md).
+
+`CODEX_CONFIG={"developer_instructions":"<persona>"}` is the mechanism. It is live on turn 1, it
+holds across turns, and it survives both a `session/load` in a second process **with the variable
+unset** and a real compaction. The proof against the obvious confound is `t5`/`t6`: the persona
+carried a fact the conversation never mentioned, and a fresh process with no `CODEX_CONFIG` at
+all answered with it, so this is not the replayed transcript and not a turn-1 prompt wearing a
+better name. Codex stores the instructions on the session.
+
+It is **additive to `AGENTS.md`**, verified with one in the workspace: turn 1 used the persona and
+the repository's codename in the same sentence. ADR-0003 holds, and `model_instructions_file` was
+not reached for. `CODEX_HOME` was not touched, so the ladder's credential-adjacent rung is not
+needed.
+
+Step 3, for ticket 02: the merge reaches **Codex's own config loader**, not an allowlist — a
+nonsense `sandbox_mode` fails `session/new` by name. `model` and `model_reasoning_effort` take
+effect through it. `sandbox_mode` and `approval_policy` are accepted and validated but do **not**
+move the mode the bridge reports, which stays `agent`; `INITIAL_AGENT_MODE` is what moves that.
+Which layer wins where a command actually runs is not answered here and is ticket 02's to
+establish behaviourally. An unknown key is accepted in silence, so blobot's posture should be
+asserted against what comes back rather than trusted on the write. Malformed JSON kills the
+bridge before `initialize`, which is the good failure.
+
+One consequence for ticket 05, and it is new: **a loaded session keeps the persona it was created
+with.** Loading a session with a different persona in the environment changed nothing. So for
+Codex an edited persona takes effect on a *new* session and not on a resumed one, which ADR-0002's
+"at the team's next start" does not guarantee by itself once `TeamPool` resumes with
+`session/load`.
