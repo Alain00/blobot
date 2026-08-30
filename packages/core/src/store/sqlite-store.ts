@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
-import type { Agent, AgentProfile, Message, Team } from '../orchestrator/domain.js';
+import type { Agent, AgentDefinition, AgentProfile, Message, Team } from '../orchestrator/domain.js';
 import type { MessageStore } from '../orchestrator/message-store.js';
 import type { BlobotDatabase } from './database.js';
 import { agentMessages, agentProfiles, agents, messages, sessions, teams } from './schema.js';
@@ -176,6 +176,53 @@ export class SqliteStore implements MessageStore {
       .all()
       .filter((row) => row.deletedAt === null)
       .map(toAgentRecord);
+  }
+
+  /**
+   * Rewrite an agent's definition. Every field is given, because this is what the profile is
+   * now rather than a patch against what it was.
+   *
+   * It touches the profile row alone. What an edit does to the teams the agent is already on
+   * is a separate decision with a separate reason for each field, and it lives one level up in
+   * the app's `editAgentProfile` — see `docs/adr/0002-editing-an-agents-definition.md`.
+   */
+  updateProfile(profileId: string, definition: AgentDefinition): void {
+    this.#db
+      .update(agentProfiles)
+      .set({
+        name: definition.name,
+        role: definition.role,
+        runtimeId: definition.runtimeId,
+        executablePath: definition.executablePath ?? null,
+        instructions: definition.instructions ?? null,
+        hue: definition.hue ?? null,
+      })
+      .where(eq(agentProfiles.id, profileId))
+      .run();
+  }
+
+  /**
+   * Carry the half of an edited definition that a membership is not built out of onto one
+   * Agent row: its role, its standing instructions and its face.
+   *
+   * Deliberately not its name, and not its runtime. The AgentWorkspace is `blobot/<team>/<agent>`
+   * and the branch is named after what the agent was called when it joined; a session belongs
+   * to the provider that opened it. Those two are what a Team gave the Agent, and an edit to
+   * the definition does not reach back into them.
+   */
+  restateAgent(
+    agentId: string,
+    stated: { readonly role: string; readonly instructions?: string; readonly hue?: number },
+  ): void {
+    this.#db
+      .update(agents)
+      .set({
+        role: stated.role,
+        instructions: stated.instructions ?? null,
+        hue: stated.hue ?? null,
+      })
+      .where(eq(agents.id, agentId))
+      .run();
   }
 
   /**

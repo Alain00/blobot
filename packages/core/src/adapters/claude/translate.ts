@@ -1,5 +1,6 @@
 import type { StopReason, ToolCallStatus, ToolKind } from '../../events.js';
 import type { InjectableEvent } from '../../mock/mock-agent-runtime.js';
+import type { AvailableCommand } from '../../runtime.js';
 import type { ContentBlock, SessionUpdate, ToolContent } from './wire.js';
 
 /**
@@ -11,7 +12,9 @@ import type { ContentBlock, SessionUpdate, ToolContent } from './wire.js';
  *
  * - `plan` (Claude's `TodoWrite`) and `current_mode_update`, `session_info_update`,
  *   `config_option_update` — Claude-only state with no OpenCode counterpart.
- * - `available_commands_update` — a slash-command menu, several KB on every turn.
+ * - `available_commands_update` — a slash-command menu, several KB on every turn. It is
+ *   *captured* by the runtime rather than discarded (see `commandsFrom`), but it stays out of
+ *   the vocabulary: an event would carry it through the recorder into SQLite.
  * - `user_message_chunk` — only ever replayed history, and our store is the transcript of
  *   record.
  *
@@ -32,6 +35,32 @@ export function translateSessionUpdate(update: SessionUpdate): InjectableEvent[]
     default:
       return [];
   }
+}
+
+/**
+ * The command menu off an `available_commands_update`, in blobot's shape.
+ *
+ * Returns `undefined` for any other update, which is what distinguishes "this notification
+ * says nothing about commands" from "this session advertises none" — an empty list is a real
+ * answer and must be able to replace a full one.
+ *
+ * An entry with no name cannot be inserted into the composer, so it is dropped rather than
+ * shown as a blank row.
+ */
+export function commandsFrom(update: SessionUpdate): AvailableCommand[] | undefined {
+  if (update.sessionUpdate !== 'available_commands_update') return undefined;
+  return (update.availableCommands ?? []).flatMap((command) => {
+    const name = command.name;
+    if (name === undefined || name === '') return [];
+    const hint = command.input?.hint;
+    return [
+      {
+        name,
+        description: command.description ?? '',
+        ...(hint === undefined || hint === '' ? {} : { hint }),
+      },
+    ];
+  });
 }
 
 function chunk(

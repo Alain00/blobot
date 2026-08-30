@@ -24,6 +24,12 @@ Two consequences you will keep bumping into:
 - **Status is never colour.** It has three channels instead: motion on the blobatar, a mono word
   spelled out, and a hairline that sweeps while a turn is in flight. Seven states do not fit in
   a dot, and a coloured dot is exactly what the palette forbids.
+- **A blobatar is seeded by the agent's *name*, never by a row id.** The library derives the
+  whole face from that string, so a surface that seeds it with an id draws a different creature
+  for the same agent. That is exactly what happened: the rail seeded by Agent id, the roster
+  lists by profile id and the hire preview by the name being typed, and one agent wore three
+  faces. The colour picker already says the name gives the face; this is that sentence enforced.
+  Only the hue is stored, because the user can choose it.
 - **Contrast is the attention channel**, because colour is spoken for. Spend it almost never.
   There are two inversions in the whole app: `waiting` (the one state where an agent sits
   forever until a human looks) and an armed primary button.
@@ -33,7 +39,7 @@ Two consequences you will keep bumping into:
 | Token | Value | What it is |
 |---|---|---|
 | `--ground` | `#0a0a0b` | The page. |
-| `--raised` | `#131315` | Anything lifted off it: a bubble, a field, a hovered row, a menu. |
+| `--raised` | `#131315` | Anything lifted off it: a bubble, a field, a selected row, a menu. |
 | `--ink` | `#fafaf8` | Text, and the one emphasis worth spending. |
 | `--muted` | `#8a8a93` | Secondary text, every mono label, every icon at rest. |
 | `--line` | `#232327` | Every hairline and every border at rest. |
@@ -82,6 +88,11 @@ Other transcript rules:
 - The column fills the pane to a 900px measure and centres.
 - A time rule appears before the first item and after a fifteen-minute gap.
 - Three dots stand in for an agent that has been asked something and has not started streaming.
+- **Only the message being written carries status.** A blobatar beside a settled message is
+  still: that message is a record of something already said, and twenty of them bobbing in
+  unison the moment their agent starts working is the same fidget the team mark's single
+  folded animation exists to avoid. The header, the status word, the rail row and the pending
+  dots carry the state instead.
 - **Folding is for the peer voice only.** A message from you is yours and short; an agent's
   answer is the thing the pane exists to show, and folding it would be hiding the work.
 - **A permission block is a transcript item, not a modal.** An agent that has been asked to run
@@ -112,7 +123,14 @@ Every control descends from the composer. If you are adding one, start there.
   Alice's pane, because the pane is already the recipient; in the team pane it wears the
   resolved agent's blobatar, because there the recipient is a live question.
 - Selection in a list is the raised ground alone. No left rule: a row that lifts and brightens
-  is already saying it twice.
+  is already saying it twice. The row is **inset and rounded** at `.field`'s 12px, like every
+  other lifted surface here — a full-bleed square block is the one shape this app does not have,
+  and it reads as a band across the rail rather than as the row being pointed at.
+- **Hover is not the raised ground.** It was, and selection was too, so the two were one
+  declaration twice over and a row you were pointing at looked like the row you were in. They
+  answer different questions, so they differ in kind and not in degree: selection takes the
+  ground, hover takes the row's muted second line to ink. Pick the line every row has — the one
+  carrying the preview *or* the role — so a row nobody has spoken on still answers the pointer.
 
 ## Icons
 
@@ -126,6 +144,14 @@ are in use. Take a primitive when you need the half nobody screenshots: a focus 
 returned to the trigger, `aria-modal`, a listbox with arrow keys and type-ahead. Style every
 pixel yourself from the tokens above.
 
+**`cmdk` for the one thing Radix has no primitive for: a combobox.** The composer's `@mention`
+menu, and the `/` palette that will be the same list, need a menu whose arrow keys move a
+*virtual* cursor while focus stays in the text input. Every Radix menu moves real focus into the
+menu instead, so there is nothing to take. cmdk is unstyled and its rule is the same as Radix's:
+behaviour only. Do not use its `Command.Input` — it hardcodes `spellCheck={false}` and
+`aria-expanded={true}` after spreading your props, and a message field is prose that is usually
+not showing a menu. Keep the input, take the list.
+
 **No shadcn, no Tailwind.** Considered and declined 2026-08-29: the design system already
 exists, so shadcn's value would have been defaults we override to nothing, plus a build step.
 If you want a component from it, take the Radix primitive underneath it instead.
@@ -136,11 +162,46 @@ Motion is a real channel here, not decoration: it is what makes "two agents work
 legible from across the room. It is also the only thing that moves, so anything you add
 competes with status.
 
+**There are two budgets, and the sentence above is about the first one.**
+
+**Ambient motion** runs on its own, forever, whether or not anybody is doing anything. It is
+spoken for: it means status, and it lives on the blobatar. Adding a second ambient animation
+anywhere is a design decision, and almost always the wrong one.
+
 - Status animations live on the blobatar: still, breathe, bob, nod, pulse, flinch.
 - A team mark animates the **folded** team status once for the whole cluster. Four members
   bobbing out of phase is four things fidgeting.
+
+**Interaction motion** runs once, because a person just did something, and is over before the
+eye returns to the status column. It cannot compete with status, because it is not there when
+status is being read. This is what the transitions in the stylesheet are, and the rules on them
+are narrow:
+
+- **Only in answer to something the user did.** A click, a press, a pointer crossing a row. If
+  it can start on its own it belongs to the first budget, not this one.
+- **Under 300ms, and usually far under.** 120ms for a hover reveal, 140 to 200ms for a press or
+  an arrival, 260ms for the fold, which is the only thing here that travels far enough to earn
+  it. Two curves, `--ease-out` and `--ease-in-out`. A third would be a decision nobody could
+  state the reason for.
+- **`transform` and `opacity` only**, and prefer the individual `scale` and `translate`
+  properties: they compose with a `transform` a rule is already using for layout instead of
+  overwriting it.
+- **Nothing that carries meaning of its own.** It smooths a change the interface was making
+  anyway. If a user has to see the animation to understand what happened, the animation is
+  doing a job that belongs to a word.
+- **Nothing on the paths that are walked all day.** Not the composer's `@mention` menu, not
+  pane or team switching, not the rail's hover colour, not the activity feed. Frequency is the
+  disqualifier, not taste: a hundred small delays a day is a slow app.
+- **Nothing that moves what the user is reading.** The transcript, the feed and the turn pips
+  are data, and data does not move for style.
+
+Both budgets answer to the same withdrawal rule:
+
 - **Everything decorative sits behind `prefers-reduced-motion`**, where the mono word and the
-  hairline carry the state alone. No exceptions.
+  hairline carry the state alone. No exceptions. Interaction motion is withdrawn rather than
+  deleted: a cross-fade is not motion, so the opacity stays and everything that travels or grows
+  goes. That block is **last in the stylesheet**, because it and the rules it overrides carry
+  the same specificity and order is the only thing deciding them.
 
 ## Words
 
@@ -186,6 +247,14 @@ One flat file, one flat namespace, no build step between it and the DOM.
   standfirst, numbered steps. It is read once, start to finish, before anything exists, which is
   a different job from every other surface. Do not spread this treatment; it works because it is
   the only one.
+- **Your agents** — every AgentProfile the user has hired, over the working surface rather than
+  in place of it: the team behind it keeps running, and nothing on this screen restarts one. A
+  row is a face, a name, a role, the runtime and the teams it is on, with its standing
+  instructions under them clamped to two lines. Clicking a row edits the definition; retiring is
+  an icon revealed on hover and `:focus-within`, the rail's rule for the same reason. It is a
+  **working** surface and takes none of the creation flow's editorial treatment: no hand face, no
+  standfirst, no numerals. Reached from a row above TEAMS in the rail, because that is the order
+  the model reads in.
 - **Modals** — for things that outlive the screen that opened them. Hiring an agent is a modal
   because the agent exists afterwards whether or not the team is created. A step of a flow is
   not a modal.

@@ -4,8 +4,10 @@ import type { AgentEvent } from '../../events.js';
 import { assembleMessages } from '../../message-assembler.js';
 import { AsyncQueue } from '../../mock/async-queue.js';
 import type { InjectableEvent } from '../../mock/mock-agent-runtime.js';
+import { sameCommands } from '../../commands.js';
 import type {
   AgentRuntime,
+  AvailableCommand,
   PermissionHandler,
   PermissionOption,
   Prompt,
@@ -19,7 +21,8 @@ import {
   spawnClaudeBridge,
   type SpawnBridge,
 } from './stdio-bridge.js';
-import { stopReasonOf, translateSessionUpdate } from './translate.js';
+import { offerableNames, paletteOf } from './palette.js';
+import { commandsFrom, stopReasonOf, translateSessionUpdate } from './translate.js';
 import type {
   InitializeResult,
   NewSessionResult,
@@ -45,13 +48,40 @@ const PERMISSION_MODE = 'default';
  * ignored blobot's tool, called `ListAgents`, found three unrelated Claude sessions and told
  * the user Bob was unreachable.
  *
- * They are disallowed for a blobot agent. This is narrower than it looks and it is not a
- * retreat from ticket 07's "inherit the user's whole setup": a permanent rule says **the
- * orchestrator owns agent-to-agent communication**, and these two tools are a second,
- * unowned channel for exactly that — messages that never reach the mailbox, never persist,
- * and never appear in the UI. Every other inherited tool, MCP server, hook and skill stays.
+ * They are disallowed for a blobot agent: a permanent rule says **the orchestrator owns
+ * agent-to-agent communication**, and these two tools are a second, unowned channel for
+ * exactly that — messages that never reach the mailbox, never persist, and never appear in
+ * the UI.
+ *
+ * This once carried a note that it was "not a retreat from ticket 07's inherit the user's
+ * whole setup". ADR-0003 has since made that retreat deliberately and at the right altitude:
+ * an agent inherits the project's config, not the operator's. See `SETTING_SCOPES`.
  */
 const SHADOWING_TOOLS = ['SendMessage', 'ListAgents'];
+
+/**
+ * Which settings scopes a blobot agent loads. See
+ * `docs/adr/0003-what-an-agent-inherits.md`, including its amendment.
+ *
+ * All three, which is also the bridge's default — stated here anyway, because it was chosen
+ * rather than inherited, and because it was briefly `['project','local']` and the reason it
+ * changed back is worth keeping next to the line.
+ *
+ * The first decision dropped `user` on the strength of a measurement: 223 advertised commands,
+ * of which 175 came from that scope. But 140 of those were a single installed **plugin** and
+ * only **37** were skills the operator had actually written, and those two populations have
+ * nothing in common. Dropping the scope to be rid of the plugin also took the author's own
+ * work, and `settingSources` is too coarse to separate them.
+ *
+ * So the separation moved to where it can actually be made: `palette.ts` enumerates
+ * `~/.claude/skills` and the workspace's `.claude/` from disk, because a plugin installs into
+ * neither. The scope decides what an agent *can do*; the palette decides what blobot *offers*.
+ * Conflating those two was the error.
+ *
+ * The cost is real and is tracked in `.scratch/runtime-posture/`: `user` scope also restores
+ * the operator's global CLAUDE.md, settings and hooks for every agent.
+ */
+const SETTING_SCOPES = ['user', 'project', 'local'];
 
 /**
  * The servers blobot injects are pre-approved, by name, as `mcp__<server>`.
@@ -127,6 +157,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
   readonly #spawn: SpawnBridge;
   readonly #eventListeners = new Set<(event: AgentEvent) => void>();
   readonly #lifecycleListeners = new Set<(lifecycle: RuntimeLifecycle) => void>();
+  readonly #commandListeners = new Set<(commands: readonly AvailableCommand[]) => void>();
 
   #sessionId = '';
   #lifecycle: RuntimeLifecycle = 'created';
@@ -138,6 +169,8 @@ export class ClaudeAgentRuntime implements AgentRuntime {
   #modeId: string | undefined;
   #replaying = false;
   #resumed = false;
+  #commands: readonly AvailableCommand[] = [];
+  #projectNames: ReadonlySet<string> | undefined;
 
   constructor(options: ClaudeAgentRuntimeOptions) {
     this.agentId = options.agentId;
@@ -278,6 +311,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
         claudeCode: {
           options: {
             disallowedTools: SHADOWING_TOOLS,
+            settingSources: SETTING_SCOPES,
             allowedTools: preApprovedTools(this.#options.mcpServers ?? []),
             ...(this.#options.model === undefined ? {} : { model: this.#options.model }),
           },
@@ -381,12 +415,54 @@ export class ClaudeAgentRuntime implements AgentRuntime {
     this.#permissionHandler = handler;
   }
 
+  get availableCommands(): readonly AvailableCommand[] {
+    return this.#commands;
+  }
+
+  onCommandsChange(listener: (commands: readonly AvailableCommand[]) => void): Unsubscribe {
+    this.#commandListeners.add(listener);
+    return () => this.#commandListeners.delete(listener);
+  }
+
+  /**
+   * Replace, never merge, and stay quiet when nothing actually moved.
+   *
+   * The filter runs here rather than at the consumer, so nothing above the adapter ever holds
+   * the unfiltered list. That is the provider rule doing its job: the names in
+   * `VOUCHED_BUILT_INS` are Claude Code's, and a component that saw them would know which
+   * provider it was rendering.
+   */
+  #setCommands(advertised: readonly AvailableCommand[]): void {
+    const commands = paletteOf(advertised, this.#projectCommands());
+    if (sameCommands(this.#commands, commands)) return;
+    this.#commands = commands;
+    for (const listener of this.#commandListeners) listener(commands);
+  }
+
+  /** Read once. A skill added to the workspace mid-session needs a restart to be offered,
+   *  which is the same bargain the provider's own `/reload-skills` exists to make. */
+  #projectCommands(): ReadonlySet<string> {
+    this.#projectNames ??= offerableNames(this.#options.cwd);
+    return this.#projectNames;
+  }
+
   #onSessionUpdate(notification: SessionNotification): void {
+    const update = notification.update;
+    if (update === undefined) return;
+
+    // Commands pass both guards below on purpose. They are current state rather than
+    // transcript, so a menu advertised while a resume replays describes the session we are
+    // about to use — and during that replay `#sessionId` is still empty, because it is not
+    // assigned until `session/load` returns.
+    const commands = commandsFrom(update);
+    if (commands !== undefined) {
+      this.#setCommands(commands);
+      return;
+    }
+
     // The replay of a resumed transcript, which every listener already has. See `#loadSession`.
     if (this.#replaying) return;
     if (notification.sessionId !== this.#sessionId) return;
-    const update = notification.update;
-    if (update === undefined) return;
     if (update.sessionUpdate === 'current_mode_update') {
       // Dropped from the stream — Claude-only state — but worth knowing, because a mode that
       // drifts off `default` is the posture quietly failing.

@@ -106,6 +106,47 @@ export const asksBeforeDeleting: Scenario = scenario('asks-before-deleting')
   .say('Cleared, and the build is green again.')
   .end();
 
+/**
+ * The commands a session advertises once it has held a turn. Short on purpose: research
+ * measured 48 entries from a real personal setup, and what that list should be allowed to
+ * contain is issue 03's question, not the mock's to prejudge.
+ */
+const FIRST_MENU = [
+  { name: 'review', description: 'Review the changes on this branch' },
+  { name: 'test', description: 'Run the test suite', hint: '[path]' },
+] as const;
+
+/**
+ * A session that knows no commands until its first turn is under way, then advertises a menu
+ * and immediately replaces it.
+ *
+ * Both halves are traps rather than decoration. The empty start is the OpenCode ordering,
+ * where the list lands after `session/prompt` — a consumer that treats empty as "still
+ * loading" is wrong about a real session. The replace is the bridge's own rule: a push is
+ * authoritative, so a consumer that merges accumulates commands from directories the agent
+ * has left. The identical third advertisement must wake nobody.
+ */
+export const advertisesCommands: Scenario = scenario('advertises-commands')
+  .think('Reading what this workspace offers before I pick a route through it.')
+  .advertises(FIRST_MENU)
+  .say('I can see what this workspace offers now.')
+  .advertises([
+    { name: 'review', description: 'Review the changes on this branch' },
+    { name: 'ship', description: 'Open a pull request for this branch' },
+  ])
+  .advertises([
+    { name: 'review', description: 'Review the changes on this branch' },
+    { name: 'ship', description: 'Open a pull request for this branch' },
+  ])
+  .say(' The menu moved under me halfway through, which is allowed.')
+  .end();
+
+/** The other direction: a session that had a menu and loses it entirely. */
+export const losesCommands: Scenario = scenario('loses-commands')
+  .say('That directory is gone, so the commands that lived in it are gone with it.')
+  .advertises([])
+  .end();
+
 export const scenarios = {
   'alice-asks-bob': aliceAsksBob,
   'bob-reviews': bobReviews,
@@ -115,6 +156,8 @@ export const scenarios = {
   'slow-to-first-token': slowToFirstToken,
   'long-running-tool': longRunningTool,
   'asks-before-deleting': asksBeforeDeleting,
+  'advertises-commands': advertisesCommands,
+  'loses-commands': losesCommands,
   refuses,
 } as const satisfies Record<string, Scenario>;
 

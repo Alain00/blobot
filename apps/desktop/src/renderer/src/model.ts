@@ -2,6 +2,7 @@ import type { AgentEvent, AgentStatus, Message } from '@blobot/core/domain';
 import type {
   UiPermissionOutcome,
   UiPermissionRequest,
+  UiCommand,
   UiSnapshot,
 } from '../../shared/api.js';
 
@@ -120,6 +121,8 @@ export interface AppState {
   snapshot: UiSnapshot | undefined;
   turnsThisPrompt: number;
   statuses: Record<string, AgentStatus>;
+  /** The slash menu each agent offers, by agent id. Per session, so it is not on `UiAgent`. */
+  commands: Record<string, readonly UiCommand[]>;
   items: Item[];
   feed: FeedEntry[];
   budget: { used: number; budget: number } | undefined;
@@ -129,6 +132,7 @@ export type Action =
   | { type: 'snapshot'; snapshot: UiSnapshot }
   | { type: 'event'; event: AgentEvent }
   | { type: 'status'; agentId: string; status: AgentStatus }
+  | { type: 'commands'; agentId: string; commands: readonly UiCommand[] }
   | { type: 'message'; message: Message }
   | { type: 'budget'; used: number; budget: number }
   | { type: 'turns'; turnsThisPrompt: number }
@@ -139,6 +143,7 @@ export const initialState: AppState = {
   snapshot: undefined,
   turnsThisPrompt: 0,
   statuses: {},
+  commands: {},
   items: [],
   feed: [],
   budget: undefined,
@@ -163,7 +168,11 @@ export function reduce(state: AppState, action: Action): AppState {
       return {
         ...state,
         snapshot: action.snapshot,
+        // Replaced rather than merged, and it can be: the snapshot carries every live team's
+        // agents, not just the one on screen. So this both seeds the rail's other rows and
+        // forgets a team the pool has since unloaded, which is the correct thing to forget.
         statuses: { ...action.snapshot.statuses },
+        commands: { ...action.snapshot.commands },
         turnsThisPrompt: action.snapshot.turnsThisPrompt,
         items: [
           ...action.snapshot.messages.map(toItem),
@@ -198,6 +207,10 @@ export function reduce(state: AppState, action: Action): AppState {
       return { ...state, turnsThisPrompt: action.turnsThisPrompt };
     case 'status':
       return { ...state, statuses: { ...state.statuses, [action.agentId]: action.status } };
+    case 'commands':
+      // Replace, never merge. A provider's advertisement is authoritative all the way down:
+      // merging here would undo the same rule the adapter keeps.
+      return { ...state, commands: { ...state.commands, [action.agentId]: action.commands } };
     case 'budget':
       return { ...state, budget: { used: action.used, budget: action.budget } };
     case 'permission': {
@@ -461,4 +474,59 @@ export function foldTeamStatus(statuses: readonly AgentStatus[]): {
     if (n > 0) return { status, label: `${n} ${status}` };
   }
   return { status: 'idle', label: 'all idle' };
+}
+
+/**
+ * What the composer's `/` menu shows, and why it shows nothing when it shows nothing.
+ *
+ * Pure, and separate from the component, because every interesting question here is a decision
+ * rather than a rendering: when a `/` is a command and when it is prose, whose commands they
+ * are, and which of the two empty states the user is looking at.
+ */
+export interface CommandMenu {
+  readonly suggestions: readonly UiCommand[];
+  /** Shown instead of rows, and never selectable: Enter must keep sending. */
+  readonly note?: string;
+}
+
+/**
+ * A slash command is only a slash command at the very start of the message.
+ *
+ * That is what the CLI parses — blobot passes the user's text through verbatim, so `/foo`
+ * arrives as the first characters — and it is the only rule that survives contact with prose:
+ * `src/auth.ts` and `and/or` are not somebody reaching for a menu. A space ends it, because
+ * what follows is the command's argument.
+ */
+export function slashPartial(draft: string): string | undefined {
+  return /^\/([\w:-]*)$/.exec(draft)?.[1];
+}
+
+export function commandMenu(options: {
+  readonly draft: string;
+  readonly dismissed: boolean;
+  /** Undefined in the team pane until a mention resolves. */
+  readonly recipientName: string | undefined;
+  readonly offered: readonly UiCommand[];
+}): CommandMenu {
+  const partial = slashPartial(options.draft);
+  if (partial === undefined || options.dismissed) return { suggestions: [] };
+
+  // A command belongs to a session, and in the team pane there is no session until the message
+  // is addressed. This is the precondition send already has, said out loud.
+  if (options.recipientName === undefined) {
+    return { suggestions: [], note: 'Say who with @ first. Commands belong to one teammate.' };
+  }
+  // A real answer, not a spinner: a session that has not held a turn may offer none. It is
+  // never primed with a throwaway prompt to make the menu look populated, because that spends
+  // a real turn of the user's tokens on decoration.
+  if (options.offered.length === 0) {
+    return { suggestions: [], note: `${options.recipientName} has not offered any commands yet` };
+  }
+
+  // A typo is not an empty state. It closes the menu, exactly as `@zz` does.
+  return {
+    suggestions: options.offered.filter((command) =>
+      command.name.toLowerCase().startsWith(partial.toLowerCase()),
+    ),
+  };
 }

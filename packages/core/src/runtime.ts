@@ -61,6 +61,22 @@ export type PeerMessageHandler = (call: PeerMessageCall) => Promise<PeerMessageA
  */
 export type RuntimeLifecycle = 'created' | 'starting' | 'ready' | 'stopped' | 'dead';
 
+/**
+ * One entry in a session's slash-command menu: a command or a skill, which the providers do
+ * not distinguish and neither do we.
+ *
+ * blobot's own shape, not the wire type, for the same reason core imports no ACP type today.
+ * It is not an `AgentEvent`: ticket 04 dropped `available_commands_update` from the vocabulary
+ * because it is a menu rather than agent state, and several KB of it arrives every turn.
+ * Putting it in the stream would push all of that through the recorder into SQLite.
+ */
+export interface AvailableCommand {
+  readonly name: string;
+  readonly description: string;
+  /** What the command expects after its name, when it takes an argument at all. */
+  readonly hint?: string;
+}
+
 export type Unsubscribe = () => void;
 
 /**
@@ -98,4 +114,24 @@ export interface AgentRuntime {
   onLifecycleChange(listener: (lifecycle: RuntimeLifecycle) => void): Unsubscribe;
 
   setPermissionHandler(handler: PermissionHandler): void;
+
+  /**
+   * The slash commands and skills this session currently advertises.
+   *
+   * Per session, so it belongs to the runtime instance rather than to the Team or the
+   * AgentProfile, and it does not survive a restart: after `session/load` the provider
+   * re-advertises, and a stale menu read from disk would be worse than an empty one.
+   *
+   * **Empty is a real answer.** On OpenCode the list arrives a few milliseconds *after*
+   * `session/prompt`, so an agent that has never held a turn knows no commands at all. A
+   * consumer must say so rather than assume the list is still loading.
+   */
+  readonly availableCommands: readonly AvailableCommand[];
+
+  /**
+   * Fires when the list has actually changed. **Replace, never merge** — a provider's push is
+   * authoritative, and merging would accumulate commands from directories the agent has left.
+   * An identical re-advertisement, which OpenCode sends after every prompt, notifies nobody.
+   */
+  onCommandsChange(listener: (commands: readonly AvailableCommand[]) => void): Unsubscribe;
 }

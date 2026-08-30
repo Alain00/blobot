@@ -395,3 +395,42 @@ describe('driving it by hand', () => {
     expect(said(three)).toBe('two');
   });
 });
+
+describe('the command menu', () => {
+  it('knows no commands before a turn has ever run', async () => {
+    const { runtime } = make({ script: scenarios['advertises-commands'] });
+    await runtime.start();
+
+    // The trap ticket 01 names: on OpenCode the list lands after `session/prompt`, so a fresh
+    // session having no menu is correct rather than a loading state.
+    expect(runtime.availableCommands).toEqual([]);
+  });
+
+  it('picks up a menu advertised mid-turn, and replaces it when it changes', async () => {
+    const { runtime, clock } = make({ script: scenarios['advertises-commands'] });
+    await runtime.start();
+    const seen: number[] = [];
+    runtime.onCommandsChange((commands) => seen.push(commands.length));
+
+    const events = await runTurn(runtime, clock);
+
+    expect(runtime.availableCommands.map((command) => command.name)).toEqual(['review', 'ship']);
+    // Three advertisements, the third identical to the second: two changes.
+    expect(seen).toEqual([2, 2]);
+    // And none of it is in the stream, where the recorder would carry it into SQLite.
+    expect(types(events)).not.toContain('available_commands_update');
+  });
+
+  it('lets a session lose its commands entirely', async () => {
+    const { runtime, clock } = make({
+      script: scenarios['loses-commands'],
+      commands: [{ name: 'review', description: 'Review the changes' }],
+    });
+    await runtime.start();
+    expect(runtime.availableCommands).toHaveLength(1);
+
+    await runTurn(runtime, clock);
+
+    expect(runtime.availableCommands).toEqual([]);
+  });
+});

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { PanelRight, PanelRightClose } from 'lucide-react';
+import { Agents } from './components/Agents.js';
 import { Composer } from './components/Composer.js';
 import { Conversation } from './components/Conversation.js';
 import { Feed } from './components/Feed.js';
@@ -12,13 +13,16 @@ import { useRailWidth } from './useRailWidth.js';
 
 export function App(): React.JSX.Element {
   const [state, dispatch] = useReducer(reduce, initialState);
-  // `--pane=<agentId>` on the main process lands here, so a screenshot can review a pane the
-  // reviewer cannot click into.
-  const initialPane = window.location.hash.replace('#pane=', '');
+  // `--pane=<agentId>` and `--screen=agents` on the main process land here, so a screenshot can
+  // review a surface the reviewer cannot click into.
+  const opened = new URLSearchParams(window.location.hash.slice(1));
+  const initialPane = opened.get('pane') ?? '';
   const [pane, setPane] = useState<Pane>(
     initialPane === '' ? { kind: 'team' } : { kind: 'agent', agentId: initialPane },
   );
   const [creating, setCreating] = useState(false);
+  /** *Your agents*, over the working surface. Not a modal: it is a place, not a decision. */
+  const [browsingAgents, setBrowsingAgents] = useState(opened.get('screen') === 'agents');
   /** The team a modal is about, and which one. Never the team on screen by implication. */
   const [editing, setEditing] = useState<string | undefined>(undefined);
   const [deleting, setDeleting] = useState<string | undefined>(undefined);
@@ -59,8 +63,16 @@ export function App(): React.JSX.Element {
       window.blobot.onTurns((teamId, turnsThisPrompt) => {
         if (mine(teamId)) dispatch({ type: 'turns', turnsThisPrompt });
       }),
-      window.blobot.onStatus((teamId, agentId, status) => {
-        if (mine(teamId)) dispatch({ type: 'status', agentId, status });
+      // The one stream that is *not* filtered to the team on screen. Every other channel here
+      // would draw another team's work into this transcript, which is the bug the filter
+      // exists for. A status is different: it is what the rail row is, and a backgrounded
+      // team that is working, or stuck at `waiting`, has no other way to say so. Keyed by
+      // agent id, which is per membership, so no two teams can write the same entry.
+      window.blobot.onStatus((_teamId, agentId, status) => {
+        dispatch({ type: 'status', agentId, status });
+      }),
+      window.blobot.onCommands((teamId, agentId, commands) => {
+        if (mine(teamId)) dispatch({ type: 'commands', agentId, commands });
       }),
       window.blobot.onMessage((teamId, message) => {
         if (mine(teamId)) dispatch({ type: 'message', message });
@@ -190,6 +202,7 @@ export function App(): React.JSX.Element {
                   });
                 },
                 onNewTeam: () => setCreating(true),
+                onOpenAgents: () => setBrowsingAgents(true),
                 onEditTeam: (teamId: string) => setEditing(teamId),
                 onDeleteTeam: (teamId: string) => setDeleting(teamId),
               })}
@@ -207,6 +220,7 @@ export function App(): React.JSX.Element {
           />
           <Composer
             agents={snapshot.agents}
+            commands={state.commands}
             pane={pane}
             onSend={(agentId, text) => void window.blobot.prompt(agentId, text)}
           />
@@ -221,6 +235,10 @@ export function App(): React.JSX.Element {
             onSaved={() => refresh(true)}
           />
         )}
+        {/* Over the panes rather than in place of them: the team behind it keeps running, and
+            an edit here is about agents rather than about what is on screen. Nothing it does
+            restarts a team, so nothing behind it has to be torn down. */}
+        {browsingAgents && <Agents onClose={() => setBrowsingAgents(false)} />}
         {deletingTeam !== undefined && (
           <DeleteTeam
             team={deletingTeam}

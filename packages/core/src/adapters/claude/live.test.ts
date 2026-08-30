@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -6,6 +6,7 @@ import type { AgentEvent } from '../../events.js';
 import { PeerMessageServer } from '../../mcp/peer-message-server.js';
 import type { PeerMessageCall } from '../../runtime.js';
 import { ClaudeAgentRuntime } from './claude-agent-runtime.js';
+import { personalSkillNames, VOUCHED_BUILT_INS } from './palette.js';
 
 /**
  * The real thing: a real `claude`, a real workspace, a real turn.
@@ -50,6 +51,84 @@ live('against a real claude', () => {
     expect(events.some((event) => event.type === 'agent_message_delta')).toBe(true);
     expect(events.at(-1)).toMatchObject({ type: 'turn_ended', stopReason: 'end_turn' });
     expect(events.some((event) => event.type === 'error')).toBe(false);
+  }, 180_000);
+
+  /**
+   * The palette, end to end: `settingSources` without `user`, then the allowlist.
+   *
+   * A fresh workspace ships no `.claude/`, so what survives here is exactly the built-ins
+   * blobot vouches for. The measurement that produced these rules — 223 commands and 97 KB
+   * unfiltered, 48 with `user` dropped — is on issue 03 and in ADR-0003.
+   */
+  it('offers a palette of the repo\'s commands and the vouched built-ins', async () => {
+    const runtime = new ClaudeAgentRuntime({
+      agentId: 'alice',
+      cwd: workspace(),
+      persona: 'You are Alice, a blobot teammate. Answer in as few words as possible.',
+    });
+
+    await runtime.start();
+    // Claude advertises during startup rather than after the first prompt, which is the
+    // opposite of what OpenCode was observed doing. Give it a beat rather than assuming.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const commands = runtime.availableCommands;
+    await runtime.stop();
+
+    process.stderr.write(
+      `[palette] ${commands.length} offered, ${JSON.stringify(commands).length} bytes\n`,
+    );
+    for (const command of commands) {
+      process.stderr.write(`[palette]   /${command.name}\n`);
+    }
+
+    expect(commands.length).toBeGreaterThan(0);
+    expect(commands.every((command) => command.name.length > 0)).toBe(true);
+    // This workspace ships no `.claude/`, so what is left is the vouched built-ins plus
+    // whatever the operator has written in `~/.claude/skills`.
+    const personal = personalSkillNames();
+    expect(
+      commands.every(
+        (command) => VOUCHED_BUILT_INS.includes(command.name) || personal.has(command.name),
+      ),
+    ).toBe(true);
+    // A plugin's skills load, and are never offered: they are in nobody's authored directory.
+    expect(commands.some((command) => command.name.includes(':'))).toBe(false);
+    // The ones that would have fought something blobot owns are gone.
+    for (const forbidden of ['batch', 'loop', 'schedule', 'mcp', 'config', 'list-agents']) {
+      expect(commands.some((command) => command.name === forbidden)).toBe(false);
+    }
+  }, 180_000);
+
+  /**
+   * The half the allowlist exists for: a skill the *repository* ships.
+   *
+   * ADR-0003 keeps `project` scope precisely so this works, and the palette's rule is that the
+   * repo owns the menu. Everything else in the list is five built-ins blobot happens to vouch
+   * for; this is the population that is supposed to grow.
+   */
+  it("offers a skill the workspace itself ships", async () => {
+    const dir = workspace();
+    mkdirSync(join(dir, '.claude', 'skills', 'house-style'), { recursive: true });
+    writeFileSync(
+      join(dir, '.claude', 'skills', 'house-style', 'SKILL.md'),
+      '---\nname: house-style\ndescription: How this repository writes things.\n---\n\nBe brief.\n',
+    );
+    mkdirSync(join(dir, '.claude', 'commands'), { recursive: true });
+    writeFileSync(join(dir, '.claude', 'commands', 'ship.md'), 'Open a pull request.\n');
+
+    const runtime = new ClaudeAgentRuntime({
+      agentId: 'alice',
+      cwd: dir,
+      persona: 'You are Alice, a blobot teammate.',
+    });
+    await runtime.start();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const offered = runtime.availableCommands.map((command) => command.name);
+    await runtime.stop();
+
+    process.stderr.write(`[project] ${offered.join(' ')}\n`);
+    expect(offered).toContain('house-style');
+    expect(offered).toContain('ship');
   }, 180_000);
 
   it('runs a tool in its own workspace and reports the lifecycle', async () => {

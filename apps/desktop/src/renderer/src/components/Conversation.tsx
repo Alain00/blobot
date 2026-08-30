@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { AgentStatus } from '@blobot/core/domain';
 import type { UiAgent, UiTeam } from '../../../shared/api.js';
@@ -38,6 +38,7 @@ export function Conversation({
   const byId = new Map(agents.map((agent) => [agent.id, agent]));
   const focused = pane.kind === 'agent' ? byId.get(pane.agentId) : undefined;
   const stream = useStickToBottom();
+  const answer = useLatest(onAnswerPermission);
 
   // The pane's own chrome only: App owns the column, so the composer sits under this in the
   // same flex container.
@@ -52,7 +53,7 @@ export function Conversation({
           />
         ) : (
           <Blob
-            name={focused.id}
+            name={focused.name}
             size={38}
             status={statuses[focused.id] ?? 'idle'}
             hue={focused.hue}
@@ -98,11 +99,10 @@ export function Conversation({
                 {rule !== undefined && <div className="timerule">{rule}</div>}
                 <ItemView
                   item={item}
-                  pane={pane}
-                  byId={byId}
-                  statuses={statuses}
                   grouped={grouped}
-                  onAnswerPermission={onAnswerPermission}
+                  teamPane={pane.kind === 'team'}
+                  onAnswerPermission={answer}
+                  {...castOf(item, pane, byId, statuses)}
                 />
               </React.Fragment>
             );
@@ -116,7 +116,7 @@ export function Conversation({
             .map((agent) => (
               <div className="msg pending" key={agent.id}>
                 <Blob
-                  name={agent.id}
+                  name={agent.name}
                   size={28}
                   status={statuses[agent.id] ?? 'idle'}
                   hue={agent.hue}
@@ -142,21 +142,102 @@ export function Conversation({
   );
 }
 
-function ItemView({
+/**
+ * What one item needs from the roster and the pane, resolved by the parent into plain values.
+ *
+ * An item is drawn by its own speaker, not by the cast list: handing `ItemView` the roster map
+ * and the status record made every message in the transcript re-render whenever any of it
+ * changed, which for a `Record` rebuilt on every status action is constantly. Names, hues and
+ * roles are strings and numbers, so `React.memo`'s shallow comparison settles them without
+ * anyone having to remember to memoize a map upstream.
+ */
+interface Cast {
+  /** The voice: the agent speaking, or the sender of a peer message. */
+  fromName?: string | undefined;
+  fromHue?: number | undefined;
+  /** The addressed agent: who a message from you went to, or who a peer wrote to. */
+  toName?: string | undefined;
+  toHue?: number | undefined;
+  /** Printed in the peer route header, and only there: the far end's role. */
+  role?: string | undefined;
+  /** This pane is the recipient of a peer message, so it reads as mail rather than as a copy. */
+  received?: boolean | undefined;
+  /**
+   * The speaker's status, and only while this message is the one being written. A settled
+   * message is a record of something already said, so a blobatar beside it that bobs along with
+   * whatever its agent is doing now is twenty things fidgeting at one piece of news, which is
+   * the fidget `DESIGN.md` reserves the team mark's single animation to avoid.
+   */
+  status?: AgentStatus | undefined;
+}
+
+function castOf(
+  item: Item,
+  pane: Pane,
+  byId: Map<string, UiAgent>,
+  statuses: Record<string, AgentStatus>,
+): Cast {
+  switch (item.kind) {
+    case 'user':
+      return { toName: byId.get(item.agentId)?.name ?? item.agentId };
+    case 'agent': {
+      const agent = byId.get(item.agentId);
+      return {
+        fromName: agent?.name ?? item.agentId,
+        fromHue: agent?.hue,
+        ...(item.live ? { status: statuses[item.agentId] ?? 'idle' } : {}),
+      };
+    }
+    case 'peer': {
+      const from = byId.get(item.fromId);
+      const to = byId.get(item.toId);
+      const received = pane.kind === 'agent' && pane.agentId === item.toId;
+      return {
+        fromName: from?.name ?? item.fromId,
+        fromHue: from?.hue,
+        toName: to?.name ?? item.toId,
+        toHue: to?.hue,
+        role: (received ? from?.role : to?.role) ?? '',
+        received,
+      };
+    }
+    case 'permission':
+      return { fromName: byId.get(item.agentId)?.name ?? item.agentId };
+    case 'system':
+      // No fallback to the id: an unrecognised agent leaves the line unattributed rather than
+      // prefixing it with a row id nobody can read.
+      return { fromName: pane.kind === 'team' ? byId.get(item.agentId)?.name : undefined };
+    case 'tool':
+      return {};
+  }
+}
+
+/**
+ * Memoized, because `applyEvent` hands the pane a new `items` array on every streamed token and
+ * an unmemoized child means every message in the history re-renders, and re-parses its markdown,
+ * to show one more word at the bottom. The cost of a token was the length of the transcript.
+ *
+ * The items are immutable values with stable ids, so reference equality on the item is the
+ * comparison this wants, and everything else is narrowed to a primitive above.
+ */
+const ItemView = React.memo(function ItemView({
   item,
-  pane,
-  byId,
-  statuses,
   grouped,
+  teamPane,
   onAnswerPermission,
+  fromName,
+  fromHue,
+  toName,
+  toHue,
+  role,
+  received = false,
+  status,
 }: {
   item: Item;
-  pane: Pane;
-  byId: Map<string, UiAgent>;
-  statuses: Record<string, AgentStatus>;
   grouped: boolean;
+  teamPane: boolean;
   onAnswerPermission: (requestId: string, choice: 'allow' | 'reject') => void;
-}): React.JSX.Element | null {
+} & Cast): React.JSX.Element | null {
   switch (item.kind) {
     // From you: a solid bubble on the right. There is only ever one "you", so the side is an
     // unambiguous label no matter how many agents share the pane — which is why this survives
@@ -167,34 +248,26 @@ function ItemView({
           <div className="bubble">{item.text}</div>
           {/* Only where a message could have gone somewhere else. In an agent's pane the
               recipient is the pane. */}
-          {pane.kind === 'team' && (
-            <div className="tag">to {byId.get(item.agentId)?.name ?? item.agentId}</div>
-          )}
+          {teamPane && <div className="tag">to {toName}</div>}
         </div>
       );
 
     // From the agent: no container at all. It is the pane's default voice, and boxing it would
     // make the agent look like a guest in its own transcript — and would put a solid enclosure
     // in the same column as the dashed peer, which is the contrast doing all the work below.
-    case 'agent': {
-      const agent = byId.get(item.agentId);
+    case 'agent':
       return (
         <div className={grouped ? 'msg grouped' : 'msg'}>
           {grouped ? (
             // Holds the gutter so a continued turn stays on the same left edge as its header.
             <div className="gutter" />
           ) : (
-            <Blob
-              name={item.agentId}
-              size={28}
-              status={statuses[item.agentId] ?? 'idle'}
-              hue={byId.get(item.agentId)?.hue}
-            />
+            <Blob name={fromName ?? ''} size={28} status={status} hue={fromHue} />
           )}
           <div className="body">
             {!grouped && (
               <div className="hdr">
-                <span className="nm">{agent?.name ?? item.agentId}</span>
+                <span className="nm">{fromName}</span>
                 {item.live && <span className="tag">typing</span>}
               </div>
             )}
@@ -202,7 +275,6 @@ function ItemView({
           </div>
         </div>
       );
-    }
 
     // From a peer: a dashed rule down the left, inset, both blobatars in a route header. Never
     // a bubble, and never filled — dashed against the user's solid bubble reads as lower
@@ -210,20 +282,15 @@ function ItemView({
     // refusable, not authoritative". It was a full dashed box on a raised ground, which at the
     // length these run to was the heaviest thing in the transcript, so the enclosure is now one
     // edge and the message is folded until asked for.
-    case 'peer': {
-      const from = byId.get(item.fromId);
-      const to = byId.get(item.toId);
-      const received = pane.kind === 'agent' && pane.agentId === item.toId;
+    case 'peer':
       return (
         <div className="peer">
           <div className="route">
-            <Blob name={item.fromId} size={20} hue={byId.get(item.fromId)?.hue} />
+            <Blob name={fromName ?? ''} size={20} hue={fromHue} />
             <span className="arrow">→</span>
-            <Blob name={item.toId} size={20} hue={byId.get(item.toId)?.hue} />
+            <Blob name={toName ?? ''} size={20} hue={toHue} />
             <span className="lbl">
-              {received
-                ? `from ${from?.name ?? item.fromId} · ${from?.role ?? ''}`
-                : `sent to ${to?.name ?? item.toId} · ${to?.role ?? ''}`}
+              {received ? `from ${fromName} · ${role}` : `sent to ${toName} · ${role}`}
             </span>
           </div>
           <Foldable>
@@ -235,7 +302,6 @@ function ItemView({
           )}
         </div>
       );
-    }
 
     case 'tool':
       // Asked about but not started: the permission block below it is this call's line.
@@ -261,8 +327,7 @@ function ItemView({
      * is the thing to do here"; blobot has no opinion about whether an agent should run this,
      * which is the entire reason it is asking.
      */
-    case 'permission': {
-      const who = byId.get(item.agentId)?.name ?? item.agentId;
+    case 'permission':
       if (item.outcome !== undefined) {
         return (
           <div className="tool">
@@ -280,7 +345,7 @@ function ItemView({
       return (
         <div className="perm">
           <div className="ask">
-            <b>{who}</b> wants to run <span className="mono">{item.title}</span>
+            <b>{fromName}</b> wants to run <span className="mono">{item.title}</span>
           </div>
           {/* Said every time rather than once at team creation: this is the moment the sentence
               is about something, and the block is where a user decides what blobot is. */}
@@ -302,21 +367,18 @@ function ItemView({
           </div>
         </div>
       );
-    }
 
     // A structural event, in the timeline rather than in the activity column — it is part of
     // what happened here, and a column the reader may not be watching is not where the reason
     // an answer stopped belongs. Named in the team pane, where several agents share the stream.
-    case 'system': {
-      const who = pane.kind === 'team' ? byId.get(item.agentId)?.name : undefined;
+    case 'system':
       return (
         <div className="sysline">
-          <span>{who === undefined ? item.text : `${who} · ${item.text}`}</span>
+          <span>{fromName === undefined ? item.text : `${fromName} · ${item.text}`}</span>
         </div>
       );
-    }
   }
-}
+});
 
 /**
  * The transcript follows the newest line, and stops following the moment the reader scrolls
@@ -401,4 +463,18 @@ function Foldable({ children }: { children: React.ReactNode }): React.JSX.Elemen
       )}
     </>
   );
+}
+
+/**
+ * A callback with a stable identity, reading whatever the latest render gave it.
+ *
+ * The memoized item above compares its props by identity, and a handler written inline at the
+ * call site is a new function on every render, which would defeat the memo for the entire
+ * transcript. Holding it here rather than asking `App` for a `useCallback` keeps that a property
+ * of this pane instead of an obligation on whoever renders it next.
+ */
+function useLatest<A extends unknown[]>(fn: (...args: A) => void): (...args: A) => void {
+  const held = useRef(fn);
+  held.current = fn;
+  return useCallback((...args: A) => held.current(...args), []);
 }

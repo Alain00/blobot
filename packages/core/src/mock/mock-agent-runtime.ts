@@ -2,8 +2,10 @@ import type { Clock } from '../clock.js';
 import { SystemClock } from '../clock.js';
 import type { AgentEvent, StopReason } from '../events.js';
 import { assembleMessages } from '../message-assembler.js';
+import { sameCommands } from '../commands.js';
 import type {
   AgentRuntime,
+  AvailableCommand,
   PeerMessageAck,
   PeerMessageHandler,
   PermissionHandler,
@@ -46,6 +48,12 @@ export interface MockAgentRuntimeOptions {
   readonly cancelLatencyMs?: number;
   readonly contextSize?: number;
   readonly usedPerTurn?: number;
+  /**
+   * The menu the session advertises before it has held a turn. Defaults to empty, which is
+   * the case worth building against: a fresh session may genuinely know no commands until a
+   * scenario's `advertises()` step fires.
+   */
+  readonly commands?: readonly AvailableCommand[];
 }
 
 const CANCELLED_TOOL_OUTPUT =
@@ -81,6 +89,8 @@ export class MockAgentRuntime implements AgentRuntime {
   #permissionHandler: PermissionHandler | undefined;
   #eventListeners = new Set<(event: AgentEvent) => void>();
   #lifecycleListeners = new Set<(lifecycle: RuntimeLifecycle) => void>();
+  #commandListeners = new Set<(commands: readonly AvailableCommand[]) => void>();
+  #commands: readonly AvailableCommand[];
 
   constructor(options: MockAgentRuntimeOptions) {
     this.agentId = options.agentId;
@@ -93,6 +103,7 @@ export class MockAgentRuntime implements AgentRuntime {
     this.#cancelLatencyMs = options.cancelLatencyMs ?? 0;
     this.#contextSize = options.contextSize ?? 200_000;
     this.#usedPerTurn = options.usedPerTurn ?? 4_200;
+    this.#commands = options.commands ?? [];
   }
 
   get lifecycle(): RuntimeLifecycle {
@@ -184,6 +195,22 @@ export class MockAgentRuntime implements AgentRuntime {
     return () => this.#lifecycleListeners.delete(listener);
   }
 
+  get availableCommands(): readonly AvailableCommand[] {
+    return this.#commands;
+  }
+
+  onCommandsChange(listener: (commands: readonly AvailableCommand[]) => void): Unsubscribe {
+    this.#commandListeners.add(listener);
+    return () => this.#commandListeners.delete(listener);
+  }
+
+  /** Replace, never merge, and stay quiet when nothing actually moved. */
+  #setCommands(commands: readonly AvailableCommand[]): void {
+    if (sameCommands(this.#commands, commands)) return;
+    this.#commands = commands;
+    for (const listener of this.#commandListeners) listener(commands);
+  }
+
   setPermissionHandler(handler: PermissionHandler): void {
     this.#permissionHandler = handler;
   }
@@ -254,6 +281,10 @@ export class MockAgentRuntime implements AgentRuntime {
         }
         case 'message_agent': {
           await this.#runPeerMessage(queue, step, turnId);
+          break;
+        }
+        case 'commands': {
+          this.#setCommands(step.commands);
           break;
         }
         case 'usage': {

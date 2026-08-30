@@ -28,7 +28,7 @@ export function TeamMark({
   status,
   size = 46,
 }: {
-  agents: readonly { readonly id: string; readonly hue?: number }[];
+  agents: readonly { readonly id: string; readonly name: string; readonly hue?: number }[];
   status: AgentStatus;
   size?: number;
 }): React.JSX.Element {
@@ -46,7 +46,7 @@ export function TeamMark({
             style={{ left: slot.x, top: slot.y, width: slot.size, height: slot.size }}
           >
             <Blobatar
-              name={agent.id}
+              name={agent.name}
               size={slot.size}
               {...(agent.hue === undefined ? {} : { hue: agent.hue })}
             />

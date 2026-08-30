@@ -113,3 +113,25 @@ transcript of record**, which that ticket must confirm rather than contradict.
   must key on event kind, never on message identity.
 - A cancelled tool reports `status: "completed"` with `exit: null` (OpenCode). Never infer
   success from status.
+
+## Amendment, 2026-08-29: `available_commands_update` is not sent once at session start
+
+Found while scoping the composer's command palette (`.scratch/command-palette/`). **The decision
+stands — it still never enters the event stream.** What is wrong is the word *once*.
+
+- The Claude bridge re-pushes the full list on `commands_changed`, and its own comment says why:
+  skills are discovered dynamically as the agent works in a subdirectory, and the client should
+  *replace* its cached list rather than merge into it
+  (`@agentclientprotocol/claude-agent-acp@0.70.0`, `dist/acp-agent.js:2201`). It also
+  re-advertises when the CLI's terminal-bound command set changes (`:1950`), deduping by
+  `JSON.stringify` comparison before it sends.
+- OpenCode resends the whole array ~7ms after every `session/prompt`, which ticket 03 already
+  observed and this ticket half-recorded as "on every turn".
+
+So the shape a consumer needs is **cache-and-replace with a change check**, not capture-once. A
+palette built on the session-start snapshot would go stale the first time an agent walks into a
+directory with its own skills, and would be empty on OpenCode until after the first turn.
+
+Nothing else moves. It stays out of `AgentEvent`, out of the recorder and out of SQLite; it
+reaches the UI through the runtime, not the event stream. See
+`.scratch/command-palette/01-cache-available-commands.md`.

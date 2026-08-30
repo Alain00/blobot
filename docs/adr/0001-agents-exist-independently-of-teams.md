@@ -64,3 +64,8 @@ the team was formed.
 
 Editing a profile (rename, change role, change runtime), and what an edit means for the teams an
 agent is already on. Today a profile is hired and retired, nothing in between.
+
+**Answered 2026-08-29 by `docs/adr/0002-editing-an-agents-definition.md`**, which came out of the
+*your agents* screen: an edit restates the whole definition, a team the agent is on takes the
+role, the standing instructions and the face at its next start, and the name and the runtime stay
+as they were because a branch is under the one and a session belongs to the other.

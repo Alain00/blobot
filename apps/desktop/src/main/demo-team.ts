@@ -64,6 +64,24 @@ export async function createDemoTeam(
   const store = new SqliteStore(opened.db);
   store.createTeam({ ...team, createdAt: clock.now() });
 
+  /**
+   * What the demo team's sessions offer under `/`.
+   *
+   * Two shapes on purpose, because they are the two populations the palette has: a skill the
+   * repository ships, and a built-in blobot vouches for. Alice and Bob differ, which is the
+   * fact the composer has to get right — a command belongs to one teammate's session, not to
+   * the team.
+   */
+  const aliceCommands = [
+    { name: 'house-style', description: 'How this repository writes things' },
+    { name: 'code-review', description: 'Review the changes on this branch' },
+    { name: 'compact', description: 'Free up context by summarizing the conversation so far' },
+  ];
+  const bobCommands = [
+    { name: 'code-review', description: 'Review the changes on this branch' },
+    { name: 'security-review', description: 'Complete a security review of the pending changes' },
+  ];
+
   let orchestrator: Orchestrator;
   const runtimes = new Map<string, AgentRuntime>([
     [
@@ -71,6 +89,7 @@ export async function createDemoTeam(
       new MockAgentRuntime({
         agentId: alice.id,
         clock,
+        commands: aliceCommands,
         peerMessageHandler: (call) => orchestrator.handleMessageAgent(call),
         script: [
           scenarios['alice-asks-bob'],
@@ -92,6 +111,7 @@ export async function createDemoTeam(
       new MockAgentRuntime({
         agentId: bob.id,
         clock,
+        commands: bobCommands,
         peerMessageHandler: (call) => orchestrator.handleMessageAgent(call),
         script: scenarios['bob-reviews'],
       }),

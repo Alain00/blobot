@@ -16,8 +16,11 @@ export type {
   UsageUpdated,
 } from './events.js';
 
+export { sameCommands } from './commands.js';
+
 export type {
   AgentRuntime,
+  AvailableCommand,
   PeerMessageAck,
   PeerMessageCall,
   PeerMessageHandler,
@@ -60,7 +63,7 @@ export type { ScenarioName } from './mock/scenarios/index.js';
 export { uuidv7 } from './ids.js';
 export type { IdFactory } from './ids.js';
 
-export type { Agent, AgentProfile, Message, Team } from './orchestrator/domain.js';
+export type { Agent, AgentDefinition, AgentProfile, Message, Team } from './orchestrator/domain.js';
 export { composePersona, composeWakePrompt } from './orchestrator/envelope.js';
 export { findAgentByName } from './orchestrator/roster.js';
 export { InMemoryMessageStore } from './orchestrator/message-store.js';

@@ -153,6 +153,19 @@ up. Read it before starting work.
   Agent from it, because a workspace, a session, a mailbox and a status are things a Team gives
   an Agent and none of them can be shared.
 
+- **What an agent inherits, and what blobot offers** — `docs/adr/0003-what-an-agent-inherits.md`.
+  Two decisions that look like one and are not: **the settings scope decides what an agent can
+  do; the palette decides what blobot offers.** An agent loads all three scopes, so the
+  repository's CLAUDE.md and the operator's own skills both work. The composer's `/` menu is an
+  **allowlist** (`adapters/claude/palette.ts`) built from what a person authored — the
+  workspace's `.claude/`, the operator's `~/.claude/skills`, and five vouched built-ins — never
+  from a plugin's surface or a vendor's release cadence, which is what makes it fail closed.
+  Measured live: 223 advertised commands and 97 KB, of which **40 are offered**, with zero
+  plugin entries. Read the ADR's amendment before changing any of this: the first version
+  dropped `user` scope and was wrong, because the 140-command flood it was aimed at belonged to
+  a plugin and not to the author's 37 skills. The three hazards a menu filter cannot fix are
+  their own effort at `.scratch/runtime-posture/`.
+
 - **Switching a team no longer restarts it.** `TeamPool` (`apps/desktop/src/main/team-pool.ts`)
   keeps the last three live, LRU by selection, never evicting the active team or one that is
   mid-turn. The Claude adapter resumes with `session/load`, re-supplying `mcpServers` and muting
@@ -161,8 +174,23 @@ up. Read it before starting work.
   Every stream channel leads with a team id, because several teams stream at once now, and a
   Workspace that has been moved or deleted says so instead of being called "not a git repository".
 
-Next: **a screen for *your agents*** (and what editing a profile means), surfacing whether an
-agent resumed or started fresh, and a backgrounded team that says nothing while it works.
+- **A screen for *your agents***, and what editing one means —
+  `docs/adr/0002-editing-an-agents-definition.md`, the repo's second ADR, which answers the
+  question ADR-0001 left open. An edit restates the whole definition; a team the agent is
+  already on takes the role, the standing instructions and the face at its next start, and keeps
+  its name and its runtime, because the branch is `blobot/<team>/<agent>` and a session belongs
+  to the runtime that opened it. The screen is over the working surface, reached from above TEAMS
+  in the rail, and nothing on it restarts a team.
+
+- **Every rail row is its team, and says what that team is doing.** A row draws its members'
+  faces and folds their status through the same `StatusWord` the open team uses, silent while
+  they are idle, inverted for `waiting` — which is the only way a backgrounded team blocked on
+  a permission request can reach the user. It said `STOPPED` on every row but the active one
+  until this, a literal string left over from when switching really did stop a team, so the
+  rail was asserting that about teams the pool was still running. Whether the pool is holding
+  a team is *not* surfaced: nobody chose it and an evicted team resumes when it comes back.
+
+Next: surfacing whether an agent resumed or started fresh.
 `build.md`'s *Next session* has the order and the reasons. OpenCode (03 + 16) is deferred by the author, 2026-08-29; the cost of proving
 `AgentRuntime` against one provider only is recorded in `build.md`.
 

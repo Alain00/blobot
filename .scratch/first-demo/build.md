@@ -639,14 +639,14 @@ Restarting is cheap now that `session/load` resumes each agent where it was.
 
 ## Next session
 
-1. **A screen for *your agents*.** They are still only visible inside team creation, and
-   editing a profile — rename, change of role or runtime — is the open question ADR-0001 named
-   and did not answer.
+1. ~~**A screen for *your agents*.**~~ Built, 2026-08-29, with the open question answered:
+   see the section at the foot of this file and `docs/adr/0002-editing-an-agents-definition.md`.
 2. **Surface a resumed session.** `runtime.resumed` knows whether an agent came back knowing
    the conversation or started again under a transcript it cannot remember, and nothing says
    so. Observed live: Mara silently started fresh.
-3. **A backgrounded team that is working says nothing.** Three teams stay live and a team the
-   user is not looking at can keep taking turns.
+3. ~~**A backgrounded team that is working says nothing.**~~ Built, 2026-08-29: its rail row
+   draws its members and folds their status, and it said `STOPPED` about a live team until it
+   did. See the section at the foot of this file.
 4. **Renaming a team**, which needs a decision about the branches first.
 
 Things left unverified, worth knowing before trusting them:
@@ -768,3 +768,319 @@ and the agent still knows the codeword.
 is looking elsewhere. It can, and the turn budget is the only thing bounding it; nothing
 surfaces that in the rail yet. That is a product question, and it should be a property of the
 team rather than a side effect of how recently it was clicked.
+
+## Settled, 2026-08-29: the command palette has its data, and its hard question has its numbers
+
+A second effort, `.scratch/command-palette/`, off the first demo's map. Issue 01 is built and
+resolved; 02 and 03 are still open and 03 is a grilling that wants the author.
+
+**What landed.** `AgentRuntime` can be asked for a session's slash commands and skills:
+`availableCommands` plus `onCommandsChange`, with `AvailableCommand` as blobot's own shape and
+`sameCommands` (`packages/core/src/commands.ts`) as the change test both runtimes share. The
+Claude adapter holds the cache; `commandsFrom` in the translator normalizes an
+`available_commands_update` and `translateSessionUpdate` still returns no events for it. Nothing
+reached `AgentEvent`, the recorder, the store or the migrations, which was ticket 04's condition
+for sanctioning the feature at all.
+
+Two things worth knowing that the ticket did not say:
+
+- **A menu advertised during a resume's replay is kept**, where every other replayed update is
+  swallowed. A menu is current state, not something that was said, and `#sessionId` is not
+  assigned until `session/load` returns, so the ordinary identity guard would have dropped it.
+- **`undefined` and `[]` are different answers** from `commandsFrom`. One means the notification
+  is not about the menu, the other means the menu is empty, and only the second may replace a
+  full list. An empty advertisement is a real event, not a no-op.
+
+**The measurement is the actual result of this session.** A real `claude` in a fresh workspace,
+today, advertises **223 commands and 97 KB, on every turn**. The research's figure was 48. The
+gap is not drift: **140 of the 223 are one plugin's skills** (`posthog:`), so the size of this
+menu is a property of whatever the user installed last, not of blobot or of Claude.
+
+**Sixteen built-ins survive the bridge's own terminal-bound filter and mutate state blobot
+models somewhere else** — `/compact` and `/autocompact` against `TeamPool`'s resume, `/config`,
+`/model`, `/effort`, `/fast` and `/auto-mode-setup` against ticket 14's forced permission mode,
+`/agents`, `/list-agents` and `/rename` against blobot's own roster, and `/__remote-workflow`,
+which is a private command that should never have been in a user-facing list.
+
+The one that is not a menu question: **`/mcp disable all`** turns off ticket 15's loopback
+server, which is the agent's only route to a teammate. Hiding it from a list does not stop it
+working when typed, so it wants a decision of its own rather than a filter.
+
+**Next on this effort:** issue 03 (grilling, needs the author) before issue 02 (the composer),
+which is exactly the order the spec asked for and now has real numbers to argue against.
+
+## Settled, 2026-08-29: an agent inherits the project, not the operator (ADR-0003)
+
+Issue 03 was grilled with the author the same day, in eight questions over three rounds, and it
+did not end where it started. The palette turned out to be the small half.
+
+**`docs/adr/0002-an-agent-inherits-the-project-not-the-operator.md`.** A blobot agent loads
+`project` and `local` settings scopes and **not** `user`. Until now it was the operator's own
+Claude with a persona bolted on, because that was the bridge's default and nobody had chosen it.
+The persona is untouched and was never in question: this decides what an agent *has*, not who it
+*is*.
+
+Research's open question is closed. `settingSources` reaches the SDK (the bridge sets its own
+before spreading ours) and it **fully** isolates, with no plugin-sourced leak. Verified
+separately, because the ADR rests on it: with `["project","local"]` a workspace's CLAUDE.md is
+read and its own `.claude/skills` are advertised; with `[]` neither is.
+
+**The numbers, all live against a real `claude` in an agent workspace:**
+
+| | commands | payload |
+| --- | --- | --- |
+| before | 223 | 97 KB |
+| `user` dropped | 48 | 11.7 KB |
+| after the palette allowlist | **5** | **1.9 KB** |
+
+**The palette is an allowlist the repo owns.** Dropping `user` alone does not rescue it: all 48
+survivors are the provider's built-ins, and hand-filtering those is a denylist against a vendor's
+release cadence, which **fails open** — the next release puts a new built-in in front of a user
+unreviewed, as `/batch` (thirty parallel agents) would have. So `palette.ts` offers the
+workspace's own `.claude/` commands plus five vouched by name (`/code-review`,
+`/security-review`, `/verify`, `/simplify`, `/compact`), and fails closed.
+
+It filters **inside the adapter**, because a list of one provider's command names is
+provider-specific knowledge and the permanent rule puts that behind `AgentRuntime`. No component
+ever holds an unfiltered list. The wire has `{name, description, input}` and no source field, so
+blobot reads `<workspace>/.claude/` itself and **intersects** with what was advertised: drift
+costs a command we failed to offer, never one we offered that does not exist.
+
+**`/compact` was argued and kept.** The spec's claim that it fights `TeamPool`'s resume
+overstates it — compaction does not invalidate the session id. What it causes is transcript
+divergence, which already exists and is already recorded here (Mara, starting fresh under a
+transcript she could not remember). The context gauge is on screen; withholding the remedy while
+showing the problem is the worse trade.
+
+**Three hazards a menu filter cannot fix got their own effort**, `.scratch/runtime-posture/`,
+because a hidden command still runs when typed:
+
+1. **Mode drift is watched and ignored.** `current_mode_update` is handled, assigned to
+   `#modeId`, and the comment there says drift "is the posture quietly failing". Nothing reads
+   the field. Meanwhile the creation flow keeps telling the user the runtime prompts.
+2. **Permission state can be rewritten on disk.** `/fewer-permission-prompts` writes an
+   allowlist into the *project's* `.claude/settings.json`, `/update-config` configures hooks.
+   That file is inside an AgentWorkspace, which is a worktree of the user's repository, so it
+   survives the session and can be merged back. ADR-0003 makes it sharper, not safer: that is a
+   file blobot now deliberately loads.
+3. **`/mcp disable all`** switches off ticket 15's loopback server, an agent's only route to a
+   teammate. blobot cannot block it and will not pretend to. Ticket 15 already measures
+   readiness by the inbound handshake, so the signal exists and is currently used once and
+   discarded.
+
+**Not built, deliberately:** issue 04, the line in the creation disclosure saying the operator's
+own skills are not loaded. It lands in `NewTeam.tsx`, which the concurrent *your agents* session
+holds.
+
+**The composer half is built too** (issue 02), on top of the other session's cmdk work. Commands
+reach the renderer exactly the way statuses do: `Orchestrator.commandsOf` and `onCommandsChange`,
+`blobot:commands` leading with the team id, and `UiSnapshot.commands` to seed a rebuilt pane.
+Per agent, never per team.
+
+The one place `/` cannot copy `@`: **the trigger is position, not the character.** A slash
+command is only a slash command at the start of the message, because that is what the CLI
+parses, and `src/auth.ts` and `and/or` are not somebody reaching for a menu.
+
+Three states that are easy to collapse into one and must not be: no recipient yet (say so, name
+`@` as the fix), a session that offers none (a real answer, not a spinner), and a typo, which
+closes the menu rather than showing an empty one — otherwise every mistyped command claims Enter
+and refuses to send. A note takes no keys at all, because anything left off the list still works
+when typed. The decision is `commandMenu` in `model.ts`, pure and tested; the component renders
+it.
+
+### Amended the same day: the operator's own skills come back
+
+The author, on seeing the menu: *global claude code skills are not present why?*
+
+Because the scope decision was argued from a number that belonged to something else. Of the 175
+commands `user` scope contributed, **140 were an installed plugin's and 37 were skills the author
+had written.** Dropping the scope to be rid of the first threw away the second, and
+`settingSources` cannot separate them.
+
+**All three scopes load again.** The separation moved to `palette.ts`, which enumerates
+`~/.claude/skills` and the workspace's `.claude/` from disk — a plugin installs into neither, and
+the wire carries no field that would say where a command came from. The allowlist still fails
+closed. Live after the change: **40 offered out of 223 advertised, zero plugin entries.**
+
+The sentence this cost a round to learn, now in ADR-0003 and CLAUDE.md:
+
+> The settings scope decides what an agent **can do**. The palette decides what blobot
+> **offers**.
+
+**A bug worth remembering: a skill directory is usually a symlink.** 36 of the author's 37 are
+links into a shared `~/.agents/skills`, and `readdirSync` reports each as a symlink rather than a
+directory, so the first implementation found exactly one skill and looked like it worked.
+Membership is decided by `statSync` on the `SKILL.md`, which follows links. Pinned by a test.
+
+**The cost, and it is real:** `user` scope also restores the operator's global CLAUDE.md,
+settings and hooks for every agent. `.scratch/runtime-posture/`'s issue 02 — permission state
+rewritten on disk — gained a second route in. Issue 04 of the palette effort is closed obsolete:
+there is no longer anything to disclose.
+
+**Proven live: a skill the repository ships autocompletes.** A `.claude/skills/house-style/` and
+a `.claude/commands/ship.md` in a real workspace both appear, ahead of the five built-ins. That
+is the population the palette exists for, and the reason ADR-0003 keeps `project` scope. blobot
+itself ships no `.claude/`, so in this repo the menu is the five built-ins and nothing else,
+which is the honest result rather than a bug. Demo mode now advertises a mixed list, and Alice
+and Bob differ, because a command belongs to one teammate's session.
+
+## Settled, 2026-08-29: your agents, and what editing one means
+
+The first item of the last handoff. Two halves: a screen, and the decision ADR-0001 left open.
+
+**The decision, now `docs/adr/0002-editing-an-agents-definition.md`.** An edit **restates the
+whole definition** rather than patching it, so an emptied field means "nothing standing". The
+profile takes all of it; a team the agent is already on takes the role, the standing instructions
+and the face, at that team's next start, and keeps its name and its runtime.
+
+The reason the split is not arbitrary, and the thing worth knowing before touching this again:
+**`branchNameFor` derives the branch from `refSlug(agentName)`** (`packages/core/src/workspace/
+workspace.ts`), so renaming an Agent row leaves its worktree unfindable by the only code that
+knows how to find it. That is the same wall renaming a *team* is behind, which is why both are
+one problem and this ADR does not pretend to solve either. A Session belongs to the provider that
+opened it, which is the runtime half of the same argument.
+
+What keeps a transcript honest turned out **not** to be `agents.name`: it is
+`sessions.persona_text`, which records what the agent was actually told and is never rewritten.
+So the transcript argument alone would have permitted a rename. The branch is what forbids it,
+and the schema comments now say so rather than repeating the transcript reason for every column.
+
+**Nothing about an edit restarts a team**, which is the opposite of editing a roster. A persona
+names the roster and the mailbox resolves recipients out of it, so a live team whose membership
+changed disagrees with itself; a live team whose definition changed is mid-conversation under the
+definition it started with, which is correct. The consequence the screen has to say out loud is
+that a changed role or a changed instruction is not visible on screen until that team next
+starts, and it does say it, in both places: before the save, naming the teams, and after it, from
+what the main process actually did.
+
+**The screen** (`apps/desktop/src/renderer/src/components/Agents.tsx`) sits over the working
+surface rather than in place of it, reached from a row above TEAMS in the rail — the model's
+order, agents first. A working surface, not editorial: the creation flow's hand face and numerals
+are deliberately absent. `HireAgent` moved out of `NewTeam.tsx` into `AgentForm.tsx` and is now
+shared with `EditAgent` and `RetireAgent`, which is what makes hiring and editing visibly the
+same fields.
+
+**New in the store:** `updateProfile` and `restateAgent`, both writing columns that already
+existed, so there is no migration. `AgentDefinition` is the profile without its id, in
+`orchestrator/domain.ts`, because an edit restates that shape exactly. `UiAgentProfile` now
+carries `runtimeId` under the same rule `UiRuntimeChoice` already had: an opaque token the
+renderer round-trips and never reads, so the edit form can open the picker on the runtime the
+agent already has without matching label strings.
+
+**`--screen=agents`** joins `--pane=`: the hash the main process hands the renderer is now a
+query string, so a screenshot can open a surface it cannot click to. That is how this screen was
+reviewed, against the author's own database, with `--no-autoplay` so no turn was spent.
+
+**One agent had three faces, and now has one.** Found by the author on this screen. A blobatar
+is derived entirely from the string it is seeded with, and three surfaces seeded it three ways:
+the rail, the composer, the transcript and the team mark by **Agent id**, the roster lists by
+**profile id**, and the hire preview by the **name being typed**. Every one of them is the name
+now, which is what the colour picker's own label ("the colour its name gives it") always claimed.
+`DESIGN.md` carries the rule. The consequence, written into ADR-0002: a rename keeps the hue,
+which is stored and restated, and changes the silhouette, which is derived from the name, so a
+team that keeps the old name keeps the old shape.
+
+**The screenshot harness renders about one run in three.** Repeated launches against the real
+database come back as a uniformly `#0a0a0b` PNG, at any delay, with no renderer console error and
+the same result at `HEAD` with `--demo` and with `--disable-gpu`. It is `capturePage` rather than
+the app. Take the picture more than once and check the mean pixel value before believing a blank.
+
+**Still unclicked, and now with company:** nobody has clicked save on this screen either. The
+store half is covered — eight tests in `team-store.test.ts` pin the restatement, the two fields
+that do not travel, the name clash, the cleared instruction and an agent on two teams at once —
+but the IPC handler, like delete and edit-team before it, has only ever been typechecked.
+Retiring an agent has no test above the store's tombstone, for the same reason.
+
+## Settled, 2026-08-29: streaming a token stopped costing the transcript
+
+A second effort off the first demo's map, `.scratch/transcript-scale/`, whose issue 01 is now
+resolved. Found by reading the code rather than by hitting a wall: the conversation pane rendered
+every message it had ever been given, from a query with no `LIMIT`, with no memoization.
+
+**Issue 01 is built.** `ItemView` is memoized and its props narrowed, so the work of a streamed
+token is the message being written and not the history behind it. Measured, because it is a
+performance claim: **401 markdown renders per token into a 400-message transcript, now 1**, and
+on the clock **24.1 ms per token, now 10.2** at that depth, 5.0 to 2.3 at demo depth. The
+instrument is committed (`Conversation.test.tsx`, jsdom, `Markdown` mocked so the count is of
+renders rather than of layout), and **jsdom is a new root devDependency** because observing a
+memo needs a real reconciler and `react-dom/server` has none.
+
+The clock is still not flat, and that is the finding worth carrying: what remains at 400 is
+`Conversation` itself mapping every item and handing React 400 elements to compare. Cheap, not
+free. It is the argument for issue 03 and now has a number behind it.
+
+Two things the ticket did not anticipate:
+
+- **`onAnswerPermission` was an inline arrow in `App.tsx`**, so it was a fresh identity every
+  render and would have defeated the memo across the whole transcript by itself. Stabilized
+  inside the pane rather than by asking `App` to remember a `useCallback`.
+- **A settled message's blobatar no longer carries live status**, which is a real if small
+  visible change, and now a rule in `DESIGN.md`. Passing the status only while `item.live` is
+  what lets a settled item's props be constant; it also stops twenty of Alice's old messages
+  bobbing in unison the moment Alice starts working, which is the fidget the team mark's single
+  folded animation already exists to avoid.
+
+Six tests render each voice and read the column back, because narrowing the props rewrote all
+six case bodies. The `--demo` transcript was also read on screen — after **three blank captures
+in a row** at `--screenshot-at=6000`. The one-in-three capture flake recorded above is worse
+than one in three; a longer delay got a frame on the fourth attempt.
+
+**Issue 02 is now unblocked** (the bounded snapshot query), and it carries an open question for
+the author before its affordance can be built: whether "load earlier" is a button or happens on
+scroll. That is `DESIGN.md`'s call, not the ticket's.
+
+## Settled, 2026-08-29: a rail row says what its team is doing
+
+Raised by the author from a screenshot: `hermes-agent` sat in the rail as a dashed silhouette
+with the word `STOPPED` next to it, and the question was why switching stops a team when the
+pool was built to stop stopping them.
+
+**It did not.** The team was live. The word was a literal string in `Rail.tsx`, on every row but
+the active one, left over from when switching really did stop the team you were leaving. The
+pool work updated the button's behaviour and the comment above it and left the label beneath
+untouched. So the rail asserted `stopped` about teams that were often still working.
+
+The silhouette had a separate cause and the same shape: `UiTeamSummary` carried `agentCount` and
+no members, so the row had no name to seed a face from. It was not a design decision about
+backgrounded teams; it was a placeholder for data that was never sent.
+
+What the row says now:
+
+- **Its members' faces**, from `UiTeamSummary.members`. The count is `members.length`. The ghost
+  survives for the one team that genuinely has no face to draw: a team with nobody on it.
+- **Its folded status**, when it has one, through the same `foldTeamStatus` and `StatusWord` the
+  team on screen uses. `waiting` still inverts, which is the point of the word: a backgrounded
+  team blocked on a permission request has no other way to reach the user.
+- **Nothing, while it is quiet.** The same rule the agent rows follow. `idle` printed on every
+  row is one word repeated as many times as the user has teams.
+
+**Loaded-versus-evicted is deliberately not surfaced.** Which three teams `TeamPool` happens to
+hold is a fact about a process pool: the user did not choose it, cannot control it, and an
+evicted team resumes its session when it comes back. A badge for it would teach a rule nobody
+can act on. An unloaded team contributes no statuses, folds to `idle` and is therefore silent,
+which is honest — it has nothing in flight either way. What *is* worth surfacing is the next
+item below: whether an agent came back knowing the conversation. That belongs in the transcript,
+beside the agent it happened to.
+
+Two things this forced:
+
+- **`UiSnapshot.statuses` now covers every live team**, not just the one on screen, and
+  `App.tsx`'s status subscription is the one channel *not* filtered by team id. Every other
+  channel stays filtered — a second team's messages in this transcript would be a worse bug
+  than the one being fixed. Agent ids are per membership, so two teams cannot collide in the
+  map, and the reducer's snapshot case still replaces rather than merges: it seeds the other
+  rows and forgets a team the pool has since unloaded, which is the correct thing to forget.
+- **`start-team.ts` was dropping the stored hue**, found while wiring this. A running team drew
+  the name's derived colour while every other surface drew the one the user picked. The hue is
+  the only part of a face that is stored rather than derived, so losing it is one agent with two
+  faces, which is exactly what `DESIGN.md`'s seeding rule exists to prevent.
+
+`Rail.test.tsx` renders the row and reads it back: it draws its members, it never says
+`stopped`, it folds `2 working`, it inverts for `waiting`, and it is silent both when its team
+is idle and when the pool is not holding it. Read on screen against the real database:
+`portfolio` draws three faces and `3 agents · 13m`, with no status word.
+
+**Not exercised end to end:** a backgrounded team lighting its row *while working*. Every piece
+is covered — the main process sends status per team from `attach`, the renderer accepts any
+team's, the row renders each state — but nothing has driven a real second team into `working`
+and watched the row change. Same reason as the delete dialog above: it needs a mouse.

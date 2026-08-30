@@ -32,8 +32,18 @@ export interface Team {
  * which a Team gives an Agent. So joining a Team instantiates an {@link Agent} from a profile.
  * See `docs/adr/0001-agents-exist-independently-of-teams.md`.
  */
-export interface AgentProfile {
+export interface AgentProfile extends AgentDefinition {
   readonly id: string;
+}
+
+/**
+ * An AgentProfile without its identity: everything an edit can change.
+ *
+ * Named apart from the profile because editing is *restating the whole definition*, not
+ * patching fields — and because each of these behaves differently towards the teams the agent
+ * is already on. See `docs/adr/0002-editing-an-agents-definition.md`.
+ */
+export interface AgentDefinition {
   readonly name: string;
   readonly role: string;
   /** Which runtime this agent runs on. Read by whatever constructs a runtime; never by the UI. */

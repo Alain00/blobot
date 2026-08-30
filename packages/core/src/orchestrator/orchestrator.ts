@@ -11,6 +11,7 @@ import type {
   Prompt,
   Unsubscribe,
 } from '../runtime.js';
+import type { AvailableCommand } from '../runtime.js';
 import { AgentStatusTracker, type AgentStatus } from '../status.js';
 import type { Agent, Message, Team } from './domain.js';
 import { findAgentByName } from './roster.js';
@@ -87,6 +88,9 @@ export class Orchestrator {
   readonly #inFlight = new Set<Promise<void>>();
   readonly #eventListeners = new Set<(event: AgentEvent) => void>();
   readonly #statusListeners = new Set<(agentId: string, status: AgentStatus) => void>();
+  readonly #commandListeners = new Set<
+    (agentId: string, commands: readonly AvailableCommand[]) => void
+  >();
   readonly #budgetListeners = new Set<(exhausted: BudgetExhausted) => void>();
   readonly #messageListeners = new Set<(message: Message) => void>();
   readonly #permissionListeners = new Set<(pending: PendingPermission) => void>();
@@ -131,6 +135,12 @@ export class Orchestrator {
       // `#askPermission` answers on its own when nobody is.
       runtime.setPermissionHandler((request) => this.#askPermission(request));
       this.#subscriptions.push(
+        // A menu, not agent state: it never enters the event stream and the recorder never
+        // sees it (ticket 04). It is relayed because the composer is in another process and
+        // the runtimes are in this one.
+        runtime.onCommandsChange((commands) => {
+          for (const listener of this.#commandListeners) listener(agent.id, commands);
+        }),
         runtime.onLifecycleChange((lifecycle) => tracker.lifecycleChanged(lifecycle)),
         // Events belonging to no turn — process death between turns.
         runtime.onEvent((event) => {
@@ -166,6 +176,24 @@ export class Orchestrator {
   onStatusChange(listener: (agentId: string, status: AgentStatus) => void): Unsubscribe {
     this.#statusListeners.add(listener);
     return () => this.#statusListeners.delete(listener);
+  }
+
+  /**
+   * The slash commands an agent's session currently offers, already curated by its adapter.
+   *
+   * Per agent rather than per team: each has its own workspace and its own session, so two
+   * teammates genuinely can offer different menus. Empty is a real answer, not a loading
+   * state — a session that has never held a turn may know none.
+   */
+  commandsOf(agentId: string): readonly AvailableCommand[] {
+    return this.#runtimes.get(agentId)?.availableCommands ?? [];
+  }
+
+  onCommandsChange(
+    listener: (agentId: string, commands: readonly AvailableCommand[]) => void,
+  ): Unsubscribe {
+    this.#commandListeners.add(listener);
+    return () => this.#commandListeners.delete(listener);
   }
 
   /**

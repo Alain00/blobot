@@ -6,7 +6,9 @@ import {
   isPending,
   lastLineOf,
   itemsFor,
+  commandMenu,
   reduce,
+  slashPartial,
   type AppState,
   type Item,
 } from './model.js';
@@ -39,6 +41,7 @@ describe('a snapshot', () => {
     teams: [],
     agents: [],
     statuses: {},
+    commands: {},
     messages: [peerMessage],
     answers: [{ id: 'a1', agentId: 'bob', text: 'on it', at: 20 }],
     turnsThisPrompt: 0,
@@ -291,6 +294,7 @@ describe('a permission block', () => {
         teams: [],
         agents: [],
         statuses: {},
+        commands: {},
         messages: [],
         answers: [],
         permissions: [request],
@@ -335,4 +339,58 @@ it('holds the tool line when the request arrives before the call it is about', (
     { kind: 'permission', id: 'perm_1' },
     { kind: 'tool', id: 'tool_1', status: 'asking' },
   ]);
+});
+
+describe('the composer\'s slash menu', () => {
+  const offered = [
+    { name: 'code-review', description: 'Review the changes' },
+    { name: 'compact', description: 'Free up context' },
+  ];
+  const menu = (draft: string, over = {}): ReturnType<typeof commandMenu> =>
+    commandMenu({ draft, dismissed: false, recipientName: 'Alice', offered, ...over });
+
+  it('opens on a slash that begins the message', () => {
+    expect(menu('/').suggestions).toHaveLength(2);
+    expect(menu('/co').suggestions.map((c) => c.name)).toEqual(['code-review', 'compact']);
+    expect(menu('/comp').suggestions.map((c) => c.name)).toEqual(['compact']);
+  });
+
+  it('leaves prose alone, which is the whole reason for the position rule', () => {
+    // A path and a conjunction are not somebody reaching for a menu. `@` can afford to match
+    // anywhere; `/` cannot.
+    for (const draft of ['look at src/auth.ts', 'and/or', 'ask Bob then /review']) {
+      expect(slashPartial(draft)).toBeUndefined();
+      expect(menu(draft).suggestions).toEqual([]);
+      expect(menu(draft).note).toBeUndefined();
+    }
+  });
+
+  it('closes once the argument starts, because the command is already chosen', () => {
+    expect(slashPartial('/code-review ')).toBeUndefined();
+    expect(slashPartial('/code-review src/auth.ts')).toBeUndefined();
+  });
+
+  it('says a command needs a recipient before it can have one', () => {
+    const { suggestions, note } = menu('/', { recipientName: undefined });
+    expect(suggestions).toEqual([]);
+    // The team pane's honest answer, and the same precondition send already has.
+    expect(note).toBe('Say who with @ first. Commands belong to one teammate.');
+  });
+
+  it('says an empty menu is an answer rather than a wait', () => {
+    const { suggestions, note } = menu('/', { offered: [] });
+    expect(suggestions).toEqual([]);
+    expect(note).toBe('Alice has not offered any commands yet');
+  });
+
+  it('treats a typo as a closed menu, not as an empty state', () => {
+    // Otherwise every mistyped command claims Enter and refuses to send.
+    const { suggestions, note } = menu('/revieww');
+    expect(suggestions).toEqual([]);
+    expect(note).toBeUndefined();
+  });
+
+  it('stays shut after Escape until the next keystroke', () => {
+    expect(menu('/', { dismissed: true })).toEqual({ suggestions: [] });
+  });
 });

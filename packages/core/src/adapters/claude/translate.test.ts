@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { stopReasonOf, toolKind, translateSessionUpdate } from './translate.js';
+import { commandsFrom, stopReasonOf, toolKind, translateSessionUpdate } from './translate.js';
 
 describe('translating the bridge into the vocabulary', () => {
   it('turns message chunks into deltas, keeping the messageId', () => {
@@ -127,5 +127,50 @@ describe('translating the bridge into the vocabulary', () => {
     expect(
       ['end_turn', 'cancelled', 'max_tokens', 'max_turn_requests', 'refusal'].map(stopReasonOf),
     ).toEqual(['end_turn', 'cancelled', 'max_tokens', 'max_turn_requests', 'refusal']);
+  });
+});
+
+describe('reading the command menu', () => {
+  it('says nothing about commands for any other update', () => {
+    // `undefined` and `[]` have to stay distinguishable: one is "this notification is not
+    // about the menu", the other is "the menu is empty", and only the second may replace one.
+    expect(commandsFrom({ sessionUpdate: 'agent_message_chunk' })).toBeUndefined();
+  });
+
+  it('normalizes the wire entry, lifting the argument hint out of `input`', () => {
+    expect(
+      commandsFrom({
+        sessionUpdate: 'available_commands_update',
+        availableCommands: [
+          { name: 'review', description: 'Review the changes', input: { hint: '[path]' } },
+          { name: 'ship' },
+        ],
+      }),
+    ).toEqual([
+      { name: 'review', description: 'Review the changes', hint: '[path]' },
+      { name: 'ship', description: '' },
+    ]);
+  });
+
+  it('drops a nameless entry rather than offering a blank row', () => {
+    expect(
+      commandsFrom({
+        sessionUpdate: 'available_commands_update',
+        availableCommands: [{ description: 'no name' }, { name: '' }],
+      }),
+    ).toEqual([]);
+  });
+
+  it('reads an advertisement of nothing as an empty menu, not as silence', () => {
+    expect(commandsFrom({ sessionUpdate: 'available_commands_update' })).toEqual([]);
+  });
+
+  it('keeps the menu out of the event stream', () => {
+    expect(
+      translateSessionUpdate({
+        sessionUpdate: 'available_commands_update',
+        availableCommands: [{ name: 'review', description: 'Review the changes' }],
+      }),
+    ).toEqual([]);
   });
 });

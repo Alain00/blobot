@@ -1,4 +1,5 @@
 import type { StopReason, ToolKind } from '../events.js';
+import type { AvailableCommand } from '../runtime.js';
 
 /**
  * Scenarios are the backbone: named, checked in, and what both the tests and demo mode play.
@@ -58,6 +59,7 @@ export type ScenarioStep =
       /** Whether the process is gone afterwards, or only this turn is lost. */
       readonly dies: boolean;
     }
+  | { readonly kind: 'commands'; readonly commands: readonly AvailableCommand[] }
   | { readonly kind: 'end'; readonly stopReason: StopReason };
 
 export interface TextOptions {
@@ -131,6 +133,21 @@ export class Scenario {
         ? { kind: 'message_agent', to, message }
         : { kind: 'message_agent', to, message, context },
     );
+  }
+
+  /**
+   * The session re-advertises its slash-command menu mid-turn.
+   *
+   * A step rather than an option because that is when it really happens: on OpenCode the
+   * first advertisement lands *after* `session/prompt`, so an agent that has never held a
+   * turn knows no commands, and a consumer built against a list that is simply present at
+   * launch is built against a case that does not occur.
+   *
+   * Replaces the whole list, the way a provider's push does. An empty array is a legal
+   * advertisement, not a no-op.
+   */
+  advertises(commands: readonly AvailableCommand[]): Scenario {
+    return this.#with({ kind: 'commands', commands });
   }
 
   usage(used: number, size = 200_000, costUsd?: number): Scenario {

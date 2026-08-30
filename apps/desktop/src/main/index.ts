@@ -19,6 +19,7 @@ import {
   TeamCreationError,
   createTeam,
   deleteTeam,
+  editAgentProfile,
   editTeamRoster,
   hireAgent,
   initializeWorkspace,
@@ -32,6 +33,7 @@ import { runtimeLabel } from './runtime-labels.js';
 import { isWorking, type RunningTeam } from './running-team.js';
 import { TeamPool } from './team-pool.js';
 import type {
+  EditAgentResult,
   HireResult,
   TeamCreationResult,
   TeamDeletionResult,
@@ -139,10 +141,35 @@ function teamSummaries(): UiTeamSummary[] {
       name: team.name,
       workspacePath: team.workspacePath,
       workspaceKind: team.workspaceKind,
-      agentCount: store?.agentsOfTeam(team.id).length ?? 0,
+      // The members rather than a count of them: the rail draws every team as its faces, and
+      // a face is seeded by the agent's name. Same query the count came from.
+      members: (store?.agentsOfTeam(team.id) ?? []).map((agent) => ({
+        id: agent.id,
+        name: agent.name,
+        ...(agent.hue === undefined ? {} : { hue: agent.hue }),
+      })),
       ...(lastActiveAt === undefined ? {} : { lastActiveAt }),
     };
   });
+}
+
+/**
+ * Every live agent's status, across every team the pool is holding.
+ *
+ * Not just the team on screen. Three teams run at once, and a backgrounded one can be working,
+ * or stuck at `waiting` on a permission block nobody has been shown. The rail is the only
+ * surface that can say so, and this is what it says it from.
+ *
+ * A team the pool is not holding simply has no entries here. That is not a claim that it was
+ * stopped: which three teams happen to be loaded is a fact about a process pool, not something
+ * the user chose, and an unloaded team has nothing in flight either way.
+ */
+function liveStatuses(): Record<string, AgentStatus> {
+  const statuses: Record<string, AgentStatus> = {};
+  for (const live of demo === undefined ? pool.live : [demo]) {
+    for (const agent of live.agents) statuses[agent.id] = live.orchestrator.statusOf(agent.id);
+  }
+  return statuses;
 }
 
 /** Every hired agent, and which teams it is on — a membership query, never a stored count. */
@@ -153,6 +180,7 @@ function agentProfiles(): UiAgentProfile[] {
     id: profile.id,
     name: profile.name,
     role: profile.role,
+    runtimeId: profile.runtimeId,
     runtimeLabel: runtimeLabel(profile.runtimeId),
     ...(profile.instructions === undefined ? {} : { instructions: profile.instructions }),
     ...(profile.hue === undefined ? {} : { hue: profile.hue }),
@@ -172,6 +200,7 @@ function snapshot(): UiSnapshot {
       teams: teamSummaries(),
       agents: [],
       statuses: {},
+      commands: {},
       messages: [],
       answers: [],
       permissions: [],
@@ -194,7 +223,11 @@ function snapshot(): UiSnapshot {
             name: team.team.name,
             workspacePath: team.team.workspacePath,
             workspaceKind: team.team.workspaceKind,
-            agentCount: team.agents.length,
+            members: team.agents.map((agent) => ({
+              id: agent.id,
+              name: agent.name,
+              ...(agent.hue === undefined ? {} : { hue: agent.hue }),
+            })),
           },
         ]
       : teamSummaries(),
@@ -207,9 +240,12 @@ function snapshot(): UiSnapshot {
       ...(agent.hue === undefined ? {} : { hue: agent.hue }),
       ...(team.branches[agent.id] === undefined ? {} : { branch: team.branches[agent.id] }),
     })),
-    statuses: Object.fromEntries(
-      team.agents.map((agent) => [agent.id, team.orchestrator.statusOf(agent.id)]),
-    ) as Record<string, AgentStatus>,
+    statuses: liveStatuses(),
+    // Read fresh rather than remembered: a team that was evicted and resumed re-advertises,
+    // and a menu kept across that would describe a session that no longer exists.
+    commands: Object.fromEntries(
+      team.agents.map((agent) => [agent.id, team.orchestrator.commandsOf(agent.id)]),
+    ),
     messages: team.store.forTeam(team.team.id),
     answers: team.store.answersOfTeam(team.team.id),
     // A block the user has not answered survives a re-snapshot, because the turn behind it is
@@ -242,6 +278,18 @@ function attach(team: RunningTeam): void {
     if (!isWorking(team)) void pool.evictIdle();
   });
   orchestrator.onStatusChange((agentId, status) => send('blobot:status', teamId, agentId, status));
+  orchestrator.onCommandsChange((agentId, commands) =>
+    send('blobot:commands', teamId, agentId, commands),
+  );
+  // Catch up on what was advertised before this ran. A team is attached *after* it starts, and
+  // a session advertises its menu during startup — so the first advertisement, which is usually
+  // the only one, lands with nobody listening. Worse, the adapter is right not to repeat
+  // itself: an identical re-advertisement notifies nobody, so without this the event would
+  // never come again and the composer would wait forever for a message already sent.
+  for (const agent of team.agents) {
+    const commands = orchestrator.commandsOf(agent.id);
+    if (commands.length > 0) send('blobot:commands', teamId, agent.id, commands);
+  }
   orchestrator.onPermissionRequested((pending) => {
     // The answer arrives by id from another process, so the team it belongs to is remembered
     // here rather than asked for: the renderer knows one team and must not be trusted with
@@ -295,8 +343,14 @@ async function createWindow(): Promise<void> {
     },
   });
 
+  // Two review affordances, both of them "open on the surface a screenshot cannot click to".
   const pane = process.argv.find((arg) => arg.startsWith('--pane='))?.slice('--pane='.length);
-  const hash = pane === undefined ? undefined : `pane=${pane}`;
+  const screen = process.argv.find((arg) => arg.startsWith('--screen='))?.slice('--screen='.length);
+  const parts = [
+    ...(pane === undefined ? [] : [`pane=${pane}`]),
+    ...(screen === undefined ? [] : [`screen=${screen}`]),
+  ];
+  const hash = parts.length === 0 ? undefined : parts.join('&');
   const devServer = process.env['ELECTRON_RENDERER_URL'];
   if (devServer !== undefined) {
     await window.loadURL(devServer + (hash === undefined ? '' : `#${hash}`));
@@ -413,6 +467,43 @@ void app.whenReady().then(async () => {
       return { ok: false, error: describe(error) };
     }
   });
+  /**
+   * Restate an agent's definition.
+   *
+   * No team is stopped and none is restarted, which is the difference between this and editing
+   * a roster. A roster change makes a live team disagree with itself: a persona names the
+   * roster and the mailbox resolves recipients out of it. A definition change does not. What
+   * it changes is what the *next* persona says, and the agents on screen are mid-conversation
+   * under the one they were started with. ADR-0002.
+   */
+  ipcMain.handle(
+    'blobot:editAgent',
+    async (_event, profileId: string, spec: NewAgentSpec): Promise<EditAgentResult> => {
+      if (store === undefined) return { ok: false, error: 'No database is open.' };
+      try {
+        // Resolved here for the same reason hiring resolves it here: pinning the user's own
+        // binary is detection's job, and a changed runtime means a different binary.
+        const detected = await detectRuntimes();
+        const executablePath = detected.find(
+          (detection) => detection.runtimeId === spec.runtimeId,
+        )?.executablePath;
+        const edit = editAgentProfile(
+          profileId,
+          { ...spec, ...(executablePath === undefined ? {} : { executablePath }) },
+          { store, clock },
+        );
+        return {
+          ok: true,
+          restated: edit.restated,
+          keepingName: edit.keepingName,
+          ...(edit.formerName === undefined ? {} : { formerName: edit.formerName }),
+          runtimeChanged: edit.runtimeChanged,
+        };
+      } catch (error) {
+        return { ok: false, error: describe(error) };
+      }
+    },
+  );
   ipcMain.handle('blobot:retireAgent', (_event, profileId: string) => {
     store?.tombstoneProfile(profileId, clock.now());
   });

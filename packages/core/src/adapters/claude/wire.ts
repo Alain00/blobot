@@ -57,6 +57,14 @@ export interface SessionUpdate {
   readonly size?: number;
   readonly cost?: { readonly amount?: number; readonly currency?: string };
   readonly currentModeId?: string;
+  readonly availableCommands?: readonly AvailableCommandWire[];
+}
+
+/** The menu entry as the bridge sends it. Normalized into blobot's `AvailableCommand`. */
+export interface AvailableCommandWire {
+  readonly name?: string;
+  readonly description?: string;
+  readonly input?: { readonly hint?: string };
 }
 
 export interface ContentBlock {

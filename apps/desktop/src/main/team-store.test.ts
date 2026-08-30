@@ -16,6 +16,7 @@ import {
   TeamCreationError,
   createTeam,
   deleteTeam,
+  editAgentProfile,
   editTeamRoster,
   hireAgent,
 } from './team-store.js';
@@ -264,7 +265,7 @@ describe('agents that exist on their own', () => {
     expect(memberships.every((agent) => agent.profileId === mara.id)).toBe(true);
   });
 
-  it('copies name, role and instructions onto the Agent, so a later edit cannot rewrite them', async () => {
+  it('copies name, role and instructions onto the Agent as they were when it joined', async () => {
     const mara = hireAgent(
       { name: 'Mara', role: 'marketing', runtimeId: 'claude-code', instructions: 'Cite a source.' },
       { store, clock },
@@ -301,6 +302,149 @@ describe('agents that exist on their own', () => {
     expect(store.listProfiles().map((profile) => profile.id)).not.toContain(mara.id);
     // The team is a real team; ending it is a separate decision from retiring the agent.
     expect(store.agentsOfTeam(team.id)).toHaveLength(1);
+  });
+});
+
+/**
+ * ADR-0002. An edit restates the definition, and it does not land uniformly on the teams the
+ * agent is already on: the role, the standing instructions and the face are restated there, and
+ * the name and the runtime are not, because a branch is under the old name and a session belongs
+ * to the runtime that opened it.
+ */
+describe('editing an agent', () => {
+  const deps = () => ({ store, clock, workspaces, inspect: () => workspaces.inspect() });
+
+  it('restates the whole definition on the profile', () => {
+    const mara = hireAgent(
+      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code', instructions: 'Cite a source.', hue: 42 },
+      { store, clock },
+    );
+
+    editAgentProfile(
+      mara.id,
+      { name: 'Marisol', role: 'growth', runtimeId: 'opencode', instructions: 'Cite two.', hue: 215 },
+      deps(),
+    );
+
+    expect(store.profileById(mara.id)).toMatchObject({
+      name: 'Marisol',
+      role: 'growth',
+      runtimeId: 'opencode',
+      instructions: 'Cite two.',
+      hue: 215,
+    });
+  });
+
+  it('restates role, instructions and face on a team the agent is on, and not the name', async () => {
+    const mara = hireAgent(
+      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code', instructions: 'Cite a source.', hue: 42 },
+      { store, clock },
+    );
+    const team = await createTeam({ ...spec, profileIds: [mara.id] }, deps());
+
+    editAgentProfile(
+      mara.id,
+      { name: 'Marisol', role: 'growth', runtimeId: 'opencode', instructions: 'Cite two.', hue: 215 },
+      deps(),
+    );
+
+    const member = store.agentsOfTeam(team.id)[0];
+    expect(member).toMatchObject({ role: 'growth', instructions: 'Cite two.', hue: 215 });
+    // The two the membership is built out of. The branch is under the old name, and the open
+    // session belongs to the runtime that opened it.
+    expect(member?.name).toBe('Mara');
+    expect(member?.branch).toBe('blobot/checkout/mara');
+    expect(member?.runtimeId).toBe('claude-code');
+  });
+
+  it('says which teams keep the former name, and that the runtime is for the next one', async () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    await createTeam({ ...spec, profileIds: [mara.id] }, deps());
+
+    const edit = editAgentProfile(
+      mara.id,
+      { name: 'Marisol', role: 'marketing', runtimeId: 'opencode' },
+      deps(),
+    );
+
+    expect(edit).toMatchObject({
+      restated: ['checkout'],
+      keepingName: ['checkout'],
+      formerName: 'Mara',
+      runtimeChanged: true,
+    });
+  });
+
+  it('has nothing to report about an edit that changed no name and no runtime', async () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    await createTeam({ ...spec, profileIds: [mara.id] }, deps());
+
+    const edit = editAgentProfile(
+      mara.id,
+      { name: 'Mara', role: 'growth', runtimeId: 'claude-code' },
+      deps(),
+    );
+
+    expect(edit).toMatchObject({ restated: ['checkout'], keepingName: [], runtimeChanged: false });
+    expect(edit.formerName).toBeUndefined();
+  });
+
+  it('clears standing instructions that were emptied, on the profile and on every team', async () => {
+    const mara = hireAgent(
+      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code', instructions: 'Cite a source.' },
+      { store, clock },
+    );
+    const team = await createTeam({ ...spec, profileIds: [mara.id] }, deps());
+
+    // Restated, not patched: an empty field is an answer, and it is "nothing standing".
+    editAgentProfile(mara.id, { name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, deps());
+
+    expect(store.profileById(mara.id)?.instructions).toBeUndefined();
+    expect(store.agentsOfTeam(team.id)[0]?.instructions).toBeUndefined();
+  });
+
+  it('refuses a name another agent already has, and allows an agent to keep its own', () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    hireAgent({ name: 'Nils', role: 'design', runtimeId: 'claude-code' }, { store, clock });
+
+    expect(() =>
+      editAgentProfile(mara.id, { name: 'Nils', role: 'marketing', runtimeId: 'claude-code' }, deps()),
+    ).toThrow(TeamCreationError);
+    expect(() =>
+      editAgentProfile(mara.id, { name: 'Mara', role: 'growth', runtimeId: 'claude-code' }, deps()),
+    ).not.toThrow();
+  });
+
+  it('refuses an agent that is gone, and an agent with no name', () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    expect(() =>
+      editAgentProfile('agent_gone', { name: 'Mara', role: 'x', runtimeId: 'claude-code' }, deps()),
+    ).toThrow(TeamCreationError);
+    expect(() =>
+      editAgentProfile(mara.id, { name: '  ', role: 'x', runtimeId: 'claude-code' }, deps()),
+    ).toThrow(TeamCreationError);
+  });
+
+  it('reaches every team the agent is on at once', async () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    const first = await createTeam(
+      { name: 'checkout', workspacePath: '/repo', turnBudget: 6, profileIds: [mara.id] },
+      deps(),
+    );
+    const second = await createTeam(
+      { name: 'storefront', workspacePath: '/other', turnBudget: 6, profileIds: [mara.id] },
+      deps(),
+    );
+
+    const edit = editAgentProfile(
+      mara.id,
+      { name: 'Mara', role: 'growth', runtimeId: 'claude-code' },
+      deps(),
+    );
+
+    expect([...edit.restated].sort()).toEqual(['checkout', 'storefront']);
+    expect(store.agentsOfTeam(first.id)[0]?.role).toBe('growth');
+    expect(store.agentsOfTeam(second.id)[0]?.role).toBe('growth');
   });
 });
 

@@ -1,31 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
-import * as Select from '@radix-ui/react-select';
-import { Check, ChevronDown, Shuffle, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import type {
   NewTeamSpec,
   UiAgentProfile,
   UiRuntimeChoice,
   UiWorkspaceInspection,
 } from '../../../shared/api.js';
+import { HireAgent } from './AgentForm.js';
 import { Blob } from './Blob.js';
-
-/**
- * The colours an agent can be given, as a ring of hues rather than a continuum.
- *
- * A slider offered 360 answers to a question with about a dozen useful ones, and two agents a
- * few degrees apart are two agents the user cannot tell apart in a 20px rail. These are spaced
- * far enough that every pair is distinguishable at blobatar size, which is the only size that
- * matters. Warm to cool, so the row reads as a spectrum and not as a bag of colours.
- */
-const HUES = [0, 22, 42, 62, 96, 145, 172, 194, 215, 245, 275, 310, 335] as const;
-
-const READINESS_WORD: Record<UiRuntimeChoice['readiness'], string> = {
-  ready: 'ready',
-  needs_sign_in: 'needs sign-in',
-  not_installed: 'not installed',
-  unknown: 'status unknown',
-};
 
 /**
  * Forming a team: a Workspace, a name, and agents that already exist.
@@ -234,7 +216,7 @@ export function NewTeam({
                   >
                     {/* The same face it will wear in the rail and the transcript, so the roster
                         is recognisably the same set of agents rather than a list of names. */}
-                    <Blob name={agent.id} size={34} hue={agent.hue} />
+                    <Blob name={agent.name} size={34} hue={agent.hue} />
                     <span className="who">
                       <span className="nm">
                         <b>{agent.name}</b> <span className="muted">{agent.role}</span>
@@ -381,204 +363,6 @@ function Step({
       </div>
       <div className="stepbody">{children}</div>
     </section>
-  );
-}
-
-/**
- * Hiring an agent, in a modal over the sheet.
- *
- * It is a modal rather than a row that unfolds because hiring is not a step of making a team:
- * the agent exists afterwards whether or not this team is ever created, and it can join any
- * other. A dialog says "this is its own thing" in the one language every user already reads.
- *
- * Radix owns the dialog, the select and the slider. Not for the look — every rule below is this
- * app's own — but for the behaviour underneath it: a focus trap, focus returned to whatever
- * opened the dialog, Escape, `aria-modal`, a listbox that answers to arrow keys and type-ahead,
- * and a slider that answers to arrows and Home/End. All of that was hand-rolled or missing, and
- * it is the half of a control nobody screenshots.
- *
- * The blobatar is the size it is because this is the only moment the user meets this agent's
- * face. Everywhere else it is 20 to 34 pixels beside a name. It stands on the page rather than
- * in a card, and carries no name under it: the name is in the field two rows down, being typed,
- * and printing it twice makes the preview look like a record that already exists.
- */
-function HireAgent({
-  runtimes,
-  onClose,
-  onHired,
-}: {
-  runtimes: readonly UiRuntimeChoice[];
-  onClose: () => void;
-  onHired: (profileId: string) => Promise<void> | void;
-}): React.JSX.Element {
-  const [name, setName] = useState('');
-  const [role, setRole] = useState('');
-  const [instructions, setInstructions] = useState('');
-  const [runtimeId, setRuntimeId] = useState('');
-  /** Undefined means the name decides, which is the default and stays the default. */
-  const [hue, setHue] = useState<number | undefined>();
-  const [error, setError] = useState<string | undefined>();
-  const [busy, setBusy] = useState(false);
-
-  const preferred = runtimes.find((runtime) => runtime.supported)?.runtimeId ?? '';
-  const selected = runtimeId === '' ? preferred : runtimeId;
-  const runtime = runtimes.find((entry) => entry.runtimeId === selected);
-  // The preview is seeded by the name being typed, so the face changes as the agent is named.
-  // Before there is a name there is still a blobatar: an empty seed is a valid one, and a blank
-  // square here would read as a broken image rather than as "nothing yet".
-  const seed = name.trim() === '' ? 'new agent' : name.trim();
-
-  const hire = async (): Promise<void> => {
-    setBusy(true);
-    const result = await window.blobot.hireAgent({
-      name,
-      role,
-      runtimeId: selected,
-      ...(instructions.trim() === '' ? {} : { instructions }),
-      ...(hue === undefined ? {} : { hue }),
-    });
-    setBusy(false);
-    if (!result.ok || result.profileId === undefined) {
-      setError(result.error ?? 'The agent could not be hired.');
-      return;
-    }
-    await onHired(result.profileId);
-  };
-
-  return (
-    <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="scrim" />
-        <Dialog.Content className="modal" aria-describedby={undefined}>
-          <header className="modalhead">
-            <div>
-              <div className="eyebrow mono">HIRE AN AGENT</div>
-              <Dialog.Title className="display sm">Somebody new</Dialog.Title>
-            </div>
-            <Dialog.Close className="iconbtn" aria-label="Close">
-              <X size={17} aria-hidden />
-            </Dialog.Close>
-          </header>
-
-          <div className="hirepreview">
-            <Blob name={seed} size={112} hue={hue} />
-            {/* A radiogroup, because that is what it is: one colour out of a fixed set, and the
-                first cell is the default rather than a reset button parked to one side. */}
-            <div className="swatches" role="radiogroup" aria-label="Colour">
-              <button
-                role="radio"
-                aria-checked={hue === undefined}
-                aria-label="the colour its name gives it"
-                title="the colour its name gives it"
-                className={`swatch auto${hue === undefined ? ' on' : ''}`}
-                onClick={() => setHue(undefined)}
-              >
-                <Shuffle size={12} aria-hidden />
-              </button>
-              {HUES.map((choice) => (
-                <button
-                  key={choice}
-                  role="radio"
-                  aria-checked={hue === choice}
-                  aria-label={`colour ${choice}`}
-                  className={`swatch${hue === choice ? ' on' : ''}`}
-                  style={{ background: `hsl(${choice} 68% 56%)` }}
-                  onClick={() => setHue(choice)}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div className="fields">
-            <label className="labelled">
-              <span className="fieldlabel mono">NAME</span>
-              <input
-                className="field"
-                value={name}
-                placeholder="Alice"
-                autoFocus
-                onChange={(event) => setName(event.target.value)}
-              />
-            </label>
-            <label className="labelled">
-              <span className="fieldlabel mono">ROLE</span>
-              <input
-                className="field"
-                value={role}
-                placeholder="frontend"
-                onChange={(event) => setRole(event.target.value)}
-              />
-            </label>
-            <div className="labelled">
-              <span className="fieldlabel mono" id="runtimelabel">
-                RUNTIME
-              </span>
-              <Select.Root value={selected} onValueChange={setRuntimeId}>
-                <Select.Trigger className="field selecttrigger" aria-labelledby="runtimelabel">
-                  <Select.Value />
-                  <Select.Icon>
-                    <ChevronDown size={14} aria-hidden />
-                  </Select.Icon>
-                </Select.Trigger>
-                <Select.Portal>
-                  <Select.Content className="selectmenu" position="popper" sideOffset={6}>
-                    <Select.Viewport>
-                      {runtimes.map((entry) => (
-                        <Select.Item
-                          key={entry.runtimeId}
-                          value={entry.runtimeId}
-                          // Never gated on detection: an unsupported *runtime* is ours to
-                          // refuse, a signed-out one is not.
-                          disabled={!entry.supported}
-                          className="selectitem"
-                        >
-                          <Select.ItemText>
-                            {entry.label}
-                            {entry.supported ? '' : ' (no adapter yet)'}
-                          </Select.ItemText>
-                          <Select.ItemIndicator className="selecttick">
-                            <Check size={13} aria-hidden />
-                          </Select.ItemIndicator>
-                        </Select.Item>
-                      ))}
-                    </Select.Viewport>
-                  </Select.Content>
-                </Select.Portal>
-              </Select.Root>
-              {runtime !== undefined && (
-                <span className="note mono muted">
-                  {READINESS_WORD[runtime.readiness]}
-                  {runtime.version === undefined ? '' : ` · ${runtime.version}`} · {runtime.detail}
-                </span>
-              )}
-            </div>
-            <label className="labelled">
-              <span className="fieldlabel mono">STANDING INSTRUCTIONS</span>
-              <textarea
-                className="field"
-                rows={3}
-                value={instructions}
-                placeholder="anything true of this agent on every team it joins (optional)"
-                onChange={(event) => setInstructions(event.target.value)}
-              />
-            </label>
-          </div>
-
-          {error !== undefined && <div className="refusal">{error}</div>}
-
-          <div className="modalfoot">
-            <Dialog.Close className="btn">cancel</Dialog.Close>
-            <button
-              className="btn primary"
-              disabled={name.trim() === '' || busy}
-              onClick={() => void hire()}
-            >
-              {busy ? 'hiring…' : 'hire'}
-            </button>
-          </div>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
   );
 }
 

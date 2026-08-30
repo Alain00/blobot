@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import type { AgentEvent, AgentStatus, Message } from '@blobot/core/domain';
 import type {
   BlobotApi,
+  EditAgentResult,
   HireResult,
   NewAgentSpec,
   NewTeamSpec,
@@ -11,6 +12,7 @@ import type {
   TeamDeletionResult,
   UiPermissionOutcome,
   UiPermissionRequest,
+  UiCommand,
   UiRuntimeChoice,
   UiSnapshot,
   UiWorkspaceInspection,
@@ -40,6 +42,8 @@ const api: BlobotApi = {
   listAgents: () => ipcRenderer.invoke('blobot:listAgents') as Promise<readonly UiAgentProfile[]>,
   hireAgent: (spec: NewAgentSpec) =>
     ipcRenderer.invoke('blobot:hireAgent', spec) as Promise<HireResult>,
+  editAgent: (profileId: string, spec: NewAgentSpec) =>
+    ipcRenderer.invoke('blobot:editAgent', profileId, spec) as Promise<EditAgentResult>,
   retireAgent: (profileId: string) =>
     ipcRenderer.invoke('blobot:retireAgent', profileId) as Promise<void>,
   createTeam: (spec: NewTeamSpec) =>
@@ -57,6 +61,10 @@ const api: BlobotApi = {
   onStatus: (listener) =>
     subscribe('blobot:status', (_e, teamId: string, agentId: string, status: AgentStatus) =>
       listener(teamId, agentId, status),
+    ),
+  onCommands: (listener) =>
+    subscribe('blobot:commands', (_e, teamId: string, agentId: string, commands: UiCommand[]) =>
+      listener(teamId, agentId, commands),
     ),
   onMessage: (listener) =>
     subscribe('blobot:message', (_e, teamId: string, message: Message) =>

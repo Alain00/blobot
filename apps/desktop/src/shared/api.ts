@@ -18,11 +18,39 @@ export interface UiAgent {
   readonly hue?: number;
 }
 
+/**
+ * One entry in the composer's slash menu.
+ *
+ * Curated before it gets here: the adapter offers the workspace's own `.claude/` commands plus
+ * the handful blobot vouches for, so nothing on this list can tell the renderer which provider
+ * produced it. See ADR-0003 and `adapters/claude/palette.ts`.
+ */
+export interface UiCommand {
+  readonly name: string;
+  readonly description: string;
+  /** What the command expects after its name, when it takes an argument at all. */
+  readonly hint?: string;
+}
+
 export interface UiTeam {
   readonly id: string;
   readonly name: string;
   readonly workspacePath: string;
   readonly turnBudget: number;
+}
+
+/**
+ * One member of a team, as a rail row draws it: enough to seed a blobatar, nothing more.
+ *
+ * Separate from `UiAgent` on purpose. A row for a team that is not the one on screen has no
+ * session, no workspace and no runtime to name — but it does have faces, and DESIGN.md seeds a
+ * face from the agent's *name*, so the name has to travel with the row.
+ */
+export interface UiTeamMember {
+  readonly id: string;
+  readonly name: string;
+  /** The blobatar's hue, when the user chose one. Absent means the name derives it. */
+  readonly hue?: number;
 }
 
 /** A row in the rail's team list. Every team the user has created, running or not. */
@@ -36,7 +64,12 @@ export interface UiTeamSummary {
    * work — a branch that survives if it has commits on it, or a copy blobot will not delete.
    */
   readonly workspaceKind: 'git' | 'plain' | 'nested';
-  readonly agentCount: number;
+  /**
+   * Who is on it. This used to be a count, which is why every team but the one on screen was
+   * drawn as an anonymous dashed silhouette: the row had nothing to seed a face with. The
+   * count is `members.length` and the mark is the members.
+   */
+  readonly members: readonly UiTeamMember[];
   /** When it last said anything. Undefined for a team that has never held a turn. */
   readonly lastActiveAt?: number;
 }
@@ -54,7 +87,17 @@ export interface UiSnapshot {
   readonly team?: UiTeam;
   readonly teams: readonly UiTeamSummary[];
   readonly agents: readonly UiAgent[];
+  /**
+   * Every agent on every *live* team, not just the one on screen. Several teams run at once,
+   * and the rail draws a status on each of their rows, so a map keyed by team would only be
+   * unfolded again on arrival. Agent ids are per membership, so two teams cannot collide.
+   *
+   * A team the pool is not holding contributes nothing and therefore reads as idle, which is
+   * what it is: an unloaded team has nothing in flight.
+   */
   readonly statuses: Record<string, AgentStatus>;
+  /** Per agent, because each has its own session and two teammates can offer different menus. */
+  readonly commands: Record<string, readonly UiCommand[]>;
   readonly messages: readonly Message[];
   /** The team's own words, so a restart shows a conversation rather than half of one. */
   readonly answers: readonly UiAgentMessage[];
@@ -158,8 +201,14 @@ export interface UiAgentProfile {
   readonly id: string;
   readonly name: string;
   readonly role: string;
-  /** A label to print. There is no runtime id here for the same reason there is none on
-   *  `UiAgent`: the renderer would eventually branch on it. */
+  /**
+   * An opaque token, exactly as `UiRuntimeChoice.runtimeId` is one: the edit form sends it back
+   * so the runtime picker opens on the runtime this agent already has. The renderer never reads
+   * it, never compares it to a literal, and never branches on it. The label is the thing to
+   * print.
+   */
+  readonly runtimeId: string;
+  /** The label to print. The only one of the two a component may put on screen. */
   readonly runtimeLabel: string;
   readonly instructions?: string;
   /** The blobatar's hue, when the user chose one. Absent means the name derives it. */
@@ -210,6 +259,27 @@ export interface HireResult {
   readonly error?: string;
 }
 
+/**
+ * What an edit to an agent's definition actually did, so the screen can say it rather than
+ * imply it.
+ *
+ * An edit is not uniform across the teams the agent is on: the role, the standing instructions
+ * and the face are restated on every one of them and land at that team's next start, while the
+ * name and the runtime stay as they were, because a branch is under the old name and a session
+ * belongs to the provider that opened it. ADR-0002 has the reasoning; this is the receipt.
+ */
+export interface EditAgentResult {
+  readonly ok: boolean;
+  readonly error?: string;
+  /** Teams whose copy of role, instructions and face was restated. */
+  readonly restated?: readonly string[];
+  /** Teams that keep the former name, because their branch is under it. */
+  readonly keepingName?: readonly string[];
+  readonly formerName?: string;
+  /** The runtime changed, so the next team it joins is the first that runs on it. */
+  readonly runtimeChanged?: boolean;
+}
+
 export interface BlobotApi {
   snapshot(): Promise<UiSnapshot>;
   prompt(agentId: string, text: string): Promise<void>;
@@ -222,6 +292,10 @@ export interface BlobotApi {
   /** Every agent the user has hired, with the teams each is currently on. */
   listAgents(): Promise<readonly UiAgentProfile[]>;
   hireAgent(spec: NewAgentSpec): Promise<HireResult>;
+  /**
+   * Restate an agent's definition. The whole of it, not a patch: this is what the agent is now.
+   */
+  editAgent(profileId: string, spec: NewAgentSpec): Promise<EditAgentResult>;
   /** Retires the agent. Teams it is on keep working — ending one is a separate decision. */
   retireAgent(profileId: string): Promise<void>;
   createTeam(spec: NewTeamSpec): Promise<TeamCreationResult>;
@@ -245,6 +319,9 @@ export interface BlobotApi {
    */
   onEvent(listener: (teamId: string, event: AgentEvent) => void): () => void;
   onStatus(listener: (teamId: string, agentId: string, status: AgentStatus) => void): () => void;
+  onCommands(
+    listener: (teamId: string, agentId: string, commands: readonly UiCommand[]) => void,
+  ): () => void;
   onMessage(listener: (teamId: string, message: Message) => void): () => void;
   onBudget(listener: (teamId: string, turnsUsed: number, turnBudget: number) => void): () => void;
   onTurns(listener: (teamId: string, turnsThisPrompt: number) => void): () => void;

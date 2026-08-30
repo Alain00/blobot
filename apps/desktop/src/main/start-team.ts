@@ -78,6 +78,10 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       name: record.name,
       role: record.role,
       ...(record.instructions === undefined ? {} : { instructions: record.instructions }),
+      // The stored hue was being dropped here, so a running team drew the name's derived
+      // colour while every other surface drew the one the user picked. The hue is the only
+      // part of a face that is stored rather than derived; losing it is one agent, two faces.
+      ...(record.hue === undefined ? {} : { hue: record.hue }),
       workspacePath: workspace.path,
     });
     // A copied AgentWorkspace has no branch to show, and the UI already treats it as optional.

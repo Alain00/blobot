@@ -79,13 +79,25 @@ export const agents = sqliteTable(
     profileId: text('profile_id').references(() => agentProfiles.id),
     /**
      * Copied from the profile at creation, not read through it: renaming the profile must not
-     * rewrite what a transcript says this agent was called at the time.
+     * rewrite what a transcript says this agent was called at the time. It is also half of
+     * `blobot/<team>/<agent>`, so on a membership it is the name the branch is under, and an
+     * edit to the profile leaves it alone. See ADR-0002.
      */
     name: text('name').notNull(),
+    /** Copied, and restated by an edit: nothing is named after a role. */
     role: text('role').notNull(),
-    /** Copied from the profile too, and for the same reason: the persona is auditable. */
+    /**
+     * Copied, and restated by an edit as well. What keeps a strange turn explicable is
+     * `sessions.persona_text`, which records what the agent was actually told at the time;
+     * this column is what the *next* session will be composed from.
+     */
     instructions: text('instructions'),
-    /** Copied as well: a transcript should show the face the agent wore at the time. */
+    /**
+     * Copied as well, so a team of agents hired before this column keeps its faces. Unlike the
+     * name and the role, an edit to the profile **restates** this one: a face is an identity
+     * rather than a record of what was said, and an agent wearing two colours on two teams is
+     * the thing the hue exists to prevent. See ADR-0002.
+     */
     hue: integer('hue'),
     runtimeId: text('runtime_id').notNull(),
     /** Ticket 07 pins CLAUDE_CODE_EXECUTABLE to the user's own binary. */

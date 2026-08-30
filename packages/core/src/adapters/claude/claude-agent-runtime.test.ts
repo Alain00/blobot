@@ -1,4 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { AgentEvent } from '../../events.js';
 import type { RuntimeLifecycle } from '../../runtime.js';
 import { ClaudeAgentRuntime } from './claude-agent-runtime.js';
@@ -177,6 +180,25 @@ describe('resuming', () => {
 
     const completed = events.filter((event) => event.type === 'agent_message_completed');
     expect(completed.map((event) => (event as { text: string }).text)).toEqual(['today']);
+  });
+
+  it('keeps a menu advertised during the replay, because a menu is not transcript', async () => {
+    const { runtime } = await resuming({
+      replayOnLoad: [
+        { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: 'said yesterday' } },
+        {
+          sessionUpdate: 'available_commands_update',
+          availableCommands: [{ name: 'code-review', description: 'Review the changes' }],
+        },
+      ],
+    });
+
+    // The replay is swallowed because every listener already has it. Commands are the
+    // exception: they describe the session we are about to use, not what was said in it, and
+    // `#sessionId` is not even assigned until `session/load` returns.
+    expect(runtime.availableCommands).toEqual([
+      { name: 'code-review', description: 'Review the changes' },
+    ]);
   });
 
   it('starts a new session when the provider has forgotten the old one', async () => {
@@ -425,5 +447,221 @@ describe('stopping', () => {
     await runtime.stop();
     expect(runtime.lifecycle).toBe('stopped');
     expect(lifecycles).toEqual(['starting', 'ready', 'stopped']);
+  });
+});
+
+describe('the command menu', () => {
+  // The palette reads `~/.claude/skills` off disk, so every test here points that at a
+  // directory it controls. Otherwise the suite would pass or fail on what the developer
+  // running it happens to have installed.
+  const configDir = mkdtempSync(join(tmpdir(), 'blobot-config-'));
+  beforeEach(() => {
+    process.env.CLAUDE_CONFIG_DIR = configDir;
+  });
+  afterEach(() => {
+    delete process.env.CLAUDE_CONFIG_DIR;
+  });
+
+  // Vouched built-ins, so these survive the palette filter. See `palette.ts`.
+  const MENU = [
+    { name: 'code-review', description: 'Review the changes', input: { hint: '[path]' } },
+    { name: 'simplify', description: 'Simplify the changes' },
+  ];
+
+  it('knows no commands before the provider advertises any', async () => {
+    const { runtime } = await started();
+
+    // Not a placeholder for "still loading". On OpenCode the first advertisement lands after
+    // `session/prompt`, so a session that has never held a turn genuinely has no menu, and a
+    // consumer must be able to say so.
+    expect(runtime.availableCommands).toEqual([]);
+  });
+
+  it('caches the first advertisement and normalizes it away from the wire shape', async () => {
+    const { runtime, bridge, outOfBand } = await started();
+    const seen: (readonly { name: string }[])[] = [];
+    runtime.onCommandsChange((commands) => seen.push(commands));
+
+    bridge.update({ sessionUpdate: 'available_commands_update', availableCommands: MENU });
+    await tick();
+
+    expect(runtime.availableCommands).toEqual([
+      { name: 'code-review', description: 'Review the changes', hint: '[path]' },
+      { name: 'simplify', description: 'Simplify the changes' },
+    ]);
+    expect(seen).toHaveLength(1);
+    // The menu is not agent state, so nothing about it may reach the stream or the recorder.
+    expect(outOfBand).toEqual([]);
+  });
+
+  it('replaces the list rather than merging into it', async () => {
+    const { runtime, bridge } = await started();
+    bridge.update({ sessionUpdate: 'available_commands_update', availableCommands: MENU });
+    await tick();
+
+    bridge.update({
+      sessionUpdate: 'available_commands_update',
+      availableCommands: [{ name: 'verify', description: 'Verify the change' }],
+    });
+    await tick();
+
+    // Merging would keep advertising commands from a directory the agent has left.
+    expect(runtime.availableCommands).toEqual([
+      { name: 'verify', description: 'Verify the change' },
+    ]);
+  });
+
+  it('notifies nobody when the same list is advertised again', async () => {
+    const { runtime, bridge } = await started();
+    let notifications = 0;
+    runtime.onCommandsChange(() => (notifications += 1));
+
+    bridge.update({ sessionUpdate: 'available_commands_update', availableCommands: MENU });
+    await tick();
+    // OpenCode resends the identical array after every prompt. Without the comparison, every
+    // turn would wake the renderer for nothing.
+    bridge.update({ sessionUpdate: 'available_commands_update', availableCommands: MENU });
+    await tick();
+
+    expect(notifications).toBe(1);
+  });
+
+  it('takes an empty advertisement as a real answer', async () => {
+    const { runtime, bridge } = await started();
+    bridge.update({ sessionUpdate: 'available_commands_update', availableCommands: MENU });
+    await tick();
+    let notifications = 0;
+    runtime.onCommandsChange(() => (notifications += 1));
+
+    bridge.update({ sessionUpdate: 'available_commands_update', availableCommands: [] });
+    await tick();
+
+    expect(runtime.availableCommands).toEqual([]);
+    expect(notifications).toBe(1);
+  });
+
+  it('offers nothing the repo did not ship and blobot did not vouch for', async () => {
+    const { runtime, bridge } = await started();
+    let notifications = 0;
+    runtime.onCommandsChange(() => (notifications += 1));
+
+    bridge.update({
+      sessionUpdate: 'available_commands_update',
+      availableCommands: [
+        // One agent quietly becoming thirty, and the per-team turn budget defeated.
+        { name: 'batch', description: 'Execute across 5-30 isolated agents' },
+        { name: 'loop', description: 'Run a prompt on a recurring interval' },
+        // A cloud agent, against a permanent local-first rule.
+        { name: 'schedule', description: 'Create scheduled cloud agents' },
+        // Ticket 14's posture, and the disclosure that promised it.
+        { name: 'config', description: 'Set a setting by key' },
+        { name: 'fewer-permission-prompts', description: 'Add an allowlist to settings.json' },
+        // The agent's only route to a teammate.
+        { name: 'mcp', description: 'Manage MCP servers' },
+        // A second, competing roster.
+        { name: 'list-agents', description: 'List subagents and teammates' },
+      ],
+    });
+    await tick();
+
+    expect(runtime.availableCommands).toEqual([]);
+    // Filtered to nothing is not a change from nothing, so nobody is woken.
+    expect(notifications).toBe(0);
+  });
+
+  it("offers the operator's own skills, and not a plugin's", async () => {
+    const config = mkdtempSync(join(tmpdir(), 'blobot-personal-'));
+    mkdirSync(join(config, 'skills', 'grilling'), { recursive: true });
+    writeFileSync(join(config, 'skills', 'grilling', 'SKILL.md'), 'x');
+    process.env.CLAUDE_CONFIG_DIR = config;
+
+    const { runtime, bridge } = await started();
+    bridge.update({
+      sessionUpdate: 'available_commands_update',
+      availableCommands: [
+        { name: 'grilling', description: 'Something the operator wrote' },
+        // A plugin installs outside `~/.claude/skills`, which is the only thing that tells it
+        // apart from the line above: the wire says nothing about where either came from.
+        { name: 'posthog:building-workflows', description: "A plugin's skill" },
+        { name: 'deep-research', description: 'A built-in nobody vouched for' },
+      ],
+    });
+    await tick();
+
+    expect(runtime.availableCommands.map((command) => command.name)).toEqual(['grilling']);
+  });
+
+  it('finds a skill whose directory is a symlink', async () => {
+    // Not hypothetical: 36 of the author's 37 personal skills are symlinks into a shared
+    // `~/.agents/skills`. `readdirSync` calls every one of them a symlink and not a directory,
+    // so a membership test written on `Dirent.isDirectory` finds none of them, which is
+    // exactly the bug this pins.
+    const real = mkdtempSync(join(tmpdir(), 'blobot-real-'));
+    mkdirSync(join(real, 'grilling'), { recursive: true });
+    writeFileSync(join(real, 'grilling', 'SKILL.md'), 'x');
+    const config = mkdtempSync(join(tmpdir(), 'blobot-linked-'));
+    mkdirSync(join(config, 'skills'), { recursive: true });
+    symlinkSync(join(real, 'grilling'), join(config, 'skills', 'grilling'));
+    process.env.CLAUDE_CONFIG_DIR = config;
+
+    const { runtime, bridge } = await started();
+    bridge.update({
+      sessionUpdate: 'available_commands_update',
+      availableCommands: [{ name: 'grilling', description: 'Through the linked directory' }],
+    });
+    await tick();
+
+    expect(runtime.availableCommands.map((command) => command.name)).toEqual(['grilling']);
+  });
+
+  it("offers the workspace's own skills and commands", async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'blobot-palette-'));
+    mkdirSync(join(dir, '.claude', 'skills', 'house-style'), { recursive: true });
+    writeFileSync(join(dir, '.claude', 'skills', 'house-style', 'SKILL.md'), 'x');
+    mkdirSync(join(dir, '.claude', 'commands', 'db'), { recursive: true });
+    writeFileSync(join(dir, '.claude', 'commands', 'ship.md'), 'x');
+    writeFileSync(join(dir, '.claude', 'commands', 'db', 'migrate.md'), 'x');
+
+    const bridge = new FakeBridge();
+    const runtime = new ClaudeAgentRuntime({
+      agentId: 'bob',
+      cwd: dir,
+      persona: 'You are Bob.',
+      claudeExecutable: '/usr/bin/true',
+      spawn: () => bridge,
+    });
+    await runtime.start();
+
+    bridge.update({
+      sessionUpdate: 'available_commands_update',
+      availableCommands: [
+        { name: 'house-style', description: "This repo's house style" },
+        { name: 'ship', description: 'Ship it' },
+        { name: 'db:migrate', description: 'Run migrations' },
+        // Advertised, but neither the repo's nor vouched for.
+        { name: 'heapdump', description: 'Dump the JS heap to ~/Desktop' },
+      ],
+    });
+    await tick();
+
+    // Someone wrote these three for this repository, which is what makes them relevant to
+    // every teammate on the team. A nested command namespaces as `dir:name`.
+    expect(runtime.availableCommands.map((command) => command.name)).toEqual([
+      'house-style',
+      'ship',
+      'db:migrate',
+    ]);
+  });
+
+  it('offers nothing extra for a workspace that ships no .claude at all', async () => {
+    const { runtime, bridge } = await started();
+    bridge.update({
+      sessionUpdate: 'available_commands_update',
+      availableCommands: [{ name: 'house-style', description: 'not this repo' }],
+    });
+    await tick();
+
+    // The ordinary case, and not an error: most workspaces have no `.claude/`.
+    expect(runtime.availableCommands).toEqual([]);
   });
 });

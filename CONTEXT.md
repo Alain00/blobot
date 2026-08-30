@@ -12,8 +12,11 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
   several Teams at the same time. *Mara, marketing.* See
   `docs/adr/0001-agents-exist-independently-of-teams.md`.
 - **Agent** — an AgentProfile instantiated on a Team: a named member of it with a role and an
-  AgentWorkspace. *Alice*, *Bob*. Name and role are copied from the profile when the team is
-  formed, so renaming an agent later cannot rewrite what a transcript says it was called.
+  AgentWorkspace. *Alice*, *Bob*. The definition is copied from the profile when the team is
+  formed. Editing the profile afterwards **restates** the role, the standing instructions and
+  the face here, at the Team's next start, and leaves the name and the RuntimeProvider as they
+  were: the AgentWorkspace's branch is under the name the Agent joined with, and a Session
+  belongs to the runtime that opened it. See `docs/adr/0002-editing-an-agents-definition.md`.
 - **Workspace** — the location a Team points at. **Not necessarily code, and not necessarily a
   repository** — a folder of documents is a valid Workspace. One per Team. It is one of three
   *kinds*, decided by looking at it and stored on the Team, because the kind chooses the

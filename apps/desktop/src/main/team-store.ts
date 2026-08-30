@@ -103,6 +103,90 @@ export function hireAgent(spec: NewAgentSpec, deps: CreateTeamDeps): AgentProfil
   });
 }
 
+/** What an edit changed, and which teams it did or did not reach. Rendered, never inferred. */
+export interface AgentEdit {
+  readonly profileId: string;
+  /** The teams whose copy of the definition was restated. They pick it up on their next start. */
+  readonly restated: readonly string[];
+  /** The teams that keep the old name, because the branch is under it. Empty on no rename. */
+  readonly keepingName: readonly string[];
+  /** The old name, when it changed. The sentence about those teams needs it. */
+  readonly formerName?: string;
+  /** True when the runtime changed, which only the next team it joins gets. */
+  readonly runtimeChanged: boolean;
+}
+
+/**
+ * Edit an agent's definition.
+ *
+ * The whole definition is restated rather than patched, and it lands in two places for two
+ * different reasons. **The profile takes all of it**: it is the current definition of this
+ * agent, and the next team formed out of it gets exactly what is on screen.
+ *
+ * **A team the agent is already on takes the half it is not built out of** — the role, the
+ * standing instructions and the face — which reaches the running agent when its team next
+ * starts, because that is when the persona is composed. The other half stays as it was:
+ *
+ * - **The name**, because the AgentWorkspace is `blobot/<team>/<agent>` and the branch is under
+ *   the name the agent joined with. Renaming the row would leave the worktree unfindable by the
+ *   only thing that knows how to find it, which is the same wall team rename is behind.
+ * - **The runtime**, because a Session belongs to the provider that opened it. A membership
+ *   cannot change providers without throwing away the conversation, and quietly throwing away
+ *   the conversation is not what "change the runtime" means.
+ *
+ * See `docs/adr/0002-editing-an-agents-definition.md`. Nothing here restarts a team: the change
+ * is the definition, and a running team is mid-conversation under the one it started with.
+ */
+export function editAgentProfile(
+  profileId: string,
+  spec: NewAgentSpec,
+  deps: CreateTeamDeps,
+): AgentEdit {
+  const profile = deps.store.profileById(profileId);
+  if (profile === undefined) {
+    throw new TeamCreationError('unknown_agent', 'That agent no longer exists.');
+  }
+  const name = spec.name.trim();
+  if (name === '') throw new TeamCreationError('no_agents', 'An agent needs a name.');
+  const clash = deps.store.profileByName(name);
+  if (clash !== undefined && clash.id !== profileId) {
+    throw new TeamCreationError('agent_name_taken', `You already have an agent called ${name}.`);
+  }
+
+  const role = spec.role.trim() === '' ? 'generalist' : spec.role.trim();
+  const instructions = spec.instructions?.trim();
+  deps.store.updateProfile(profileId, {
+    name,
+    role,
+    runtimeId: spec.runtimeId,
+    ...(spec.executablePath === undefined ? {} : { executablePath: spec.executablePath }),
+    ...(profile.model === undefined ? {} : { model: profile.model }),
+    ...(instructions === undefined || instructions === '' ? {} : { instructions }),
+    ...(spec.hue === undefined ? {} : { hue: spec.hue }),
+  });
+
+  const memberships = deps.store.membershipsOf(profileId);
+  const teamNames = new Map(deps.store.listTeams().map((team) => [team.id, team.name]));
+  const on = memberships
+    .map((member) => teamNames.get(member.teamId))
+    .filter((teamName): teamName is string => teamName !== undefined);
+  for (const member of memberships) {
+    deps.store.restateAgent(member.id, {
+      role,
+      ...(instructions === undefined || instructions === '' ? {} : { instructions }),
+      ...(spec.hue === undefined ? {} : { hue: spec.hue }),
+    });
+  }
+
+  return {
+    profileId,
+    restated: on,
+    keepingName: name === profile.name ? [] : on,
+    ...(name === profile.name ? {} : { formerName: profile.name }),
+    runtimeChanged: spec.runtimeId !== profile.runtimeId,
+  };
+}
+
 /**
  * Form a team out of agents that already exist, and give each of them its own copy of the
  * repository.
