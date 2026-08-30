@@ -2899,3 +2899,88 @@ This is the pattern for the next one of these. A divergence gets aligned where A
 fact that both runtimes already send — `locations` here, the `diff` block for the line counts —
 and is left alone where it is genuinely the provider's own voice with no protocol-level answer
 behind it.
+
+## Built, 2026-08-30: where an agent's work is, and whether GitHub has it
+
+Asked for by the author against a screenshot of Claude Code's composer, which carries a status
+strip under the input: the checkout, an open pull request, the current branch. Three things in
+one bar, and they do not all survive being moved into blobot.
+
+**The chip row was not copied.** Model, effort and access are live toggles there. Here they are
+`session/new` parameters chosen per agent in the hire and edit dialogs and taken at the team's
+next start, and the permission posture already has a permanent home on the conversation header
+— a chip under the input would claim an immediacy blobot does not have and repeat something the
+header says.
+
+**The pull request was refused once and the refusal was wrong.** The argument was that an
+agent's branch never reaches GitHub, since `git push` and `git remote` prompt at every trust
+level including `trusting`. True, and beside the point: the actor is the user. They push
+`blobot/<team>/<agent>` themselves and open the pull request themselves, and `gh` is their own
+login in exactly the way `claude auth login` is — the pattern `detect/remedies.ts` already
+leans on. blobot stores no token, proxies no credential and speaks to no API of its own; it
+spawns the CLI the user is already signed in to. Reopened by the author on both points.
+
+**The branch is per agent and never per team.** A team has N branches, one per member, plus the
+`nested` kind where each repository has its own and the tree has none, plus `plain`, which has
+no branch at all. So it is drawn in two places and the placement is what makes each sentence
+true: under the composer in an agent's pane, where one branch and one pull request is the whole
+answer, and as a block in the activity column beside `CONTEXT` in the team pane, where it is a
+list. One `Row` serves both; the panel names whose each row is and the line does not, because
+there the pane already is that agent.
+
+- `packages/core/src/workspace/status.ts` reads it. `changed` from `status --porcelain`,
+  `ahead` from `rev-list --count <base>..HEAD`, `pushed` from the remote-tracking ref rather
+  than `ls-remote` because this runs on every read and must not touch the network. The base is
+  the Workspace repository's *current* branch, read once per team rather than per agent: not
+  what the team was actually created from, which nothing records, but right until the user
+  moves and it is the count they can act on.
+- **`asked` is kept apart from the answer.** `ForgeReading` is `{asked: false, detail}` or
+  `{asked: true, pr?}`, so *no pull request* and *we could not look* can never draw the same.
+  It is ticket 10's first-run-against-branch-gone distinction in a second place. `gh`'s three
+  usual reasons get their own words (no remote, not signed in, not on GitHub) and anything else
+  is passed through verbatim, because a message nobody anticipated is more use as it came.
+  Unreadable output is *could not look*, never *none*.
+- **Nothing here refuses.** A missing directory, a git that fails, a `gh` that is not there:
+  each narrows what can be said, and the line simply says less. A red row about a folder is not
+  what the user came to the conversation for.
+- `publish.ts` is the one place blobot writes to a forge: `git push -u origin <branch>`, then
+  `gh pr create`. Two steps rather than gh's own `--push`, because which one failed is the thing
+  the user most needs told — a create that fails after a successful push has left the branch on
+  the remote and the message says so. `publishPlan` writes the same two commands the way a
+  person reads them and the confirm shows them before anything runs, which is `remedies.ts`'s
+  rule applied to the one command here that is not a fixed string. **argv is ours**: the
+  renderer sends words for a title, never a command line, and `execFile` takes them as separate
+  arguments with no shell, so a title containing a semicolon is a title.
+- **`forge` is off by default and the caller turns it on.** Local git follows the work and is
+  re-read whenever a turn finishes; GitHub is asked on opening a team and on the user's own
+  refresh and on nothing else. No timer: a backgrounded team must not sit making requests
+  nobody wanted, and a pull request cannot appear on its own anyway, because the only thing that
+  could open one is a person.
+- **It is observation.** No agent is told any of it, nothing enters a session, and the result of
+  a publish does not either. That is what keeps the whole feature outside every permission
+  posture rather than inside one.
+
+Verified against real repositories rather than only fakes. `live-gh.test.ts`
+(`BLOBOT_LIVE_GH=<repo>`) finds a real pull request by head branch, and gets *no pull request*
+rather than *could not look* for a branch that has none. The three live teams in the author's own
+database read correctly: `blobot/portfolio/alice` is clean and 3 commits ahead of `master` with
+nothing pushed, which is exactly the state that offers *open a pull request*. The panel was read
+on screen against those teams.
+
+Two things found on screen and fixed, both the same shape of mistake. `.conv` is a flex column
+that hides its overflow, so the line under the composer shrank to nothing until it was given
+`flex:0 0 auto`. And the agent's name was gated on its hue, which is optional for anybody who
+kept the default: a roster of default agents came out anonymous.
+
+Known gaps: **`nested` is read but never published from** — a tree of repositories is several
+possible pull requests and one button cannot be honest about which, so `publishTarget` refuses
+it by name. Nothing records what branch a team was actually created from, so `ahead` is measured
+against the Workspace repository's branch as it is now. `gh` that is missing or signed out is
+silent and blobot offers no remedy for it, unlike a runtime, because it gates nothing — a
+`RuntimeSetup`-style way out is available if that turns out to be wrong. And the publish path
+has never been *clicked*: `publishBranch` is covered, and no test pushes.
+
+Unrelated and worth knowing: **`--pane=<agentId>` does not survive the first snapshot.** The
+reset in `App.tsx` consumes `wanted` before the roster arrives, so a screenshot of an agent's
+pane comes back on the team pane. Seeding `wanted` from the flag was tried and does not fix it.
+The line under the composer is covered by `Workspaces.test.tsx` instead.

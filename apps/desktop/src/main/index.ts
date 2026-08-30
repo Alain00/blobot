@@ -36,6 +36,9 @@ import {
   createTeam,
   deleteTeam,
   measureTeam,
+  publishAgentBranch,
+  publishPlanFor,
+  readTeamWorkspaces,
   editAgentProfile,
   editTeamRoster,
   hireAgent,
@@ -71,6 +74,8 @@ import type {
   UiSnapshot,
   UiTeamIcon,
   UiTeamDiskUsage,
+  UiWorkspaceStatus,
+  UiPublishResult,
   UiTeamSummary,
   UiWorkspaceInspection,
 } from '../shared/api.js';
@@ -1094,6 +1099,74 @@ void app.whenReady().then(async () => {
       return { bytes: 0, agents: [] };
     }
   });
+
+  /**
+   * What each agent's workspace is holding, and what GitHub knows about it.
+   *
+   * The git half is local and cheap and runs whenever the line is drawn. The forge half is a
+   * subprocess and a network round trip, so it only runs when the renderer asks for it, which
+   * it does on opening the line and on the user's refresh and never on a timer. A backgrounded
+   * team never reaches GitHub.
+   */
+  ipcMain.handle(
+    'blobot:workspaceStatus',
+    async (_event, teamId: string, forge = false): Promise<readonly UiWorkspaceStatus[]> => {
+      if (store === undefined) return [];
+      const statuses = await readTeamWorkspaces(teamId, { store, clock }, { forge }).catch(() => []);
+      return statuses.map((status) => ({
+        agentId: status.agentId,
+        agentName: status.agentName,
+        kind: status.kind,
+        ...(status.branch === undefined ? {} : { branch: status.branch }),
+        present: status.present,
+        ...(status.changed === undefined ? {} : { changed: status.changed }),
+        ...(status.ahead === undefined ? {} : { ahead: status.ahead }),
+        ...(status.pushed === undefined ? {} : { pushed: status.pushed }),
+        ...(status.forge.asked
+          ? status.forge.pr === undefined
+            ? {}
+            : { pr: status.forge.pr }
+          : { unavailable: status.forge.detail }),
+      }));
+    },
+  );
+
+  ipcMain.handle(
+    'blobot:publishPlan',
+    async (
+      _event,
+      teamId: string,
+      agentId: string,
+      options: { title?: string; draft?: boolean } = {},
+    ): Promise<readonly string[]> => {
+      if (store === undefined) return [];
+      return publishPlanFor(teamId, agentId, { store, clock }, options).catch(() => []);
+    },
+  );
+
+  /**
+   * The user pushing an agent's branch and opening a pull request for it.
+   *
+   * Nothing about this is an agent's: it is not a tool, no runtime is told it happened, and the
+   * result never enters a session. blobot carries no token either — `gh` is the user's own
+   * login, spawned, exactly as the runtime remedies spawn `claude auth login`.
+   */
+  ipcMain.handle(
+    'blobot:publishBranch',
+    async (
+      _event,
+      teamId: string,
+      agentId: string,
+      options: { title?: string; body?: string; draft?: boolean } = {},
+    ): Promise<UiPublishResult> => {
+      if (store === undefined) return { ok: false, step: 'create', error: 'No database is open.' };
+      return publishAgentBranch(teamId, agentId, { store, clock }, options).catch((error: unknown) => ({
+        ok: false as const,
+        step: 'create' as const,
+        error: error instanceof Error ? error.message : String(error),
+      }));
+    },
+  );
 
   ipcMain.handle('blobot:deleteTeam', async (_event, teamId: string, clean = false): Promise<TeamDeletionResult> => {
     if (store === undefined) return { ok: false, error: 'No database is open.' };

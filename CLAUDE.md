@@ -331,6 +331,22 @@ up. Read it before starting work.
   runs two real Codex agents who message each other, and `--live-mixed=<dir>` puts a Claude agent
   and a Codex agent on one team, which is the point of the whole architecture.
 
+- **Where an agent's work is, and whether GitHub has it.** A `WORKSPACE` line: the branch, what
+  the worktree is holding, how far ahead it is, and the pull request whose head that branch is.
+  Per agent and never per team, so it is drawn twice and the placement is what makes each
+  sentence true: under the composer in an agent's pane, and as a block beside `CONTEXT` in the
+  activity column in the team pane, where a single branch name would be false about the other
+  members. `workspace/status.ts` reads it and `workspace/publish.ts` is the one place blobot
+  writes to a forge, pushing the branch and running `gh pr create` with the two commands shown
+  in full before they run. **`gh` is the user's own login, spawned**, the way
+  `detect/remedies.ts` spawns `claude auth login`: no token is stored, no credential is proxied,
+  no API is called by blobot. **A pull request is the user's action and never an agent's** —
+  `git push` and `git remote` prompt at every trust level, nothing here is a tool, and no runtime
+  is told any of it. *No pull request* and *we could not look* are separate states in the type
+  and never draw the same. Local git follows the work and is re-read as turns finish; GitHub is
+  asked on opening a team and on the user's refresh and on no timer. Verified against real
+  repositories, `BLOBOT_LIVE_GH=<repo>`.
+
 Next: handing a real runtime a real attachment (neither live suite has an attachment case yet),
 then surfacing whether an agent resumed or started fresh.
 `build.md`'s *Next session* has the order and the reasons.

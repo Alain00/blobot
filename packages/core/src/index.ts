@@ -136,6 +136,16 @@ export { findWorkspaceIcon, type WorkspaceIcon } from './workspace/icon.js';
 export { workspaceProviderFor } from './workspace/provider-for.js';
 // What a full clean would recover. The words for a size are the renderer's, not core's.
 export { directorySize } from './workspace/size.js';
+export {
+  readAgentWorkspaceStatus,
+  readPullRequest,
+  spawnCommand,
+  type AgentWorkspaceStatus,
+  type ForgeReading,
+  type PullRequest,
+  type PullRequestState,
+} from './workspace/status.js';
+export { publishBranch, publishPlan, type PublishOutcome, type PublishRequest } from './workspace/publish.js';
 export { WorkspaceError, branchNameFor, refSlug } from './workspace/workspace.js';
 export type {
   AgentWorkspace,

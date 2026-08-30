@@ -22,6 +22,8 @@ import type {
   UiTeamIcon,
   UiTeamDiskUsage,
   UiWorkspaceInspection,
+  UiWorkspaceStatus,
+  UiPublishResult,
   UiRuntimeOptions,
 } from '../shared/api.js';
 
@@ -104,6 +106,14 @@ const api: BlobotApi = {
     ipcRenderer.invoke('blobot:deleteTeam', teamId, clean === true) as Promise<TeamDeletionResult>,
   teamDiskUsage: (teamId: string) =>
     ipcRenderer.invoke('blobot:teamDiskUsage', teamId) as Promise<UiTeamDiskUsage>,
+  workspaceStatus: (teamId, forge) =>
+    ipcRenderer.invoke('blobot:workspaceStatus', teamId, forge) as Promise<
+      readonly UiWorkspaceStatus[]
+    >,
+  publishPlan: (teamId, agentId, options) =>
+    ipcRenderer.invoke('blobot:publishPlan', teamId, agentId, options) as Promise<readonly string[]>,
+  publishBranch: (teamId, agentId, options) =>
+    ipcRenderer.invoke('blobot:publishBranch', teamId, agentId, options) as Promise<UiPublishResult>,
   answerPermission: (requestId: string, choice: PermissionChoice) =>
     ipcRenderer.invoke('blobot:answerPermission', requestId, choice) as Promise<void>,
   // The runtime's own login or its vendor's own installer, on a terminal. Two ids go out and

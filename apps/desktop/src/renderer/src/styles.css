@@ -5,7 +5,7 @@
  * dropped.
  *
  * The governing rule: the blobatars are the only saturated thing on the page. Status is
- * monochrome, carried by motion, a mono word and a sweeping hairline.
+ * monochrome, carried by motion, a mono word and three dots.
  */
 
 :root{
@@ -51,11 +51,6 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 
 /* ---------- app chrome (shared by all variants) ---------- */
 .app{height:100vh;display:flex;flex-direction:column;overflow:hidden}
-.topbar{display:flex;align-items:center;gap:14px;padding:0 16px;height:44px;border-bottom:1px solid var(--line);flex:0 0 auto}
-.wordmark{font-weight:600;letter-spacing:-.02em}
-.crumb{color:var(--muted);font-family:var(--mono);font-size:11px}
-.crumb b{color:var(--ink);font-weight:500}
-.topbar .spacer{flex:1}
 /* The activity column is a preference, not a mode, so its control is an icon in the chrome
    rather than anything the conversation has to make room for. */
 .paneltoggle{display:inline-flex;align-items:center;color:var(--muted);padding:4px}
@@ -68,18 +63,16 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* ---------- blobatar + status ---------- */
 .blob{display:block;flex:0 0 auto;transform-origin:50% 62%}
 .blob svg{display:block;width:100%;height:100%}
-.b-still .blob{animation:none}
-.b-thinking .blob{animation:breathe 2.6s ease-in-out infinite}
-.b-working  .blob{animation:bob .9s ease-in-out infinite}
-.b-responding .blob{animation:nod 1.15s ease-in-out infinite}
-.b-starting .blob{animation:fadein 1.4s ease-in-out infinite;opacity:.55}
-.b-waiting  .blob{animation:jolt 2.2s ease-in-out infinite}
+/* One body animation, not six. The bob travelled 3px and tilted 2.5 degrees every .9s, which
+   read as fidgeting rather than working, and folded onto a team's mark it made a whole rail row
+   hop. What it bought was never collected: `breathe` at scale(1.035) and `nod` at scaleY(.965)
+   are sub-pixel at 34px, so nobody has ever told thinking from responding by looking at a face.
+   The word says which state and the dots say in flight; the body is left saying "alive", which
+   is the one thing a shape is good at. */
+.b-still .blob,.b-idle .blob{animation:none}
+.b-thinking .blob,.b-working .blob,.b-responding .blob,.b-starting .blob,.b-waiting .blob{animation:breathe 2.6s ease-in-out infinite}
 .b-failed   .blob{filter:grayscale(1) brightness(.72);animation:none}
 @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
-@keyframes bob{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-3px) rotate(-2.5deg)}75%{transform:translateY(2px) rotate(2deg)}}
-@keyframes nod{0%,100%{transform:translateY(0) scaleY(1)}50%{transform:translateY(1px) scaleY(.965)}}
-@keyframes fadein{0%,100%{opacity:.4}50%{opacity:.8}}
-@keyframes jolt{0%,86%,100%{transform:translateX(0)}90%{transform:translateX(-2px)}94%{transform:translateX(2px)}}
 @media (prefers-reduced-motion:reduce){.blob{animation:none!important}}
 
 /* ---------- the face as a second status channel (the rail only, so far) ----------
@@ -115,17 +108,26 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    a variable we can take back rather than as an animation we would have to unpick. */
 .b-failed .mo-root{--mo-amp:0}
 
-/* status is never colour. three channels: motion, a mono word, a rule. */
+/* status is never colour. two channels: a mono word, and three dots while a turn is in flight.
+   The third used to be a 14px hairline swept by a linear infinite fill, and it was withdrawn on
+   two counts. A bar sweeping toward an end makes a claim about progress that nothing here can
+   back: we do not know how far into a turn an agent is. And at 14px it did not read as a bar at
+   all, only as a shimmer beside the word, so it was paying the full price of ambient motion for
+   a signal nobody could collect. Three dots say "occupied, no estimate", which is the truth. */
 .stat{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
-.stat .dotline{width:14px;height:1px;background:var(--line);position:relative;overflow:hidden}
-.stat .dotline::after{content:"";position:absolute;inset:0;background:var(--muted);transform:translateX(-100%);animation:sweep 1.1s linear infinite}
-.stat.is-idle .dotline::after,.stat.is-failed .dotline::after{animation:none;transform:translateX(-100%)}
-@keyframes sweep{to{transform:translateX(100%)}}
-.stat.is-responding::after{content:"";width:6px;height:11px;background:var(--muted);animation:blink 1s steps(1) infinite}
-@keyframes blink{50%{opacity:0}}
+/* The transcript's pending dots, at the size a 10.5px line can hold. Deliberately the same
+   glyph and the same keyframes: it already means "still coming" one column over, and one shape
+   meaning one thing in two places is the good kind of repetition. */
+.dots{display:flex;gap:4px;align-items:center}
+.dots i{width:5px;height:5px;border-radius:50%;background:var(--muted);animation:dot 1.25s ease-in-out infinite}
+.dots i:nth-child(2){animation-delay:.16s}
+.dots i:nth-child(3){animation-delay:.32s}
+@keyframes dot{0%,70%,100%{opacity:.28;transform:translateY(0)}35%{opacity:1;transform:translateY(-2px)}}
+@media (prefers-reduced-motion:reduce){.dots i{animation:none;opacity:.6}}
+.stat .dots{gap:3px}
+.stat .dots i{width:3px;height:3px}
 /* the one inversion on the page, spent on the one state a human must clear */
 .stat.is-waiting{background:var(--ink);color:var(--ground);padding:2px 6px;font-weight:500}
-.stat.is-waiting .dotline{display:none}
 .stat.is-failed{color:var(--ink);text-decoration:line-through;text-decoration-thickness:1px}
 .stat.is-idle{opacity:.55}
 
@@ -262,16 +264,12 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    flat silhouette of one is usually a blob. `contain`, so a wordmark is letterboxed rather
    than cropped into initials nobody chose. */
 .mark .teamicon{position:absolute;object-fit:contain;opacity:.92;filter:grayscale(1)}
-/* In a folder the container is the body that moves and the faces are cargo, so the seven status
-   animations come off the blobs and onto the mark. Same keyframes, same durations: this is where
-   they are applied, not a second vocabulary. */
+/* In a folder the faces are cargo and do not move. Neither does the folder: it used to wear the
+   folded status as the body animation, which is how a hop on one team's `working` became the
+   loudest thing in a column whose job is quiet. The folded status is still on the row, said by
+   the same word and the same dots the agent rows use, so nothing was lost but the motion. */
 .mark.folder > .blob{animation:none}
 .mark.folder{transform-origin:50% 62%}
-.mark.folder.b-thinking{animation:breathe 2.6s ease-in-out infinite}
-.mark.folder.b-working{animation:bob .9s ease-in-out infinite}
-.mark.folder.b-responding{animation:nod 1.15s ease-in-out infinite}
-.mark.folder.b-starting{animation:fadein 1.4s ease-in-out infinite;opacity:.55}
-.mark.folder.b-waiting{animation:jolt 2.2s ease-in-out infinite}
 /* The navigator's door. A field's box — the raised ground and the 12px radius every lifted
    surface in this app uses — because that is the shape a person looks for when they want to
    type a name, even though this one opens a layer rather than taking the keystrokes itself.
@@ -484,12 +482,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .peer .foot{margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--muted)}
 /* Something landed and an answer is coming. Muted, small, and gone the moment there is text
    to watch instead. */
-.msg.pending .dots{display:flex;gap:4px;align-items:center;height:21px}
-.msg.pending .dots i{width:5px;height:5px;border-radius:50%;background:var(--muted);animation:dot 1.25s ease-in-out infinite}
-.msg.pending .dots i:nth-child(2){animation-delay:.16s}
-.msg.pending .dots i:nth-child(3){animation-delay:.32s}
-@keyframes dot{0%,70%,100%{opacity:.28;transform:translateY(0)}35%{opacity:1;transform:translateY(-2px)}}
-@media (prefers-reduced-motion:reduce){.msg.pending .dots i{animation:none;opacity:.6}}
+.msg.pending .dots{height:21px}
 .tool{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;gap:8px;align-items:baseline;margin-left:40px}
 /* The verb is a fixed column, blank for a tool blobot has no word for. A ragged left edge is
    the reason a stack of calls stops reading as a list, which is the whole value of the fold. */
@@ -501,15 +494,14 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .tool .diff{display:inline-flex;gap:6px;flex:0 0 auto;font-variant-numeric:tabular-nums}
 .tool .diff .add{color:var(--added)}
 .tool .diff .del{color:var(--removed)}
-/* A call that is still running, said in the status channel's own hand: `.stat`'s sweeping
-   hairline, at the same width and the same 1.1s, so the line under a working agent and the line
-   next to a working call are one device and not two. Centred rather than on the baseline the
-   rest of the row sits on, because a 1px rule dropped to a baseline reads as an underscore. */
-.tool .inflight{flex:0 0 auto;align-self:center;width:14px;height:1px;background:var(--line);position:relative;overflow:hidden}
-.tool .inflight::after{content:"";position:absolute;inset:0;background:var(--muted);transform:translateX(-100%);animation:sweep 1.1s linear infinite}
-/* Reduced motion still has to say "this one has not finished", so the hairline stays and stops
-   sweeping: filled rather than animated, which is the same fact held still. */
-@media (prefers-reduced-motion:reduce){.tool .inflight::after{animation:none;transform:none}}
+/* A call that is still running, said in the status channel's own hand: the same three dots, at
+   the same size, so the tell beside a working agent and the tell beside a working call are one
+   device and not two. It followed `.stat`'s sweeping hairline when there was one, and it follows
+   the dots for the same reason. Centred rather than on the baseline the rest of the row sits on.
+   Reduced motion is handled by `.dots` above, which holds them still at .6 opacity: "this one
+   has not finished" is still said, by three marks that are there rather than by movement. */
+.tool .inflight{flex:0 0 auto;align-self:center;gap:3px}
+.tool .inflight i{width:3px;height:3px}
 
 /* A folded run of settled work. It takes `.route`'s chevron and mono label so the transcript
    has one disclosure gesture and not two, and leaves behind the dashed edge, which is the peer
@@ -574,7 +566,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
  * corners softened; a button is the same pill; the primary one inverts to ink when it is armed,
  * exactly as send does.
  */
-.newteam{flex:1;overflow:auto;display:flex;justify-content:center;padding:56px 24px 24px}
+.newteam{flex:1;overflow:auto;display:flex;justify-content:center;padding:72px 24px 24px}
 .sheet{width:100%;max-width:660px;display:flex;flex-direction:column;gap:34px}
 /* Caveat sets small for its point size, so the display runs larger than a serif would at the
    same rank, and the standfirst under it does the work of setting the measure. */
@@ -598,7 +590,12 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .stepbody > .field,.stepbody > .note,.stepbody > .refusal,.stepbody > .roster,.stepbody > .reposcope{align-self:stretch}
 .sheet .row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .pathline{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
-.note{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:10px;flex-wrap:wrap;line-height:1.5}
+/* Prose, not a row. It was a wrapping flex box, which made every inline `<span>` mid-sentence
+   its own flex item on its own line — the note that names `~/blobot` broke after the path and
+   started the next line on a comma. Buttons inside a note are inline-flex and still sit in the
+   line. */
+.note{font-size:12.5px;color:var(--muted);line-height:1.5}
+.note .btn{vertical-align:middle;margin:2px 0}
 .fieldlabel{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 
 /* ---------- fields and buttons, after the composer ---------- */
@@ -994,3 +991,47 @@ textarea.field{resize:vertical;line-height:1.5}
   .btn:active:not([disabled]),.iconbtn:active,.swatch:hover{scale:1}
   .peer .route svg{transition:none}
 }
+
+/* ---------- workspace ---------- */
+/* Where an agent's work is, and whether GitHub has it. Mono and monochrome throughout,
+   including the pull request's state: a green `merged` would be the second saturated thing on
+   screen, and the blobatars are the only saturated thing on screen. */
+/* Under the composer, in an agent's pane. `flex:0 0 auto` because `.conv` is a flex column
+   that hides its overflow, and a row left to shrink shrank to nothing. Centred on the same
+   900px column as the pill, and inset the further 16px that puts it under the pill's own text
+   rather than under its edge, so it hangs off the field it is about. */
+.wsline{flex:0 0 auto;align-self:center;width:100%;max-width:940px;padding:0 36px 12px;margin-top:-8px}
+/* In the activity column, in the team pane. The same inset and the same rule as the gauge
+   above it, because they are two readings of the same roster and must line up. */
+.ws{padding:0 0 10px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.wshead{display:flex;align-items:center;gap:6px;padding:0 14px 6px}
+.wsrow{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.ws .wsrow{padding:3px 8px;margin:0 6px;border-radius:8px}
+.ws .wsrow:hover{background:var(--raised)}
+/* Wraps rather than truncating. A branch name is the one thing here that cannot be recovered
+   by looking somewhere else on screen, so it gets the second line instead of an ellipsis. */
+.wsfacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.wsfacts .who{color:var(--ink)}
+.wsbranch{display:inline-flex;align-items:center;gap:4px;color:var(--ink);word-break:break-all}
+.wsseg{color:var(--muted)}
+.wsseg::before{content:'· '}
+/* The one thing on the line that leads somewhere, so it is the one thing that looks pressable. */
+.wspr{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:11px;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:1px 6px;cursor:pointer}
+.wspr:hover{border-color:var(--muted)}
+.wsopen{font-family:var(--mono);font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;cursor:pointer}
+.wsopen:hover{color:var(--ink);border-color:var(--muted)}
+.wsrefresh{margin-left:auto;color:var(--muted);display:inline-flex;align-items:center;cursor:pointer}
+.wsrefresh:hover{color:var(--ink)}
+.wsrefresh[disabled]{opacity:.4;cursor:not-allowed}
+/* Opens in place under its own row, the same rule the gauge's breakdown keeps: nothing in a
+   column covers anything else in it. */
+.wspublish{display:flex;flex-direction:column;gap:6px;padding:8px 0 4px 8px}
+.wstitle{width:100%;background:var(--raised);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-family:var(--sans);font-size:12px;color:var(--ink)}
+.wstitle:focus{border-color:var(--muted);outline:none}
+.wsdraft{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+/* The commands themselves, not a description of them. The user is agreeing to what they would
+   have pasted, which is `detect/remedies.ts`'s rule for the other place blobot runs a vendor
+   CLI on their behalf. */
+.wsplan{font-family:var(--mono);font-size:10.5px;color:var(--muted);background:var(--raised);border:1px solid var(--line);border-radius:8px;padding:6px 8px;word-break:break-all}
+.wsfailed{font-family:var(--mono);font-size:10.5px;color:var(--ink)}
+.wsactions{display:flex;gap:8px;justify-content:flex-end}

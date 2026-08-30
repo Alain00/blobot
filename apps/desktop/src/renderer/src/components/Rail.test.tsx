@@ -128,10 +128,17 @@ describe('a team the user is not looking at', () => {
     }
   });
 
-  it('says what its members are doing, folded, while they are doing something', () => {
+  it('says its members are busy with the dots, and does not also print the word', () => {
+    // This asserted `2 working` until the word was withdrawn from every in-flight state. The
+    // dots already say a turn is in flight, and a row that draws them and then spells WORKING
+    // beside them is making the same claim twice in the narrowest column in the app. The count
+    // went with the word: it was qualifying it, and there is nothing left to qualify.
     const drawn = draw({ mara: 'working', nils: 'working' });
     const row = backgrounded(drawn);
-    expect(row.textContent).toContain('2 working');
+    expect(row.querySelector('.stat.is-working .dots')).not.toBeNull();
+    expect(row.textContent?.toLowerCase()).not.toContain('working');
+    // Still legible to anyone not reading the shape.
+    expect(row.querySelector('.stat.is-working')?.getAttribute('aria-label')).toBe('2 working');
     // Contrast is the attention channel, and a row with something to say spends it.
     expect(row.className).toContain('busy');
     done(drawn);

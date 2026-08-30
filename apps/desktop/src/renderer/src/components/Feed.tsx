@@ -1,7 +1,14 @@
 import { useState } from 'react';
-import type { UiAgent, UiInjection, UiUsage } from '../../../shared/api.js';
+import type {
+  UiAgent,
+  UiInjection,
+  UiPublishResult,
+  UiUsage,
+  UiWorkspaceStatus,
+} from '../../../shared/api.js';
 import { sizeOf } from './Attached.js';
 import { Blob } from './Blob.js';
+import { WorkspacePanel } from './Workspaces.js';
 import type { FeedEntry, Pane } from '../model.js';
 
 /**
@@ -17,12 +24,32 @@ export function Feed({
   usage,
   injection,
   pane,
+  workspaces,
+  looking,
+  onRefreshWorkspaces,
+  onPublish,
+  onPlan,
 }: {
   entries: readonly FeedEntry[];
   agents: readonly UiAgent[];
   usage: Record<string, UiUsage>;
   injection: Record<string, UiInjection>;
   pane: Pane;
+  /**
+   * Every member's workspace, in the team pane only. An agent's pane draws its own under the
+   * composer, because there one branch is the whole answer.
+   */
+  workspaces: readonly UiWorkspaceStatus[];
+  looking: boolean;
+  onRefreshWorkspaces: () => void;
+  onPublish: (
+    agentId: string,
+    options: { title?: string; draft?: boolean },
+  ) => Promise<UiPublishResult>;
+  onPlan: (
+    agentId: string,
+    options: { title?: string; draft?: boolean },
+  ) => Promise<readonly string[]>;
 }): React.JSX.Element {
   const name = (agentId?: string): string =>
     agents.find((agent) => agent.id === agentId)?.name ?? 'team';
@@ -36,6 +63,14 @@ export function Feed({
         <span className="mono muted">ACTIVITY</span>
       </div>
       <Context agents={agents} usage={usage} injection={injection} />
+      <WorkspacePanel
+        statuses={workspaces}
+        agents={agents}
+        looking={looking}
+        onRefresh={onRefreshWorkspaces}
+        onPublish={onPublish}
+        onPlan={onPlan}
+      />
       {entries.length === 0 && (
         // A header over nothing is what a fifth of the window looked like on a quiet team.
         // The column keeps its width rather than collapsing: it would reappear on the first

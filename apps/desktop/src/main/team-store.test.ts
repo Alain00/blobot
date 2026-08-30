@@ -50,6 +50,10 @@ class FakeWorkspaces implements WorkspaceProvider {
 
   async provision(request: ProvisionRequest): Promise<AgentWorkspace> {
     this.provisioned.push(request);
+    return this.workspaceFor(request);
+  }
+
+  workspaceFor(request: ProvisionRequest): AgentWorkspace {
     return {
       agentId: request.agentId,
       path: `/worktrees/${request.agentId}`,

@@ -57,6 +57,7 @@ export function Composer({
   pane,
   lead,
   onSend,
+  footer,
   opening = false,
 }: {
   agents: readonly UiAgent[];
@@ -71,6 +72,14 @@ export function Composer({
   lead?: string;
   /** Everybody the message is addressed to. One agent unless the user named several. */
   onSend: (agentIds: readonly string[], text: string, attachmentIds: readonly string[]) => void;
+  /**
+   * What sits in the tray under the field: where this agent's work is, in an agent's pane.
+   *
+   * A child rather than a sibling, because it is drawn *tucked under the pill* and the two have
+   * to be one stacking context for that to work. It is a node and not a status, so the composer
+   * still knows nothing about branches or pull requests.
+   */
+  footer?: React.ReactNode;
   /**
    * The team is still starting. Sending is closed, because there is no session to send to yet,
    * but the field stays open: a cold start is seconds and the thing the user came to say is
@@ -453,6 +462,7 @@ export function Composer({
         <ArrowUp size={16} strokeWidth={2.25} aria-hidden />
       </button>
       </div>
+      {footer}
     </div>
   );
 }

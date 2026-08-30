@@ -5,13 +5,18 @@ import type { TrustLevel } from '@blobot/core';
 import {
   inspectWorkspace as inspectPath,
   prepareWorkspace as preparePath,
+  publishBranch,
+  publishPlan,
+  readAgentWorkspaceStatus,
   SqliteStore,
   workspaceProviderFor,
   WorkspaceError,
   refSlug,
   uuidv7,
   type AgentProfileRecord,
+  type AgentWorkspaceStatus,
   type Clock,
+  type PublishOutcome,
   type Team,
   type WorkspaceInspection,
   type WorkspaceProvider,
@@ -421,6 +426,118 @@ export async function measureTeam(teamId: string, deps: CreateTeamDeps): Promise
     agents.push({ agentName: record.name, bytes });
   }
   return { bytes: agents.reduce((total, agent) => total + agent.bytes, 0), agents };
+}
+
+/**
+ * Every agent's workspace on one team, read together.
+ *
+ * The base each branch is measured against is the Workspace repository's *current* branch, read
+ * once here rather than per agent: it is one answer about one repository and asking it N times
+ * would be N subprocesses saying the same thing.
+ *
+ * `forge` is off by default and the caller turns it on, because it is the network. A read that
+ * runs on a snapshot must not reach GitHub; the one behind the user's refresh may.
+ */
+export async function readTeamWorkspaces(
+  teamId: string,
+  deps: CreateTeamDeps,
+  options: { readonly forge?: boolean } = {},
+): Promise<readonly AgentWorkspaceStatus[]> {
+  const team = deps.store.teamById(teamId);
+  if (team === undefined) return [];
+  const workspaces = deps.workspaces ?? workspaceProviderFor(team.workspaceKind);
+  const base = await baseBranchOf(team, deps);
+
+  const statuses: AgentWorkspaceStatus[] = [];
+  for (const record of deps.store.agentsOfTeam(team.id)) {
+    const workspace = workspaces.workspaceFor(requestFor(team, record.id, record.name));
+    statuses.push(
+      await readAgentWorkspaceStatus(workspace, {
+        kind: team.workspaceKind,
+        agentName: record.name,
+        ...(base === undefined ? {} : { base }),
+        ...(options.forge === true ? { forge: true } : {}),
+      }).catch(() => ({
+        agentId: record.id,
+        agentName: record.name,
+        kind: team.workspaceKind,
+        present: false,
+        forge: { asked: false as const, detail: 'the workspace could not be read' },
+      })),
+    );
+  }
+  return statuses;
+}
+
+/** What a pull request from this agent would merge into, and what `ahead` counts against. */
+async function baseBranchOf(team: Team, deps: CreateTeamDeps): Promise<string | undefined> {
+  if (team.workspaceKind !== 'git') return undefined;
+  const inspect = deps.inspect ?? inspectPath;
+  const seen = await inspect(team.workspacePath).catch(() => undefined);
+  return seen?.branch;
+}
+
+/** The one shape every provider is addressed by, built from a team row and an agent row. */
+function requestFor(team: Team, agentId: string, agentName: string) {
+  return {
+    workspacePath: team.workspacePath,
+    teamName: team.name,
+    agentId,
+    agentName,
+    ...(team.workspaceRepos === undefined ? {} : { repos: team.workspaceRepos }),
+  };
+}
+
+/** What `publishAgentBranch` is about to run, for the confirm to show before the user agrees. */
+export async function publishPlanFor(
+  teamId: string,
+  agentId: string,
+  deps: CreateTeamDeps,
+  options: { readonly title?: string; readonly draft?: boolean } = {},
+): Promise<readonly string[]> {
+  const found = await publishTarget(teamId, agentId, deps);
+  if ('error' in found) return [];
+  return publishPlan({ ...found.request, ...options });
+}
+
+/**
+ * Push this agent's branch and open a pull request for it.
+ *
+ * The user's action end to end: their click, their `gh`, their credential, and a branch that
+ * only ever reached the remote because they asked. No agent has a path to this, and nothing it
+ * returns goes back into a session.
+ */
+export async function publishAgentBranch(
+  teamId: string,
+  agentId: string,
+  deps: CreateTeamDeps,
+  options: { readonly title?: string; readonly body?: string; readonly draft?: boolean } = {},
+): Promise<PublishOutcome> {
+  const found = await publishTarget(teamId, agentId, deps);
+  if ('error' in found) return { ok: false, step: 'create', error: found.error };
+  return publishBranch({ ...found.request, ...options });
+}
+
+/** The three things that have to be true before a branch can become a pull request. */
+async function publishTarget(
+  teamId: string,
+  agentId: string,
+  deps: CreateTeamDeps,
+): Promise<{ request: { path: string; branch: string; base: string } } | { error: string }> {
+  const team = deps.store.teamById(teamId);
+  if (team === undefined) return { error: 'That team is already gone.' };
+  const record = deps.store.agentsOfTeam(team.id).find((agent) => agent.id === agentId);
+  if (record === undefined) return { error: 'That agent is not on this team.' };
+  if (team.workspaceKind !== 'git') {
+    // A copy has no branch and a nested tree has several. Neither is one pull request.
+    return { error: 'This team\'s workspace is not a single git repository.' };
+  }
+  const workspaces = deps.workspaces ?? workspaceProviderFor(team.workspaceKind);
+  const workspace = workspaces.workspaceFor(requestFor(team, record.id, record.name));
+  if (workspace.branch === undefined) return { error: 'This agent has no branch to push.' };
+  const base = await baseBranchOf(team, deps);
+  if (base === undefined) return { error: 'blobot cannot tell what this branch would merge into.' };
+  return { request: { path: workspace.path, branch: workspace.branch, base } };
 }
 
 /**

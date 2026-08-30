@@ -4,12 +4,14 @@ import { Agents } from './components/Agents.js';
 import { Composer } from './components/Composer.js';
 import { Conversation } from './components/Conversation.js';
 import { Feed } from './components/Feed.js';
+import { WorkspaceLine } from './components/Workspaces.js';
 import { Navigator } from './components/Navigator.js';
 import { NewTeam } from './components/NewTeam.js';
 import { Rail } from './components/Rail.js';
 import { DeleteTeam, EditTeam } from './components/TeamEdits.js';
 import { initialState, itemsFor, reduce, type Pane } from './model.js';
 import { useFeedVisible } from './useFeedVisible.js';
+import { useWorkspaces } from './useWorkspaces.js';
 import { useRailWidth } from './useRailWidth.js';
 
 export function App(): React.JSX.Element {
@@ -152,6 +154,38 @@ export function App(): React.JSX.Element {
   }, []);
 
   const items = useMemo(() => itemsFor(state.items, pane), [state.items, pane]);
+  /**
+   * Where each agent's work is. Local git follows the feed, so the count moves as the agents do;
+   * GitHub is asked on opening the team and on the user's own refresh, and never on a timer.
+   *
+   * Read up here, above every early return, because this component has two of them — no
+   * snapshot yet, and no team yet — and a hook below either is a hook that is not always
+   * called. It takes the id as an optional and answers with nothing when there is no team.
+   */
+  const openTeamId = state.snapshot?.team?.id;
+  const workspaces = useWorkspaces(openTeamId, state.feed.length);
+  const refreshWorkspaces = workspaces.refresh;
+  const publish = useCallback(
+    (agentId: string, options: { title?: string; draft?: boolean }) => {
+      if (openTeamId === undefined) {
+        return Promise.resolve({ ok: false as const, step: 'create' as const, error: 'No team is open.' });
+      }
+      return window.blobot.publishBranch(openTeamId, agentId, options).then((result) => {
+        // Whatever happened, the branch may now be on the remote and there may now be a pull
+        // request. Both are things only this read can see.
+        refreshWorkspaces();
+        return result;
+      });
+    },
+    [openTeamId, refreshWorkspaces],
+  );
+  const plan = useCallback(
+    (agentId: string, options: { title?: string; draft?: boolean }) =>
+      openTeamId === undefined
+        ? Promise.resolve([] as readonly string[])
+        : window.blobot.publishPlan(openTeamId, agentId, options),
+    [openTeamId],
+  );
   const snapshot = state.snapshot;
   if (snapshot === undefined) return <div className="app" />;
   // Looked up rather than copied into state: a team that has just been deleted must not stay
@@ -166,13 +200,11 @@ export function App(): React.JSX.Element {
   // The genuine empty state: a first launch, before any team exists.
   if (snapshot.team === undefined || creating) {
     return (
+      // No strip across the top. It said the product's own name and counted the teams, on the
+      // one screen where neither is a thing the reader can act on, and it put a second
+      // left-aligned anchor above a page that is set centred. The working surface lost its
+      // header for the same reason.
       <div className="app">
-        <div className="topbar">
-          <span className="wordmark">blobot</span>
-          <span className="crumb">
-            {snapshot.teams.length === 0 ? 'no teams yet' : `${snapshot.teams.length} teams`}
-          </span>
-        </div>
         {openError !== undefined && <div className="openerror">{openError}</div>}
         <NewTeam
           {...(snapshot.team === undefined ? {} : { onCancel: () => setCreating(false) })}
@@ -286,6 +318,18 @@ export function App(): React.JSX.Element {
               void window.blobot.prompt(agentIds, text, attachmentIds)
             }
           />
+          {/* Under the input, and only in an agent's pane: there it is one branch and one
+              possible pull request, which is a sentence that can be true. The team pane's
+              answer is N of them, and it is drawn in the activity column instead. */}
+          {pane.kind === 'agent' && (
+            <WorkspaceLine
+              status={workspaces.statuses.find((row) => row.agentId === pane.agentId)}
+              looking={workspaces.looking}
+              onRefresh={workspaces.refresh}
+              onPublish={(options) => publish(pane.agentId, options)}
+              onPlan={(options) => plan(pane.agentId, options)}
+            />
+          )}
         </div>
         {feed.visible && (
           <Feed
@@ -294,6 +338,11 @@ export function App(): React.JSX.Element {
             usage={state.usage}
             injection={state.injection}
             pane={pane}
+            workspaces={pane.kind === 'team' ? workspaces.statuses : []}
+            looking={workspaces.looking}
+            onRefreshWorkspaces={workspaces.refresh}
+            onPublish={publish}
+            onPlan={plan}
           />
         )}
         {editingTeam !== undefined && (

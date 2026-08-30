@@ -119,6 +119,13 @@ export interface WorkspaceProvider {
    * price attached. Never a refusal: a workspace that is gone measures 0.
    */
   measure(request: ProvisionRequest): Promise<number>;
+  /**
+   * Where this agent's workspace and branch are, without touching either.
+   *
+   * Pure, and on the interface because a reader now needs it: naming the path and the branch is
+   * not the same job as provisioning them, and every provider already answered it privately.
+   */
+  workspaceFor(request: ProvisionRequest): AgentWorkspace;
 }
 
 /** The team half of `blobot/<team>/<agent>`, and the directory name under the worktree root. */

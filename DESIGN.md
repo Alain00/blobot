@@ -21,9 +21,24 @@ an agent is the only thing on screen that has one.
 
 Consequences you will keep bumping into:
 
-- **Status is never colour.** It has three channels instead: motion on the blobatar, a mono word
-  spelled out, and a hairline that sweeps while a turn is in flight. Seven states do not fit in
-  a dot, and a coloured dot is exactly what the palette forbids.
+- **Status is never colour**, and it is a shape or a word, **never both at once**. A coloured dot
+  is exactly what the palette forbids. **Three dots while a turn is in flight, and no word** —
+  `starting`, `thinking`, `working` and `responding` are one fact to a glance down a column, and
+  spelling WORKING beside dots that already say so is the same claim twice in the narrowest
+  place in the app. **The word survives exactly where the dots would lie**: `waiting`, which is
+  not busy but stopped until a human looks, and which takes the one inversion on the page; and
+  `failed`, struck through. `idle` says nothing anywhere. A slow breathe on the blobatar sits
+  under all of it. *Amended 2026-08-30, twice on the same day. First: this said three channels,
+  the third being a hairline that swept while a turn was in flight. A bar travelling toward an
+  end claims progress toward a finish, and nothing here knows how far into a turn an agent is;
+  at 14px it did not read as a bar anyway, only as a shimmer beside the word. Three dots claim
+  "occupied, no estimate", which is the truth, and they are the glyph the transcript already
+  used for "still coming". Then: the word went with it for those four states. It had been the
+  only thing separating four body animations that turned out to be sub-pixel, so once those
+  collapsed it was distinguishing nothing, and* which *kind of busy is a question the transcript
+  answers concretely — in tool lines and text arriving — rather than as an abstraction printed
+  over them. The count a fold carried ("2 working") went with the word, since it was qualifying
+  it. It survives as the `aria-label`, so nothing is lost to a reader not reading the shape.*
 - **A blobatar is seeded by the agent's *name*, never by a row id.** The library derives the
   whole face from that string, so a surface that seeds it with an id draws a different creature
   for the same agent. That is exactly what happened: the rail seeded by Agent id, the roster
@@ -118,9 +133,8 @@ Other transcript rules:
 - Three dots stand in for an agent that has been asked something and has not started streaming.
 - **Only the message being written carries status.** A blobatar beside a settled message is
   still: that message is a record of something already said, and twenty of them bobbing in
-  unison the moment their agent starts working is the same fidget the team mark's single
-  folded animation exists to avoid. The rail row, its status word and the pending dots carry
-  the state instead — not the transcript's header, which carries no status at all.
+  unison the moment their agent starts working is the same fidget the team mark's folded
+  animation was withdrawn for. The rail row and the pending dots carry the state instead — not the transcript's header, which carries no status at all.
 - **Hiding is for the peer voice and for settled steps.** A message from you is yours and
   short; an agent's answer is the thing the pane exists to show, and putting it behind a click
   would be hiding the work. **Amended 2026-08-30 (ticket 12):** a caption on a tool call is not
@@ -298,11 +312,19 @@ competes with status.
 spoken for: it means status, and it lives on the blobatar. Adding a second ambient animation
 anywhere is a design decision, and almost always the wrong one.
 
-- Status animations live on the blobatar: still, breathe, bob, nod, pulse, flinch.
-- A team mark animates the **folded** team status once for the whole cluster — as the folder,
-  not as the faces in it. Four members bobbing out of phase is four things fidgeting; a folder
-  that moves is one thing moving, and it is the right one, because the fold is a claim about
-  the team and not about anybody in it.
+- Status animation on the blobatar is **one** loop, not six: a slow breathe for every state
+  where something is happening, still for `idle`, grayscale and still for `failed`. Plus the
+  face's own poses, which are a separate channel and stay (`thinking`'s two-dot eye loader,
+  `sleepy` while starting, `surprised` while waiting).
+- **Neither the blobatar nor the team's folder animates the state itself.** The dots do that.
+  *Amended 2026-08-30: this listed six body animations and gave the folder the folded status as
+  motion. Two things were wrong with it. `bob` travelled 3px and tilted 2.5 degrees every .9s,
+  which reads as fidgeting rather than working, and folded onto a rail row it made a whole team
+  hop, in a column whose job is quiet. And the distinction the six were bought for was never
+  legible: `breathe` at scale(1.035) against `nod` at scaleY(.965) is sub-pixel at 34px, so
+  nobody has ever told thinking from responding by looking at a face. The word already said
+  which state. The folded status is still on the team row, in the same word and the same dots
+  the agent rows use, so what the folder carried is not lost — only its motion is.*
 
 **Interaction motion** runs once, because a person just did something, and is over before the
 eye returns to the status column. It cannot compete with status, because it is not there when
@@ -348,7 +370,8 @@ are narrow:
 Both budgets answer to the same withdrawal rule:
 
 - **Everything decorative sits behind `prefers-reduced-motion`**, where the mono word and the
-  hairline carry the state alone. No exceptions. Interaction motion is withdrawn rather than
+  three dots carry the state alone — the dots held still at .6 opacity rather than removed,
+  because three marks that are *there* still say "not finished" without moving. No exceptions. Interaction motion is withdrawn rather than
   deleted: a cross-fade is not motion, so the opacity stays and everything that travels or grows
   goes. That block is **last in the stylesheet**, because it and the rules it overrides carry
   the same specificity and order is the only thing deciding them.
@@ -450,7 +473,10 @@ One flat file, one flat namespace, no build step between it and the DOM.
   the only one. **The name is step 01 and the folder is step 02**, because the folder step now
   has a second door — *make one for me*, which puts a git repository with one empty commit under
   `~/blobot` and names it after the team, so the team has to be named before that door is open.
-  The picker still fills the name in when it is empty, so nothing is lost by the swap. A user
+  The picker still fills the name in when it is empty, so nothing is lost by the swap. **No
+  strip across the top of it either** — it said the product's own name and counted the teams,
+  neither of which the reader can act on here, and it put a second left-aligned anchor above a
+  page that is set centred. A user
   who has never seen this app should not have to go and find a repository before they can watch
   two agents talk.
 - **Your agents** — every AgentProfile the user has hired, over the working surface rather than

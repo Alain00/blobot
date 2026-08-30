@@ -373,6 +373,41 @@ export interface TeamDeletionResult {
  * Bytes rather than a formatted string, so the renderer decides how a size is spoken in the
  * same place it decides everything else a person reads.
  */
+/**
+ * One agent's workspace as the UI draws it: what is in the worktree, and what GitHub knows.
+ *
+ * Three states about the pull request, flattened out of core's `ForgeReading` into two optional
+ * fields, and the third is both of them absent. `pr` present means there is one; `unavailable`
+ * present means blobot could not look and says why; neither means it looked and there is none.
+ * *No pull request* and *we could not look* must never draw the same, which is why this is not
+ * one nullable field.
+ */
+export interface UiWorkspaceStatus {
+  readonly agentId: string;
+  readonly agentName: string;
+  readonly kind: 'git' | 'nested' | 'plain';
+  /** Absent on a copied workspace. There is no branch to name and none is invented. */
+  readonly branch?: string;
+  readonly present: boolean;
+  readonly changed?: number;
+  readonly ahead?: number;
+  readonly pushed?: boolean;
+  readonly pr?: UiPullRequest;
+  readonly unavailable?: string;
+}
+
+export interface UiPullRequest {
+  readonly number: number;
+  readonly state: 'open' | 'draft' | 'merged' | 'closed';
+  readonly title: string;
+  readonly url: string;
+}
+
+/** What became of a push and an open. The url is where to send the user next. */
+export type UiPublishResult =
+  | { readonly ok: true; readonly url: string }
+  | { readonly ok: false; readonly step: 'push' | 'create'; readonly error: string };
+
 export interface UiTeamDiskUsage {
   readonly bytes: number;
   readonly agents: readonly { readonly agentName: string; readonly bytes: number }[];
@@ -697,6 +732,31 @@ export interface BlobotApi {
   deleteTeam(teamId: string, clean?: boolean): Promise<TeamDeletionResult>;
   /** How much disk this team's workspaces are holding, for the delete dialog to price a clean. */
   teamDiskUsage(teamId: string): Promise<UiTeamDiskUsage>;
+  /**
+   * Every agent's workspace on a team, read now.
+   *
+   * `forge` is the network and is therefore never implicit: the line draws itself from the git
+   * half on arrival and asks GitHub only when the user opens or refreshes it. A backgrounded
+   * team makes no request nobody asked for.
+   */
+  workspaceStatus(teamId: string, forge?: boolean): Promise<readonly UiWorkspaceStatus[]>;
+  /** The exact commands `publishBranch` would run, for the confirm to show before it does. */
+  publishPlan(
+    teamId: string,
+    agentId: string,
+    options?: { readonly title?: string; readonly draft?: boolean },
+  ): Promise<readonly string[]>;
+  /**
+   * Push this agent's branch and open a pull request for it, as the user.
+   *
+   * Their `gh`, their credential, their click. No agent reaches this and nothing it returns
+   * goes back into a session, which is what keeps it outside every permission posture.
+   */
+  publishBranch(
+    teamId: string,
+    agentId: string,
+    options?: { readonly title?: string; readonly body?: string; readonly draft?: boolean },
+  ): Promise<UiPublishResult>;
   /**
    * Answering a permission block. `reject` is a refusal of this call, not a standing rule;
    * `allow_always` is the only one of the three that leaves anything behind.

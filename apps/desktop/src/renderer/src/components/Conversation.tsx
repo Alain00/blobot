@@ -319,13 +319,17 @@ function ToolLine({ item }: { item: Extract<Item, { kind: 'tool' | 'permission' 
       {/* In flight. The word `running` was the only thing on this line that changed while the
           call ran, and a word does not change: it sat there static under a three-dot pending
           bubble that was the only moving thing on the screen. So the fact is carried by the
-          status channel's own device instead, the hairline that sweeps in `.stat` while a turn
-          is in flight, rather than a spinner, which would be a second in-flight vocabulary for
+          status channel's own device instead, the three dots `.stat` wears while a turn is in
+          flight, rather than a spinner, which would be a second in-flight vocabulary for
           the same fact. It sits where the word sat, at the end, and not in the verb column:
           `read`, `edit` and `run` are a fixed left column, and losing the verb for the duration
           of the call is exactly the ragged edge that column exists to prevent. */}
       {item.kind === 'tool' && item.status === 'running' && (
-        <span className="inflight" role="status" aria-label="running" />
+        <span className="inflight dots" role="status" aria-label="running">
+          <i />
+          <i />
+          <i />
+        </span>
       )}
     </div>
   );

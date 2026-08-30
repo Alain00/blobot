@@ -37,6 +37,11 @@ function render(
         usage={usage}
         injection={injection}
         pane={{ kind: 'team' }}
+        workspaces={[]}
+        looking={false}
+        onRefreshWorkspaces={() => undefined}
+        onPublish={async () => ({ ok: false, step: 'create', error: 'not in this test' })}
+        onPlan={async () => []}
       />,
     );
   });

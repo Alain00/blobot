@@ -3,11 +3,16 @@ import { idle, sleepy, surprised, thinking, type Expression } from 'blobatar/exp
 import type { AgentStatus } from '@blobot/core/domain';
 
 /**
- * A blobatar, wrapped in the one element that carries status as motion. The animation classes
- * are the prototype's: still, breathe, bob-and-tilt, nod, pulse, flinch — and `grayscale` for
- * failed, because if saturation means identity then draining it means "not alive".
+ * A blobatar, wrapped in the one element that carries status as motion. There is **one** body
+ * animation now, a slow breathe worn by every state where something is happening, plus
+ * `grayscale` for failed, because if saturation means identity then draining it means "not
+ * alive". The prototype's six — still, breathe, bob-and-tilt, nod, pulse, flinch — were cut to
+ * that: `bob` travelled 3px and tilted 2.5 degrees every .9s and read as fidgeting, and the
+ * poses meant to separate thinking from responding are sub-pixel at 34px, so the distinction
+ * they were bought for was never legible. The word says which state, the three dots beside it
+ * say in flight, and the body is left saying the one thing a shape says well.
  *
- * All of it sits behind `prefers-reduced-motion`, where the mono word and the hairline carry
+ * All of it sits behind `prefers-reduced-motion`, where the mono word and the dots carry
  * the state alone.
  *
  * **`name` is the agent's name, never its id.** The library derives the whole face from this
@@ -80,9 +85,9 @@ export function Blob({
 
             That is an ambient animation beside the one that means status, which DESIGN.md warns
             is almost always wrong, and the reason it is right here is amplitude. At 34px the
-            idle bob travels 0.37px and the glance 0.38px, against 3px for the `working` bob and
-            2.9px for the `thinking` seesaw. The floor is three to eight times under the signal,
-            so it reads as breathing beneath motion that reads as working. It gives the existing
+            idle bob travels 0.37px and the glance 0.38px, against 2.9px for the `thinking`
+            seesaw and a 1.035 scale for the breathe. The floor is several times under the
+            signal, so it reads as breathing beneath motion that reads as working. It gives the existing
             channel a floor rather than adding a second channel next to it.
 
             `expression` defaults to `idle`, which the library documents as byte-identical to
@@ -113,17 +118,18 @@ export function Blob({
  *
  * - `thinking` is the reason to do any of this. The library calls it "the two-dot loader, drawn
  *   with the two dots a blobatar already has", and it swings the eyes 8.4 viewBox units, which
- *   is 2.9px at the rail's 34px — the same magnitude as the `bob` the rail already has, spent
- *   on the eyes instead of the whole square.
+ *   is 2.9px at the rail's 34px, and it is now the largest thing moving on a face, the `bob` it
+ *   used to merely match having been withdrawn. It is also the dots idiom again, said by the
+ *   only two dots a blobatar was already wearing.
  * - `starting` gets `sleepy`: an agent whose runtime is still coming up, said with the face
  *   rather than by dimming to 55%, which reads as disabled rather than as waking.
  * - `waiting` gets `surprised`, the only pose that grows the eyes. It does not read as surprise
  *   so much as *eyes on you*, which is the literal content of the one state where an agent sits
  *   forever until a human looks.
  *
- * `working` and `responding` keep the body channel alone: the bob and the nod are about a whole
- * creature busy or talking, and the library has no pose for hands. `idle` is still, because
- * still is what tells you nothing is happening. `failed` keeps the grayscale and no pose: the
+ * `working` and `responding` keep the body channel alone: the library has no pose for hands, and
+ * what separates them is a word, not a face. `idle` is still, because still is what tells you
+ * nothing is happening. `failed` keeps the grayscale and no pose: the
  * drained saturation already says "not alive", and a sad face on top is a second claim made at
  * the moment the user has something to fix.
  *
