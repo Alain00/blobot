@@ -43,3 +43,48 @@ describe('what a call is about, across two runtimes', () => {
     expect(targetOf({ locations: [{ path: cwd }] }, cwd)).toBe(cwd);
   });
 });
+
+/**
+ * The third runtime, which says it somewhere else. Codex's edit call carries no `locations` at
+ * all: it is titled `Editing files` and names the file inside its `diff` block. Taken off the
+ * wire 2026-08-30.
+ */
+describe('a runtime that names the file in the diff instead', () => {
+  const cwd = '/tmp/blobot-live-codex-XYZ';
+
+  it('answers the same target from the diff block', () => {
+    expect(
+      targetOf(
+        {
+          content: [
+            { type: 'diff', path: `${cwd}/notes.txt`, oldText: null as unknown as string, newText: 'four\n' },
+          ],
+        },
+        cwd,
+      ),
+    ).toBe('notes.txt');
+  });
+
+  it('prefers locations where a runtime sends both, and never counts a file twice', () => {
+    expect(
+      targetOf(
+        {
+          locations: [{ path: 'notes.txt' }],
+          content: [{ type: 'diff', path: `${cwd}/notes.txt` }],
+        },
+        cwd,
+      ),
+    ).toBe('notes.txt');
+    expect(
+      targetOf(
+        {
+          content: [
+            { type: 'diff', path: `${cwd}/notes.txt`, newText: 'a' },
+            { type: 'diff', path: `${cwd}/notes.txt`, newText: 'ab' },
+          ],
+        },
+        cwd,
+      ),
+    ).toBe('notes.txt');
+  });
+})

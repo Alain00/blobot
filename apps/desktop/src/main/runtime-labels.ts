@@ -6,6 +6,7 @@
 const LABELS: Record<string, string> = {
   'claude-code': 'Claude Code',
   opencode: 'OpenCode',
+  codex: 'Codex',
   mock: 'Mock (demo)',
 };
 

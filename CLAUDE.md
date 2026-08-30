@@ -113,7 +113,8 @@ up. Read it before starting work.
   `@agentclientprotocol/claude-agent-acp` bridge spawned over stdio, JSON-RPC spoken directly so
   core still imports no ACP type, `session/set_mode("default")` forced on every session. A real
   `claude` answers, streams, runs tools and cancels — `BLOBOT_LIVE_CLAUDE=1` runs those tests,
-  and `--live-claude=<dir>` puts a real agent behind the real UI.
+  and `--live-claude=<dir>` puts a real agent behind the real UI (one of three roster shortcuts
+  now, beside `--live-codex` and `--live-mixed`).
 
 - **Ticket 15's loopback MCP server** in `packages/core/src/mcp`: one tool, `message_agent`,
   over `127.0.0.1` with a per-agent bearer token that *is* the caller's identity, stateless
@@ -313,6 +314,22 @@ up. Read it before starting work.
   blobatars, and content the user supplied is not blobot's to desaturate. Under the gauge,
   `attachments · 2 · 480 KB · sent this session` — bytes and a count, never tokens, and worded
   apart because it is the only figure there that is not per-turn.
+
+- **The Codex adapter** (`.scratch/codex-runtime/`, tickets 01 to 05) in
+  `packages/core/src/adapters/codex`: the pinned `@agentclientprotocol/codex-acp` bridge, the
+  persona as `CODEX_CONFIG.developer_instructions` (which Codex **stores on the session**, so it
+  survives a resume and a compaction, and an edited one does *not* take on a resumed session --
+  issue 06), and ticket 14's posture as `INITIAL_AGENT_MODE=read-only`, asserted against the mode
+  the session reports and fatal if it cannot be confirmed. That variable is not optional: the
+  bridge's default mode wrote a file into the user's home directory without asking once. All
+  three trust words answer the same mode, because the neighbouring two are under blobot's floor
+  and over its ceiling, and `CODEX_EXPRESSES_TRUST` says so rather than letting three words imply
+  otherwise. Codex ships its own subagent vocabulary that competes with the mailbox, so the
+  adapter tells it in words that it has none. blobot answers permission requests for **its own
+  loopback tool** -- decided on `rawInput.{server,tool}`, never on prose -- because Codex asks
+  about every MCP call and a peer message would otherwise wait on a human. `--live-codex=<dir>`
+  runs two real Codex agents who message each other, and `--live-mixed=<dir>` puts a Claude agent
+  and a Codex agent on one team, which is the point of the whole architecture.
 
 Next: handing a real runtime a real attachment (neither live suite has an attachment case yet),
 then surfacing whether an agent resumed or started fresh.

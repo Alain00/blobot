@@ -129,13 +129,24 @@ const autoplayDelayMs = Number(
 );
 
 /**
- * `--live-claude=<dir>` is now a shortcut through the product path rather than beside it: it
+ * `--live-<runtime>=<dir>` is a shortcut through the product path rather than beside it: it
  * creates a real team for `<dir>` in the real database, with a two-agent roster it still
  * hardcodes, and starts it exactly as the creation flow would.
+ *
+ * Three of them now, and the third is the point of the whole architecture: `--live-mixed` puts
+ * a Claude agent and a Codex agent on one team, where the orchestrator cannot tell them apart
+ * and the mailbox has to carry a message from one vendor's process to another's.
  */
-const liveClaudePath = process.argv
-  .find((arg) => arg.startsWith('--live-claude='))
-  ?.slice('--live-claude='.length);
+const LIVE_ROSTERS: Readonly<Record<string, readonly [string, string]>> = {
+  '--live-claude=': ['claude-code', 'claude-code'],
+  '--live-codex=': ['codex', 'codex'],
+  '--live-mixed=': ['claude-code', 'codex'],
+};
+
+const liveLaunch = Object.entries(LIVE_ROSTERS).flatMap(([flag, runtimes]) => {
+  const path = process.argv.find((arg) => arg.startsWith(flag))?.slice(flag.length);
+  return path === undefined ? [] : [{ path, runtimes }];
+})[0];
 
 let opened: OpenedDatabase | undefined;
 let store: SqliteStore | undefined;
@@ -701,7 +712,10 @@ void app.whenReady().then(async () => {
     // before the CLI has been spawned, so the hire dialog draws its picker instead of waiting.
     rememberRuntimeOptionsIn(join(app.getPath('userData'), 'runtime-options.json'));
     store = new SqliteStore(opened.db);
-    launchTeam = liveClaudePath === undefined ? store.listTeams()[0] : await liveTeam(liveClaudePath);
+    launchTeam =
+      liveLaunch === undefined
+        ? store.listTeams()[0]
+        : await liveTeam(liveLaunch.path, liveLaunch.runtimes);
   }
 
   ipcMain.handle('blobot:snapshot', () => snapshot());
@@ -1157,29 +1171,49 @@ void app.whenReady().then(async () => {
   }
 });
 
-/** The `--live-claude` roster: still hardcoded, now the only shortcut left in that flag. */
-async function liveTeam(workspacePath: string): Promise<Team | undefined> {
+/**
+ * The `--live-*` roster: still hardcoded, now with a runtime per seat.
+ *
+ * The names carry the runtime on a mixed team (`Alice`, `Bob-codex`) because an agent is hired
+ * once and joins many teams (ADR-0001), and a `Bob` who is Claude on one team cannot also be
+ * Codex on another: the runtime is part of what an agent *is*, and an edit may not change it.
+ */
+async function liveTeam(
+  workspacePath: string,
+  runtimes: readonly [string, string],
+): Promise<Team | undefined> {
   if (store === undefined) return undefined;
   const name = basename(workspacePath);
   const existing = store.teamByName(name);
   if (existing !== undefined) return existing;
-  const claude = await knownRuntime('claude-code');
-  const profileIds = [
-    { name: 'Alice', role: 'frontend' },
-    { name: 'Bob', role: 'backend' },
-  ].map((member) => {
+  const seats = [
+    { name: 'Alice', role: 'frontend', runtimeId: runtimes[0] },
+    { name: 'Bob', role: 'backend', runtimeId: runtimes[1] },
+  ];
+  const profileIds: string[] = [];
+  for (const seat of seats) {
+    const detected = await knownRuntime(seat.runtimeId);
+    const profileName = seat.runtimeId === 'claude-code' ? seat.name : `${seat.name}-codex`;
     // Hire them once. On a second directory they are the *same* agents joining a second team.
-    const existingProfile = store?.profileByName(member.name);
-    if (existingProfile !== undefined) return existingProfile.id;
-    return hireAgent(
-      {
-        ...member,
-        runtimeId: 'claude-code',
-        ...(claude?.executablePath === undefined ? {} : { executablePath: claude.executablePath }),
-      },
-      { store: store as SqliteStore, clock },
-    ).id;
-  });
+    const existingProfile = store.profileByName(profileName);
+    if (existingProfile !== undefined) {
+      profileIds.push(existingProfile.id);
+      continue;
+    }
+    profileIds.push(
+      hireAgent(
+        {
+          name: profileName,
+          role: seat.role,
+          runtimeId: seat.runtimeId,
+          ...(detected?.executablePath === undefined
+            ? {}
+            : { executablePath: detected.executablePath }),
+        },
+        { store: store as SqliteStore, clock },
+      ).id,
+    );
+  }
   return createTeam({ name, workspacePath, turnBudget: 6, profileIds }, { store, clock });
 }
 

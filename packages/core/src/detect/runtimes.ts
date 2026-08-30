@@ -110,15 +110,15 @@ const OPENCODE: RuntimeProbe = {
  * prefix, which is what `.npm-global/bin` is here for. Anything stranger is layer three's job:
  * the login shell knows a `PATH` this process does not.
  *
- * **`supported` is false until the adapter lands** (codex-runtime ticket 05). Detected honestly
- * and offered as *no adapter yet*, exactly as OpenCode was, because hiding a runtime the user
- * has installed would misreport their machine.
+ * `supported` was false while ticket 04 was the whole of this, and is true now that ticket 05's
+ * adapter exists: `runtimeFor` turns `codex` into a `CodexAgentRuntime`, so offering to install
+ * and sign in is offering a door that leads somewhere.
  */
 const CODEX: RuntimeProbe = {
   runtimeId: 'codex',
   label: 'Codex',
   binary: 'codex',
-  supported: false,
+  supported: true,
   extraDirs: ['.local/bin', '.npm-global/bin'],
   probeAuth: async (path, run) => {
     const result = await run(path, ['login', 'status'], { timeoutMs: 5_000 });

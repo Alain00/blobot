@@ -65,7 +65,6 @@ export interface SessionUpdate {
   readonly title?: string;
   readonly kind?: string;
   readonly status?: string;
-  readonly rawInput?: unknown;
   readonly rawOutput?: unknown;
   readonly used?: number;
   readonly size?: number;
@@ -77,6 +76,17 @@ export interface SessionUpdate {
    * agree on where their titles do not — see `target.ts`.
    */
   readonly locations?: readonly { readonly path?: string; readonly line?: number }[];
+  /**
+   * What the call was made with, whatever the provider puts there. The two named fields are
+   * Codex's on an MCP call — `{server, tool, arguments}` — which is how an adapter tells
+   * blobot's own loopback tool from a server the user configured. Everything else a runtime
+   * sends here is its own and stays unread.
+   */
+  readonly rawInput?: {
+    readonly server?: string;
+    readonly tool?: string;
+    readonly [key: string]: unknown;
+  };
   /**
    * The provider's own extension block. **Only an adapter may read this** — it is where a
    * vendor's vocabulary lives, and the shared half is the protocol's shape and nothing else.

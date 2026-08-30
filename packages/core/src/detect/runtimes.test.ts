@@ -195,12 +195,12 @@ describe('the Codex probe', () => {
   });
 
   /**
-   * Detected honestly and offered as *no adapter yet*, which is how OpenCode was carried before
-   * its adapter landed. A remedy would be offering to install a runtime blobot cannot drive;
-   * codex-runtime ticket 05 flips the one boolean and this expectation with it.
+   * Carried as *no adapter yet* while ticket 04 was the whole of this, the way OpenCode was
+   * before its own adapter landed. Ticket 05 built the adapter, so the remedies now lead
+   * somewhere and this says so.
    */
-  it('is offered no remedy while blobot has no adapter for it', async () => {
+  it('is a runtime blobot can construct, now that the adapter exists', async () => {
     const codex = await codexOf(ok('Logged in using ChatGPT\n'));
-    expect(codex?.supported).toBe(false);
+    expect(codex?.supported).toBe(true);
   });
 });

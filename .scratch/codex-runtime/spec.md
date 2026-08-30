@@ -68,7 +68,8 @@ the no-credential-storage rule forbids outright. Ticket 04.
 - `02` Trust, approval and a sandbox that the other runtimes do not have. **Resolved 2026-08-30: one mode, `INITIAL_AGENT_MODE=read-only`, at every trust level; the bridge's default mode writes to `~` without asking.** `research/02-trust-and-the-sandbox.md`.
 - `03` A second pinned bridge, and the part of `stdio-bridge.ts` that was never Claude's. **Resolved 2026-08-30**: `adapters/acp/npm-bridge.ts`, and the codex-acp pin is in both manifests.
 - `04` Detection, `codex login`, and the auth method blobot must not take. **Resolved 2026-08-30: `codex login status` exits 0 / 1, the probe is in, `supported` is false until 05.**
-- `05` The adapter itself. Blocked by all four.
+- `05` The adapter itself. Blocked by all four. **Resolved 2026-08-30: built, live on both a two-Codex team and a mixed Claude/Codex team.**
+- `06` An edited persona, and a session that keeps the old one. **Open**, raised by 05.
 
 ## Out of scope
 

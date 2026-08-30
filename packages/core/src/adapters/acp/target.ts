@@ -33,9 +33,7 @@ export function withTarget(event: InjectableEvent, update: SessionUpdate, cwd: s
 }
 
 export function targetOf(update: SessionUpdate, cwd: string): string | undefined {
-  const paths = (update.locations ?? [])
-    .map((location) => location.path)
-    .filter((path): path is string => typeof path === 'string' && path.length > 0);
+  const paths = [...locationPaths(update), ...(hasLocations(update) ? [] : diffPaths(update))];
   if (paths.length === 0) return undefined;
   const shown = paths.map((path) => display(path, cwd));
   // Several locations on one call: say how many rather than the first, which would be a claim
@@ -43,6 +41,35 @@ export function targetOf(update: SessionUpdate, cwd: string): string | undefined
   return shown.length === 1
     ? (shown[0] as string)
     : `${shown[0] as string} +${shown.length - 1} more`;
+}
+
+/**
+ * The paths ACP's own `locations` names.
+ *
+ * Claude and OpenCode both populate it. **Codex does not**, measured 2026-08-30: its edit call
+ * arrives titled `Editing files`, with the path inside the `diff` content block instead. So a
+ * third runtime says the same fact in a second protocol-level field, and reading both is still
+ * reading the protocol rather than learning a vendor's habits.
+ */
+function locationPaths(update: SessionUpdate): string[] {
+  return (update.locations ?? [])
+    .map((location) => location.path)
+    .filter((path): path is string => typeof path === 'string' && path.length > 0);
+}
+
+function hasLocations(update: SessionUpdate): boolean {
+  return locationPaths(update).length > 0;
+}
+
+/** The `path` on a `diff` block, which is where Codex says which file an edit is about. */
+function diffPaths(update: SessionUpdate): string[] {
+  const content = update.content;
+  if (content === undefined || !Array.isArray(content)) return [];
+  const paths = content
+    .map((block) => block.path)
+    .filter((path): path is string => typeof path === 'string' && path.length > 0);
+  // The same file twice is one target: an edit block arrives narrow and again widened.
+  return [...new Set(paths)];
 }
 
 function display(path: string, cwd: string): string {

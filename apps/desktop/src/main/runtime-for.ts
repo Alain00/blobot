@@ -1,5 +1,6 @@
 import {
   ClaudeAgentRuntime,
+  CodexAgentRuntime,
   OpencodeAgentRuntime,
   type AgentRuntime,
   type TrustLevel,
@@ -68,6 +69,14 @@ export function runtimeFor(request: RuntimeRequest): AgentRuntime {
         ...(request.executablePath === undefined
           ? {}
           : { opencodeExecutable: request.executablePath }),
+      });
+    case 'codex':
+      return new CodexAgentRuntime({
+        ...shared,
+        agentName: request.agentName,
+        ...(request.executablePath === undefined
+          ? {}
+          : { codexExecutable: request.executablePath }),
       });
     default:
       throw new Error(`${request.agentName} is set up for ${request.runtimeId}, which blobot cannot run`);

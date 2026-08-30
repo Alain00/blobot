@@ -155,6 +155,20 @@ export type {
 } from './mcp/peer-message-server.js';
 
 // Ticket 11: detecting what the user already has. Spawns processes, so not in `/domain`.
+// The Codex adapter. Same reason again: it spawns a pinned npm bridge over stdio.
+export { CodexAgentRuntime } from './adapters/codex/codex-agent-runtime.js';
+export type { CodexAgentRuntimeOptions } from './adapters/codex/codex-agent-runtime.js';
+export {
+  CODEX_EXPRESSES_TRUST,
+  CODEX_POSTURE_MODE,
+  codexModeFor,
+} from './adapters/codex/permissions.js';
+export {
+  CODEX_BRIDGE_VERSION,
+  resolveCodexExecutable,
+  spawnCodexBridge,
+} from './adapters/codex/stdio-bridge.js';
+
 export { detectRuntimes, parseOpencodeAuthList, parseVersion, stripAnsi } from './detect/runtimes.js';
 export type {
   CommandResult,
