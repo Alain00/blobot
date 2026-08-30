@@ -270,6 +270,45 @@ describe('the voices, after the roster stopped being passed down', () => {
     expect(opened).not.toContain('completed');
   });
 
+  /**
+   * A call in flight used to end in the word `running`, which is a static word claiming a live
+   * fact: on screen the only moving thing was the pending bubble's three dots underneath it.
+   * The word is gone and the status channel's sweeping hairline stands in its place.
+   */
+  it('says a call is still running with the status hairline, and never with the word', () => {
+    const items: Item[] = [
+      {
+        kind: 'tool',
+        id: 't1',
+        at,
+        agentId: 'a',
+        title: 'npx astro check',
+        toolKind: 'execute',
+        status: 'running',
+      },
+    ];
+    let hairlines = -1;
+    // A running call is never folded away, so it draws without opening anything.
+    const drawn = draw(items, { kind: 'team' }, undefined, (host) => {
+      hairlines = host.querySelectorAll('.tool .inflight').length;
+    });
+    expect(drawn).toContain('runnpx astro check');
+    expect(drawn).not.toContain('running');
+    expect(hairlines).toBe(1);
+
+    // And the verb column survives it: the hairline is at the end, not in place of `run`.
+    let settled = -1;
+    draw(
+      [{ ...(items[0] as Extract<Item, { kind: 'tool' }>), status: 'completed' }],
+      { kind: 'team' },
+      undefined,
+      (host) => {
+        settled = host.querySelectorAll('.tool .inflight').length;
+      },
+    );
+    expect(settled).toBe(0);
+  });
+
   it('draws what an edit changed, signed, and nothing at all where it was not measured', () => {
     const items: Item[] = [
       {

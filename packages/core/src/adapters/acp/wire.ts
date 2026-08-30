@@ -73,6 +73,11 @@ export interface SessionUpdate {
   readonly currentModeId?: string;
   readonly availableCommands?: readonly AvailableCommandWire[];
   /**
+   * What the call is about, as paths. ACP's own field, and the one neutral fact both runtimes
+   * agree on where their titles do not — see `target.ts`.
+   */
+  readonly locations?: readonly { readonly path?: string; readonly line?: number }[];
+  /**
    * The provider's own extension block. **Only an adapter may read this** — it is where a
    * vendor's vocabulary lives, and the shared half is the protocol's shape and nothing else.
    * The Claude adapter uses `claudeCode.toolName` to take its own verb back off a title.

@@ -153,11 +153,19 @@ Other transcript rules:
   A call carries a **verb** from the four kinds core already has off both runtimes — `read`,
   `edit`, `run`, and nothing for an MCP tool, whose name is its server's and not ours to
   paraphrase. It is a fixed column: a ragged left edge is what stops a stack of calls reading as
-  a list, which is the whole value of the fold. **The title beside it is the target and nothing
-  else**: every runtime leads its own title with its own verb (`Edit notes.txt`), so the line
-  said the same thing twice in two registers and pushed the target out of the column. The verb
-  is taken off in the adapter, which is the only place allowed to know that `Edit` and `Write`
-  are Claude's words.
+  a list, which is the whole value of the fold.
+
+  **The title beside it is the target, and it is the same string whichever runtime is behind
+  it.** Left to their own titles the two disagree twice over on identical work — Claude says
+  `Edit notes.txt`, its verb plus a workspace-relative path, and OpenCode says
+  `tmp/blobot-oc-kAIrDZ/notes.txt`, the absolute path with its leading slash gone. So the line
+  said the same fact twice in two registers for one agent and gave a long machine path for the
+  other. Both are settled on ACP's `locations`, which is the protocol's own field and carries no
+  verb, shown relative to the AgentWorkspace: what differs between two agents on a team is the
+  part of the path that says nothing about the work. A path outside the workspace keeps its
+  `../`, which is worth seeing. A call about no path — every command — keeps its own title,
+  because there is nothing else to say. Claude's verb is taken off what is left, in the adapter,
+  the only place allowed to know that `Edit` and `Write` are its words.
 
   **Diff counts beside an edit (`+74 −41`) are the one place saturated colour appears off a
   blobatar**, by the author, 2026-08-30. Two small numbers whose sign already carries the

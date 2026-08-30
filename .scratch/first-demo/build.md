@@ -2870,3 +2870,32 @@ and a peer attaching anything, refused in `.scratch/composer-attachments/09`.
 **Not verified live.** No real runtime has been handed an attachment yet — the adapters' halves
 are covered by unit tests over the block shapes, and `BLOBOT_LIVE_CLAUDE=1` / `BLOBOT_LIVE_OPENCODE=1`
 have no attachment case. That is the first thing to run next.
+
+## Built, 2026-08-30: the two runtimes say a tool call the same way
+
+The divergence the OpenCode live run turned up, closed. On the same edit the transcript read
+`edit  notes.txt` for a Claude agent and `edit  tmp/blobot-oc-kAIrDZ/notes.txt` for an OpenCode
+one — a short relative path against a long absolute one, on identical work, in a fold whose whole
+value is that a stack of calls scans as a list.
+
+**Not reconciled by comparing their titles.** That would mean a rule per vendor about which words
+to strip and which slash to restore, kept up to date against two release cadences, in code that
+is meant to know neither. `locations` is ACP's own field, both runtimes populate it, and a path
+carries no verb — so `adapters/acp/target.ts` takes the title from there, relative to the
+AgentWorkspace, and the two agree by construction rather than by string surgery.
+
+Relative to the workspace because that is what the path *means*: every agent works in its own
+checkout, and the part that differs between two agents on one team is exactly the part that says
+nothing about the work. A path outside it keeps its `../`. Several locations on one call say
+`a.ts +2 more` rather than naming the first, which would claim the others did not happen. A call
+about no path — every command — keeps its own title, because there is nothing else to say, and
+that is also why `withoutToolVerb` stays: Claude's in-flight title is `Edit` or `Read File`
+before any location exists.
+
+**Verified live on both**, asserting the same string from each: `notes.txt`. The full OpenCode
+suite is green again afterwards, seven tests now.
+
+This is the pattern for the next one of these. A divergence gets aligned where ACP has a neutral
+fact that both runtimes already send — `locations` here, the `diff` block for the line counts —
+and is left alone where it is genuinely the provider's own voice with no protocol-level answer
+behind it.

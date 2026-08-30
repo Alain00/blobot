@@ -29,6 +29,7 @@ import {
 import { offerableNames, paletteOf } from './palette.js';
 import { vouchedTools } from './permissions.js';
 import { commandsFrom, stopReasonOf, translateSessionUpdate } from '../acp/session-updates.js';
+import { withTarget } from '../acp/target.js';
 import { withoutToolVerb } from './tool-title.js';
 import { ACCEPTS_NOTHING, acceptsOf, contentBlockOf } from '../acp/attachments.js';
 import type {
@@ -537,7 +538,12 @@ export class ClaudeAgentRuntime implements AgentRuntime {
       this.#modeId = update.currentModeId ?? this.#modeId;
       return;
     }
-    for (const event of translateSessionUpdate(update)) this.#emit(withoutToolVerb(event, update));
+    // Two normalizations, in order and for different reasons. `withTarget` is the shared one:
+    // where ACP says which paths a call is about, that is the title, so both runtimes say the
+    // same thing. `withoutToolVerb` is Claude's own, and covers what is left — a call with no
+    // location, whose title is still `Edit` or `Read File` while its arguments stream.
+    for (const event of translateSessionUpdate(update))
+      this.#emit(withoutToolVerb(withTarget(event, update, this.#options.cwd), update));
   }
 
   async #onPermissionRequest(params: PermissionRequestParams): Promise<unknown> {

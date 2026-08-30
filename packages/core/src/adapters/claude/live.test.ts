@@ -66,6 +66,9 @@ live('against a real claude', () => {
       if (title === undefined) continue;
       expect(title).not.toMatch(/^(Edit|Write|Read|Update) /);
     }
+    // And once the arguments have landed, the title is the target, relative to the workspace —
+    // the same string OpenCode's live test asserts for the same edit.
+    expect(edits.map((edit) => (edit as { title?: string }).title)).toContain('notes.txt');
     // And the diff block reached the vocabulary: three lines for one.
     const counted = events.find(
       (event) => event.type === 'tool_call_updated' && event.changed !== undefined,

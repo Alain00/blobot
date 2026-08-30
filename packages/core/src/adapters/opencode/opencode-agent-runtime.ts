@@ -21,6 +21,7 @@ import type {
 import { applyOptionChoices, optionGroupsFrom } from '../acp/config-options.js';
 import { JsonRpcConnection, type LineTransport } from '../acp/jsonrpc.js';
 import { commandsFrom, stopReasonOf, translateSessionUpdate } from '../acp/session-updates.js';
+import { withTarget } from '../acp/target.js';
 import { ACCEPTS_NOTHING, acceptsOf, contentBlockOf } from '../acp/attachments.js';
 import type {
   InitializeResult,
@@ -480,7 +481,11 @@ export class OpencodeAgentRuntime implements AgentRuntime {
 
     if (this.#replaying) return;
     if (notification.sessionId !== this.#sessionId) return;
-    for (const event of translateSessionUpdate(update)) this.#emit(event);
+    // Where ACP says which paths a call is about, that is the title. OpenCode's own title for
+    // a file call is the absolute path with its leading slash gone, which said the same work
+    // very differently from Claude's workspace-relative one.
+    for (const event of translateSessionUpdate(update))
+      this.#emit(withTarget(event, update, this.#options.cwd));
   }
 
   async #onPermissionRequest(params: PermissionRequestParams): Promise<unknown> {

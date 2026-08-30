@@ -501,6 +501,15 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .tool .diff{display:inline-flex;gap:6px;flex:0 0 auto;font-variant-numeric:tabular-nums}
 .tool .diff .add{color:var(--added)}
 .tool .diff .del{color:var(--removed)}
+/* A call that is still running, said in the status channel's own hand: `.stat`'s sweeping
+   hairline, at the same width and the same 1.1s, so the line under a working agent and the line
+   next to a working call are one device and not two. Centred rather than on the baseline the
+   rest of the row sits on, because a 1px rule dropped to a baseline reads as an underscore. */
+.tool .inflight{flex:0 0 auto;align-self:center;width:14px;height:1px;background:var(--line);position:relative;overflow:hidden}
+.tool .inflight::after{content:"";position:absolute;inset:0;background:var(--muted);transform:translateX(-100%);animation:sweep 1.1s linear infinite}
+/* Reduced motion still has to say "this one has not finished", so the hairline stays and stops
+   sweeping: filled rather than animated, which is the same fact held still. */
+@media (prefers-reduced-motion:reduce){.tool .inflight::after{animation:none;transform:none}}
 
 /* A folded run of settled work. It takes `.route`'s chevron and mono label so the transcript
    has one disclosure gesture and not two, and leaves behind the dashed edge, which is the peer

@@ -102,6 +102,15 @@ live('against a real opencode', () => {
       (event) => event.type === 'tool_call_updated' && event.changed !== undefined,
     );
     expect(counted).toMatchObject({ changed: { added: 3, removed: 1 } });
+
+    // And the target, said the way Claude says it. OpenCode's own title for this call is the
+    // absolute path with its leading slash gone; `locations` is what makes the two agree.
+    const titles = events
+      .filter((event) => event.type === 'tool_call_updated' && event.kind === 'edit')
+      .map((event) => (event as { title?: string }).title)
+      .filter((title): title is string => title !== undefined);
+    expect(titles).toContain('notes.txt');
+    expect(titles.some((title) => title.startsWith('/') || title.startsWith('tmp/'))).toBe(false);
   }, 300_000);
 
   it('runs a tool in its own workspace, with the ids stable across the lifecycle', async () => {
