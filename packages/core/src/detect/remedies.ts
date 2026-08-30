@@ -39,12 +39,18 @@ export interface RuntimeRemedy {
  * somewhere its own updater will not find. It is shown in full and confirmed before it runs:
  * the user is agreeing to the command they would have pasted themselves.
  *
- * Both land in `~/.local/bin`, which is already in the cascade `detectRuntimes` searches when
- * `PATH` misses it, so a fresh install is found without the app being restarted.
+ * The first two land in `~/.local/bin`, which is already in the cascade `detectRuntimes`
+ * searches when `PATH` misses it, so a fresh install is found without the app being restarted.
+ *
+ * Codex is the odd one: its published command is npm's, so where the binary lands is wherever
+ * `npm prefix -g` points, which is `~/.local/bin` on the machine this was written on and
+ * `/usr/local/bin` on a default install. The probe searches the first and layer one of the
+ * cascade finds the second, since `/usr/local/bin` is on every default `PATH`.
  */
 const INSTALL_SCRIPTS: Readonly<Record<string, string>> = {
   'claude-code': 'curl -fsSL https://claude.ai/install.sh | bash',
   opencode: 'curl -fsSL https://opencode.ai/install | bash',
+  codex: 'npm install -g @openai/codex',
 };
 
 /**
@@ -55,6 +61,12 @@ const INSTALL_SCRIPTS: Readonly<Record<string, string>> = {
 const SIGN_IN_ARGS: Readonly<Record<string, readonly string[]>> = {
   'claude-code': ['auth', 'login'],
   opencode: ['auth', 'login'],
+  // Bare `codex login` is the ChatGPT browser flow, which is the one of Codex's three auth
+  // methods blobot will take. `--with-api-key` and `--with-access-token` read a credential from
+  // stdin, and this is a PTY blobot owns: passing either would make blobot the thing that
+  // carries the credential, which `CLAUDE.md` forbids outright. They are absent by construction
+  // and this table is the only place argv is built.
+  codex: ['login'],
 };
 
 /**

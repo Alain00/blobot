@@ -94,8 +94,42 @@ const OPENCODE: RuntimeProbe = {
   },
 };
 
-/** The runtimes blobot can construct today, in the order the picker offers them. */
-export const RUNTIME_PROBES: readonly RuntimeProbe[] = [CLAUDE_CODE, OPENCODE];
+/**
+ * Codex, measured 2026-08-30 against codex-cli 0.148.0.
+ *
+ * `codex login status` is the signal, and it has the same asymmetric shape ticket 11 recorded
+ * for the other two: exit 0 and *"Logged in using ChatGPT"* where a credential exists, exit 1
+ * and *"Not logged in"* where none does. A negative is reliable, a positive is not, and the word
+ * *authenticated* still does not appear. Both states were observed without touching the user's
+ * own login: the negative was produced by pointing `CODEX_HOME` at an empty directory.
+ *
+ * `extraDirs` carries npm's user prefix as well as `~/.local/bin`, because Codex is installed
+ * with `npm install -g` and npm's global bin is wherever `npm prefix -g` points. On this machine
+ * that is `~/.local/bin`, which the cascade already searched; the common alternatives are
+ * `/usr/local/bin`, which is on every default `PATH` and so is found by layer one, and a user
+ * prefix, which is what `.npm-global/bin` is here for. Anything stranger is layer three's job:
+ * the login shell knows a `PATH` this process does not.
+ *
+ * **`supported` is false until the adapter lands** (codex-runtime ticket 05). Detected honestly
+ * and offered as *no adapter yet*, exactly as OpenCode was, because hiding a runtime the user
+ * has installed would misreport their machine.
+ */
+const CODEX: RuntimeProbe = {
+  runtimeId: 'codex',
+  label: 'Codex',
+  binary: 'codex',
+  supported: false,
+  extraDirs: ['.local/bin', '.npm-global/bin'],
+  probeAuth: async (path, run) => {
+    const result = await run(path, ['login', 'status'], { timeoutMs: 5_000 });
+    if (result.code === 0) return { readiness: 'ready', detail: 'Signed in on this machine' };
+    if (result.code === 1) return { readiness: 'needs_sign_in', detail: 'Installed, not signed in' };
+    return { readiness: 'unknown', detail: 'Installed; sign-in state could not be read' };
+  },
+};
+
+/** The runtimes the picker offers, in order. `supported` says which blobot can construct. */
+export const RUNTIME_PROBES: readonly RuntimeProbe[] = [CLAUDE_CODE, OPENCODE, CODEX];
 
 export async function detectRuntimes(options: DetectOptions = {}): Promise<RuntimeDetection[]> {
   const run = options.run ?? execRunner;

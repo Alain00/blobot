@@ -159,3 +159,48 @@ describe('detectRuntimes', () => {
     );
   });
 });
+
+/**
+ * Codex, against the exit codes a real `codex login status` returned on 2026-08-30 (codex-cli
+ * 0.148.0): 0 with *"Logged in using ChatGPT"*, 1 with *"Not logged in"*. The signed-out state
+ * was produced by pointing `CODEX_HOME` at an empty directory, so the author's own login was
+ * never touched to observe it.
+ */
+describe('the Codex probe', () => {
+  const found = (status: CommandResult): CommandRunner =>
+    fakeRunner({
+      'command -v codex': ok('/home/someone/.local/bin/codex\n'),
+      '/home/someone/.local/bin/codex --version': ok('codex-cli 0.148.0\n'),
+      '/home/someone/.local/bin/codex login status': status,
+      // The other two are absent from the table, so they answer 127 and report not installed.
+    });
+
+  const codexOf = async (status: CommandResult) =>
+    (await detectRuntimes({ run: found(status), home: '/home/someone', shell: '/bin/zsh' })).find(
+      (entry) => entry.runtimeId === 'codex',
+    );
+
+  it('reads a credential as present on exit 0, and never says authenticated', async () => {
+    const codex = await codexOf(ok('Logged in using ChatGPT\n'));
+    expect(codex?.readiness).toBe('ready');
+    expect(codex?.version).toBe('0.148.0');
+    expect(codex?.detail).not.toMatch(/authenticated/i);
+  });
+
+  it('reads exit 1 as signed out, and anything else as unread rather than as signed out', async () => {
+    expect((await codexOf({ code: 1, stdout: 'Not logged in\n', stderr: '' }))?.readiness).toBe(
+      'needs_sign_in',
+    );
+    expect((await codexOf({ code: 2, stdout: '', stderr: 'boom' }))?.readiness).toBe('unknown');
+  });
+
+  /**
+   * Detected honestly and offered as *no adapter yet*, which is how OpenCode was carried before
+   * its adapter landed. A remedy would be offering to install a runtime blobot cannot drive;
+   * codex-runtime ticket 05 flips the one boolean and this expectation with it.
+   */
+  it('is offered no remedy while blobot has no adapter for it', async () => {
+    const codex = await codexOf(ok('Logged in using ChatGPT\n'));
+    expect(codex?.supported).toBe(false);
+  });
+});
