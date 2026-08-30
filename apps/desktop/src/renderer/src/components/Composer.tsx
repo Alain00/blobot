@@ -4,7 +4,7 @@ import { ArrowUp } from 'lucide-react';
 import { findAgentByName } from '@blobot/core/domain';
 import type { Agent } from '@blobot/core/domain';
 import type { UiAgent, UiCommand } from '../../../shared/api.js';
-import { commandMenu } from '../model.js';
+import { addressedBy, commandMenu, isAddressing } from '../model.js';
 import type { Pane } from '../model.js';
 import { Blob } from './Blob.js';
 
@@ -68,7 +68,8 @@ export function Composer({
    * fact about the team.
    */
   lead?: string;
-  onSend: (agentId: string, text: string) => void;
+  /** Everybody the message is addressed to. One agent unless the user named several. */
+  onSend: (agentIds: readonly string[], text: string) => void;
   /**
    * The team is still starting. Sending is closed, because there is no session to send to yet,
    * but the field stays open: a cold start is seconds and the thing the user came to say is
@@ -83,13 +84,22 @@ export function Composer({
   const [dismissed, setDismissed] = useState(false);
   const roster = agents as unknown as readonly Agent[];
 
-  const mentions = [...draft.matchAll(/@([\w-]+)/g)];
-  const resolvedMentions = mentions
-    .map((match) => findAgentByName(roster, match[1] ?? ''))
-    .filter((agent): agent is Agent => agent !== undefined);
+  const addressed = addressedBy(draft, roster);
   const implicit = pane.kind === 'agent' ? pane.agentId : lead;
-  const recipientId = resolvedMentions.at(-1)?.id ?? implicit;
-  const recipient = agents.find((agent) => agent.id === recipientId);
+  /**
+   * Everybody this message is going to. More than one only when the user named more than one:
+   * blobot never widens the list, so an implicit recipient is always exactly one agent.
+   */
+  const recipientIds =
+    addressed.length > 0
+      ? addressed.map((agent) => agent.id)
+      : implicit === undefined
+        ? []
+        : [implicit];
+  const recipients = recipientIds
+    .map((id) => agents.find((agent) => agent.id === id))
+    .filter((agent): agent is UiAgent => agent !== undefined);
+  const recipient = recipients[0];
 
   const partial = /@([\w-]*)$/.exec(draft)?.[1];
   const suggestions =
@@ -97,7 +107,10 @@ export function Composer({
       ? []
       : agents.filter((agent) => agent.name.toLowerCase().startsWith(partial.toLowerCase()));
 
-  const offered = recipientId === undefined ? [] : (commands[recipientId] ?? []);
+  // One menu, and it is the first recipient's. Two agents can offer different commands, and
+  // there is no honest way to draw a list that is true of both — so the menu belongs to the
+  // agent the message is addressed to first, and a command nobody offers still sends as text.
+  const offered = recipient === undefined ? [] : (commands[recipient.id] ?? []);
   const { suggestions: commandSuggestions, note } = commandMenu({
     draft,
     dismissed,
@@ -144,15 +157,45 @@ export function Composer({
         ? 'Message the team. Start with @ to say who'
         : `Message ${recipient.name}. @ to say who else`;
 
+  /**
+   * The recipients, short enough for a button. Two names and a count past that: a list that
+   * grows with the roster stops being readable at the width a send control has, and `3 agents`
+   * would answer "who is this going to" with a number, which is the register ticket 12 removed.
+   * The field itself carries the full answer, underlined, a few pixels to the left.
+   */
+  const addressLabel = recipients
+    .slice(0, 2)
+    .map((agent) => agent.name)
+    .join(', ')
+    .concat(recipients.length > 2 ? ` +${recipients.length - 2}` : '');
+  const addressSentence = recipients.map((agent) => agent.name).join(', ');
+
   const send = (): void => {
     const text = draft.trim();
-    if (opening || text === '' || recipientId === undefined) return;
-    onSend(recipientId, text);
+    if (opening || recipients.length === 0 || text === '') return;
+    onSend(recipientIds, text);
     setDraft('');
   };
 
+  /**
+   * Words in the field and nowhere to send them.
+   *
+   * The team pane says who it resolved to in the placeholder, and the placeholder is gone by the
+   * second keystroke — so a team with no lead used to answer a typed message with a disabled
+   * arrow and a tooltip, which reads as broken rather than as unaddressed. Found by the author
+   * on the first real team, which had no lead because it predates them.
+   *
+   * It names both exits, and neither of them is blobot choosing a recipient: address it, or give
+   * the team a lead. Suppressed while the mention menu is up, because that is the user already
+   * doing the first one.
+   */
+  const stranded = pane.kind === 'team' && recipients.length === 0 && draft.trim() !== '' && !open;
+
   return (
     <div className="composer">
+      {stranded && (
+        <div className="stranded">say who with @ · or give this team a lead</div>
+      )}
       <div className="pill">
       <Command
         className="mentionwrap"
@@ -234,16 +277,16 @@ export function Composer({
       </Command>
       <button
         className={`send${pane.kind === 'team' && recipient !== undefined ? ' named' : ''}`}
-        disabled={opening || recipientId === undefined || draft.trim() === ''}
+        disabled={opening || recipients.length === 0 || draft.trim() === ''}
         onClick={send}
         title={
           opening
             ? 'The team is still starting'
             : recipient === undefined
               ? 'Say who with @'
-              : `Send to ${recipient.name}`
+              : `Send to ${addressSentence}`
         }
-        aria-label={recipient === undefined ? 'Send' : `Send to ${recipient.name}`}
+        aria-label={recipient === undefined ? 'Send' : `Send to ${addressSentence}`}
       >
         {/* The name, and never the face. The recipient's blobatar was here, which was the
             recipient identified a fourth time: the pill carries it, the `@mention` you typed
@@ -251,7 +294,7 @@ export function Composer({
             affordance rather than as an identity, which is the one thing a face must never be
             here. The word is what the button is promising, so the word is what it shows. */}
         {pane.kind === 'team' && recipient !== undefined && (
-          <span className="to">{recipient.name}</span>
+          <span className="to">{addressLabel}</span>
         )}
         <ArrowUp size={16} strokeWidth={2.25} aria-hidden />
       </button>
@@ -288,14 +331,23 @@ function MentionInput({
   );
 }
 
-/** A resolved mention takes ink weight and an underline; an unresolved one stays muted. */
+/**
+ * Three states, because there are three: **addressing** (ink, underlined — this is going to
+ * them), **naming** (ink, no underline — a teammate talked about rather than written to), and
+ * **unresolved** (muted). The underline is the message's To: line, so it must not appear over
+ * `ask @bob about @alice's branch`'s second name, which nothing is being sent to.
+ */
 function highlight(draft: string, roster: readonly Agent[]): React.JSX.Element[] {
   const parts = draft.split(/(@[\w-]+)/g);
+  let offset = 0;
   return parts.map((part, index) => {
+    const at = offset;
+    offset += part.length;
     if (!part.startsWith('@')) return <span key={index}>{part}</span>;
     const resolved = findAgentByName(roster, part.slice(1)) !== undefined;
+    const className = !resolved ? 'm bad' : isAddressing(draft, at) ? 'm' : 'm ref';
     return (
-      <span key={index} className={resolved ? 'm' : 'm bad'}>
+      <span key={index} className={className}>
         {part}
       </span>
     );

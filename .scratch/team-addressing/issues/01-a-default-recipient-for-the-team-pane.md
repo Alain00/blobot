@@ -108,3 +108,14 @@ agent pane is as it was.
 
 Seen on screen: the demo team's pane addressing Alice, and the creation flow's lead picker with a
 roster ticked.
+
+## Found on first contact, 2026-08-30
+
+A team with no lead was left silent. `hermes-agent` predates the column, so it has none — the
+decided behaviour — but typing into its team pane gave a disabled arrow and no reason for it: the
+placeholder that says *Start with @ to say who* is gone by the second keystroke, and the rest was
+in a tooltip.
+
+The composer now carries `say who with @ · or give this team a lead` while the field has words
+and no recipient, suppressed while the mention menu is up. It names both exits and promotes
+nobody into the job, which is the rule this ticket turns on.

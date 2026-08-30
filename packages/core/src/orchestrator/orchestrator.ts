@@ -273,27 +273,49 @@ export class Orchestrator {
   // ------------------------------------------------------------------ the user's prompt
 
   /**
-   * The user says something to one agent. This is what resets the turn budget: N agent turns
-   * are allowed to follow from it before the team halts and asks.
+   * The user says something to one agent, or to several at once.
    *
-   * Resolves when *this* agent's turn ends. Anything it set off keeps running — see
-   * {@link settled}.
+   * **A list, and not a broadcast.** Every id here is one the user typed a name for, and each
+   * gets its own `messages` row carrying the user's own words with the user's own authority —
+   * so ticket 05's "a message lands in exactly one agent's session" holds N times rather than
+   * bending once. blobot never decides who a message is for and never widens the list. See
+   * `.scratch/team-addressing/issues/02-does-a-coordinator-earn-its-turn.md`, which chose this
+   * over a coordinator that would have decided it.
+   *
+   * **One prompt, one budget.** The reset happens once for the whole fan-out, so naming three
+   * agents spends three of the ten rather than resetting the count three times.
+   *
+   * **One `at` for every row**, from a single read of the clock, because one thing was typed
+   * once: the team pane groups the rows back into the single bubble the user actually sent.
+   *
+   * Resolves when every turn it started has ended. Anything *those* set off keeps running —
+   * see {@link settled}.
    */
-  async promptFromUser(agentId: string, text: string): Promise<void> {
-    const agent = this.#requireAgent(agentId);
+  async promptFromUser(agentIds: readonly string[], text: string): Promise<void> {
+    const agents = agentIds.map((agentId) => this.#requireAgent(agentId));
     this.#turnsThisPrompt = 0;
     const now = this.#clock.now();
-    const message = this.#store.commit({
-      id: this.#createId(now),
-      teamId: this.team.id,
-      fromAgentId: null, // the discriminator: NULL means the user
-      toAgentId: agent.id,
-      body: text,
-      at: now,
+    const dispatched = agents.map((agent) => {
+      const message = this.#store.commit({
+        id: this.#createId(now),
+        teamId: this.team.id,
+        fromAgentId: null, // the discriminator: NULL means the user
+        toAgentId: agent.id,
+        body: text,
+        at: now,
+      });
+      this.#store.markDelivered([message.id], now);
+      this.#announceMessage(message);
+      return { agent, message };
     });
-    this.#store.markDelivered([message.id], now);
-    this.#announceMessage(message);
-    await this.#runTurn(agent, { text, from: 'user' }, message.id);
+    // Committed for everybody before anybody starts. A turn can message a teammate mid-flight,
+    // and a recipient who has not been written to yet would take that wake before the user's
+    // own words — which is the user watching their prompt arrive second.
+    await Promise.all(
+      dispatched.map((entry) =>
+        this.#runTurn(entry.agent, { text, from: 'user' }, entry.message.id),
+      ),
+    );
   }
 
   // ------------------------------------------------------------------ the peer-message tool

@@ -321,7 +321,14 @@ export interface EditAgentResult {
 
 export interface BlobotApi {
   snapshot(): Promise<UiSnapshot>;
-  prompt(agentId: string, text: string): Promise<void>;
+  /**
+   * One thing the user typed, to everybody they addressed with it.
+   *
+   * A list rather than an id, because `@alice @bob` is one prompt and several messages: a row
+   * per named agent, each carrying the user's own words, all sharing one timestamp because they
+   * were typed once. It is not a broadcast — blobot never widens a list the user did not type.
+   */
+  prompt(agentIds: readonly string[], text: string): Promise<void>;
   resumeAfterBudget(): Promise<void>;
   /** The creation flow. `chooseWorkspace` opens the OS picker; the rest take a path. */
   chooseWorkspace(): Promise<string | undefined>;

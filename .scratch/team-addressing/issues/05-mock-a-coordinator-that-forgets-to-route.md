@@ -1,6 +1,5 @@
 Type: task
 Status: needs-triage
-Blocked by: 02
 
 # Mock a coordinator that forgets to route
 
@@ -34,3 +33,29 @@ worth surfacing, and as what, is the question the scenario is meant to make unav
 
 The scenario exists and the coordinator design has an answer for it that is not "the model will
 remember".
+
+## Reframed, 2026-08-30: the trap is a peer's, not a coordinator's
+
+Issue 02 closed with **no coordinator**, and this ticket survives it — unblocked, and about a
+failure that exists in the product today rather than one a coordinator would have introduced.
+
+Alice is asked to get Bob on the API side. She answers *"I'll ask Bob to review it"*, never calls
+`message_agent`, and the transcript looks healthy. Nothing about that needs a router: it is the
+`SHADOWING_TOOLS` failure shape, observed live, in the ordinary two-agent case.
+
+**blobot surfaces it, and never repairs it.** Decided in the grilling:
+
+- **The trigger is lexical and scoped**: the turn's text names a teammate **whom the user named
+  in the prompt that started it**, and no message reached that teammate. The orchestrator can
+  already see this — it counts turns and owns `handleMessageAgent`, so nothing new is plumbed.
+- **Scoped, because unscoped is noise.** "Bob's branch is fine" names Bob and promises nothing.
+  A warning that fires on shop talk is a warning nobody reads, which is worse than silence.
+- **Never inference.** Detecting a *promise* means reading prose, and blobot provides no
+  inference. A name and an absence are both facts.
+- **Worded as an observation, never an accusation**, and it offers no button that sends the
+  message for her: blobot deciding what the message should have said is blobot doing inference.
+- **Known limitation, on the record**: it cannot see a promise made about a teammate the user
+  never named.
+
+So this ticket is now two things: the checked-in scenario in `packages/core/src/mock/` where an
+agent says it will message and does not, and the system line that scenario exists to produce.

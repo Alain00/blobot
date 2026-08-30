@@ -137,8 +137,12 @@ Every control descends from the composer. If you are adding one, start there.
   and `not-allowed`.
 - **`.iconbtn`** — a 32px circle, muted at rest, ink on hover. For chrome: close, panel toggle.
 - **Icon-only where the label would repeat the screen.** The composer's send is an arrow in
-  Alice's pane, because the pane is already the recipient; in the team pane it wears the
-  resolved agent's blobatar, because there the recipient is a live question.
+  Alice's pane, because the pane is already the recipient; in the team pane it carries the
+  recipient's name beside the arrow, because there the recipient is a live question — and can
+  be one the user never typed, since the team pane addresses the team's lead when nobody is
+  named. Two names and a count past that (`Alice, Bob +1`): a message can address several
+  agents, and a list that grows with the roster stops being readable at the width a send control
+  has. Never a face — a blobatar on a button reads as the affordance rather than as an identity.
 - Selection in a list is the raised ground alone. No left rule: a row that lifts and brightens
   is already saying it twice. The row is **inset and rounded** at `.field`'s 12px, like every
   other lifted surface here — a full-bleed square block is the one shape this app does not have,
@@ -186,8 +190,10 @@ spoken for: it means status, and it lives on the blobatar. Adding a second ambie
 anywhere is a design decision, and almost always the wrong one.
 
 - Status animations live on the blobatar: still, breathe, bob, nod, pulse, flinch.
-- A team mark animates the **folded** team status once for the whole cluster. Four members
-  bobbing out of phase is four things fidgeting.
+- A team mark animates the **folded** team status once for the whole cluster — as the folder,
+  not as the faces in it. Four members bobbing out of phase is four things fidgeting; a folder
+  that moves is one thing moving, and it is the right one, because the fold is a claim about
+  the team and not about anybody in it.
 
 **Interaction motion** runs once, because a person just did something, and is over before the
 eye returns to the status column. It cannot compete with status, because it is not there when
@@ -207,8 +213,18 @@ are narrow:
   anyway. If a user has to see the animation to understand what happened, the animation is
   doing a job that belongs to a word.
 - **Nothing on the paths that are walked all day.** Not the composer's `@mention` menu, not
-  pane or team switching, not the rail's hover colour, not the activity feed. Frequency is the
+  pane switching, not the rail's hover colour, not the activity feed. Frequency is the
   disqualifier, not taste: a hundred small delays a day is a slow app.
+- **One exception, and it is the only one: the faces leaving the folder when a team opens.**
+  This clause used to name team switching too, and it was written when a team row was a static
+  cluster of faces and switching was a pure data swap, where any motion would have been
+  decoration on a frequent path. A row is a folder now, and the shut and open states are
+  structurally different things: cargo in a container, or a list of rows. The travel is what
+  makes them one object rather than two pictures. It is admitted on terms rather than by
+  exemption — **under 250ms including the stagger, never gating a click, and cancellable
+  mid-flight**, because A → B → C is an ordinary thing to do in a column of teams. And it obeys
+  the rule below it: nothing is *learned* from it. The folder and the rows underneath already
+  say what the roster is. Miss it, or ask for reduced motion, and you have lost nothing.
 - **Nothing that moves what the user is reading.** The transcript, the feed and the turn pips
   are data, and data does not move for style.
 
@@ -247,15 +263,39 @@ One flat file, one flat namespace, no build step between it and the DOM.
 
 ## Screens, and what each one is for
 
-- **The rail** — every team, running or not, and the running team's agents under it. A row is a
-  blobatar, a name, the last thing that agent said, and when. The role shows only until it has
-  said something. `idle` is not printed: it is the resting state of a quiet app. Editing and
+- **The rail** — every team, running or not, and the running team's agents under it. A team row
+  is a **folder**: monochrome, drawn inset rather than to the edges of its box, with up to three
+  of its members peeking over the front and a `+N` on the panel for the rest. The faces are
+  **cropped by the front panel and sized to the folder, not to the box** — a face that hangs past
+  the folder's sides reads as standing beside a container rather than in one. They may be small,
+  which a blobatar elsewhere may not: the ~26px floor is a floor on *motion*, and a peeking face
+  does not move, because the folder carries the team's folded status and they are its cargo. The
+  open team's folder is **standing open and empty**, its members being the rows beneath it: the
+  front is a pocket flared wider at the top than the bottom, which is the ordinary open-folder
+  shape and the only treatment tried that could not be read as a folder that is merely
+  *emptied* — and emptied already has a meaning in this column, the dashed ghost of a team with
+  nobody on it. An
+  agent row is a blobatar, a name, the last thing that agent said, and when. The role shows only
+  until it has said something. `idle` is not printed: it is the resting state of a quiet app.
+  **A team row and an agent row are the same box**, down to the padding: they sit in one column,
+  and a team row standing taller made the rail read as two lists stacked rather than one.
+- **The lead is named on the row it is about.** A mono `LEAD` beside that agent's name in the
+  rail — the one row in the column the composer will write to when the user names nobody. It is
+  a standing fact about the team rather than an event, so unlike the role it does not go once the
+  agent has spoken, and it is a word rather than an inversion, because the two inversions are
+  spent (`waiting`, and an armed primary button).
+- **A team keeps its place in the rail when you open it.** The column's order is the store's, and
+  it does not depend on what you last clicked: a user reaching for the team they were on a minute
+  ago must find it where they left it. The running team is drawn from the conversation rather
+  than from its summary row, and that substitution happens **in place**. Editing and
   deleting a team live on the team's own row as icon buttons, revealed on hover **and on
   `:focus-within`** — hover-only would put both out of reach of the keyboard — because a delete
   button sitting on every row at rest would be the loudest thing in a column whose job is quiet.
 - **The transcript** — the three voices above, in a centred column, under **one mono hairline
-  row** carrying only what the rail does not: the agent's role, its runtime, where it is working,
-  and the posture. No face, no bold name, no status word up there. The selected rail row is a few
+  row** carrying only what the rail does not: the agent's role, its runtime and where it is
+  working. No face, no bold name, no status word, and no posture line up there — a sentence
+  printed over every pane all day is not read, and the creation flow's disclosure is where the
+  posture is said. The selected rail row is a few
   pixels to the left already saying all three, larger, so a header that repeated them was a
   second and weaker copy of the rail outranking the rail.
 - **The activity column** — the log. Tool calls and finished turns. Hideable from the chrome,

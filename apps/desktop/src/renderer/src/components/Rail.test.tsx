@@ -202,9 +202,87 @@ describe('status worn on the face', () => {
     for (const status of ['thinking', 'starting', 'waiting'] as const) {
       const drawn = draw({ mara: status, nils: 'idle' });
       for (const mark of drawn.host.querySelectorAll('.mark')) {
-        expect(mark.querySelector('svg')).toBeNull();
+        // The mark's own two `svg`s are the folder. What must not be here is a *posed* face,
+        // which is what the library renders as inline SVG inside the `.blob`.
+        expect(mark.querySelector('.blob svg')).toBeNull();
       }
       done(drawn);
     }
+  });
+});
+
+/**
+ * The column's order is the store's, not a record of what you last clicked.
+ *
+ * The rail used to build its rows as "the running team, then everything else", so opening a
+ * team moved it to the top and every other row shifted under the pointer. That was never an
+ * ordering decision: the running team is drawn from the `team` prop rather than from its
+ * summary row, and the hoist was how the two were spliced together.
+ */
+describe('where a team sits in the rail', () => {
+  /** The names of the team rows, top to bottom. */
+  function order(teams: readonly UiTeamSummary[], open: UiTeam): string[] {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    act(() => {
+      root.render(
+        React.createElement(Rail, {
+          team: open,
+          teams,
+          agents: OPEN_AGENTS,
+          statuses: {},
+          items: [],
+          pane: { kind: 'team' },
+          onSelect: () => {},
+          onSelectTeam: () => {},
+        }),
+      );
+    });
+    const names = [...host.querySelectorAll('.teamrow .nm b')].map((node) => node.textContent ?? '');
+    act(() => root.unmount());
+    host.remove();
+    return names;
+  }
+
+  it('keeps its place when it is the one open', () => {
+    // `portfolio` is second in the store's order, and it is the team on screen. It stays
+    // second: the row a user reaches for is where they last saw it.
+    const listed = [TEAMS[1] as UiTeamSummary, TEAMS[0] as UiTeamSummary];
+    expect(order(listed, OPEN)).toEqual(['hermes-agent', 'portfolio']);
+  });
+
+  it('is drawn from the conversation even so, members and all', () => {
+    // The reason the hoist existed: the open row's faces come from `agents`, not from the
+    // summary. Substituting in place has to keep doing that.
+    const listed = [TEAMS[1] as UiTeamSummary, TEAMS[0] as UiTeamSummary];
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    act(() => {
+      root.render(
+        React.createElement(Rail, {
+          team: OPEN,
+          teams: listed,
+          agents: OPEN_AGENTS,
+          statuses: {},
+          items: [],
+          pane: { kind: 'team' },
+          onSelect: () => {},
+          onSelectTeam: () => {},
+        }),
+      );
+    });
+    // One agent row, under the open team, drawn from `agents`.
+    expect(host.querySelectorAll('.agentrow')).toHaveLength(1);
+    expect(host.textContent).toContain('Alice');
+    act(() => root.unmount());
+    host.remove();
+  });
+
+  it('still leads the column when the store has no row for it, which is demo mode', () => {
+    // The one case the prepend was for: `--demo`'s team is a TypeScript file and is in no
+    // summary list, so there is no place to keep and the top is the only answer.
+    expect(order([TEAMS[1] as UiTeamSummary], OPEN)).toEqual(['portfolio', 'hermes-agent']);
   });
 });

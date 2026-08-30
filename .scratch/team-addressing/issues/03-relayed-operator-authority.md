@@ -1,5 +1,5 @@
 Type: grilling
-Status: needs-triage
+Status: resolved
 Blocked by: 02
 
 # What authority does a relayed message carry?
@@ -46,3 +46,25 @@ to authorise, and what stays refusable regardless of who relayed it.
 
 There is an ADR. This is the class of question ADR-0001 and ADR-0003 are for: it outlives the
 feature, and the next person will otherwise re-litigate it.
+
+## Answer
+
+**Closed with issue 02, and without the ADR it asked for — because the posture it settled is
+what killed the coordinator.**
+
+Answered first, in the grilling of 2026-08-30, since the ticket's values half constrains every
+shape and was answerable before any of them: **a relayed message carries peer authority, always.
+There is no third voice.** The envelope is untouched. blobot fails closed here the way
+`docs/adr/0003-what-an-agent-inherits.md` has the palette fail closed, and for the same reason —
+the alternative grants operator authority to every prompt injection that reaches one agent's
+context.
+
+The consequence was followed rather than swallowed: it means a relay is strictly weaker than the
+same words typed at the agent, so a coordinator can only ever be more *convenient*, never more
+*capable*. Issue 02 could not carry that cost, and chose multi-mention instead — where the user's
+words reach each agent as the user's own, with no relay in the path at all.
+
+**No ADR, because nothing relays.** An ADR records a decision that outlives its feature, and this
+one has no feature: the envelope says what it always said. If a coordinator is ever proposed
+again, the first sentence of this answer is the constraint it inherits, and *that* is when it
+becomes an ADR.

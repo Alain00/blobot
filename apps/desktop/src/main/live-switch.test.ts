@@ -99,7 +99,7 @@ live('switching between real teams', () => {
     const first = await pool.select(alpha);
     const alice = first.agents[0]?.id ?? '';
     await first.orchestrator.promptFromUser(
-      alice,
+      [alice],
       'Remember this: the build password is TANGERINE-9. Just say OK.',
     );
 
@@ -120,7 +120,7 @@ live('switching between real teams', () => {
     expect(revived).not.toBe(first);
 
     const revivedAlice = revived.agents[0]?.id ?? '';
-    await revived.orchestrator.promptFromUser(revivedAlice, 'What is the build password?');
+    await revived.orchestrator.promptFromUser([revivedAlice], 'What is the build password?');
     const said = revived.store
       .answersOfTeam(alpha.id)
       .map((answer) => answer.text)

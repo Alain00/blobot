@@ -1,5 +1,5 @@
 Type: task
-Status: needs-triage
+Status: resolved
 Blocked by: 02
 
 # A coordinator cannot see who is free
@@ -37,3 +37,20 @@ A router that cannot see status will hand work to a busy agent.
 
 Either it is written down that the ack is the answer, or `team_status` exists with the same
 free-form, degrades-honestly shape as `message_agent`.
+
+## Answer
+
+**The ack is the answer. No `team_status` tool.** Closed with issue 02, 2026-08-30.
+
+The ticket asked its cheap answer to be disproved before a tool was added, and it was not
+disproved: it was made moot. There is no router. Nobody's job is to decide *who* should do a
+thing, so nobody needs to see what everybody is doing — the user picks the agents by name, and
+the user can already see every status in the rail.
+
+For the case that remains, a peer messaging a peer, ticket 05's reasoning is unchanged and its
+answer holds: `handleMessageAgent` acks `started` or `queued`, so an agent learns after the fact
+that a recipient was busy and can route elsewhere on the next call, at no round trip. Ticket 05
+refused `listTeammates` over round trips rather than secrecy, and an agent asking "who is free"
+every turn is a round trip per turn.
+
+If a coordinator ever returns, this ticket returns with it and the ack is where it starts.

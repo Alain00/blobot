@@ -330,3 +330,20 @@ the first 2026-08-29 amendment already found false under `default` mode — and 
 sentence a user would have read while watching an agent stop on an MCP call. It now says the
 true thing: the user's own MCP tools are asked about like anything else, and the mailbox blobot
 injects is the one exception.
+
+## Amendment, 2026-08-30: the header's posture indicator is cut
+
+By the author, on the working surface as built. *"Plus one quiet permanent affordance"* above is
+withdrawn: `asks before dangerous commands` is gone from ticket 12's conversation header.
+
+The reason it was there was that a disclosure gets clicked past in week one. The reason it is
+gone is that the fix did not work: a sentence printed over every pane, every session, all day is
+a sentence nobody reads by the second day either, and it was spending a third of the header's
+one line on a fact that never changes and that nothing in the app branches on. Permanence is not
+attention.
+
+Nothing else in this ticket moves. The disclosure still carries the posture in full, stated and
+not consented to, in the creation flow where it is read once before any agent exists — and the
+posture itself is unchanged, since it was always a property of what blobot arranges with the
+runtime and never of what the header said about it. The permission block is still where a user
+meets the posture in practice: it is the one moment the sentence is about something.

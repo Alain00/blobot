@@ -275,7 +275,7 @@ describe('what a turn leaves behind', () => {
     await clock.runAll();
     await starting;
 
-    const done = orchestrator.promptFromUser(alice.id, 'get it reviewed');
+    const done = orchestrator.promptFromUser([alice.id], 'get it reviewed');
     await clock.runAll();
     await orchestrator.settled();
     await done;

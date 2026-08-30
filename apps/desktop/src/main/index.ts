@@ -470,7 +470,7 @@ async function createWindow(): Promise<void> {
       void firstStart.then(() => {
         const team = current();
         if (team !== undefined) {
-          void team.orchestrator.promptFromUser(team.agents[0]?.id ?? '', team.autoplayPrompt);
+          void team.orchestrator.promptFromUser([team.agents[0]?.id ?? ''], team.autoplayPrompt);
         }
       });
     }, 700);
@@ -514,12 +514,12 @@ void app.whenReady().then(async () => {
   }
 
   ipcMain.handle('blobot:snapshot', () => snapshot());
-  ipcMain.handle('blobot:prompt', async (_event, agentId: string, text: string) => {
+  ipcMain.handle('blobot:prompt', async (_event, agentIds: readonly string[], text: string) => {
     // `current()` is still the team that was on screen while another one starts, so a message
     // sent now would reach the wrong team's agent. The composer is closed for the same reason;
     // this is the half that does not depend on the renderer having agreed.
     if (opening !== undefined) return;
-    await current()?.orchestrator.promptFromUser(agentId, text);
+    await current()?.orchestrator.promptFromUser(agentIds, text);
   });
   ipcMain.handle('blobot:resume', () => current()?.orchestrator.resumeAfterBudget());
 

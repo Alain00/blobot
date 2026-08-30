@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentEvent, Message } from '@blobot/core/domain';
 import {
+  addressedBy,
   continuesSpeaker,
   initialState,
   isPending,
@@ -162,7 +163,7 @@ describe('one turn, labelled once', () => {
     text: 'hi',
     live: false,
   });
-  const asked: Item = { kind: 'user', id: 'u', at: 0, agentId: 'alice', text: 'who are u?' };
+  const asked: Item = { kind: 'user', id: 'u', at: 0, agentIds: ['alice'], text: 'who are u?' };
 
   it('groups a second answer from the same agent', () => {
     expect(continuesSpeaker(answer('alice'), answer('alice'))).toBe(true);
@@ -354,6 +355,68 @@ it('holds the tool line when the request arrives before the call it is about', (
     { kind: 'permission', id: 'perm_1' },
     { kind: 'tool', id: 'tool_1', status: 'asking' },
   ]);
+});
+
+describe('who a message is addressed to', () => {
+  const roster = [
+    { id: 'alice', name: 'Alice' },
+    { id: 'bob', name: 'Bob' },
+  ] as unknown as readonly import('@blobot/core/domain').Agent[];
+  const ids = (draft: string): string[] => addressedBy(draft, roster).map((agent) => agent.id);
+
+  it('takes the leading run, and sends the whole message to every one of them', () => {
+    expect(ids('@Alice @Bob the page double-charges')).toEqual(['alice', 'bob']);
+  });
+
+  it('stops at the first ordinary word: a later mention is a reference', () => {
+    expect(ids('@Bob about @Alice branch')).toEqual(['bob']);
+  });
+
+  // The behaviour "last valid mention wins" used to give, and the price of the new rule.
+  it('no longer addresses a trailing mention', () => {
+    expect(ids('ship it @Bob')).toEqual([]);
+  });
+
+  it('does not end the run on a name nobody has', () => {
+    expect(ids('@alic @Bob hi')).toEqual(['bob']);
+  });
+
+  it('counts the same agent once, however many times it was named', () => {
+    expect(ids('@Alice @alice @ALICE go')).toEqual(['alice']);
+  });
+
+  it('addresses nobody when the message starts with prose', () => {
+    expect(ids('the page double-charges')).toEqual([]);
+  });
+});
+
+describe('one thing typed, drawn once', () => {
+  const at = 1_700_000_000_000;
+  // What `@alice @bob …` commits: a row each, one timestamp, because it was typed once.
+  const fanout: Item[] = [
+    { kind: 'user', id: 'u1', at, agentIds: ['alice'], text: '@Alice @Bob look at this' },
+    { kind: 'user', id: 'u2', at, agentIds: ['bob'], text: '@Alice @Bob look at this' },
+  ];
+
+  it('draws the two rows as one bubble in the team pane, tagged with both', () => {
+    const drawn = itemsFor(fanout, { kind: 'team' });
+    expect(drawn).toHaveLength(1);
+    expect(drawn[0]?.kind === 'user' && drawn[0].agentIds).toEqual(['alice', 'bob']);
+  });
+
+  it('leaves an agent pane with the one message that is its own', () => {
+    const drawn = itemsFor(fanout, { kind: 'agent', agentId: 'bob' });
+    expect(drawn).toHaveLength(1);
+    expect(drawn[0]?.kind === 'user' && drawn[0].agentIds).toEqual(['bob']);
+  });
+
+  it('keeps the same words apart when they were sent at different times', () => {
+    const twice: Item[] = [
+      { kind: 'user', id: 'u1', at, agentIds: ['alice'], text: 'again' },
+      { kind: 'user', id: 'u2', at: at + 1, agentIds: ['alice'], text: 'again' },
+    ];
+    expect(itemsFor(twice, { kind: 'team' })).toHaveLength(2);
+  });
 });
 
 describe('the composer\'s slash menu', () => {

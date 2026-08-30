@@ -567,6 +567,20 @@ describe('editing a team', () => {
     expect(store.teamById(team.id)?.leadAgentId).toBe(alice?.id);
   });
 
+  // The only state an existing team can be in, and the one the author hit first: no lead,
+  // nobody joining or leaving, one face picked. The tests around it all began from a team
+  // created *with* a lead, which is a state no team made before the column can reach.
+  it('names a lead on a team that has none, with the roster unchanged', async () => {
+    const team = await createTeam(spec, deps());
+    store.setTeamLead(team.id, undefined);
+    expect(store.teamById(team.id)?.leadAgentId).toBeUndefined();
+
+    await editTeamRoster(team.id, spec.profileIds, deps(), spec.profileIds[1]);
+
+    const bob = store.agentsOfTeam(team.id).find((agent) => agent.name === 'Bob');
+    expect(store.teamById(team.id)?.leadAgentId).toBe(bob?.id);
+  });
+
   it('takes a new lead by profile, resolving it to the membership on this team', async () => {
     const team = await createTeam(spec, deps());
     const bob = store.agentsOfTeam(team.id)[1];

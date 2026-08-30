@@ -3,6 +3,7 @@ import type { AgentStatus } from '@blobot/core/domain';
 import type { UiAgent, UiTeam, UiTeamSummary } from '../../../shared/api.js';
 import { foldTeamStatus, lastLineOf, type Item, type Pane } from '../model.js';
 import { lastActive } from '../time.js';
+import { useFaceFlight } from '../useFaceFlight.js';
 import { Blob } from './Blob.js';
 import { TeamMark } from './TeamMark.js';
 import { StatusWord } from './StatusWord.js';
@@ -50,24 +51,38 @@ export function Rail({
   onOpenAgents?: () => void;
 }): React.JSX.Element {
   const teamStatus = foldTeamStatus(agents.map((agent) => statuses[agent.id] ?? 'idle'));
-  // The running team may not be in the summary list at all — demo mode has no row for it —
-  // so it is drawn from `team` and the list only supplies the others.
+  // The roster, not just the team: a team opens in two steps — its row arrives from the store,
+  // its members arrive when the snapshot does — and the flight belongs to the step that puts
+  // faces on screen. Keying on the team alone would run it against an empty column.
+  const flight = useFaceFlight(`${team.id}:${agents.map((agent) => agent.id).join(',')}`);
+  // **A team keeps its place in the column when you open it.** The rail used to hoist the
+  // running team to the top, which meant the order of the list depended on which row you last
+  // clicked: a user reaching for the team they were on a minute ago found a different team
+  // there. The store already answers this — `listTeams` orders by `createdAt`, and that order
+  // is stable across every switch — so the rail simply renders it.
+  //
+  // The hoist was never an ordering decision. It was a *lookup* solved with one: the running
+  // team is drawn from `team` rather than from its summary row, because the summary carries a
+  // count of nothing the conversation has and demo mode has no row for it at all. So the
+  // substitution happens in place, and the prepend survives only for the case that needed it.
   const open = teams.find((row) => row.id === team.id);
-  const rows: readonly UiTeamSummary[] = [
-    {
-      id: team.id,
-      name: team.name,
-      workspacePath: team.workspacePath,
-      // The running team is drawn from `team`, which is the conversation's view of it and
-      // carries no kind. The summary row has one, and demo mode has no row at all.
-      workspaceKind: open?.workspaceKind ?? 'git',
-      members: agents,
-    },
-    ...teams.filter((other) => other.id !== team.id),
-  ];
+  const running: UiTeamSummary = {
+    id: team.id,
+    name: team.name,
+    workspacePath: team.workspacePath,
+    // The running team is drawn from `team`, which is the conversation's view of it and
+    // carries no kind. The summary row has one, and demo mode has no row at all.
+    workspaceKind: open?.workspaceKind ?? 'git',
+    members: agents,
+    ...(open?.lastActiveAt === undefined ? {} : { lastActiveAt: open.lastActiveAt }),
+  };
+  const rows: readonly UiTeamSummary[] =
+    open === undefined
+      ? [running, ...teams]
+      : teams.map((row) => (row.id === team.id ? running : row));
 
   return (
-    <div className="rail">
+    <div className="rail" ref={flight}>
       {/* Above the teams, because that is the order the model reads in: agents exist, and
           teams are formed out of them. One quiet row rather than a second list, since this
           column's job is the teams and the agents have a screen of their own. */}
@@ -113,7 +128,7 @@ export function Rail({
               {row.members.length === 0 ? (
                 <span className="ghost" aria-hidden="true" />
               ) : (
-                <TeamMark agents={row.members} status={rowStatus.status} size={46} />
+                <TeamMark agents={row.members} status={rowStatus.status} size={34} />
               )}
               <span className="who">
                 <span className="nm">
@@ -146,7 +161,7 @@ export function Rail({
               className={`teamrow${pane.kind === 'team' ? ' sel' : ''}`}
               onClick={() => onSelect({ kind: 'team' })}
             >
-              <TeamMark agents={agents} status={teamStatus.status} size={46} />
+              <TeamMark agents={agents} status={teamStatus.status} size={34} open />
               <span className="who">
                 <span className="nm">
                   <b>{row.name}</b>
@@ -181,10 +196,22 @@ export function Rail({
                       the team mark above it stays unposed, because the mark folds its members'
                       statuses and a pose is per face, so posing it would draw four faces each
                       asserting what the fold only ever claimed of somebody. */}
-                  <Blob name={agent.name} size={34} status={status} hue={agent.hue} animated />
+                  <Blob
+                    name={agent.name}
+                    size={34}
+                    status={status}
+                    hue={agent.hue}
+                    animated
+                    face={agent.id}
+                  />
                   <span className="who">
                     <span className="nm">
                       <b>{agent.name}</b>
+                      {/* Who the composer writes to when the user names nobody. A permanent
+                          fact about this team, so unlike the role it does not go once the
+                          agent has spoken — and a mono word rather than an inversion, which
+                          is spent on `waiting` and on an armed button. */}
+                      {agent.id === team.leadAgentId && <span className="lead mono">LEAD</span>}
                       <span className="grow" />
                       {/* When it last spoke, where a chat app puts it. Absent, rather than
                           zero, for an agent that has not said anything yet. */}

@@ -145,7 +145,7 @@ function describe(event: AgentEvent): string {
 process.stdout.write(`--- Bob's persona ---\n${composePersona(bob, team, [alice, bob])}\n---\n\n`);
 
 await orchestrator.start();
-await orchestrator.promptFromUser(alice.id, 'Get the session refresh reviewed before we ship.');
+await orchestrator.promptFromUser([alice.id], 'Get the session refresh reviewed before we ship.');
 await orchestrator.settled();
 
 process.stdout.write(`\n${orchestrator.turnsThisPrompt} agent turns from one user prompt.\n`);

@@ -52,8 +52,15 @@ for the idea and the reason this effort exists rather than a rejection note.
 
 ## Out of scope
 
-- **Broadcast.** One message, many sessions, is not on the table. It is the thing ticket 05
-  settled and the thing the compact-context rule forbids at scale.
+- **Broadcast.** One message going to *the team* implicitly is not on the table. It is the thing
+  ticket 05 settled and the thing the compact-context rule forbids at scale.
+
+  **Amended 2026-08-30 by issue 02**, which needed the boundary drawn rather than assumed:
+  what is forbidden is the *implicit* surface — a composer that sends to everybody because you
+  named nobody, which is what ticket 12 removed. **Naming several agents is not that.**
+  `@alice @bob` commits one message row per named agent, each landing in exactly one session,
+  which is ticket 05's rule satisfied twice rather than bent once. The line to hold: blobot never
+  decides who a message is for, and never expands a set the user did not type.
 - **Renaming or restructuring Team.** A coordinator is a role, not a new aggregate.
 - **Agent context compaction.** Belongs to the CLI behind the adapter. See
   `.scratch/transcript-scale/spec.md`, *Not in scope*.
@@ -63,10 +70,15 @@ for the idea and the reason this effort exists rather than a rejection note.
 - `01-a-default-recipient-for-the-team-pane.md` — the cheap half, and a ticket 12 reopen.
   **Resolved and built, 2026-08-30**: a team has a lead, the team pane writes to it, and a team
   with none behaves exactly as ticket 12 specified.
-- `02-does-a-coordinator-earn-its-turn.md` — the grilling. Cost, serialization, the budget,
-  the single point of failure, and role-on-an-existing-agent versus a dedicated one.
-- `03-relayed-operator-authority.md` — the security question. Probably an ADR.
-- `04-a-coordinator-cannot-see-who-is-free.md` — ticket 05 declined `listTeammates`.
+- `02-does-a-coordinator-earn-its-turn.md` — the grilling. **Resolved 2026-08-30: no
+  coordinator, in any shape.** The ask was fan-out, relayed authority is capped at peer, and so
+  a router can only ever deliver weaker work than the same words addressed by the user.
+  **Fan-out is multi-mention.**
+- `03-relayed-operator-authority.md` — the security question. **Closed with 02, and without an
+  ADR**: peer authority always, no third voice, nothing relays. It is the answer that killed the
+  coordinator rather than a consequence of it.
+- `04-a-coordinator-cannot-see-who-is-free.md` — **closed with 02: the ack is the answer.**
 - `05-mock-a-coordinator-that-forgets-to-route.md` — the observed trap, per ticket 08's thesis.
+  **Unblocked and reframed**: the trap is a peer's and exists today.
 
-Order: 01 stands alone and can ship without any of the others. 02 gates 03 to 05.
+Order: 01 shipped alone. 02 answered and closed 03 and 04 with it; 05 is the only open one.

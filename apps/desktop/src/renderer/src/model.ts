@@ -1,4 +1,5 @@
-import type { AgentEvent, AgentStatus, Message } from '@blobot/core/domain';
+import { findAgentByName } from '@blobot/core/domain';
+import type { Agent, AgentEvent, AgentStatus, Message } from '@blobot/core/domain';
 import type {
   UiPermissionOutcome,
   UiPermissionRequest,
@@ -10,7 +11,12 @@ import type {
 export type Pane = { readonly kind: 'team' } | { readonly kind: 'agent'; readonly agentId: string };
 
 export type Item =
-  | { kind: 'user'; id: string; at: number; agentId: string; text: string }
+  /**
+   * Something the user said. `agentIds` rather than one id, because one thing typed once can
+   * address several agents — the store has a row each, and the team pane draws the bubble the
+   * user actually sent. See {@link itemsFor}, which is where the rows become the one bubble.
+   */
+  | { kind: 'user'; id: string; at: number; agentIds: readonly string[]; text: string }
   | { kind: 'agent'; id: string; at: number; agentId: string; text: string; live: boolean }
   | {
       kind: 'peer';
@@ -277,7 +283,7 @@ function toItem(message: Message): Item {
           kind: 'user',
           id: message.id,
           at: message.at,
-          agentId: message.toAgentId,
+          agentIds: [message.toAgentId],
           text: message.body,
         }
       : {
@@ -458,9 +464,45 @@ export function itemsFor(items: readonly Item[], pane: Pane): Item[] {
       : items.filter((item) =>
           item.kind === 'peer'
             ? item.fromId === pane.agentId || item.toId === pane.agentId
-            : item.agentId === pane.agentId,
+            : item.kind === 'user'
+              ? item.agentIds.includes(pane.agentId)
+              : item.agentId === pane.agentId,
         );
-  return visible.sort((left, right) => left.at - right.at);
+  return oneBubblePerThingTyped(visible.sort((left, right) => left.at - right.at));
+}
+
+/**
+ * The rows the user's fan-out committed, drawn as the one message they typed.
+ *
+ * `@alice @bob` is two `messages` rows — that is ticket 05, and it does not bend — and two
+ * identical bubbles a millisecond apart read as a rendering fault. So the *view* groups what the
+ * store rightly keeps apart: same text, same timestamp, one bubble, tagged with everybody it
+ * went to. Filtering runs first, so an agent's own pane keeps seeing one message addressed to
+ * one agent, which is what it is from where that pane stands.
+ *
+ * Grouping on `(text, at)` is a heuristic and worth naming as one: the timestamp is a single
+ * read of the clock in `promptFromUser`, so a genuine second dispatch of identical words would
+ * have to land inside the same millisecond to be merged wrongly.
+ */
+function oneBubblePerThingTyped(items: readonly Item[]): Item[] {
+  const grouped: Item[] = [];
+  for (const item of items) {
+    const previous = grouped.at(-1);
+    if (
+      item.kind === 'user' &&
+      previous?.kind === 'user' &&
+      previous.at === item.at &&
+      previous.text === item.text
+    ) {
+      grouped[grouped.length - 1] = {
+        ...previous,
+        agentIds: [...previous.agentIds, ...item.agentIds],
+      };
+      continue;
+    }
+    grouped.push(item);
+  }
+  return grouped;
 }
 
 /**
@@ -492,6 +534,48 @@ export interface CommandMenu {
   readonly suggestions: readonly UiCommand[];
   /** Shown instead of rows, and never selectable: Enter must keep sending. */
   readonly note?: string;
+}
+
+/**
+ * Who a message is addressed to: the **leading run** of mentions.
+ *
+ * Mentions before the first ordinary word are the recipients — the To: line, where the eye
+ * already looks. A mention anywhere after that is a *reference*, so `ask @bob about @alice's
+ * branch` reaches Bob alone, which is the misfire the rule exists to prevent.
+ *
+ * This replaced ticket 12's **last valid mention wins**, and its second reopen records that.
+ * `ship it @bob` no longer sends to Bob: keeping it would have meant two addressing rules, the
+ * second existing only to preserve a behaviour that was hours old.
+ *
+ * Naming several is a fan-out, not a broadcast. Each named agent gets the whole message, mention
+ * tokens and all — splitting `@alice do the UI, @bob do the API` into clauses would be blobot
+ * deciding which half is whose, which is inference, and Bob seeing what Alice was asked is what
+ * stops him doing it twice.
+ *
+ * An unresolved mention inside the run does not end it: `@alic @bob hi` reaches Bob, and the
+ * field draws `@alic` as the dud it is.
+ */
+export function addressedBy(draft: string, roster: readonly Agent[]): Agent[] {
+  const leading = /^[\s]*((?:@[\w-]+\s*)+)/.exec(draft)?.[1];
+  if (leading === undefined) return [];
+  const named = [...leading.matchAll(/@([\w-]+)/g)].map((match) =>
+    findAgentByName(roster, match[1] ?? ''),
+  );
+  const found = named.filter((agent): agent is Agent => agent !== undefined);
+  // The same agent twice is one recipient: two rows would be the same words delivered to one
+  // session twice, and the second is not a second instruction.
+  return found.filter((agent, index) => found.findIndex((it) => it.id === agent.id) === index);
+}
+
+/**
+ * Whether a mention at this offset is addressing the message or merely naming somebody.
+ *
+ * The field draws the difference, because an underline that means "this is going to them" must
+ * not appear over a name that is only being talked about.
+ */
+export function isAddressing(draft: string, offset: number): boolean {
+  const leading = /^[\s]*((?:@[\w-]+\s*)+)/.exec(draft)?.[0];
+  return leading !== undefined && offset < leading.length;
 }
 
 /**

@@ -649,8 +649,9 @@ Restarting is cheap now that `session/load` resumes each agent where it was.
    did. See the section at the foot of this file.
 4. **Renaming a team**, which needs a decision about the branches first.
 5. **Talking to a team without naming a member**, charted 2026-08-29 at
-   `.scratch/team-addressing/`. Issue 01, the ergonomic, is **built** — see the section at the
-   foot of this file. The coordinator is not decided. The author's ask is a team group chat with a
+   `.scratch/team-addressing/`. **Answered and built**: issue 01's lead, and issue 02's
+   multi-mention in place of the coordinator, which was refused. Only issue 05 is left — see the
+   sections at the foot of this file. The author's ask is a team group chat with a
    coordinator that routes messages and hands out work; the effort splits that into the
    ergonomic (a default recipient, which reopens ticket 12 on one point) and the coordinator
    itself, whose cost, single point of failure and relayed-authority question are the reason it
@@ -1227,8 +1228,11 @@ It is a rule rather than a list so the next surface answers itself. Four changes
 - **The conversation header is one mono hairline row.** It was a face, a bold name, a role and a
   `StatusWord` over the workspace line; the selected rail row a few pixels to its left already
   carries all four, larger, and carries the same `StatusWord`. What is left is the role, the
-  runtime, the branch or path and ticket 14's posture, all mono and muted: the facts the rail
-  does *not* have. `team` is no longer a prop of `Conversation` at all — the topbar crumb is
+  runtime and the branch or path, all mono and muted: the facts the rail does *not* have.
+  **Ticket 14's posture line came out of the header too**, on the author's call and amended on
+  ticket 14: the indicator existed so the creation disclosure would not be clicked past in week
+  one, and a sentence printed over every pane all day is not read by the second day either. The
+  disclosure still carries it, and the permission block is still where a user meets it. `team` is no longer a prop of `Conversation` at all — the topbar crumb is
   where the team's name and path live. Height went from ~56px to ~28px and nothing above the
   transcript is bold or saturated any more.
 - **A peer message is one shut line.** `message received from ⬤ Alice`, opening on a click into
@@ -1292,3 +1296,172 @@ demo team's pane addressing Alice, and the lead picker under a ticked roster.
 **Unclicked**, in the sense this file already uses: nobody has saved the roster dialog with a new
 lead in the running app. The store half is covered by tests and the picker was rendered, but the
 dialog's own save path with a lead change has only been exercised by `editTeamRoster` directly.
+
+## Settled, 2026-08-30: the rail's order, and the team folder
+
+Two changes on the rail, the first a prerequisite for the second. Ticket 12 carries both with
+their reasons; `DESIGN.md` carries the rules.
+
+**A team keeps its place when you open it.** `Rail.tsx` built `rows` as `[running, ...others]`,
+so opening a team hoisted it. `sqlite-store.ts:94` already orders `listTeams` by `createdAt`, so
+the rail now renders that order and substitutes the running team **in place**; the prepend
+survives only for demo mode, whose team is a TypeScript file and is in no summary list. Three
+tests in `Rail.test.tsx`: it keeps its place, it is still drawn from the conversation while doing
+so, and it still leads the column when the store has no row for it.
+
+**A team row is a folder** (`TeamMark.tsx`, rewritten). Two inline SVG paths — a back with a
+tab, and a front that is a panel when shut and a flared pocket when open — in
+`--line`/`--ground`/`--raised`, with up to three members peeking over the front and a `+N` on the
+panel. `markLayout`'s square packing is gone; `peekLayout` is a single overlapping row, clamped
+so three faces plus two steps can never leave **the folder**, which is narrower than the box.
+The status animation moved from the faces to the folder.
+
+That last move is what pays for the fit. The peeking faces are 52% of the box rather than 62%,
+which is under the ~26px floor the 26→34 pass established — and legitimately so, because that
+floor is a floor on *motion*: under it a `scale(1.035)` breath is half a pixel. These faces do
+not breathe. The folder does, and they are its cargo, so they only have to be identifiable.
+
+Reviewed with a throwaway `--screen=marks` harness — a strip of shut folders at 1/2/3/4/6, both
+open candidates, the ghost, and a mock rail column, at 46/92/138px — then deleted. Three things
+it caught that the rail alone would not have:
+
+- Three open states read as a folder that was merely **empty**, which is the dashed ghost's
+  meaning: a tapered `clip-path`, a dropped panel, and a flap rotated eight degrees on its
+  bottom-left corner. What works is the ordinary open-folder shape the author supplied as a
+  reference — a **front pocket flared wider than the box at the top and narrower at the bottom**.
+  That took the folder from two bordered boxes to two inline SVG paths, because a `clip-path` on
+  a bordered box loses the stroke down every slanted edge.
+- **Keeping one face** in the open folder, the other candidate, is worse than emptying it: it
+  reads as *a team of one*, on the row whose entire roster is listed directly beneath it.
+- The `+N` hung below the front panel rather than on it, and read as a detached footnote.
+- Two corrections after the shape was right, both from the author looking at it in the rail: the
+  back ran to the bottom of the box, so its two bottom corners came out past the sides of the
+  narrowing pocket; and the folder was drawn to the box's edges, which made the faces the smaller
+  half of their own mark. The back now stops at y=58 and the folder is inset to x 4..96.
+
+**The fly-out is built** — `useFaceFlight.ts`, called from `Rail`. Each agent row's face starts
+where that member was sitting in the shut folder, at the size it was there, and travels to its
+row. 190ms, `--ease-out`, staggered 30ms and squeezed on a large roster so the last face still
+lands under 250ms.
+
+**The first half of the FLIP is arithmetic, not measurement, and that is the whole design.** The
+usual shape of this — capture rects before the click, replay them after — is wrong here, because
+a team switch is *asynchronous*: a cold team takes seconds to open, and a rect captured before
+the click has had a whole rail's worth of reflow to go stale. The source is derivable instead.
+The folder is still on screen when the effect runs, `peekLayout` is the same pure function that
+placed the faces inside it, and between them they give an exact source rect at the moment the
+animation starts. Nothing is captured, so nothing can go stale — and the source is *identical* to
+where the face was by construction rather than by measurement, because it is the same function
+call with the same arguments.
+
+Three decisions inside it:
+
+- **Only opening travels.** The team being left has had its rows removed from the document by the
+  time this runs, so there is nothing to animate them from, and chasing it would mean captured
+  rects and the staleness above. It is also the right asymmetry: leaving is the system
+  responding, arriving is what the person asked for.
+- **Keyed on the roster, not the team.** A team opens in two steps — its row arrives from the
+  store, its members arrive with the snapshot — so keying on the team id alone runs the flight
+  against an empty column.
+- **Cancel, then `Animation`.** A CSS animation restarts from zero when re-triggered; A → B → C
+  is ordinary in a column of teams, and this replaces cleanly mid-flight. Only the wrapper span
+  is touched, so the status animations on the `.blob` inside are untouched.
+
+`useFaceFlight.test.tsx` pins the arithmetic against hand-worked numbers, because a screenshot
+cannot see motion: a two-agent team at a 46px mark starts its first face 4px right and 54px above
+where it lands, at 24/34 of its size. It also asserts the two cases where it must *not* fire —
+the first paint of a session, which is not an opening, and `prefers-reduced-motion`, which is the
+one channel the stylesheet cannot withdraw for us because this is JS.
+
+**It contradicts an interaction-motion rule and `DESIGN.md` now carries it as a named
+exception.** The rule said *nothing on the paths that are walked all day* and listed team
+switching; the argument for the exception, and the terms it is admitted on, are on ticket 12.
+
+**Not verified: what it looks like.** Demo mode has one team, so there is no switch to screenshot,
+and `--screenshot` cannot click. The arithmetic is tested and the source rect is identical to the
+shut folder's slot by construction, but nobody has watched it move.
+
+## Settled and built, 2026-08-30: no coordinator, and one prompt can address several agents
+
+`.scratch/team-addressing/`, issue 02, grilled with the author in five rounds. The question was
+whether a team should always have an agent whose job is to receive the user's message and hand
+out the work. **It should not, in any shape**, and the reason is a chain rather than a
+preference:
+
+The ask is **fan-out** — one sentence, several agents working — not triage, which is not a
+problem you have on a team you assembled yourself. Issue 03 was then answered in the same
+session and decided this one: **relayed authority is capped at peer, permanently**, the way the
+palette fails closed. From which a coordinator can only ever deliver *weaker* work than the same
+words addressed by the user, and it buys that for three to four turns of ten, a lock at the
+coordination layer, a session accumulating everything the team says, one failure that mutes the
+team, and a worktree for an agent that never opens a file.
+
+**So fan-out is multi-mention.** `@alice @bob the page double-charges` commits a row per named
+agent, each carrying the user's own words with the user's own authority. Ticket 05's "a message
+lands in exactly one agent's session" holds N times rather than bending once, and `spec.md`'s
+out-of-scope line is amended to draw the boundary it had assumed: what is forbidden is the
+*implicit* surface, and blobot never decides who a message is for or widens a list the user did
+not type.
+
+**Addressing is now the leading run of mentions**, and a mention after the first ordinary word
+is a reference — so `ask @bob about @alice's branch` reaches Bob alone. That **replaces "last
+valid mention wins"**, which is ticket 12's, so ticket 12 carries a second reopen. `ship it @bob`
+stops working, knowingly: two rules to preserve an hours-old behaviour is worse than one rule.
+
+`promptFromUser(agentIds, text)`: one budget reset, one read of the clock, every row committed
+before any turn starts — a turn can message a teammate mid-flight, and a recipient not yet
+written to would take that wake before the user's own words. The team pane groups the rows into
+the one bubble that was typed, on `(text, at)`; the heuristic's failure mode needs the same
+sentence dispatched twice inside one millisecond, and it is named on the ticket rather than
+hidden. The field draws three states now — addressing, naming, unresolved — and the send control
+reads `Alice, Bob +1`, which `DESIGN.md` records.
+
+**Issues 03 and 04 closed with it.** 03 without the ADR it asked for, because nothing relays and
+the envelope is untouched; the posture is on the ticket so nobody re-litigates it. 04 as "the ack
+is the answer", which is what ticket 05 already decided and which no router now exists to
+disturb. **Issue 05 is unblocked and reframed**: an agent that says "I'll ask Bob" and never
+calls the tool is a peer failure that exists today, and blobot will surface it — trigger scoped
+to a teammate *the user named in that prompt*, lexical and never inference, worded as an
+observation, offering no button that sends the message for her. That and its mock scenario are
+issue 05's own pass.
+
+**Decided and deliberately unbuilt**: a turn that only routes should not count against
+`turnBudget`, defined by what it did rather than by who did it. Nothing in this answer spends it.
+
+Reviewed on screen with the demo prompting both agents: one bubble, `TO ALICE, BOB`, both
+blobatars working off it.
+
+**Found by the author on the first real team, and fixed the same hour.** `hermes-agent` predates
+leads, so its `lead_agent_id` is NULL — which is the decided behaviour — and typing into its team
+pane produced a disabled arrow and nothing else. The state announced itself only in the
+placeholder, which is gone by the second keystroke, and in a tooltip nobody hovers. The composer
+now says `say who with @ · or give this team a lead` whenever the field has words in it and
+nowhere to send them, suppressed while the mention menu is up. It names both exits and promotes
+nobody, which is the whole rule this feature turns on. The general lesson for the next state like
+it: **a placeholder is not where a condition lives, because a placeholder is gone exactly when the
+condition starts to matter.**
+
+### The rail's two rows are one column, 2026-08-30
+
+Two small things on top of the folder work, both from the author looking at the built rail.
+
+**A team row is now the same box as an agent row**, padding included. It stood 11px taller,
+which made a column of teams and their members read as two lists stacked rather than one. The
+heights are equal rather than tuned to be equal: both rows are two lines of text at about 37px,
+which is taller than either icon, so the icon cannot drive the height and matching the padding is
+sufficient. That took the team mark from 46px to 34px, the agent face's size — which is the right
+answer anyway, since the two occupy the same slot in the same column.
+
+The folder's faces come down with it, to about 18px. That is well under the floor a blobatar
+normally has, and it is the same licence as before: the floor is on *motion*, and a peeking face
+does not move.
+
+**The lead is named on the row it is about** — a mono `LEAD` beside that agent's name. The team's
+lead already decided something visible (the composer writes to it when the user names nobody, and
+the send control says so), but nothing in the rail said which agent that was. Deliberately quiet:
+a bordered mono word in `--muted`, taking ink on hover and on the selected row. Not an inversion,
+because both inversions are spent — `waiting`, and an armed primary button.
+
+Only the open team's rows carry it. `UiTeam.leadAgentId` is an Agent id and the rail already has
+the team; a backgrounded team's summary carries a *profile* id instead, and the shut folder is not
+the place to answer a question about which session an unaddressed message lands in.

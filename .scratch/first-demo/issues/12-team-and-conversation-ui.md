@@ -292,6 +292,8 @@ persists for the session, which makes it a rule the user authored with nowhere t
 it.
 
 The conversation header also gains a small permanent posture indicator beside the branch.
+**Withdrawn 2026-08-30** by ticket 14's own amendment of that date: the header carries no
+posture line any more. See the amendment below.
 
 Neither changes anything decided above — `waiting` already had its contrast inversion, and the
 block sits in a position the layout already uses.
@@ -339,10 +341,13 @@ always stays where the face goes.
 **The conversation header is one mono hairline row.** It carried a blobatar, the agent's name in
 bold, its role and its status word — and the selected rail row a few pixels to its left carries
 every one of those, larger, including the same `StatusWord`. What is left is the three facts the
-rail does not carry: the role, the runtime, where this agent is working, and ticket 14's posture
-indicator. Nothing above the transcript is saturated or bold any more, and the header carries no
-status at all, which supersedes this ticket's "the header carries the state" wherever it appears
-above.
+rail does not carry: the role, the runtime and where this agent is working. Nothing above the
+transcript is saturated or bold any more, and the header carries no status at all, which
+supersedes this ticket's "the header carries the state" wherever it appears above.
+
+Ticket 14's posture line went from the header the same day, on the author's call, and its reason
+is recorded on ticket 14: a sentence printed over every pane all day is not read either, and it
+was spending a third of the one line left on a fact that never changes.
 
 **The send button shows the recipient's name, never their face.** The pill, the `@mention` the
 user just typed and the tooltip already name them; a face on a button also reads as the
@@ -359,3 +364,100 @@ reading, which for a whole turn quoted back is rarely true. One blobatar rather 
 because the near end of the route is the pane the line is already sitting in.
 
 `DESIGN.md` carries all four, and `Foldable` is gone with the fold.
+
+## Amendment, 2026-08-30: the rail keeps its order, and a team is a folder
+
+Raised by the author. Two things, and the first is a prerequisite for the second.
+
+**A team keeps its place in the column when you open it.** The rail built its rows as *"the
+running team, then everything else"*, so clicking a team hoisted it to the top and every other
+row shifted under the pointer: the order of the list depended on what you last clicked, and the
+team you were on a minute ago was never where you left it. `listTeams` already orders by
+`createdAt` and that order is stable across every switch, so the rail renders it.
+
+The hoist was never an ordering decision. It was a **lookup** solved with one — the running team
+is drawn from the `team` prop rather than from its summary row, because the summary carries none
+of what the conversation knows and demo mode has no row for it at all. The substitution happens
+in place now, and the prepend survives only for the demo case that needed it.
+
+**A team row is a folder.** Monochrome, with up to three members peeking over the front panel and
+a `+N` on the panel for the rest. Three decisions inside that:
+
+- **Cropped by the front panel, and sized to the folder rather than to the box.** A face that
+  hangs past the folder's sides reads as standing beside a container rather than in one, which is
+  what happened at first: three faces at full size came to 98 of the box's 100 units inside a
+  folder that is 84 wide.
+- **A peeking face may be small, and a blobatar elsewhere may not.** The ~26px floor the 26→34
+  pass established is a floor on *motion* — under it, breathing at `scale(1.035)` is half a
+  pixel — and these faces do not move: the folder carries the team's folded status and they are
+  its cargo. All a peeking face has to do is be identifiable, which a blob with its own hue
+  manages well under that floor. This is the fact that lets three of them fit.
+- **Three peek, and the rest is a count.** A folder shows the first few of what is in it, so a
+  team of four draws three and `+1`.
+- **The open folder stands open, and is empty.** Its front is a pocket flared wider than the box
+  at the top and narrower at the bottom — the ordinary open-folder shape. Three gentler
+  treatments were tried and all three failed the same way: a tapered clip-path, a dropped panel
+  and a rotated flap each drew a folder that was merely *empty*, and empty already means
+  something in this column, being the dashed ghost of a team with nobody on it. Keeping one face
+  in the open folder was tried too and is a worse lie than the one it was meant to fix: a folder
+  with a single face reads as *a team of one*, drawn for precisely the team whose whole roster is
+  listed underneath it.
+
+  The folder is drawn as two inline SVG paths rather than as bordered boxes, because a
+  `clip-path` on a bordered box loses the stroke down every slanted edge: the open pocket would
+  be a filled wedge with a hairline on two sides of four. The stroke is `non-scaling`, so it is
+  one physical pixel at 46px and still one at 160.
+
+  Two things about the geometry, both of them corrections. **The back stops at y=58**, well above
+  the bottom of either front: it is a back, none of it below the fold is meant to be seen, and at
+  full height its two bottom corners came out past the sides of the narrowing pocket and read as
+  a misalignment. And **the folder is drawn inset**, x 4..96 rather than to the edges: it is
+  chrome around the only saturated thing on the page, and a folder drawn to the box's edges made
+  the faces the smaller half of their own mark.
+
+The mark's single folded-status animation moves with it: the **folder** carries the status, not
+the faces in it. Same keyframes, same durations, applied to the container. A folder that moves is
+one thing moving, which is what the fold is a claim about.
+
+The fly-out — the members leaving the folder for their rows when a team opens — is built, and it
+**contradicts an interaction-motion rule**, which is why it is written down here rather than
+merely done. `DESIGN.md` said *nothing on the paths that are walked all day*, and named team
+switching. Two things about that.
+
+The clause was written when a team row was a static cluster of faces, where switching was a pure
+data swap and any motion on it would have been decoration on a frequent path. A row is a folder
+now, and shut and open are structurally different things — cargo in a container, or a list of
+rows. The travel is what makes them one object instead of two pictures.
+
+And the frequency objection is met rather than waived: **under 250ms including the stagger, never
+gating a click, cancellable mid-flight** because A → B → C is ordinary in a column of teams. It
+also satisfies the rule immediately below the one it breaks, *nothing that carries meaning of its
+own*: the folder and the rows already say what the roster is, so a reader who misses it, or who
+asked for reduced motion, has lost nothing.
+
+`DESIGN.md` now carries this as its one named exception. If that reads as too much rope, this is
+the paragraph to reopen.
+
+## Reopened again, 2026-08-30: "last valid mention wins"
+
+The second reopen, and a different sentence from the first. *The recipient is an `@mention`, not
+a picker* decides that a message has **one** recipient and that **the last valid mention wins**.
+Both halves are now false, and `.scratch/team-addressing/issues/02-does-a-coordinator-earn-its-turn.md`
+is where they were argued.
+
+**A message still lands in exactly one agent's session** — that is ticket 05 and it does not
+bend. What changed is that one thing the user types can commit **more than one message**:
+`@alice @bob the page double-charges` writes a row per named agent, each carrying the user's own
+words with the user's own authority. That is the fan-out the author asked for, and the reason it
+is not the broadcast surface this ticket removed is that blobot never decides who a message is
+for and never expands a set the user did not type.
+
+**The addressing rule is now the leading run.** Mentions before the first ordinary word are the
+recipients; a mention later in the sentence is a reference, so `ask @bob about @alice's branch`
+reaches Bob alone. `ship it @bob` no longer sends to Bob, which is a real loss taken on purpose:
+keeping it would mean two rules, the second existing only for a behaviour that was hours old.
+
+Everything else in this ticket stands, including the reopen above it: `@` is still the human's
+addressing gesture, an agent pane's implicit recipient is unchanged, the team pane's implicit
+recipient is still the lead when nobody is named, and the composer still says who it resolved to
+— now up to two names and a count.

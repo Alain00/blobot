@@ -101,7 +101,7 @@ async function harness(
     prompts,
     budget,
     async run(agentId, text) {
-      const done = orchestrator.promptFromUser(agentId, text);
+      const done = orchestrator.promptFromUser([agentId], text);
       await clock.runAll();
       await orchestrator.settled();
       await done;
@@ -152,6 +152,39 @@ describe('a peer message end to end', () => {
     expect(woken).toContain('From Alice (frontend), a teammate, not the operator:');
     expect(woken).toContain('Their context: I rewrote refresh()');
     expect(woken).toContain('Teammates you can message: Alice (frontend)');
+  });
+});
+
+// Issue 02 of `.scratch/team-addressing/`: the fan-out that was chosen over a coordinator.
+describe('one prompt, several agents', () => {
+  it('commits a row per named agent, all carrying the same words at the same moment', async () => {
+    const h = await harness({});
+    const done = h.orchestrator.promptFromUser([alice.id, bob.id], 'the page double-charges');
+    await h.clock.runAll();
+    await h.orchestrator.settled();
+    await done;
+
+    const fromUser = [alice, bob].flatMap((agent) =>
+      h.store.forAgent(agent.id).filter((message) => message.fromAgentId === null),
+    );
+    expect(fromUser.map((message) => message.toAgentId)).toEqual([alice.id, bob.id]);
+    expect(new Set(fromUser.map((message) => message.body)).size).toBe(1);
+    // One read of the clock, which is what lets the team pane draw one bubble.
+    expect(new Set(fromUser.map((message) => message.at)).size).toBe(1);
+    // Both really ran: this is the two-blobatars-busy case the ticket was about.
+    expect(h.prompts.get(alice.id)).toHaveLength(1);
+    expect(h.prompts.get(bob.id)).toHaveLength(1);
+  });
+
+  it('spends the budget once for the whole fan-out, not once per agent', async () => {
+    const h = await harness({});
+    const done = h.orchestrator.promptFromUser([alice.id, bob.id], 'have a look');
+    await h.clock.runAll();
+    await h.orchestrator.settled();
+    await done;
+
+    // Two agents named is two of the ten, rather than a reset each time round.
+    expect(h.orchestrator.turnsThisPrompt).toBe(2);
   });
 });
 

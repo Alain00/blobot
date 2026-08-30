@@ -156,7 +156,7 @@ describe('the voices, after the roster stopped being passed down', () => {
   const at = 1_700_000_000_000;
 
   it('names the recipient of your message, in the team pane only', () => {
-    const items: Item[] = [{ kind: 'user', id: 'u', at, agentId: 'b', text: 'have a look' }];
+    const items: Item[] = [{ kind: 'user', id: 'u', at, agentIds: ['b'], text: 'have a look' }];
     expect(draw(items, { kind: 'team' })).toContain('to Bob');
     expect(draw(items, { kind: 'agent', agentId: 'b' })).not.toContain('to Bob');
   });

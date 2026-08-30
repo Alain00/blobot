@@ -26,7 +26,8 @@ import type {
  */
 const api: BlobotApi = {
   snapshot: () => ipcRenderer.invoke('blobot:snapshot') as Promise<UiSnapshot>,
-  prompt: (agentId, text) => ipcRenderer.invoke('blobot:prompt', agentId, text) as Promise<void>,
+  prompt: (agentIds, text) =>
+    ipcRenderer.invoke('blobot:prompt', agentIds, text) as Promise<void>,
   resumeAfterBudget: () => ipcRenderer.invoke('blobot:resume') as Promise<void>,
   chooseWorkspace: () =>
     ipcRenderer.invoke('blobot:chooseWorkspace') as Promise<string | undefined>,

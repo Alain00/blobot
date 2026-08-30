@@ -159,7 +159,8 @@ function castOf(
 ): Cast {
   switch (item.kind) {
     case 'user':
-      return { toName: byId.get(item.agentId)?.name ?? item.agentId };
+      // Everybody it went to, in the order they were addressed. One name is the ordinary case.
+      return { toName: item.agentIds.map((id) => byId.get(id)?.name ?? id).join(', ') };
     case 'agent': {
       const agent = byId.get(item.agentId);
       return {

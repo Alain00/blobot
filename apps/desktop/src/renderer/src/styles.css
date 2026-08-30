@@ -159,10 +159,18 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* When it last spoke, and the line it spoke. The preview takes the width and truncates; the
    status word beside it never does, because a half-printed state is worse than none. */
 .agentrow .when{font-family:var(--mono);font-size:10px;color:var(--muted);flex:0 0 auto}
+/* The lead. Quiet on purpose: it is a standing fact about the team, not an event, and the row
+   it sits on is already the loudest thing about that agent. */
+.agentrow .lead{font-size:9px;letter-spacing:.09em;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 3px;line-height:13px;flex:0 0 auto}
+.agentrow:hover .lead,.agentrow.sel .lead{color:var(--ink)}
 .agentrow .preview{color:var(--muted);font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .agentrow .sub .stat{flex:0 0 auto}
 .agentrow:hover .preview,.agentrow:hover .role{color:var(--ink)}
-.teamrow{display:flex;gap:11px;align-items:center;padding:10px 8px 10px 6px;width:calc(100% - 12px);margin:0 6px;border-radius:12px;text-align:left}
+/* The same box as an agent row, down to the padding, because the two sit in one column and a
+   team row standing 11px taller made the rail look like two lists. The heights are equal rather
+   than tuned to be: both rows are two lines of text at 37px, which is taller than either icon,
+   so the icons cannot drive the height and the padding is all that is left to match. */
+.teamrow{display:flex;gap:11px;align-items:center;padding:9px 8px;width:calc(100% - 12px);margin:0 6px;border-radius:12px;text-align:left}
 .teamrow.sel{background:var(--raised)}
 .teamrow .who{min-width:0;flex:1}
 .teamrow .nm{display:flex;align-items:baseline;gap:6px}
@@ -176,8 +184,8 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    every team but the one on screen, because the row was handed a count instead of its members.
    The ghost holds the mark's whole box so the names stay on one left edge, and draws a single
    silhouette inside it at the size a team of one would be. */
-.teamrow.off .ghost{position:relative;width:46px;height:46px;flex:0 0 auto}
-.teamrow.off .ghost::after{content:"";position:absolute;left:7px;top:7px;width:32px;height:32px;border:1px dashed var(--line);border-radius:40% 60% 55% 45%}
+.teamrow.off .ghost{position:relative;width:34px;height:34px;flex:0 0 auto}
+.teamrow.off .ghost::after{content:"";position:absolute;left:5px;top:5px;width:24px;height:24px;border:1px dashed var(--line);border-radius:40% 60% 55% 45%}
 /* A team you are not in reads one step back: lighter name, muted ink. Contrast is the app's
    attention channel, and the team on screen is what has it. */
 .teamrow.off b{font-weight:400;color:var(--muted)}
@@ -208,16 +216,36 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* The rail's own size for a chrome button: the 32px circle would be taller than the row's
    second line and would push the name off centre. */
 .iconbtn.sm{width:24px;height:24px;background:var(--ground)}
-/* The team reads as one mark: its members packed into a square, arranged by how many there
-   are. Members are laid out absolutely by `TeamMark`, which owns the arithmetic; the animation
-   sits on the box, so the whole cluster moves as one thing. */
+/* The team reads as one mark: a monochrome folder with its members peeking over the front.
+   The container is chrome and the faces are the only colour in it, which is the governing rule
+   as an object rather than merely obeyed. `TeamMark` owns the arithmetic of where a face sits;
+   everything here is the folder around them, and `TeamMark` owns its paths. */
 .mark{position:relative;flex:0 0 auto;display:block;--cut:var(--ground)}
+/* The two halves of the folder, each an inline SVG filling the box. `TeamMark` owns the paths;
+   these rules only say what colour they are and which one is in front.
+
+   `--ground` for the back and `--raised` for the front: the back is the inside of a container,
+   which is not lifted off the page, and the front is the near side, which is. */
+.mark svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.mark .back path{fill:var(--ground);stroke:var(--line)}
+.mark .front path{fill:var(--raised);stroke:var(--line)}
 /* Members overlap, so each is cut out of the ground behind it. The cut follows the silhouette
    rather than a circle, because these are blobs and not headshots. */
 .mark > .blob{position:absolute;filter:drop-shadow(1.5px 0 0 var(--cut)) drop-shadow(-1.5px 0 0 var(--cut)) drop-shadow(0 1.5px 0 var(--cut)) drop-shadow(0 -1.5px 0 var(--cut))}
 .teamrow.sel .mark{--cut:var(--raised)}
-/* the same dashed silhouette an empty team's ghost wears, so `+2` reads as members not drawn */
-.more{position:absolute;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--muted);border:1px dashed var(--line);border-radius:40% 60% 55% 45%}
+/* The rest of the team, labelled on the front panel where a folder carries its label. Inside
+   the panel, not under it: hanging below the mark it read as a detached footnote. */
+.mark .more{position:absolute;right:7%;bottom:20%;font-size:9px;line-height:1;color:var(--muted)}
+/* In a folder the container is the body that moves and the faces are cargo, so the seven status
+   animations come off the blobs and onto the mark. Same keyframes, same durations: this is where
+   they are applied, not a second vocabulary. */
+.mark.folder > .blob{animation:none}
+.mark.folder{transform-origin:50% 62%}
+.mark.folder.b-thinking{animation:breathe 2.6s ease-in-out infinite}
+.mark.folder.b-working{animation:bob .9s ease-in-out infinite}
+.mark.folder.b-responding{animation:nod 1.15s ease-in-out infinite}
+.mark.folder.b-starting{animation:fadein 1.4s ease-in-out infinite;opacity:.55}
+.mark.folder.b-waiting{animation:jolt 2.2s ease-in-out infinite}
 .railadd{color:var(--muted)}
 .railadd:hover{color:var(--ink)}
 .raillabel{padding:12px 14px 6px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -239,7 +267,10 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* One pill, centred over the same column as the transcript, with a round send inside it. The
    bar it replaced was a full-width rule with a mono button pinned to the far right, which put
    the control furthest from the words being typed. */
-.composer{flex:0 0 auto;padding:12px 20px 16px;display:flex;justify-content:center}
+.composer{flex:0 0 auto;padding:12px 20px 16px;display:flex;flex-direction:column;align-items:center;gap:7px}
+/* Said only when the field has words in it and nowhere to send them, which is the one moment
+   the placeholder that used to say it is gone. Names both exits and promotes nobody. */
+.stranded{width:100%;max-width:900px;padding-left:16px;font-family:var(--mono);font-size:11px;color:var(--muted)}
 .pill{width:100%;max-width:900px;display:flex;gap:10px;align-items:center;background:var(--raised);border:1px solid var(--line);border-radius:22px;padding:8px 8px 8px 16px}
 .pill:focus-within{border-color:var(--muted)}
 .composer input{flex:1;background:transparent;border:none;color:var(--ink);font:inherit;outline:none}
@@ -262,6 +293,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .hl{position:absolute;inset:0;pointer-events:none;white-space:pre;overflow:hidden;font:inherit;color:var(--ink)}
 .hl .ph{color:var(--muted)}
 .hl .m{color:var(--ink);font-weight:500;box-shadow:inset 0 -1px 0 var(--ink)}
+.hl .m.ref{box-shadow:none}
 .hl .m.bad{color:var(--muted);box-shadow:inset 0 -1px 0 var(--line)}
 /* The same object as the select's menu — a floating list of rows over a control, with one
    active item — so it takes the same numbers rather than a second set that happens to be close.
