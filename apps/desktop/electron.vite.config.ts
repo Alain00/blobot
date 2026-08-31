@@ -1,5 +1,5 @@
 import react from '@vitejs/plugin-react';
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
+import { defineConfig } from 'electron-vite';
 
 /**
  * `@blobot/core` is workspace TypeScript source, so it is bundled rather than externalized —
@@ -8,9 +8,11 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
  */
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin({ exclude: ['@blobot/core'] })],
-    build: { rollupOptions: { external: ['better-sqlite3'] } },
+    build: {
+      externalizeDeps: { exclude: ['@blobot/core'] },
+      rollupOptions: { external: ['better-sqlite3'] },
+    },
   },
-  preload: { plugins: [externalizeDepsPlugin({ exclude: ['@blobot/core'] })] },
+  preload: { build: { externalizeDeps: { exclude: ['@blobot/core'] } } },
   renderer: { root: 'src/renderer', plugins: [react()] },
 });
