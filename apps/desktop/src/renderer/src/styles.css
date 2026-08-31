@@ -594,9 +594,19 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    `overscroll-behavior` keeps that scroll from continuing into the log underneath. */
 .feedtop{position:sticky;top:0;z-index:2;background:var(--recessed);padding-top:14px;max-height:min(60%,420px);overflow:auto;overscroll-behavior:contain}
 .feedhead{padding:0 14px 10px;display:flex;align-items:baseline;justify-content:space-between}
-.fev{display:flex;gap:8px;padding:5px 14px;font-family:var(--mono);font-size:11px;color:var(--muted);align-items:baseline}
+/* An entry is two lines: when and who, then what happened under them.
+
+   It was one line of three columns, and in a 288px column that arithmetic does not work: the
+   time takes about 52px and a two-word agent name about 100, which leaves the event itself
+   around eleven characters. So every row with a real tool name on it broke mid-token and
+   clamped, and the log read as a column of fragments rather than as a list of events. The
+   stack costs nothing on those rows — they were already two lines — and gives the event the
+   column's whole width. The name still truncates rather than wrapping, for the roster whose
+   names are longer than the column however it is laid out. */
+.fev{display:flex;flex-direction:column;gap:1px;padding:5px 14px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.fev .line{display:flex;gap:8px;align-items:baseline;min-width:0}
 .fev .t{opacity:.5;flex:0 0 auto}
-.fev .who{color:var(--ink);flex:0 0 auto}
+.fev .who{color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* A tool is named after its command, and a command runs to six lines of `&&`. Two lines is
    what the log can spend on one entry; the model has already flattened and cut it, this is the
    guard for a long unbroken token. */
@@ -635,7 +645,12 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    nothing has been sent, and then it needs no gap above it. */
 .sentnote{padding-top:4px;opacity:.6;line-height:1.45}
 .sentnote:first-child{padding-top:0}
-.ctxrow .who{color:var(--ink)}
+/* One row per agent, which is what the head's own ceiling is measured against — so a name
+   longer than the column is truncated and never wrapped. Wrapped, it took the row to two lines,
+   pushed the face off the text's centre and moved the numbers out of the column they are lined
+   up in. The name is recoverable one glance away: the same roster, in the same order, is on the
+   rail and in the workspace block right under this one. */
+.ctxrow .who{color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* The numbers push right and the percent lands on one edge, so two agents read as a column
    of occupancies rather than as two sentences of different lengths. */
 .ctxrow .n{margin-left:auto}

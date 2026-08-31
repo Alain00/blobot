@@ -107,8 +107,14 @@ function FeedLine({ entry, who }: { entry: FeedEntry; who: string }): React.JSX.
   const time = new Date(entry.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   return (
     <div className={`fev${entry.emphasis === true ? ' hi' : ''}`}>
-      <span className="t">{time}</span>
-      <span className="who">{who}</span>
+      {/* When and who, over what happened. Three columns in a 288px column left the last one
+          about eleven characters wide, so `mcp__meta-ads__ads_users` broke mid-token on every
+          row and the log read as a wall of clamped fragments. The stack costs no height on the
+          rows that were already wrapping and gives the event the column's full width. */}
+      <span className="line">
+        <span className="t">{time}</span>
+        <span className="who">{who}</span>
+      </span>
       <span className="what">{entry.text}</span>
     </div>
   );
