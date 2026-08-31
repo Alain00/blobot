@@ -6,6 +6,10 @@ four runtimes `CLAUDE.md` names, so this is a genuine addition rather than a pro
 Not observed: `cursor-agent` is not installed on this machine, only the editor. Everything here is
 read out of Cursor's published CLI documentation and none of it has been run.
 
+> **Superseded 2026-08-31**: the CLI is installed now and ticket 01 was measured live. Several of
+> this spec's premises are refuted — start from `map.md` in this directory; the tickets hold the
+> answers.
+
 ## The finding
 
 **ACP is first-party and the best of the four**, and there is one blocker that decides whether any

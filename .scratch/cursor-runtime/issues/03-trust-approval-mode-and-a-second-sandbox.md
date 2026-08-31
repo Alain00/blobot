@@ -1,5 +1,5 @@
 Type: task
-Status: open
+Status: resolved
 Blocked by: 01
 
 # Trust, `approvalMode`, and a second sandbox
@@ -54,3 +54,54 @@ Expected shape, to be argued with:
 All of it has to travel through the config directory from ticket 01. If that directory turns out
 not to be per agent, then trust is per machine on this runtime, which would be a reason not to
 ship it rather than a thing to paper over.
+
+## Answer
+
+Decided with the author, 2026-08-31, on ticket 01's measurements. The three attended trust words
+each get a **real, distinct** Cursor translation — genuine equivalence with the other runtimes,
+not nomenclature parity, which is the author's stated bar. Cursor is the second runtime after
+Claude that can express the gradation at all.
+
+- **`approvalMode: allowlist` at every level, ACP mode pinned to `agent`.** `plan` and `ask` are
+  read-only and never offered; `unrestricted` / `--force` / `--yolo` are ticket 14's refusal.
+  Re-assert the mode after `session/load` (the OpenCode lesson) — `availableModes` was observed
+  on `session/new`, so the assertion has something to check against.
+- **`permissions.allow` widens as trust widens**, mirroring `adapters/claude/permissions.ts`'s
+  verbs in Cursor's own syntax: `Shell(cmd)` / `Shell(cmd:args*)`, `Read(**)` and `Write(**)`
+  (workspace-scoped per the docs) from `normal`, network and installers at `trusting`, `git`
+  split by verb (`Shell(git:status*)` and the other reading verbs vouched from `normal`; `push`
+  and `remote` in no list, so they prompt). The `command:args` matching semantics are documented
+  but unmeasured — **live-verify the git split during the build** before believing it, and fall
+  back to leaving `git` wholly unlisted (safe: everything prompts) if the syntax cannot express
+  the split.
+- **`permissions.deny` stays empty at every attended level — the PR is refuted here.** Measured:
+  a denied command is a *silent hard block* whose `tool_call` reports `completed`; no
+  `session/request_permission` is sent. blobot's dangerous verbs (`rm`, `sudo`, `chmod`, `chown`,
+  `ssh`, `scp`, `docker`, `git push`, `git remote`) **ask at every level** — the user may still
+  say yes — so on Cursor they are simply *unlisted*, which measured as a prompt ("Shell allowlist
+  is empty"), never denied, which would take the decision away from the user. The PR's
+  `ALWAYS_DENY` list implements the wrong semantics with the right names.
+- **`Mcp(blobot:*)` in `allow` at every level, `careful` included.** Measured: MCP tool calls
+  prompt. A peer message must never wait on a human — the Codex lesson, solved in config instead
+  of by answering requests. At `careful` it is the *only* allow entry.
+- **An `allow-always` answer persists in the session store under `CURSOR_CONFIG_DIR`**, not in
+  `cli-config.json` — per agent, readable and deletable as a directory blobot owns, dead with it.
+  The inline permission block's *where an always goes* sentence names that, the way it names
+  `settings.local.json` on Claude.
+- **The sandbox is a constant, not a dial** (the Codex effort's answer, adopted):
+  `sandbox.mode: enabled`, `networkAccess` allowed, at every trust level — more containment than
+  the vendor's measured default (`disabled`), chosen deliberately: an agent that cannot install
+  a dependency is hobbled, and the AgentWorkspace scoping is ticket 10's enforcement, not
+  ticket 14's dial. **The build must verify the sandbox does not break the loopback to
+  `127.0.0.1`** before this ships; if it does, that is a reopened ticket, never a silent
+  `disabled`.
+- **`unattended` is not declared by Cursor yet.** `--auto-review` is the same shape as Claude's
+  `auto` — a server classifier deciding the unvouched tail — and is the measured-in-shape
+  candidate for Cursor's fourth position. It waits on its own measurement effort (does the
+  classifier consult `deny`? do the nine verbs hold under it?), the same dedicated measurement
+  Claude's `unattended` got the day it shipped. `trustLevelsFor` declares the three attended
+  levels; the author wants the full set eventually, on real measurement.
+
+All of it travels in `cli-config.json` inside the per-agent `CURSOR_CONFIG_DIR`, which ticket 01
+measured as both relocated and enforced. The editor's own rules and the repository's `AGENTS.md`
+keep working untouched (ADR-0003); blobot narrows nothing there.

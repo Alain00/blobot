@@ -1,5 +1,5 @@
 Type: task
-Status: open
+Status: resolved
 
 # The two extension methods that block the turn
 
@@ -53,3 +53,21 @@ silently. An unanswered plan request must not become an approved plan.
 Whatever is chosen, an unknown blocking extension method must get an error reply rather than
 silence, so a future Cursor release adding a sixth method degrades into a visible refusal instead
 of an agent that hangs.
+
+## Answer
+
+Option 1, for both, as this ticket itself recommended and the author confirmed 2026-08-31:
+
+- **`cursor/ask_question`** is answered with a refusal in the agent's own channel — no user is
+  available, decide with what you have. The provider-agnostic transcript block (*blobot asks a
+  question*) is a later effort, raised only if the refusal turns out to be common in practice.
+- **`cursor/create_plan`** is rejected. blobot never approves a plan silently; an unanswered
+  plan request must not become an approved plan.
+- **An unknown blocking method gets a JSON-RPC error**, never silence, so a future release's
+  sixth method degrades into a visible refusal instead of a hang.
+- The three notifications (`update_todos`, `task`, `generate_image`) are ignored for now.
+
+The PR's `extensions.ts` survives audit: it implements exactly this. Its response shapes
+(`outcome: "skipped"` / `outcome: "rejected"`) are unmeasured guesses — verify against the real
+wire in ticket 06's live test before believing them. Neither method fired across the three
+measured turns, so the wire shapes come from the build, not from ticket 01.

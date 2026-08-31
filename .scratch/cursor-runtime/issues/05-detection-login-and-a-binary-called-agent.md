@@ -1,5 +1,5 @@
 Type: task
-Status: open
+Status: resolved
 
 # Detection, `agent login`, and a binary called `agent`
 
@@ -41,3 +41,28 @@ thing that owns the login. `agent login` on a PTY is the answer that already exi
   by default". Find out whether that can happen mid-session and, if it can, whether it can be
   turned off for blobot's child processes only. A runtime that swaps its own binary between two
   turns is a new failure mode none of the other three have.
+
+## Answer
+
+Measured on a real install (2026.08.25-3e8eec8): the installer drops **both** `cursor-agent`
+and `agent` into `~/.local/bin`. Decided by the author, 2026-08-31:
+
+- **Probe only `cursor-agent`, never the bare name.** The distinctive binary always exists after
+  a real install, so the PR's `alsoNamed: ['agent']` + `looksLike` verification machinery is
+  dropped — simpler, and it cannot be fooled because it never looks at the collision-prone name.
+- **Auth probe: `cursor-agent status --format json`** (measured signed-in: exit 0,
+  `{"status": "authenticated", "isAuthenticated": true, ...}`). The signed-out shape was not
+  observed (signing out would have cost the author's session); the probe requires
+  `isAuthenticated: true` and treats everything else as not signed in — a negative is reliable,
+  a positive is not, and the word *authenticated* stays the vendor's wire vocabulary, never
+  blobot's copy.
+- **Remedies rows**: install `curl https://cursor.com/install -fsS | bash` (lands in
+  `~/.local/bin`, already in the cascade); sign-in `cursor-agent login` on the PTY.
+- **`CURSOR_API_KEY` and `CURSOR_AUTH_TOKEN` are stripped from the child's environment**;
+  `--api-key` / `--auth-token` never appear on argv; the in-protocol `authenticate`
+  (`cursor_login`) is never used — a launch that would need it fails with a sentence naming
+  `cursor-agent login`, the way a `not_installed` runtime is refused by name.
+- **Auto-update: accepted named risk.** `agent update` exists and `channel` in `cli-config.json`
+  selects the release stream; no per-process off-switch was found. If one appears, use it; the
+  planning does not block on it. A binary that swaps mid-session remains a failure mode to
+  recognise, not one we can prevent today.
