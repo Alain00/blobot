@@ -494,3 +494,147 @@ there is still no screen listing what an agent may currently do, nothing showing
 except by opening that file. And the user's own settings still outrank all three levels, which is
 asserted live rather than assumed: `ask` and `deny` sit above `allow`, and every level is built
 out of `allow`.
+
+## Amendment, 2026-08-31: `gh` was sorted by its transport, and is split on the verb
+
+Raised by the author from the working surface: *"claude code keeps asking for permissions, for
+example read only operations to gh cli."* True, and it is this ticket's own defect rather than a
+level being set too low.
+
+### What was wrong
+
+Both adapters treated `gh` as one atom, under the heading this ticket wrote for it — *the
+commands that reach the network, change permissions, or publish*. So `gh pr view` sat in the
+same bucket as `curl`, `wget` and `npm install`, and an agent at `normal` — the default, and
+therefore almost every agent — stopped and waited for a human before it could read a pull
+request description.
+
+The list contradicted itself two lines up. **`git fetch` and `git pull` have been vouched at
+`normal` since the first amendment**, and both are reads over the same network, against the same
+host, frequently against the same repository. The axis was never *reaches the network*: had it
+been, those two would have been out as well and an agent could not fetch its own remote. The
+axis is **what the verb does**, which this ticket already applied to `git` correctly and to `gh`
+not at all. `gh` was classified by how it talks rather than by what it says.
+
+It was also wrong in the other direction, which is the part that mattered more. At `trusting`,
+`Bash(gh:*)` vouched for `gh pr create` and `gh pr merge` — so the loosest level quietly
+contradicted `workspace/publish.ts`'s rule that **a pull request is the user's action and never
+an agent's**. One atom produced a prompt nobody wanted at `normal` and an allowance nobody chose
+at `trusting`.
+
+### Decision
+
+**`gh` splits on the verb, exactly as `git` does. Reads are vouched from `normal`. Writes are
+vouched at no level, `trusting` included.**
+
+Vouched: `gh pr view|list|diff|checks|status`, `gh issue view|list|status`, `gh repo view|list`,
+`gh run view|list`, `gh workflow view|list`, `gh release view|list`, `gh label list`,
+`gh search`, `gh auth status`.
+
+Never vouched, at any level: every other verb. `gh pr create`, `gh pr merge`, `gh pr close`,
+`gh release create`, `gh repo delete`, `gh secret set`, and **`gh api`** — that last one because
+`gh api -X POST` writes and neither a Claude prefix rule nor an OpenCode command glob can see a
+flag. `gh api` is a read most of the time and a write whenever it is not, and a rule that cannot
+tell the difference has to fail closed.
+
+Bare `gh` is absent from both adapters for the reason bare `git` always was: it would swallow
+every writing verb behind it.
+
+- **Claude** (`adapters/claude/permissions.ts`): the reads join `VOUCHED_BASH`, beside `git
+  fetch`. `gh` leaves `TRUSTING_BASH` entirely — its reads are vouched a level below and its
+  writes at no level, so there was nothing left for that list to add.
+- **OpenCode** (`adapters/opencode/config.ts`): `'gh *': 'ask'` stays, and the reads are appended
+  **after** it as `allow`. Rules are a flat ordered list and later rules win (research 16 §5.1),
+  and this is the shape OpenCode's own defaults already use — `external_directory: ask` followed
+  by two narrower `allow` patterns (§5.2). `'gh *'` leaves `TRUSTED_ANYWAY`, so `trusting` no
+  longer lifts the blanket rule and no longer reaches `gh pr create`.
+
+The two adapters still translate from opposite ends, and this is the first rule where the
+subtracting one has to add something back. That is worth noting rather than hiding: an
+allow-all-minus-patterns posture expresses *allow, except, except-not* only through ordering, so
+the OpenCode half is verified by asserting the **order** of the resolved list and not only its
+actions.
+
+### Verified
+
+`opencode debug agent` against a real `opencode` 1.18.4 (`adapters/opencode/live.test.ts`, this
+session): `gh *` resolves `ask`, the nineteen read patterns resolve `allow`, they appear after
+it in the resolved list, and no rule anywhere matches `gh pr create`. The Claude half is unit
+asserted on `vouchedTools`, which is where that posture is decided.
+
+### What does not move
+
+Nothing else in this ticket. Three levels, `trusting` still the ceiling, `rm`, `sudo`, `chmod`,
+`chown`, `ssh`, `scp`, `docker`, `git push` and `git remote` still asking at every level — and
+`gh`'s writing verbs join that list rather than sitting above it. This is a **reclassification
+inside `normal`**, not a loosening of it: the same question asked on the right axis.
+
+The disclosure is untouched. It never named commands after the 2026-08-29 amendment, and *"they
+ask before things that reach outside that copy or cannot be undone"* stays true — reading a pull
+request is neither.
+
+## Reopened, 2026-08-31: is `trusting` really the ceiling?
+
+Raised in the same breath as the amendment above, and deliberately **not** answered by it:
+*"the cli has an auto mode, or allow everything, how we don't have that?"*
+
+This is a real question about a real refusal and it deserves to be argued on its own terms
+rather than settled by a `gh` bug. **Status: open. Nothing in the code has changed for it.**
+
+### What is being asked for
+
+The Claude CLI offers `bypassPermissions` (and `auto`, a model classifier); OpenCode offers an
+unqualified `'*': allow`. blobot exposes neither, and `trust.ts` says there will never be a
+fourth position. A user who wants their agents to get on with it has no way to say so, and the
+gap between `trusting` and *stop asking* is the gap this ticket chose to leave.
+
+### The case for it
+
+- The person running blobot is the person who runs `claude --dangerously-skip-permissions` in
+  their own terminal. Refusing them the same posture through blobot does not make them safer, it
+  makes blobot the thing they route around.
+- `trusting` is already **not a boundary**, and this ticket says so twice. `sed`, `npm run` and a
+  script the agent just wrote all walk through it. If the list is a speed bump, a fourth level
+  removes a speed bump rather than a wall, and the difference between the two is smaller than
+  the vocabulary implies.
+- An unattended team is exactly where a prompt costs the most: nobody is watching, the turn
+  stalls, and `waiting` on a backgrounded team reaches the user only through a rail inversion.
+  Routines already concede this — a permission raised by a run **expires**, because nobody is
+  there. That is the same problem answered with a timeout instead of a level.
+
+### The case against, which is what shipped
+
+- **blobot's claim to the user is prompting, on both runtimes.** It is stated in the creation
+  flow, once, before the first agent is spawned. A fourth level makes that disclosure false for
+  the agents it applies to, so the copy has to change with it, and the honest version of that
+  copy is hard to write without it reading as a warning nobody heeds.
+- The two runtimes do not express it the same way. Claude's `bypassPermissions` is gated on
+  `ALLOW_BYPASS = !IS_ROOT || !!IS_SANDBOX`, so it can be **silently unavailable**; OpenCode's
+  `'*': allow` always works. A level that is real for Alice and refused for Bob is the
+  asymmetric-guarantee failure this ticket rejected, pointed the other way.
+- `auto` is worse than `bypassPermissions`, not better, despite sounding safer: it hands the
+  decision to an inference call blobot does not control, on behalf of an unattended agent. The
+  original answer's reasoning stands — *a user opting into a classifier for themselves in an
+  interactive terminal is not the same act as opting into it for Bob at 2am.*
+- It is the one level where an agent's mistake is unrecoverable outside the worktree. Everything
+  `trusting` allows is undoable or contained; `rm`, `sudo`, `chmod` and `git push` are the four
+  that are not, and they are precisely what a fourth level would release.
+
+### What would have to be true to ship it
+
+Not a flag on the existing selector. If this is granted it needs, at minimum: the disclosure
+rewritten so it stops claiming prompting unconditionally; a name that is not `trusting`'s
+neighbour but visibly the end of the scale; the Claude gating probed and reported rather than
+assumed, so a user who picks it is told when it did not take; and an answer to what the
+permission block and the `waiting` status mean on an agent that can no longer produce either.
+
+Left open for the author. The `gh` fix above removes the complaint that surfaced it, which is
+the right order: the wide decision should not be made under the pressure of a narrow bug.
+
+**Update, same day:** the question moved rather than closed. `.scratch/sandboxing/` was opened
+on the observation that most of the case against a fourth level is a case against
+`bypassPermissions` **outside a sandbox** — `rm`, `sudo` and `chmod` are unrecoverable because
+there is an outside for them to reach, and Claude's own help recommends bypass *"only for
+sandboxes with no internet access"*, which is the vendor drawing this exact line. That effort's
+ticket 04 carries the question in the form it would have to be answered in; this section stays
+open and stays the record of the refusal as it stands.

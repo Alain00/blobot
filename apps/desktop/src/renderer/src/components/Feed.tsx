@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { workingCeiling } from '@blobot/core/domain';
+import { percent, tokens } from '../usage.js';
 import type {
   UiAgent,
   UiInjection,
@@ -263,22 +264,3 @@ function estimate(chars: number): string {
   return `~${tokens(Math.ceil(chars / 4))}`;
 }
 
-/** A token count at a glance: `37k`, `1m`. Never rounded up to a window it has not reached. */
-function tokens(count: number): string {
-  if (count >= 1_000_000) return `${Math.floor(count / 100_000) / 10}m`.replace('.0m', 'm');
-  if (count >= 1_000) return `${Math.floor(count / 1_000)}k`;
-  return `${count}`;
-}
-
-/**
- * Floored, so a context that is not yet full never reads as full.
- *
- * Against the working ceiling rather than the advertised window, since ticket 09. The window is
- * still drawn, as the right-hand half of `used/size`, because it is what the runtime said; this
- * is the figure a reader acts on, and the two are not the same question. An agent past its
- * ceiling never reaches here — that case is words, not a number.
- */
-function percent(used: number, ceiling: number): number {
-  if (ceiling <= 0) return 0;
-  return Math.min(100, Math.floor((used / ceiling) * 100));
-}

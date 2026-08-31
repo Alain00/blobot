@@ -7,6 +7,8 @@ const LABELS: Record<string, string> = {
   'claude-code': 'Claude Code',
   opencode: 'OpenCode',
   codex: 'Codex',
+  // Lowercase on purpose: it is how Vercel Labs writes it, and a label is a name.
+  fx: 'fx',
   mock: 'Mock (demo)',
 };
 

@@ -38,6 +38,8 @@ export type {
 
 export type { TrustLevel } from './trust.js';
 export { DEFAULT_TRUST, trustLevelOf } from './trust.js';
+export type { VerbosityLevel } from './verbosity.js';
+export { DEFAULT_VERBOSITY, verbosityInstruction, verbosityLevelOf } from './verbosity.js';
 export type { WorkingCeiling } from './context-ceiling.js';
 export {
   UNMEASURED_CAP,
@@ -235,6 +237,19 @@ export {
   spawnCodexBridge,
 } from './adapters/codex/stdio-bridge.js';
 
+// The fx adapter. Same reason again, minus the bridge: `fx acp` is the user's own binary.
+export { FxAgentRuntime } from './adapters/fx/fx-agent-runtime.js';
+export type { FxAgentRuntimeOptions } from './adapters/fx/fx-agent-runtime.js';
+export {
+  FX_EXPRESSES_TRUST,
+  FX_MODE_ASK,
+  FX_MODE_CODE,
+  FX_PERMISSION_MODE_ENV,
+  fxModeFor,
+} from './adapters/fx/permissions.js';
+export { fxPersonaBlocks } from './adapters/fx/persona.js';
+export { resolveFxExecutable, spawnFx, VERIFIED_FX_VERSION } from './adapters/fx/stdio.js';
+
 export { detectRuntimes, parseOpencodeAuthList, parseVersion, stripAnsi } from './detect/runtimes.js';
 export type {
   CommandResult,
@@ -250,7 +265,12 @@ export type { RemedyKind, RuntimeRemedy } from './detect/remedies.js';
 export { openDatabase } from './store/database.js';
 export type { BlobotDatabase, OpenDatabaseOptions, OpenedDatabase } from './store/database.js';
 export { SqliteStore } from './store/sqlite-store.js';
-export type { AgentProfileRecord, AgentRecord, SessionRecord } from './store/sqlite-store.js';
+export type {
+  AgentProfileRecord,
+  AgentRecord,
+  ContextCeilingRecord,
+  SessionRecord,
+} from './store/sqlite-store.js';
 export { SqliteRecorder } from './store/recorder.js';
 
 // Ticket 09's Routines. The scheduler decides only what is due; main owns the timer, the window

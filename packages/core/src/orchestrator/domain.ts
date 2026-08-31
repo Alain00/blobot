@@ -5,6 +5,7 @@
 
 import type { AttachmentKind } from '../runtime.js';
 import type { TrustLevel } from '../trust.js';
+import type { VerbosityLevel } from '../verbosity.js';
 
 /**
  * The two answers to "may blobot start this agent a fresh session when its window fills up".
@@ -109,6 +110,15 @@ export interface AgentDefinition {
    * `.scratch/transcript-scale/issues/10-compaction-by-handoff.md`.
    */
   readonly compaction?: CompactionSetting;
+  /**
+   * How much this agent says when it answers: `brief`, `normal` or `full`.
+   *
+   * The third word in the same row as `trust` and `compaction`, and the only one of the three
+   * that never reaches an adapter: it is composed into the persona by `composePersona`, so
+   * every runtime gets it in the same sentence and none of them had to advertise it. Absent is
+   * `normal`. See `verbosity.ts`.
+   */
+  readonly verbosity?: VerbosityLevel;
   /** Standing instructions, folded into every persona composed for it. */
   readonly instructions?: string;
   /**
@@ -134,6 +144,11 @@ export interface Agent {
   readonly hue?: number;
   /** Copied from the profile, and restated by an edit. Absent is `auto`. */
   readonly compaction?: CompactionSetting;
+  /**
+   * Copied for the same reason the instructions are: the persona is composed from the Agent,
+   * so a transcript shows the agent as it was told to write at the time. Absent is `normal`.
+   */
+  readonly verbosity?: VerbosityLevel;
   /** The Agent's own isolated copy of the Workspace. A git worktree today. */
   readonly workspacePath: string;
 }

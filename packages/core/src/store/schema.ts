@@ -104,6 +104,16 @@ export const agentProfiles = sqliteTable('agent_profiles', {
    * than an accident of defaulting. See `.scratch/transcript-scale/issues/10`.
    */
   compaction: text('compaction'),
+  /**
+   * How much this agent says when it answers: `brief`, `normal` or `full`.
+   *
+   * Its own column for the third time and for the same reason: blobot's own vocabulary, which
+   * no runtime advertises. NULL is `normal`, so an agent hired before this column reads as the
+   * middle position rather than as having been quietly made terse. Unlike the two above it,
+   * nothing reads this outside `composePersona` — it never reaches an adapter. See
+   * `verbosity.ts`.
+   */
+  verbosity: text('verbosity'),
   /** Dead since 2026-08-30, kept because dropping a column is a table rebuild for no gain. */
   model: text('model'),
   /** Standing instructions, folded into the persona. Never a credential. */
@@ -164,6 +174,8 @@ export const agents = sqliteTable(
     trust: text('trust'),
     /** Copied and restated the same way again. NULL is `auto`. */
     compaction: text('compaction'),
+    /** And once more. NULL is `normal`. Read only by `composePersona`. */
+    verbosity: text('verbosity'),
     /** Dead since 2026-08-30, superseded by `runtime_options`. Never written. */
     model: text('model'),
     workspacePath: text('workspace_path').notNull(),
@@ -495,4 +507,35 @@ export const routineRuns = sqliteTable(
     seenAt: integer('seen_at'),
   },
   (table) => [index('routine_runs_routine').on(table.routineId, table.firedAt)],
+);
+
+/**
+ * The user's own answer to *where does this model stop being worth more context*.
+ *
+ * `context-ceiling.ts` says the remedy for a model that deserves better than the fallback is to
+ * measure it and give it an entry, and until now the only place an entry could land was a table
+ * in blobot's source. That is the ageing-table hazard from the other side: the person who can
+ * actually watch a model degrade is the one sitting in front of it, and they had nowhere to
+ * write what they saw. A row here is that, and it wins over the adapter's table.
+ *
+ * Keyed by the runtime and the **model string the user chose**, which is what the lookup already
+ * keys on. The empty string is a real key and means *the runtime's own default model* — Codex
+ * advertises no model option at all, so without it a whole runtime could never be given a
+ * number. It is not a guess about which model that is: it is a ceiling for *an agent that let
+ * the runtime pick*, which is exactly the agent it applies to.
+ *
+ * Not `settings`. A key-value bag is where a credential ends up six weeks from now, and the
+ * columns here are the whole of what this is: two identifiers and a token count.
+ */
+export const contextCeilings = sqliteTable(
+  'context_ceilings',
+  {
+    runtimeId: text('runtime_id').notNull(),
+    /** The model as the runtime names it, or `''` for the runtime's own default. */
+    model: text('model').notNull(),
+    /** Where the usable part of the window ends, in the tokens the runtime reports. */
+    tokens: integer('tokens').notNull(),
+    at: integer('at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.runtimeId, table.model] })],
 );

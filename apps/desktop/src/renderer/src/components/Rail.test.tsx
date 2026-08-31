@@ -20,8 +20,12 @@ import type { AgentStatus } from '@blobot/core/domain';
 import type { UiAgent, UiTeam, UiTeamSummary } from '../../../shared/api.js';
 import type { Item } from '../model.js';
 import { Rail } from './Rail.js';
+import { stubGazeHost } from '../test-dom.js';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+// This surface draws animated blobatars, so a gaze driver mounts with them. See `test-dom.ts`.
+stubGazeHost();
 
 // The rail brings the open team's group into view when the team changes, and jsdom implements
 // no scrolling at all. Stubbed rather than guarded in the component: the guard would be a line

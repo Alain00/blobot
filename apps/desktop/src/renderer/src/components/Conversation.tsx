@@ -14,6 +14,7 @@ import {
   type Row,
 } from '../model.js';
 import { timeRule } from '../time.js';
+import { useComposerFocus } from '../useComposerFocus.js';
 import { Attached } from './Attached.js';
 import { Blob } from './Blob.js';
 import { Markdown } from './Markdown.js';
@@ -64,6 +65,8 @@ export function Conversation({
   const disarm = useLatest(onDisarmRoutine);
   const rows = rowsOf(items);
   const earlier = useLoadEarlier(stream, onLoadEarlier);
+  // Where the pending faces look, and null whenever the user is not in the composer.
+  const composer = useComposerFocus();
 
   // The pane's own chrome only: App owns the column, so the composer sits under this in the
   // same flex container.
@@ -185,11 +188,24 @@ export function Conversation({
             .filter((agent) => isPending(statuses[agent.id] ?? 'idle', items, agent.id))
             .map((agent) => (
               <div className="msg pending" key={agent.id}>
+                {/* The one face in the transcript that is drawn live, and the only one that may
+                    be. `animated` is off in here because a settled message must not wear a pose
+                    or move — both would be a claim about *now* on a record of *then* — and
+                    because a transcript grows all day and this switches a blobatar to a dozen
+                    SVG nodes. Neither applies to this block: it is not a record of anything, it
+                    exists only while a turn is in flight, and there are at most as many of them
+                    as there are agents on the team.
+
+                    So it can look at the composer while the user is in it. `isPending` excludes
+                    `waiting` and `failed`, which is why this never argues with the rule that
+                    gives `waiting` the pointer: the two faces are never the same face. */}
                 <Blob
                   name={agent.name}
                   size={28}
                   status={statuses[agent.id] ?? 'idle'}
                   hue={agent.hue}
+                  animated
+                  lookAt={composer}
                 />
                 <div className="body">
                   <div className="hdr">

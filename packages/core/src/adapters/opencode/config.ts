@@ -45,6 +45,31 @@ export const BASH_PERMISSIONS: Readonly<Record<string, 'ask' | 'allow'>> = {
   'git push*': 'ask',
   'git remote*': 'ask',
   'gh *': 'ask',
+  // Reading GitHub, allowed back after the blanket `gh *` above, because rules are a flat
+  // ordered list and the later one wins. The axis is the **verb**, not the transport: `git
+  // fetch` and `git pull` are network reads and were never in this list, so `gh pr view` had no
+  // business being in it either (2026-08-31). Every writing verb stays covered by `gh *`, at
+  // every level, `gh pr create` included. `gh api` is not here: `gh api -X POST` writes and a
+  // glob on the command string cannot see the flag.
+  'gh pr view*': 'allow',
+  'gh pr list*': 'allow',
+  'gh pr diff*': 'allow',
+  'gh pr checks*': 'allow',
+  'gh pr status*': 'allow',
+  'gh issue view*': 'allow',
+  'gh issue list*': 'allow',
+  'gh issue status*': 'allow',
+  'gh repo view*': 'allow',
+  'gh repo list*': 'allow',
+  'gh run view*': 'allow',
+  'gh run list*': 'allow',
+  'gh workflow view*': 'allow',
+  'gh workflow list*': 'allow',
+  'gh release view*': 'allow',
+  'gh release list*': 'allow',
+  'gh label list*': 'allow',
+  'gh search*': 'allow',
+  'gh auth status*': 'allow',
   'npm install*': 'ask',
   'npx *': 'ask',
   'pnpm add*': 'ask',
@@ -59,10 +84,12 @@ export const BASH_PERMISSIONS: Readonly<Record<string, 'ask' | 'allow'>> = {
  * The same split the Claude adapter makes, made here by removing rules rather than by adding
  * them, because the two runtimes express a posture from opposite ends. `rm`, `sudo`, `chmod`,
  * `chown`, `ssh`, `scp`, `docker`, `git push` and `git remote` are absent from this list and so
- * keep asking at every level.
+ * keep asking at every level. `gh *` is absent too, and for a different reason: its reads are
+ * already allowed at `normal` by the rules that follow it above, and its writes are allowed at
+ * no level, so lifting the blanket rule here would only lift `gh pr create`.
  */
 const TRUSTED_ANYWAY = [
-  'curl *', 'wget *', 'gh *', 'npm install*', 'npx *', 'pnpm add*', 'yarn add*', 'bun add*',
+  'curl *', 'wget *', 'npm install*', 'npx *', 'pnpm add*', 'yarn add*', 'bun add*',
 ];
 
 /**

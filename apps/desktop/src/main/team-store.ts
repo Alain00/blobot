@@ -26,6 +26,7 @@ import {
   type Clock,
   type PublishOutcome,
   type Team,
+  type VerbosityLevel,
   type WorkspaceInspection,
   type WorkspaceProvider,
 } from '@blobot/core';
@@ -55,6 +56,11 @@ export interface NewAgentSpec {
    * which is on, and is what every agent hired before the selector existed is.
    */
   readonly compaction?: CompactionSetting;
+  /**
+   * How much this agent says when it answers. Absent is `normal`, which is what every agent
+   * hired before the selector existed is. Read by nothing here: it reaches `composePersona`.
+   */
+  readonly verbosity?: VerbosityLevel;
 }
 
 /** Forming a team out of agents that already exist. */
@@ -147,6 +153,7 @@ export function hireAgent(spec: NewAgentSpec, deps: CreateTeamDeps): AgentProfil
     ...(spec.runtimeOptions === undefined ? {} : { runtimeOptions: spec.runtimeOptions }),
     ...(spec.trust === undefined ? {} : { trust: spec.trust }),
     ...(spec.compaction === undefined ? {} : { compaction: spec.compaction }),
+    ...(spec.verbosity === undefined ? {} : { verbosity: spec.verbosity }),
     createdAt: now,
   });
 }
@@ -213,6 +220,7 @@ export function editAgentProfile(
     ...(spec.runtimeOptions === undefined ? {} : { runtimeOptions: spec.runtimeOptions }),
     ...(spec.trust === undefined ? {} : { trust: spec.trust }),
     ...(spec.compaction === undefined ? {} : { compaction: spec.compaction }),
+    ...(spec.verbosity === undefined ? {} : { verbosity: spec.verbosity }),
     ...(instructions === undefined || instructions === '' ? {} : { instructions }),
     ...(spec.hue === undefined ? {} : { hue: spec.hue }),
   });
@@ -230,7 +238,7 @@ export function editAgentProfile(
       ...(spec.runtimeOptions === undefined ? {} : { runtimeOptions: spec.runtimeOptions }),
       ...(spec.trust === undefined ? {} : { trust: spec.trust }),
       ...(spec.compaction === undefined ? {} : { compaction: spec.compaction }),
-    ...(spec.compaction === undefined ? {} : { compaction: spec.compaction }),
+      ...(spec.verbosity === undefined ? {} : { verbosity: spec.verbosity }),
     });
   }
 
@@ -345,6 +353,7 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
       ...(profile.runtimeOptions === undefined ? {} : { runtimeOptions: profile.runtimeOptions }),
       ...(profile.trust === undefined ? {} : { trust: profile.trust }),
       ...(profile.compaction === undefined ? {} : { compaction: profile.compaction }),
+      ...(profile.verbosity === undefined ? {} : { verbosity: profile.verbosity }),
       workspacePath: workspace.path,
       ...(workspace.branch === undefined ? {} : { branch: workspace.branch }),
       createdAt: deps.clock.now(),
@@ -818,6 +827,7 @@ export async function editTeamRoster(
       ...(profile.runtimeOptions === undefined ? {} : { runtimeOptions: profile.runtimeOptions }),
       ...(profile.trust === undefined ? {} : { trust: profile.trust }),
       ...(profile.compaction === undefined ? {} : { compaction: profile.compaction }),
+      ...(profile.verbosity === undefined ? {} : { verbosity: profile.verbosity }),
       workspacePath: workspace.path,
       ...(workspace.branch === undefined ? {} : { branch: workspace.branch }),
       createdAt: deps.clock.now(),

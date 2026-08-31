@@ -92,10 +92,24 @@ describe('starting', () => {
     // The list is closed, so this is the whole of the check: a prefix that is not here is a
     // prompt the user still gets. `git` bare would swallow `git push`, which is why it is absent.
     for (const forbidden of ['rm', 'sudo', 'chmod', 'chown', 'curl', 'wget', 'ssh', 'scp',
-      'docker', 'git push', 'git remote', 'gh', 'npm install', 'npx', 'pnpm add', 'yarn add',
-      'bun add', 'git']) {
+      'docker', 'git push', 'git remote', 'gh', 'gh pr create', 'gh pr merge', 'gh api',
+      'npm install', 'npx', 'pnpm add', 'yarn add', 'bun add', 'git']) {
       expect(options.allowedTools).not.toContain(`Bash(${forbidden}:*)`);
     }
+  });
+
+  it('vouches for reading GitHub, on the verb and never on the transport', async () => {
+    const { bridge } = await started();
+    const options = (bridge.received[1]?.params as SessionParams)._meta.claudeCode.options;
+
+    // `git fetch` was always vouched and is a network read; `gh pr view` is the same act
+    // against the same host. The rule that decides is the verb (2026-08-31).
+    expect(options.allowedTools).toContain('Bash(git fetch:*)');
+    expect(options.allowedTools).toContain('Bash(gh pr view:*)');
+    expect(options.allowedTools).toContain('Bash(gh issue list:*)');
+    expect(options.allowedTools).toContain('Bash(gh run view:*)');
+    // Bare `gh` would swallow `gh pr create`, exactly as bare `git` would swallow `git push`.
+    expect(options.allowedTools).not.toContain('Bash(gh:*)');
   });
 
   it('keeps pre-approving the mailbox blobot injected, beside the posture', async () => {

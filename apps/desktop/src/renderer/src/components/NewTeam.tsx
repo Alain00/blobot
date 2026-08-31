@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Check, X } from 'lucide-react';
+import { Check, ChevronDown, X } from 'lucide-react';
 import type {
   NewTeamSpec,
   UiAgentProfile,
@@ -175,6 +175,26 @@ export function NewTeam({
   /** The marked face. An unticked lead is no longer on the team, so the first ticked leads. */
   const leading = lead !== undefined && chosen.includes(lead) ? lead : chosen[0];
 
+  /**
+   * Which settled steps the user has pulled back open.
+   *
+   * A step folds on its own once the step *below* it has been answered, which is the only
+   * signal on this page that means "moved on" — validity alone would fold the name field on the
+   * first keystroke. An entry here overrides that for one step, in whichever direction, and is
+   * kept for the life of the screen, because a step that re-folds itself while you are reading
+   * it is worse than one that stays open.
+   */
+  const [reopened, setReopened] = useState<Record<string, boolean>>({});
+  const settles: Record<string, boolean> = {
+    // The name is settled once there is a folder, because choosing one fills the name in.
+    '01': name.trim() !== '' && path !== '' && !reading,
+    // The folder is settled once somebody has been ticked below it.
+    '02': workspaceUsable && !reading && chosen.length > 0,
+  };
+  const folded = (n: string): boolean => reopened[n] ?? settles[n] ?? false;
+  const toggle = (n: string): void =>
+    setReopened((current) => ({ ...current, [n]: !folded(n) }));
+
   const create = async (): Promise<void> => {
     setBusy(true);
     setError(undefined);
@@ -216,7 +236,13 @@ export function NewTeam({
             makes for a team is named after the team, so the team has to be named before that
             door is open. Picking a folder still fills this in when it is empty, so the user who
             has a repository in mind loses nothing by the swap. */}
-        <Step n="01" title="What the team is called">
+        <Step
+          n="01"
+          title="What the team is called"
+          folded={folded('01')}
+          onToggle={() => toggle('01')}
+          summary={name.trim()}
+        >
           <input
             className="field"
             value={name}
@@ -229,7 +255,18 @@ export function NewTeam({
           </div>
         </Step>
 
-        <Step n="02" title="The folder they work in">
+        <Step
+          n="02"
+          title="The folder they work in"
+          folded={folded('02')}
+          onToggle={() => toggle('02')}
+          summary={
+            <>
+              <span className="pathline">{path}</span>
+              {inspection !== undefined && <span>· {workspaceLine(inspection, repos)}</span>}
+            </>
+          }
+        >
           <div className="row">
             <button className="btn" onClick={() => void choose()}>
               choose a folder…
@@ -309,7 +346,7 @@ export function NewTeam({
                 return (
                   <button
                     key={agent.id}
-                    className={`rosterrow${picked ? ' on' : ''}`}
+                    className={`listrow pick${picked ? ' on' : ''}`}
                     onClick={() =>
                       setChosen(
                         picked ? chosen.filter((id) => id !== agent.id) : [...chosen, agent.id],
@@ -462,29 +499,76 @@ function Disclosure({
   );
 }
 
-/** One numbered step. The numeral is the editorial device that makes this a page, not a form. */
+/**
+ * One numbered step. The numeral is the editorial device that makes this a page, not a form.
+ *
+ * A step that has been answered **folds to its own answer** — `01 · checkout` — and the body
+ * comes back on a click. The page is still read start to finish, which is what this screen is
+ * for; what folds is the tail of a step behind you, and the numeral and the title stay on
+ * screen, so the whole shape of what is being asked is never hidden. The gesture is the
+ * transcript's: a chevron that rotates, and the same word for the same act.
+ *
+ * The chevron sits **after the title**, not in front of the numeral and not out at the right
+ * edge. In front it would push the numerals of the two steps that fold out of line with the two
+ * that do not; out at the edge it is a marker a whole column away from the thing it discloses.
+ */
 function Step({
   n,
   title,
   aside,
+  summary,
+  folded = false,
+  onToggle,
   children,
 }: {
   n: string;
   title: string;
   aside?: React.ReactNode;
+  summary?: React.ReactNode;
+  folded?: boolean;
+  onToggle?: () => void;
   children: React.ReactNode;
 }): React.JSX.Element {
+  const head = (
+    <>
+      <span className="stepn mono">{n}</span>
+      <h2 className="subhead">{title}</h2>
+    </>
+  );
   return (
     <section className="step">
-      <div className="stephead">
-        <span className="stepn mono">{n}</span>
-        <h2 className="subhead">{title}</h2>
-        {aside !== undefined && <span className="stepaside">{aside}</span>}
-      </div>
-      <div className="stepbody">{children}</div>
+      {onToggle === undefined ? (
+        <div className="stephead">
+          {head}
+          {aside !== undefined && <span className="stepaside">{aside}</span>}
+        </div>
+      ) : (
+        <button className="stephead fold" aria-expanded={!folded} onClick={onToggle}>
+          {head}
+          <ChevronDown size={13} className={folded ? 'shut' : ''} aria-hidden />
+          {folded && summary !== undefined && <span className="stepsum mono">{summary}</span>}
+        </button>
+      )}
+      {!folded && <div className="stepbody">{children}</div>}
     </section>
   );
 }
+
+/**
+ * The folder step's answer in one line: what kind of Workspace it is, in the same words the
+ * note below it uses when the step is open. A summary that said something the open step does
+ * not say would be a second source of truth about the same folder.
+ */
+function workspaceLine(
+  inspection: UiWorkspaceInspection,
+  repos: readonly string[],
+): string {
+  if (inspection.kind === 'plain') return 'a copy per agent';
+  if (inspection.kind === 'nested')
+    return `${repos.length} of ${inspection.repos.length} repositories`;
+  return `git · ${inspection.dirty ? 'uncommitted changes' : 'clean'}`;
+}
+
 
 /**
  * What the chosen folder is, and therefore what the agents are about to get.
@@ -567,7 +651,7 @@ function RepoScope({
         return (
           <button
             key={repo.path}
-            className={`rosterrow${on ? ' on' : ''}`}
+            className={`listrow pick${on ? ' on' : ''}`}
             onClick={() => onToggle(repo.path)}
             // A repository with no commits has nothing to branch from. It is skipped with a
             // reason rather than refusing the whole team — one empty project in a folder of

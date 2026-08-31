@@ -45,6 +45,13 @@ Consequences you will keep bumping into:
   lists by profile id and the hire preview by the name being typed, and one agent wore three
   faces. The colour picker already says the name gives the face; this is that sentence enforced.
   Only the hue is stored, because the user can choose it.
+- **Nine silhouettes, never the organic one.** *2026-08-31.* The library partitions the hash into
+  ten shape bands, so `organic` is not something a name asks for and can be argued out of: it is
+  a region of the hash, and the only way to not have it is to not offer it. Every `<Blobatar>` in
+  the app spreads one constant, `SHAPE_TRAITS`, which names the other nine as a list and lets the
+  name pick among those. What that costs is the library's weighting, since a list is uniform over
+  what it lists, and the reason it is one constant rather than a choice per surface is the rule
+  directly above: two rosters listing different shapes give one agent two faces.
 - **A blobatar appears where you are identifying among agents or choosing one, and never
   where a single agent is merely named.** Saturation is the one channel that pulls the eye, so
   a face repeated on every surface that mentions its agent spends the channel on repetition and
@@ -88,6 +95,17 @@ Consequences you will keep bumping into:
 
 Dark only (`color-scheme:dark`). There is no light theme and adding one is a design project,
 not a variable swap: half these rules are about what is *brightest* on the page.
+
+**No ink edge on a closed shape. Ever.** *2026-08-31, and it is a ban rather than a preference.*
+A 2px `--ink` rule down one side is a mark in the gutter of the page: it works on `.refusal` and
+`.disclosure`, which have no ground and no border, where it is the only thing saying *these
+sentences are one thing*. Put it on a shape that is already closed — a card, a filled list row,
+anything with `--raised` or a hairline — and it stops containing and starts highlighting, so the
+block reads as selected, or errored, or as the one item on the screen that is not like the
+others. It was tried on the permission card and thrown out for exactly this; it survived on the
+Routine proposal and on `.openerror` and was wrong there too. If a closed shape needs to say
+something about itself, it says it **in words, or by where it sits** — never with an edge, and
+never with colour.
 
 ## Type
 
@@ -337,9 +355,14 @@ Every control descends from the composer. If you are adding one, start there.
   means everywhere else here: a division between two kinds of thing. **Hover cannot be "lift
   it"**, because the row is already the lifted ground, so it is a hairline drawn *inside* the
   row — an outline, so nothing reflows — and only on rows that are pressable: a list you cannot
-  click must not answer the pointer. Not for **picker** rows, which are a different control: a
-  row whose job is chosen-or-not needs its unchosen state to be the quiet one, and filled at rest
-  takes that away. Those stay `.rosterrow`.
+  click must not answer the pointer. **A picker row is `.listrow.pick`** — the same row, not a
+  different control. A row whose job is chosen-or-not needs its unchosen state to be the quiet
+  one, so it is outlined at rest and takes the filled ground only when it is on, and the line is
+  an inset shadow rather than a border, so choosing one does not reflow it. *Amended 2026-08-31:
+  picker rows were their own class, with their own radius, padding, gap and line spacing, so the
+  same agent, with the same face and the same two lines, was a visibly different object on* your
+  agents *than in the roster you pick it from. Only the difference that carries meaning survived
+  the merge.*
 - **Icon-only where the label would repeat the screen.** The composer's send is an arrow in
   Alice's pane, because the pane is already the recipient; in the team pane it carries the
   recipient's name beside the arrow, because there the recipient is a live question — and can
@@ -347,6 +370,35 @@ Every control descends from the composer. If you are adding one, start there.
   named. Two names and a count past that (`Alice, Bob +1`): a message can address several
   agents, and a list that grows with the roster stops being readable at the width a send control
   has. Never a face — a blobatar on a button reads as the affordance rather than as an identity.
+- **A disabled primary keeps its fill.** *2026-08-31, and it applies to every filled control,
+  not only to send.* The composer's send is the page's one armed inversion, and unarmed it wore
+  `--raised` inside a `--line` border — which is the secondary button's costume, so the control
+  changed *kind* on the first keystroke and the field looked as though it had two different
+  buttons at its end. A primary that is off is the same control turned down: keep the fill, step
+  it down the ramp (a low mix of `--ink`), drop the border entirely, leave the glyph `--muted`.
+  Never an outline, and never `opacity` low enough to stop it being a shape — that was the
+  version before this one, and the arrow disappeared with it.
+- **The composer's ends are `+` and send, and they are different kinds of thing.** Attaching is
+  at the **head** of the pill and sending at the tail, because one adds to the message and the
+  other sends it, and two round buttons sharing a corner made the second one read as a lesser
+  send. It is a **plus**, not a paperclip: the glyph names the gesture — *add something to this
+  message* — rather than the file type, while the label and the tooltip still say attach a file,
+  which is all it does today.
+- **The context ring stands where the paperclip was, and it is a reading, not a control.** How
+  full the window this message is going into is, as a dial, next to send: the person about to
+  paste a stack trace into an agent at 94% should not have to look at another column to learn
+  that. Monochrome — `--ink` for what is used against `--line` for what is left — and nothing
+  turns red, because a full window is something blobot handles by itself and not an alarm worth
+  the one saturated thing on screen. It **advises nothing and refuses nothing**: it is never a
+  reason send is disabled. It draws only for the resolved recipients, and only once they have
+  reported, since a ring at 0% claims an empty window where the truth is an unknown one. On a
+  fan-out it is the **fullest** recipient, and the panel names that agent and lists every
+  other one, because a single ring over several agents is only honest if the number belongs to
+  somebody. The panel **opens on hover** and holds **nothing but the rows** — a press is too much
+  ceremony for a figure wanted in passing, and the three lines it shipped with, explaining where
+  the handoff comes from and that nothing here is a limit, were the largest thing in it and true
+  every time. It takes no focus when it opens, because the caret belongs to the field. The figures are the activity column's own, out of one shared `usage.ts`, so the two
+  can never round differently.
 - **The composer's draft outlives the pane it was typed in, and nobody decided that.** There is
   one `Composer` for the whole app, so words typed at Alice are still in the field after a switch
   to another team, addressed to a stranger. It is recorded here so it is not mistaken for a
@@ -374,6 +426,21 @@ Every control descends from the composer. If you are adding one, start there.
   `{id, label, choices}` and draws them in the order it got them. It has no list of provider
   words in it, which is what lets one runtime offer three groups and another one with no branch
   anywhere in the renderer.
+- **A pick's sentence is on its menu row, not under the closed control.** *2026-08-31, and it
+  reverses what the trust and compaction pickers shipped with.* One control explaining itself
+  permanently is a helpful form; three of them in a row is blobot talking over the two words the
+  user came to set, and the agent form now has three — how much it says, what it can do without
+  asking, and starting over when it runs out of room. The text is unchanged and one keystroke
+  away, on the row it describes, where it is read **while** choosing rather than after. The
+  trigger keeps the word alone. This is only for a pick whose options are blobot's own closed
+  vocabulary: the runtime picker keeps its readiness line, because that line is a fact about the
+  machine rather than a gloss on a word, and it can change while the dialog is open.
+- **A dialog is 560px unless it is holding a form.** `.modal.roomy` is 760, and only the hire and
+  edit dialogs wear it. Eight fields stacked one per row ran past the fold on a 1080-tall screen,
+  which put the standing instructions below the window on the dialog whose job is stating them.
+  The width buys rows: name and role, then the runtime and what it advertises, then blobot's
+  three words side by side. Everything else stays narrow, because a paragraph set to 760px is a
+  paragraph nobody reads to the end of.
 - Selection in a list is the raised ground alone. No left rule: a row that lifts and brightens
   is already saying it twice. The row is **inset and rounded** at `.field`'s 12px, like every
   other lifted surface here — a full-bleed square block is the one shape this app does not have,
@@ -440,6 +507,24 @@ anywhere is a design decision, and almost always the wrong one.
   where something is happening, still for `idle`, grayscale and still for `failed`. Plus the
   face's own poses, which are a separate channel and stay (`thinking`'s two-dot eye loader,
   `sleepy` while starting, `surprised` while waiting).
+- **A face can follow the pointer, and that is not ambient.** *2026-08-31.* The gaze layer is
+  the one thing on a blobatar that moves because the user's hand moved, so it answers to the
+  second budget and not the first: with a still pointer it is a still face, and the driver stands
+  itself down under `prefers-reduced-motion` and on any pointer that is not a fine one. Three
+  faces have it and nothing else does. The rail's `waiting` agent follows the cursor until you
+  answer it, which is the same sentence `surprised` already says and the reason that state is the
+  only one the fold reaches into. The 112px preview in the hire and edit dialogs follows it
+  always, because there the face is the subject and nothing on the screen competes. The
+  transcript's pending face turns toward the composer *while the user is in it*, and that gate is
+  what keeps it out of the first budget — it acknowledges the person typing, and claims nothing
+  about an agent noticing anything, which no runtime reports.
+  **The excursion on the first two is deliberately above the status signal**, at 12 units against
+  the `thinking` seesaw's 8.4, which is the reverse of the amplitude argument the idle layer is
+  admitted on one bullet up. Both can be true because they are different budgets: the idle floor
+  runs forever and must stay under the signal, and this runs only while a hand is moving. A gaze
+  pitched under the signal is a channel nobody notices, which is the same as not having built it.
+  A settled transcript message still does not gaze, or pose, or move at all.
+
 - **Neither the blobatar nor the team's folder animates the state itself.** The dots do that.
   *Amended 2026-08-30: this listed six body animations and gave the folder the folded status as
   motion. Two things were wrong with it. `bob` travelled 3px and tilted 2.5 degrees every .9s,
@@ -494,7 +579,26 @@ are narrow:
   the rule below it: nothing is *learned* from it. The folder and the rows underneath already
   say what the roster is. Miss it, or ask for reduced motion, and you have lost nothing.
 - **Nothing that moves what the user is reading.** The transcript, the feed and the turn pips
-  are data, and data does not move for style.
+  are data, and data does not move for style. *The composer's context ring is the same rule and
+  broke it for a day: its arc grew into place over 320ms, which is both a number animating for
+  style and — since `usage_updated` arrives from a runtime while nobody is touching anything —
+  ambient motion, the budget the blobatar has already spent. The arc snaps, like the pips beside
+  it. Only its hover colour fades.*
+- **Anything that can be pressed answers the press.** `scale:.97` over 160ms, which `.btn`,
+  `.iconbtn` and the swatches have always done — and the composer's send, the one control this
+  whole app is built around, did not until 2026-08-31. It is a **pointer** state, so the send
+  never animates when it is sent with Enter, which is how it is actually used: keyboard paths
+  take no motion, ever.
+- **A panel that opens on a hover has to open.** Appearing between two frames under a pointer
+  that merely crossed something reads as a glitch rather than as an answer. The house entrance,
+  shortened to 140ms because a tooltip-sized thing is not a sheet, and **origin-aware**: it
+  scales out of the control it belongs to, never out of its own middle (Radix hands over the
+  corner in `--radix-popper-transform-origin` — the popper variable rather than the per-primitive
+  alias, since one class here is worn by a Select's content and a Popover's both). A modal is the
+  exception and stays centred, because it is anchored to nothing. **Every panel that opens off a
+  control gets this** — the workspace popovers, the option menus, the context ring — with exactly
+  one refusal: the composer's `@mention` list, which opens on a keystroke mid-sentence dozens of
+  times a day, where frequency is the disqualifier.
 
 Both budgets answer to the same withdrawal rule:
 
@@ -683,6 +787,17 @@ One flat file, one flat namespace, no build step between it and the DOM.
   page that is set centred. A user
   who has never seen this app should not have to go and find a repository before they can watch
   two agents talk.
+  **A step you have answered folds to its answer** — `01 · checkout`, `02 · ~/code/checkout ·
+  git · clean` — and comes back on a click. *Added 2026-08-31, and it is not a wizard:* the page
+  is still read start to finish, and the numeral and the title of every step stay on screen, so
+  what is being asked is never hidden. What folds is the **tail** of a step behind you, which on
+  the folder step is a repository list, a git note and an icon control that together dwarfed the
+  three questions around it. A step folds when the step **below** it has been answered, which is
+  the only signal here that means *moved on* — validity alone would fold the name field on the
+  first keystroke — and one the user opens by hand stays open, because a step that re-folds
+  itself while you are reading it is worse than one that never folded. The gesture is the
+  transcript's chevron, at the **end** of the head rather than in front of it, so the numerals of
+  the steps that fold stay in line with the ones that do not.
 - **Your agents** — every AgentProfile the user has hired, over the working surface rather than
   in place of it: the team behind it keeps running, and nothing on this screen restarts one. A
   row is a face, a name, a role, the runtime and the teams it is on, with its standing
@@ -712,12 +827,15 @@ One flat file, one flat namespace, no build step between it and the DOM.
   **A Routine an agent scheduled for itself is not one the user wrote, and must not draw like
   one.** It is armed when it is made, so it is not waiting for permission — what is still true is
   that **a person has not looked at it**. So it sits **above** the list rather than sorted into
-  it, with an ink edge, says which agent scheduled it and that it has been running since, shows
-  its prompt **in full** rather than clamped, and carries exactly two verbs, `keep` and `disarm`.
-  Both are answers, and there is still no third that quietly leaves it unanswered. The ink edge
-  means *you have not seen this*, **never** *this is waiting for you*: it has been running the
-  whole time it has been sitting there, and a mark that implied otherwise would be the screen
-  lying about what has already happened.
+  it, says which agent scheduled it and that it has been running since, shows **a peek** of its
+  prompt with the rest one press away, and carries exactly two verbs, `keep` and `disarm`. Both
+  are answers, and there is still no third that quietly leaves it unanswered. What says *you
+  have not seen this* is that placement and that line, **never** *this is waiting for you*: it
+  has been running the whole time it has been sitting there, and a mark that implied otherwise
+  would be the screen lying about what has already happened. *Amended 2026-08-31 twice.* The ink
+  edge is gone under the ban above — it was a highlight stuck to the side of a filled block. And
+  the prompt is clamped, reversing *in full*: a real one is thirty lines, and a block that asks a
+  question must hold its two answers on the same screen as the words being answered.
 - **Settings** — the machine, and what blobot can do about it. Over the working surface like the
   two doors beside it, and with a **column of its own**: a list of sections on the left, one of
   them current, and the section's screen in the space it leaves. That column is deliberately not
@@ -732,6 +850,20 @@ One flat file, one flat namespace, no build step between it and the DOM.
   detection has ever had of its own: it was reachable only from inside the hire dialog, so *is
   Codex signed in?* was answered behind a decision about an agent the user had not decided to
   hire. A sidebar with one true item is more honest than four invented ones.
+  **A second section: Context.** One row per model, carrying the *working ceiling* — where that
+  model stops being worth more context, which is the mark on the gauge and the number compaction
+  measures against, never the window a runtime reports. A row says the figure, the moment it
+  produces (`handoff at 240,000`), where the figure came from, and which agents are on that
+  model; a model nobody has established anything for draws **the rule and not a number**, because
+  the fallback is a fraction of a window nobody is reporting for a session that does not exist.
+  The number is **editable**, and that is the point of the section rather than a convenience:
+  blobot ships a table of what it has been told, the table ages on somebody else's release
+  cadence, and the person who can watch a model go vague is the one sitting in front of it.
+  *unset* appears only on a row the user set, since offering to undo blobot's own number is
+  offering to undo something they never did. It **reaches teams that are already running** and
+  says so, unlike the model or the trust level: those are handed over when a session is opened,
+  and this is a threshold compared against after every turn. Sections are added here when there
+  is something true to configure, never to fill the column out.
 - **An agent that schedules itself opens a block in the transcript, in the turn that did it.**
   This is the price of letting an agent arm anything, and it is not optional: an agent arming
   something off screen is the version of that feature which must not exist. It borrows the

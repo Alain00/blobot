@@ -377,5 +377,17 @@ live('against a real opencode', () => {
     expect(resolve('edit', '*')).toBe('allow');
     // Already `ask` out of the box, which is why blobot does not restate it.
     expect(resolve('external_directory', '*')).toBe('ask');
+
+    // The 2026-08-31 gh split. Reading GitHub survives the blanket `gh *: ask` only because
+    // it is emitted after it, so what is asserted is the order in the *resolved* list and not
+    // just the actions — the mechanism is invisible in the values.
+    expect(resolve('bash', 'gh *')).toBe('ask');
+    expect(resolve('bash', 'gh pr view*')).toBe('allow');
+    expect(resolve('bash', 'gh issue list*')).toBe('allow');
+    const at = (pattern: string): number =>
+      rules.findLastIndex((rule) => rule.permission === 'bash' && rule.pattern === pattern);
+    expect(at('gh pr view*')).toBeGreaterThan(at('gh *'));
+    // And no rule anywhere allows writing to a forge, at this level or any other.
+    expect(rules.some((rule) => rule.pattern.startsWith('gh pr create'))).toBe(false);
   }, 60_000);
 });

@@ -81,6 +81,56 @@ describe('an agent that exists across teams', () => {
   it('says nothing extra when it has none', () => {
     expect(composePersona(alice, team, [alice, bob])).not.toContain('Standing instructions');
   });
+
+  /**
+   * The ordering is the whole of the user's control over blobot's prose rules. The persona
+   * carries a house style and a verbosity level of blobot's own choosing; a person who writes
+   * "explain your reasoning in full" has to be able to say so and win. Above the line they
+   * lost silently to a sentence they never wrote, which is the state this asserts is gone.
+   */
+  it('puts standing instructions last, so they outrank blobot’s own prose rules', () => {
+    const mara = { ...alice, name: 'Mara', instructions: 'Explain your reasoning in full.' };
+    const persona = composePersona(mara, team, [mara, bob]);
+    expect(persona.indexOf('Explain your reasoning in full.')).toBeGreaterThan(
+      persona.indexOf('Write plainly'),
+    );
+    expect(persona).toContain('outrank');
+  });
+});
+
+/**
+ * Why this is said at all: the Claude bridge takes a string `_meta.systemPrompt` as a
+ * *replacement* for its `claude_code` preset rather than an append, and that preset is where
+ * the tone section lives. blobot passes a string, so nothing told an agent how much to say and
+ * it fell back to plain assistant prose. See `verbosity.ts`.
+ */
+describe('how much an agent says', () => {
+  it('tells an agent nobody chose for to keep it short', () => {
+    // The middle position says something rather than nothing, which is the point: the default
+    // agent is the one this whole setting exists for.
+    expect(composePersona(alice, team, [alice, bob])).toContain('Keep answers short');
+  });
+
+  it('takes the level off the agent', () => {
+    const terse = composePersona({ ...alice, verbosity: 'brief' }, team, [alice, bob]);
+    expect(terse).toContain('Answer in a line or two');
+    expect(terse).not.toContain('Keep answers short');
+
+    const full = composePersona({ ...alice, verbosity: 'full' }, team, [alice, bob]);
+    expect(full).toContain('show your working');
+    expect(full).not.toContain('Keep answers short');
+  });
+
+  /**
+   * `brief` governs prose and never what a teammate is allowed to know. An agent that had to
+   * refuse something says so at every level, because a level that could suppress a refusal
+   * would be a setting that quietly turns off the persona's own trust framing.
+   */
+  it('never lets brevity swallow a refusal', () => {
+    expect(composePersona({ ...alice, verbosity: 'brief' }, team, [alice, bob])).toContain(
+      'Say anything you had to refuse',
+    );
+  });
 });
 
 describe('the wake prompt', () => {

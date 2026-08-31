@@ -20,7 +20,7 @@ import type { TrustLevel } from '../../../shared/api.js';
  * opening anything. The sentence under the trigger is the whole of the friendliness budget.
  */
 
-interface Level {
+export interface Level {
   readonly id: TrustLevel;
   readonly word: string;
   readonly says: string;
@@ -34,7 +34,8 @@ interface Level {
  * which says it better than a badge would, and a badge here would imply the other two are
  * mistakes.
  */
-const LEVELS: readonly Level[] = [
+/** Exported so the words can be tested as words. They are the control's whole content. */
+export const LEVELS: readonly Level[] = [
   {
     id: 'careful',
     word: 'careful',
@@ -54,6 +55,13 @@ const LEVELS: readonly Level[] = [
   },
 ];
 
+/**
+ * The sentence is on the menu row and not under the closed control. *2026-08-31.* Three of these
+ * stand in a row in the agent form and each carried its explanation permanently on screen, which
+ * is three paragraphs of blobot explaining itself around two words the user came to set. The
+ * text is unchanged and one keystroke away, on the row it belongs to, where it is read while the
+ * choice is being made rather than after it has been.
+ */
 export function TrustPick({
   value,
   onChange,
@@ -61,38 +69,31 @@ export function TrustPick({
   value: TrustLevel;
   onChange: (value: TrustLevel) => void;
 }): React.JSX.Element {
-  const current = LEVELS.find((level) => level.id === value) ?? LEVELS[1];
   return (
-    <>
-      <Select.Root value={value} onValueChange={(next) => onChange(next as TrustLevel)}>
-        <Select.Trigger className="field selecttrigger" aria-label="What it can do without asking">
-          <Select.Value className="selectvalue" />
-          <Select.Icon>
-            <ChevronDown size={14} aria-hidden />
-          </Select.Icon>
-        </Select.Trigger>
-        <Select.Portal>
-          <Select.Content className="selectmenu" position="popper" sideOffset={6}>
-            <Select.Viewport>
-              {LEVELS.map((level) => (
-                <Select.Item key={level.id} value={level.id} className="selectitem trustitem">
-                  <Select.ItemText>{level.word}</Select.ItemText>
-                  <Select.ItemIndicator className="selecttick">
-                    <Check size={13} aria-hidden />
-                  </Select.ItemIndicator>
-                  {/* Outside `ItemText`, so the trigger shows the word alone: the sentence is
-                      what you read while choosing, and the line under the trigger is what you
-                      read afterwards. */}
-                  <span className="trustsays">{level.says}</span>
-                </Select.Item>
-              ))}
-            </Select.Viewport>
-          </Select.Content>
-        </Select.Portal>
-      </Select.Root>
-      {/* The same sentence, under the closed control, for the same reason the runtime picker
-          keeps its readiness line: a form should say what it is set to without being opened. */}
-      <span className="note muted">{(current as Level).says}</span>
-    </>
+    <Select.Root value={value} onValueChange={(next) => onChange(next as TrustLevel)}>
+      <Select.Trigger className="field selecttrigger" aria-label="What it can do without asking">
+        <Select.Value className="selectvalue" />
+        <Select.Icon>
+          <ChevronDown size={14} aria-hidden />
+        </Select.Icon>
+      </Select.Trigger>
+      <Select.Portal>
+        <Select.Content className="selectmenu" position="popper" sideOffset={6}>
+          <Select.Viewport>
+            {LEVELS.map((level) => (
+              <Select.Item key={level.id} value={level.id} className="selectitem trustitem">
+                <Select.ItemText>{level.word}</Select.ItemText>
+                <Select.ItemIndicator className="selecttick">
+                  <Check size={13} aria-hidden />
+                </Select.ItemIndicator>
+                {/* Outside `ItemText`, so the trigger shows the word alone: the sentence is
+                    what you read while choosing, and the trigger is what you read afterwards. */}
+                <span className="trustsays">{level.says}</span>
+              </Select.Item>
+            ))}
+          </Select.Viewport>
+        </Select.Content>
+      </Select.Portal>
+    </Select.Root>
   );
 }

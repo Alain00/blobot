@@ -275,6 +275,24 @@ describe('protocol housekeeping', () => {
     const { json } = await harness();
     expect((await json('completion/complete'))['error']).toMatchObject({ code: -32601 });
   });
+
+  /**
+   * The same rule again, named after the thing that depends on it.
+   *
+   * fx opens an MCP connection with `server/discover`, a newer draft's method this server does
+   * not implement, and falls back to the classic handshake **only because it gets an error
+   * back**. Measured 2026-08-31: an empty result instead fails the whole ACP session with
+   * `McpMissingResultType`, so every fx agent would launch with no mailbox at all. This is a
+   * separate test from the one above because the assertion that matters is `error` being
+   * present rather than `result` — a future refactor that made unknown methods return `{}` for
+   * politeness would pass a "reports an error" test written loosely.
+   */
+  it('answers server/discover with an error, which is what makes fx fall back', async () => {
+    const { json } = await harness();
+    const reply = await json('server/discover');
+    expect(reply['result']).toBeUndefined();
+    expect(reply['error']).toMatchObject({ code: -32601 });
+  });
 });
 
 /**

@@ -178,7 +178,7 @@ export function DeleteTeam({
                   paragraph above says, and it is drawn as a roster row because that is the tick
                   this app already has. Ticked is never the state it opens in. */}
               <button
-                className={`rosterrow${clean ? ' on' : ''}`}
+                className={`listrow pick${clean ? ' on' : ''}`}
                 aria-pressed={clean}
                 onClick={() => setClean(!clean)}
               >
@@ -357,7 +357,7 @@ export function EditTeam({
                   return (
                     <button
                       key={agent.id}
-                      className={`rosterrow${picked ? ' on' : ''}`}
+                      className={`listrow pick${picked ? ' on' : ''}`}
                       onClick={() =>
                         setChosen(
                           picked

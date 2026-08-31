@@ -359,6 +359,23 @@ describe('agents that exist on their own', () => {
     expect(roster.find((agent) => agent.name === 'Shy')?.trust).toBeUndefined();
   });
 
+  it('carries how much it says onto the Agent too, because the persona is composed from it', async () => {
+    const mara = hireAgent(
+      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code', verbosity: 'brief' },
+      { store, clock },
+    );
+    const shy = hireAgent({ name: 'Shy', role: 'research', runtimeId: 'claude-code' }, { store, clock });
+    const team = await createTeam(
+      { ...spec, profileIds: [mara.id, shy.id] },
+      { store, clock, workspaces, inspect: () => workspaces.inspect() },
+    );
+
+    const roster = store.agentsOfTeam(team.id);
+    expect(roster.find((agent) => agent.name === 'Mara')?.verbosity).toBe('brief');
+    // Nobody chose, so nothing is stored, and `normal` is what `composePersona` makes of that.
+    expect(roster.find((agent) => agent.name === 'Shy')?.verbosity).toBeUndefined();
+  });
+
   it('refuses a second agent of the same name', () => {
     hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
     expect(() =>
@@ -470,6 +487,32 @@ describe('editing an agent', () => {
     );
     expect(store.profileById(mara.id)?.trust).toBe('careful');
     expect(store.agentsOfTeam(team.id)[0]?.trust).toBe('careful');
+  });
+
+  it('restates how much it says, down and back up again', async () => {
+    const mara = hireAgent(
+      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code' },
+      { store, clock },
+    );
+    const team = await createTeam({ ...spec, profileIds: [mara.id] }, deps());
+
+    editAgentProfile(
+      mara.id,
+      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code', verbosity: 'brief' },
+      deps(),
+    );
+    expect(store.profileById(mara.id)?.verbosity).toBe('brief');
+    expect(store.agentsOfTeam(team.id)[0]?.verbosity).toBe('brief');
+
+    // The same direction that matters for trust: coming back up has to be sayable as a word,
+    // not as a silence, or an agent could be made terse and never made talkative again.
+    editAgentProfile(
+      mara.id,
+      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code', verbosity: 'full' },
+      deps(),
+    );
+    expect(store.profileById(mara.id)?.verbosity).toBe('full');
+    expect(store.agentsOfTeam(team.id)[0]?.verbosity).toBe('full');
   });
 
   it('restates role, instructions and face on a team the agent is on, and not the name', async () => {

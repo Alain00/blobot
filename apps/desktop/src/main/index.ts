@@ -70,7 +70,8 @@ import {
   scheduledRoutines,
   toRunRow,
 } from './routine-rows.js';
-import { ceilingFor } from './runtime-for.js';
+import { CEILING_TABLES } from './runtime-for.js';
+import { ceilingIsSane, ceilingRows, resolveCeiling } from './context-ceilings.js';
 import type {
   EditAgentResult,
   HireResult,
@@ -87,6 +88,7 @@ import type {
   UiRoutine,
   UiRoutineRun,
   UiRoutineTarget,
+  UiContextCeiling,
   UiRuntimeChoice,
   UiRuntimeOptions,
   RuntimeStepOutcome,
@@ -162,14 +164,18 @@ const autoplayDelayMs = Number(
  * creates a real team for `<dir>` in the real database, with a two-agent roster it still
  * hardcodes, and starts it exactly as the creation flow would.
  *
- * Three of them now, and the third is the point of the whole architecture: `--live-mixed` puts
- * a Claude agent and a Codex agent on one team, where the orchestrator cannot tell them apart
- * and the mailbox has to carry a message from one vendor's process to another's.
+ * Five of them now, and the mixed pairs are the point of the whole architecture: one puts a
+ * Claude agent and a Codex agent on one team, the other a Claude agent and an fx agent, where
+ * the orchestrator cannot tell them apart and the mailbox has to carry a message from one
+ * vendor's process to another's. fx is the sharper of the two, because it is the runtime none
+ * of the protocol's authors wrote.
  */
 const LIVE_ROSTERS: Readonly<Record<string, readonly [string, string]>> = {
   '--live-claude=': ['claude-code', 'claude-code'],
   '--live-codex=': ['codex', 'codex'],
+  '--live-fx=': ['fx', 'fx'],
   '--live-mixed=': ['claude-code', 'codex'],
+  '--live-fx-mixed=': ['claude-code', 'fx'],
 };
 
 const liveLaunch = Object.entries(LIVE_ROSTERS).flatMap(([flag, runtimes]) => {
@@ -394,6 +400,7 @@ function agentProfiles(): UiAgentProfile[] {
     ...(profile.runtimeOptions === undefined ? {} : { runtimeOptions: profile.runtimeOptions }),
     ...(profile.trust === undefined ? {} : { trust: profile.trust }),
     ...(profile.compaction === undefined ? {} : { compaction: profile.compaction }),
+    ...(profile.verbosity === undefined ? {} : { verbosity: profile.verbosity }),
     teams: store
       ? store
           .membershipsOf(profile.id)
@@ -532,17 +539,50 @@ function unreadAgents(): string[] {
 /**
  * What blobot knows about this model's usable context, for the agent it belongs to.
  *
- * Absent unless somebody measured that model, which is the ordinary case: the renderer falls
- * back conservatively and says so, rather than the snapshot inventing a number here. Spread
- * into the agent so an unmeasured model contributes no key at all.
+ * The user's own figure if they set one on the settings screen, then whatever the adapter's
+ * table knows, then absent — which is the ordinary case: the renderer falls back conservatively
+ * and says so, rather than the snapshot inventing a number here. Spread into the agent so an
+ * unmeasured model contributes no key at all.
  */
 function ceiling(
   runtimeId: string | undefined,
   options: Readonly<Record<string, string>> | undefined,
 ): { contextCeiling?: number } {
-  if (runtimeId === undefined) return {};
-  const tokens = ceilingFor(runtimeId, options?.['model']);
+  if (runtimeId === undefined || store === undefined) return {};
+  const tokens = resolveCeiling(store.contextCeilings(), runtimeId, options?.['model']);
   return tokens === undefined ? {} : { contextCeiling: tokens };
+}
+
+/**
+ * The settings screen's list: every model this installation can be asked about.
+ *
+ * Built from the roster rather than from a catalogue, so a row is about an agent the user
+ * actually hired — plus the handful blobot ships an entry for, so a number it decided is visible
+ * before it surprises anybody.
+ */
+function ceilingList(): readonly UiContextCeiling[] {
+  if (store === undefined) return [];
+  return ceilingRows(store.contextCeilings(), store.listProfiles(), CEILING_TABLES);
+}
+
+/**
+ * Push the ceilings at every team that is up, so a change lands on the agents it is about.
+ *
+ * Recomputed from scratch for each agent rather than diffed against what moved: the resolution
+ * order is two lines long, the rosters here are a handful of agents, and a diff would be a
+ * second implementation of `resolveCeiling` that could disagree with the first.
+ */
+function applyCeilings(): void {
+  if (store === undefined) return;
+  const overrides = store.contextCeilings();
+  for (const live of demo === undefined ? pool.live : [demo, ...pool.live]) {
+    for (const record of store.agentsOfTeam(live.team.id)) {
+      const tokens = resolveCeiling(overrides, record.runtimeId, record.runtimeOptions?.['model']);
+      live.orchestrator.setContextCeiling(record.id, tokens);
+      if (tokens === undefined) delete live.contextCeilings[record.id];
+      else live.contextCeilings[record.id] = tokens;
+    }
+  }
 }
 
 function snapshot(): UiSnapshot {
@@ -1034,6 +1074,37 @@ void app.whenReady().then(async () => {
     store?.setTeamIcon(teamId, icon);
     send('blobot:team');
   });
+  ipcMain.handle('blobot:contextCeilings', (): readonly UiContextCeiling[] => ceilingList());
+  /**
+   * Set where a model stops being worth more context, or hand the question back to blobot.
+   *
+   * **It reaches the teams that are already up**, which is the difference between this and the
+   * model or the trust level: those are `session/new` parameters and a running session was
+   * opened without them, but a ceiling is a number blobot compares against after every turn. So
+   * there is no restart to explain, and the screen does not have to promise one.
+   *
+   * The floor and the roof are not judgements about any model — they are the range in which a
+   * token count is a token count at all. Outside it the row is left as it was.
+   */
+  ipcMain.handle(
+    'blobot:setContextCeiling',
+    (
+      _event,
+      runtimeId: string,
+      model: string | undefined,
+      tokens: number | undefined,
+    ): readonly UiContextCeiling[] => {
+      if (store === undefined) return [];
+      if (tokens === undefined) store.clearContextCeiling(runtimeId, model);
+      else if (ceilingIsSane(tokens)) store.setContextCeiling(runtimeId, model, tokens, Date.now());
+      else return ceilingList();
+      applyCeilings();
+      // The gauge draws its mark off the snapshot, so the pane redraws with the new denominator
+      // rather than waiting for the next thing an agent happens to say.
+      send('blobot:team');
+      return ceilingList();
+    },
+  );
   ipcMain.handle('blobot:detectRuntimes', async (): Promise<UiRuntimeChoice[]> => {
     // The one caller that asks the machine again, because it is the one drawing the answer:
     // installing a CLI and coming back is when readiness changes. Everything else reuses this.
@@ -1595,7 +1666,11 @@ async function liveTeam(
   const profileIds: string[] = [];
   for (const seat of seats) {
     const detected = await knownRuntime(seat.runtimeId);
-    const profileName = seat.runtimeId === 'claude-code' ? seat.name : `${seat.name}-codex`;
+    // Suffixed by the runtime rather than by a hardcoded word: an agent's runtime is fixed at
+    // hire, so Alice-on-Claude and Alice-on-fx cannot be the same profile. Claude keeps the bare
+    // name because it was the first, and renaming it would orphan the profiles already hired.
+    const profileName =
+      seat.runtimeId === 'claude-code' ? seat.name : `${seat.name}-${seat.runtimeId}`;
     // Hire them once. On a second directory they are the *same* agents joining a second team.
     const existingProfile = store.profileByName(profileName);
     if (existingProfile !== undefined) {

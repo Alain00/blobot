@@ -71,6 +71,7 @@ function draw(agents: readonly UiAgent[], pane: Pane = { kind: 'agent', agentId:
         agents,
         commands: {},
         pane,
+        usage: {},
         onSend: (ids: readonly string[], text: string, attachmentIds: readonly string[]) =>
           sent.push([ids, text, attachmentIds]),
       }),

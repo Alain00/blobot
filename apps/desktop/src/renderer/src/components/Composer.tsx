@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Command, useCommandState } from 'cmdk';
-import { ArrowUp, Paperclip } from 'lucide-react';
+import { ArrowUp, Plus } from 'lucide-react';
 import { findAgentByName } from '@blobot/core/domain';
 import type { Agent } from '@blobot/core/domain';
-import type { UiAgent, UiAttachment, UiCommand } from '../../../shared/api.js';
+import type { UiAgent, UiAttachment, UiCommand, UiUsage } from '../../../shared/api.js';
 import { addressedBy, commandMenu, isAddressing } from '../model.js';
 import type { Pane } from '../model.js';
 import { Blob } from './Blob.js';
 import { Attached, sizeOf } from './Attached.js';
+import { ContextRing } from './ContextRing.js';
 
 /**
  * The recipient is an `@mention`, not a picker.
@@ -55,6 +56,7 @@ export function Composer({
   agents,
   commands,
   pane,
+  usage,
   lead,
   onSend,
   footer,
@@ -64,6 +66,12 @@ export function Composer({
   /** Each agent's own slash menu. Per session, so two teammates can offer different ones. */
   commands: Record<string, readonly UiCommand[]>;
   pane: Pane;
+  /**
+   * Every agent's context reading, by agent id. The composer draws the recipient's, and knows
+   * nothing about where the number came from — it is the same `usage_updated` the activity
+   * column folds, handed to the one other place the answer is worth having.
+   */
+  usage: Record<string, UiUsage>;
   /**
    * The team's lead, when it has one: the team pane's recipient when the user names nobody.
    * Passed rather than read off the pane, because a pane is a place on screen and this is a
@@ -320,6 +328,32 @@ export function Composer({
         <div className="stranded">say who with @ · or give this team a lead</div>
       )}
       <div className="pill">
+      {/* The discoverable door. Paste is the one that gets used and a drop is nearly free, but
+          neither is visible, and a feature nobody can find is not one.
+
+          **A plus, not a paperclip.** A paperclip names the file; a plus names the gesture, and
+          at the head of the field it is the one glyph that reads as *add something to this
+          message* without claiming what. The label and the tooltip still say attach a file,
+          because that is all it does today.
+
+          **At the head of the pill, before the field.** It sat at the tail beside send, where
+          two round buttons of the same size shared a corner and the second one read as a lesser
+          send. The two are not the same kind of thing: one adds to the message, one sends it,
+          and putting them at opposite ends of the field is the cheapest way to say so. It is
+          also the order the sentence is written in — attach, write, send. */}
+      <button
+        className="clip"
+        disabled={opening || (!canAttach.images && !canAttach.textFiles)}
+        onClick={() => void window.blobot.chooseAttachment().then(keep)}
+        title={
+          canAttach.images || canAttach.textFiles
+            ? 'Attach a file'
+            : 'This agent takes no attachments'
+        }
+        aria-label="Attach a file"
+      >
+        <Plus size={18} aria-hidden />
+      </button>
       <Command
         className="mentionwrap"
         label="Teammates and commands"
@@ -423,21 +457,9 @@ export function Composer({
         </div>
         </div>
       </Command>
-      {/* The discoverable door. Paste is the one that gets used and a drop is nearly free, but
-          neither is visible, and a feature nobody can find is not one. */}
-      <button
-        className="clip"
-        disabled={opening || (!canAttach.images && !canAttach.textFiles)}
-        onClick={() => void window.blobot.chooseAttachment().then(keep)}
-        title={
-          canAttach.images || canAttach.textFiles
-            ? 'Attach a file'
-            : 'This agent takes no attachments'
-        }
-        aria-label="Attach a file"
-      >
-        <Paperclip size={16} aria-hidden />
-      </button>
+      {/* Where the paperclip was, and it is the reading rather than a control: what stands
+          beside send is what the message is about to cost the window it is going into. */}
+      <ContextRing recipients={recipients} usage={usage} />
       <button
         className={`send${pane.kind === 'team' && recipient !== undefined ? ' named' : ''}`}
         disabled={opening || recipients.length === 0 || draft.trim() === ''}

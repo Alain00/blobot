@@ -163,7 +163,14 @@ up. Read it before starting work.
   every level, because the step above is `bypassPermissions` and ticket 14 refuses it. Per agent
   and never per team, since an AgentWorkspace is per agent. Taken at the team's next start, which
   is not a policy: `allowedTools` is a `session/new` parameter and OpenCode's posture is the
-  child's environment. Ticket 14's second 2026-08-30 amendment, and ADR-0002's.
+  child's environment. Ticket 14's second 2026-08-30 amendment, and ADR-0002's. **What a level
+  sorts on is the verb, corrected 2026-08-31**: `gh` was one atom under *reaches the network*,
+  which put `gh pr view` a level above `git fetch` — the same read, against the same host,
+  vouched at `normal` since the list was written — and let `trusting` reach `gh pr create`, which
+  contradicts *a pull request is the user's action*. It splits the way `git` always did: the
+  reading verbs vouched from `normal`, every writing verb at no level, `gh api` with them because
+  `-X POST` is invisible to a prefix rule. Whether `trusting` should be the ceiling at all is
+  **reopened and open** on ticket 14, deliberately unanswered by that fix.
 
 - **Ticket 14's posture is on screen** (14): a permission request is a channel on the
   orchestrator, so `waiting` is the status fold's own answer; the block is inline in the
@@ -415,10 +422,48 @@ up. Read it before starting work.
   should be able to do that. What is behind it is the machine: ticket 11's four states with
   ticket 11's remedies, which until now were reachable only from inside the hire dialog. One
   section, because a sidebar with one true item is more honest than four invented ones. The list
-  row is **filled** everywhere now (`.listrow`), and picker rows keep `.rosterrow`.
+  row is **filled** everywhere now (`.listrow`), and a picker row is that same row outlined
+  until it is chosen (`.listrow.pick`), which is the only difference between the two that means
+  anything.
 
-Next: handing a real runtime a real attachment (neither live suite has an attachment case yet),
-then surfacing whether an agent resumed or started fresh.
+- **A fourth runtime, and the first nobody in the ACP working group wrote.** `.scratch/fx-runtime/`,
+  five tickets, all resolved. **fx** is Vercel Labs' coding agent: a ~7 MiB native Zig binary,
+  Apache-2.0, model and provider agnostic, with a first-party `fx acp` server. The adapter is
+  `packages/core/src/adapters/fx`, and the reason it was worth building is that it **tests the
+  claim `adapters/acp/` exists to make**: Claude's and Codex's bridges come from the protocol's own
+  authors and OpenCode implements it beside them, so the shared half had never met a fourth party.
+  It took one. The JSON-RPC, the transport, the wire shapes, the `session/update` translation, the
+  option groups and the attachment blocks are all reused with no edit, and a live edit asserts the
+  same title string the other three live suites assert for the same edit. **The one edit was a
+  comment**: fx opens an MCP connection with `server/discover`, a newer draft's method, and falls
+  back to the classic handshake *only because `peer-message-server.ts` answers unknown methods with
+  an error* -- a `{}` result fails the session with `McpMissingResultType` and every fx agent would
+  launch with no mailbox. That line is load-bearing now, and has a test named after the method.
+  What is genuinely fx's own: **the persona has no channel at all**, so it rides the prompt on
+  every turn, above the user's words and never in the `messages` row, which is `composeLeadBrief`'s
+  shape and buys immunity to a compaction blobot cannot see -- every other candidate was measured
+  and failed, including an `AGENTS.md` above the worktree, `--add-dir` (fx's own string says those
+  directories contribute no instructions) and the loopback server's `instructions`. **The posture
+  is `FX_PERMISSION_MODE` on the process**, not the ACP mode: a session in mode `ask` wrote a file
+  without asking once, which is the Codex lesson word for word. **All three trust words answer
+  `ask`**, because fx's other mode is "full tool access" with no carve-out for `rm`, `sudo` or
+  `git push`, putting it above blobot's ceiling; `FX_EXPRESSES_TRUST` says so rather than letting
+  three words imply a difference. `/allowlist` is refused in the palette because it writes a
+  permanent allow rule into the user's own `~/.fx/settings.json`, which would be the one path by
+  which an agent's turn could widen what the next agent may do. And **`accepts` is
+  `{images: false, textFiles: true}`** -- the first real runtime to refuse an attachment kind, so
+  ADR-0004's refusal-at-pickup path is finally exercised by something other than the mock.
+  Detection is load-bearing rather than a courtesy here, because an unauthenticated fx fails
+  `initialize` itself instead of advertising `authMethods`; `fx status --json` is the cheapest and
+  most honest probe of the four, and it still cannot see the fifth state, since a signed-in account
+  with no gateway credit fails a turn with `insufficient_funds`. Verified live against a real fx
+  0.0.7 on a real subscription, `BLOBOT_LIVE_FX=1`: the persona holds, an edit names its file, the
+  palette offers four of eighteen, and two agents' loopback carries a per-agent bearer token.
+
+Next: two real fx agents on one team behind the UI and one beside a Claude agent (the
+`--live-mixed` shape), handing a real runtime a real attachment (no live suite has one yet, and fx
+is the interesting case because it is the one that says no to images), then surfacing whether an
+agent resumed or started fresh.
 `build.md`'s *Next session* has the order and the reasons.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that

@@ -50,6 +50,7 @@ function draw(pane: Pane, lead?: string): Drawn {
         agents: AGENTS,
         commands: {},
         pane,
+        usage: {},
         ...(lead === undefined ? {} : { lead }),
         onSend: (agentIds: readonly string[], text: string) => sent.push([agentIds, text]),
       }),

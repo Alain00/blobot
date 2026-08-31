@@ -40,6 +40,8 @@ export { findAgentByName } from './orchestrator/roster.js';
 export { AgentStatusTracker, statusAfter } from './status.js';
 export type { TrustLevel } from './trust.js';
 export { DEFAULT_TRUST, trustLevelOf } from './trust.js';
+export type { VerbosityLevel } from './verbosity.js';
+export { DEFAULT_VERBOSITY, verbosityInstruction, verbosityLevelOf } from './verbosity.js';
 /**
  * The arithmetic half of the working ceiling, and only that half. The per-model tables live in
  * the adapters and are not exported here: this entry point is what the renderer imports, and a
@@ -47,6 +49,11 @@ export { DEFAULT_TRUST, trustLevelOf } from './trust.js';
  */
 export type { WorkingCeiling } from './context-ceiling.js';
 export { UNMEASURED_CAP, UNMEASURED_FRACTION, measuredCeiling, unmeasuredCeiling, workingCeiling } from './context-ceiling.js';
+/**
+ * The fraction of that ceiling at which blobot asks for a handoff. Pure arithmetic, and the
+ * renderer draws it: a screen that lets somebody set a ceiling has to say what the number does.
+ */
+export { COMPACTION_TRIGGER } from './orchestrator/compaction.js';
 
 export type { AgentStatus } from './status.js';
 

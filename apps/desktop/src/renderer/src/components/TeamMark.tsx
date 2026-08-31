@@ -1,4 +1,5 @@
 import { Blobatar } from '@blobatar/react';
+import { SHAPE_TRAITS } from '../blobatar-shapes';
 
 interface Slot {
   readonly x: number;
@@ -68,6 +69,7 @@ export function TeamMark({
             <Blobatar
               name={agent.name}
               size={slot.size}
+              traits={SHAPE_TRAITS}
               {...(agent.hue === undefined ? {} : { hue: agent.hue })}
             />
           </span>

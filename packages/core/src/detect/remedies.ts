@@ -51,6 +51,10 @@ const INSTALL_SCRIPTS: Readonly<Record<string, string>> = {
   'claude-code': 'curl -fsSL https://claude.ai/install.sh | bash',
   opencode: 'curl -fsSL https://opencode.ai/install | bash',
   codex: 'npm install -g @openai/codex',
+  // Verified live 2026-08-31 by running it: it downloads one tarball from `releases.fx.sh`,
+  // extracts a single binary to `~/.local/bin/fx`, and appends a `PATH` line to the login
+  // shell's rc file only when that directory is not already on `PATH`.
+  fx: 'curl -fsSL https://fx.sh/setup.sh | bash',
 };
 
 /**
@@ -67,6 +71,16 @@ const SIGN_IN_ARGS: Readonly<Record<string, readonly string[]>> = {
   // carries the credential, which `CLAUDE.md` forbids outright. They are absent by construction
   // and this table is the only place argv is built.
   codex: ['login'],
+  // Bare `fx login` is the Vercel AI Gateway browser flow. `fx login codex` and `fx login grok`
+  // sign into a subscription the user already pays for, and both are equally acceptable -- but
+  // this table builds exactly one argv per runtime, and the bare form is the one that matches
+  // the provider fx defaults to. The other two are reachable from the same screen by the user
+  // typing them, which is a terminal doing what a terminal is for.
+  //
+  // `fx setup` is deliberately not here: it configures an **API key**, read from the user and
+  // written to their config. That is the flow of the three that comes closest to blobot
+  // touching a credential, and the no-credential-storage rule is kept by not offering it.
+  fx: ['login'],
 };
 
 /**

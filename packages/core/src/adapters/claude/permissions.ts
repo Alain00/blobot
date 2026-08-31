@@ -44,10 +44,14 @@ const EDITING_TOOLS = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit'];
  * unlisted-but-harmless command still prompts. That asymmetry runs in the safe direction and it
  * fails closed, which is the property ADR-0003 wanted from the palette for the same reason.
  *
- * Nothing here reaches the network, changes permissions, or publishes — the three things
- * ticket 14's OpenCode list stops. `git push`, `git remote`, `gh`, `curl`, `wget`, `ssh`, `scp`,
- * `docker`, `sudo`, `rm`, `chmod`, `chown` and every install verb are absent by construction,
- * and stay absent: a prefix added here is a prompt the user stops getting.
+ * Nothing here changes permissions or publishes — two of the three things ticket 14's OpenCode
+ * list stops. The third, *reaches the network*, turned out to be the wrong axis and was corrected
+ * on 2026-08-31: `git fetch` and `git pull` were always here, and they are reads over the same
+ * network as `gh pr view`. What decides is the **verb**, so the reading half of `gh` is here
+ * beside them and the writing half is absent at every level. `git push`, `git remote`,
+ * `gh pr create`, `curl`, `wget`, `ssh`, `scp`, `docker`, `sudo`, `rm`, `chmod`, `chown` and
+ * every install verb are absent by construction, and stay absent: a prefix added here is a
+ * prompt the user stops getting.
  *
  * `bash` and `sh` are absent for the same reason: `bash -c "rm -rf …"` would walk straight
  * through this list, and a rule that vouches for a shell vouches for everything the shell can
@@ -64,6 +68,17 @@ const VOUCHED_BASH = [
   'git checkout', 'git switch', 'git restore', 'git stash', 'git rev-parse', 'git ls-files',
   'git blame', 'git fetch', 'git pull', 'git merge', 'git rebase', 'git reset', 'git tag',
   'git describe', 'git config', 'git apply', 'git cherry-pick',
+  // Reading GitHub. The same split as local git one line up, made on the verb and never on the
+  // transport. `gh api` is absent because `gh api -X POST` writes and a prefix rule cannot see
+  // the flag; every other writing verb is absent at every level, `gh pr create` included, since
+  // a pull request is the user's action and never an agent's.
+  'gh pr view', 'gh pr list', 'gh pr diff', 'gh pr checks', 'gh pr status',
+  'gh issue view', 'gh issue list', 'gh issue status',
+  'gh repo view', 'gh repo list',
+  'gh run view', 'gh run list',
+  'gh workflow view', 'gh workflow list',
+  'gh release view', 'gh release list',
+  'gh label list', 'gh search', 'gh auth status',
   // Doing the work. Running a script is not installing one: the `add` and `install` verbs are out.
   'npm test', 'npm run', 'npm ls', 'pnpm test', 'pnpm run', 'pnpm ls', 'pnpm build',
   'yarn test', 'yarn run', 'bun test', 'bun run', 'make', 'cargo test', 'cargo build',
@@ -79,10 +94,12 @@ const VOUCHED_BASH = [
  * These are the prefixes ticket 14's OpenCode list asks about, minus the ones that delete,
  * publish or change who can do what. An agent set here fetches a page and adds a dependency
  * without stopping; it still stops before `rm`, `sudo`, `chmod`, `chown`, `ssh`, `scp`,
- * `docker`, `git push` and `git remote`, at every level, on both runtimes.
+ * `docker`, `git push`, `git remote` and every writing `gh` verb, at every level, on both
+ * runtimes. `gh` is not here: its reads are vouched at `normal` and its writes at no level, so
+ * there is nothing left for this list to add.
  */
 const TRUSTING_BASH = [
-  'curl', 'wget', 'gh', 'npm install', 'npm ci', 'npx', 'pnpm add', 'pnpm dlx', 'pnpm install',
+  'curl', 'wget', 'npm install', 'npm ci', 'npx', 'pnpm add', 'pnpm dlx', 'pnpm install',
   'yarn add', 'yarn install', 'bun add', 'bun install', 'pip install', 'pip3 install',
   'cargo add', 'go get',
 ];

@@ -392,6 +392,47 @@ describe('a measured ceiling', () => {
   });
 });
 
+describe('a ceiling the user moves while the team is up', () => {
+  it('is used by the next turn, because a threshold is not a session parameter', async () => {
+    const h = await harness({
+      // Nothing established for this model, so the fallback applies: 120,000 of the 200,000
+      // window, and a handoff asked for at 96,000. 90,000 is under that and stays put.
+      scripts: {
+        [alice.id]: [
+          fillsTo(90_000),
+          fillsTo(90_000),
+          scenario('handoff').say('Migrating call sites.').end(),
+          scenario('resumed').say('Read it.').end(),
+        ],
+      },
+    });
+    await h.run(alice.id, 'Migrate the call sites.');
+    expect(h.compacted()).toHaveLength(0);
+
+    // The user watches this model go vague sooner than blobot assumed, and says so. No restart
+    // is owed: the model, the trust level and the persona are handed over at `session/new`, and
+    // this is a number compared against after every turn.
+    h.orchestrator.setContextCeiling(alice.id, 100_000);
+    await h.run(alice.id, 'Carry on.');
+
+    const [compacted] = h.compacted();
+    expect(compacted?.ceiling).toBe(100_000);
+    expect(compacted?.measured).toBe(true);
+  });
+
+  it('puts an agent back on the fallback when the user takes their number away', async () => {
+    const h = await harness({
+      // 90,000 is past 80% of this one and under 80% of the fallback, so the two answers differ
+      // and the test is about which one is live rather than about arithmetic.
+      ceilings: { [alice.id]: 100_000 },
+      scripts: { [alice.id]: [fillsTo(90_000), fillsTo(90_000)] },
+    });
+    h.orchestrator.setContextCeiling(alice.id, undefined);
+    await h.run(alice.id, 'Migrate the call sites.');
+    expect(h.compacted()).toHaveLength(0);
+  });
+});
+
 describe('the mailbox across a restart', () => {
   it('delivers a message that arrived during the compaction to the fresh session', async () => {
     const h = await harness({

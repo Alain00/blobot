@@ -39,8 +39,10 @@ export function App(): React.JSX.Element {
   const [browsingRoutines, setBrowsingRoutines] = useState(
     opened.get('screen') === 'routines' || opened.get('screen') === 'new-routine',
   );
-  /** *Settings*, the third door. `--screen=settings` for a screenshot. */
-  const [inSettings, setInSettings] = useState(opened.get('screen') === 'settings');
+  /** *Settings*, the third door. `--screen=settings`, or `settings:context`, for a screenshot. */
+  const [inSettings, setInSettings] = useState(
+    (opened.get('screen') ?? '').startsWith('settings'),
+  );
   /** The navigator, on ctrl+k. `--screen=find` opens it for a screenshot. */
   const [finding, setFinding] = useState(opened.get('screen') === 'find');
   /** The team a modal is about, and which one. Never the team on screen by implication. */
@@ -392,6 +394,7 @@ export function App(): React.JSX.Element {
             agents={snapshot.agents}
             commands={state.commands}
             pane={pane}
+            usage={state.usage}
             {...(snapshot.team?.leadAgentId === undefined
               ? {}
               : { lead: snapshot.team.leadAgentId })}
@@ -464,7 +467,12 @@ export function App(): React.JSX.Element {
         {/* Over the panes like the two doors beside it, and for the same reason: nothing here
             restarts a team. Signing a runtime in changes what the *next* team start can do, and
             an agent already running on that runtime is already running. */}
-        {inSettings && <Settings onClose={() => setInSettings(false)} />}
+        {inSettings && (
+          <Settings
+            onClose={() => setInSettings(false)}
+            {...(opened.get('screen') === 'settings:context' ? { section: 'context' as const } : {})}
+          />
+        )}
         {deletingTeam !== undefined && (
           <DeleteTeam
             team={deletingTeam}

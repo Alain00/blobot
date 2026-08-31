@@ -1,6 +1,8 @@
 import { Blobatar } from '@blobatar/react';
+import { useGaze, type GazeTarget } from '@blobatar/react/gaze';
 import { idle, sleepy, surprised, thinking, type Expression } from 'blobatar/expression';
 import type { AgentStatus } from '@blobot/core/domain';
+import { SHAPE_TRAITS } from '../blobatar-shapes';
 
 /**
  * A blobatar, wrapped in the one element that carries status as motion. There is **one** body
@@ -13,7 +15,14 @@ import type { AgentStatus } from '@blobot/core/domain';
  * say in flight, and the body is left saying the one thing a shape says well.
  *
  * All of it sits behind `prefers-reduced-motion`, where the mono word and the dots carry
- * the state alone.
+ * the state alone. The gaze layer below is behind it too, and we did not have to build that:
+ * the driver watches the query itself, along with `(hover: hover) and (pointer: fine)`, and
+ * stands the eyes down rather than tracking a pointer that is not really there.
+ *
+ * **The eyes can follow something**, on the animated surfaces only. `lookAt` is the call site's
+ * to aim, except for `waiting`, which claims the pointer — see `aimOf`. It costs an import of
+ * `blobatar/gaze.css` in `main.tsx` and an excursion per face, and it is off for every face
+ * that is not asked, since a driver aimed at nothing parks on its first frame.
  *
  * **`name` is the agent's name, never its id.** The library derives the whole face from this
  * string, so a surface that seeds it with a row id draws a different creature for the same
@@ -33,6 +42,8 @@ export function Blob({
   status,
   hue,
   animated = false,
+  lookAt,
+  travel = TRAVEL,
 }: {
   name: string;
   size?: number;
@@ -50,6 +61,22 @@ export function Blob({
    * grows all day, which is the case the `<img>` default was chosen for.
    */
   animated?: boolean;
+  /**
+   * Where this face looks. Ignored unless `animated`, because the gaze layer writes onto the
+   * `.mo-eyes` group and an `<img>` has no eyes.
+   *
+   * An element, a point, `"pointer"`, `"rest"` (held at centre, deliberately not looking) or
+   * `null`. Omitted and `null` mean the same thing here, unlike in the library: this component
+   * always aims declaratively, so there is no second caller for the two to disagree about.
+   */
+  lookAt?: GazeTarget;
+  /**
+   * How far the eyes travel, in viewBox units — 1% of the face each, at any drawn size.
+   *
+   * Defaults to `TRAVEL`, which is the floor. A surface raises it when it has a reason it can
+   * state, and the two that do are the rail and the hire preview.
+   */
+  travel?: number;
 }): React.JSX.Element {
   if (!animated) {
     return (
@@ -58,11 +85,54 @@ export function Blob({
         style={{ width: size, height: size }}
       >
         <span className="blob" style={{ width: size, height: size }}>
-          <Blobatar name={name} size={size} {...(hue === undefined ? {} : { hue })} />
+          <Blobatar
+            name={name}
+            size={size}
+            traits={SHAPE_TRAITS}
+            {...(hue === undefined ? {} : { hue })}
+          />
         </span>
       </span>
     );
   }
+
+  return (
+    <LiveBlob
+      name={name}
+      size={size}
+      status={status}
+      hue={hue}
+      lookAt={lookAt}
+      travel={travel}
+    />
+  );
+}
+
+/**
+ * The animated blobatar, and the only thing in the app that runs a gaze driver.
+ *
+ * It is a component rather than a branch inside `Blob` because `useGaze` is a hook and the
+ * static branch must not pay for it. A driver is a `pointermove` listener, a scroll listener
+ * and a `ResizeObserver` per face; mounting one per settled transcript message would be
+ * hundreds of them behind a layer that cannot draw on an `<img>` anyway. Splitting here keeps
+ * the cost exactly where the eyes are.
+ */
+function LiveBlob({
+  name,
+  size,
+  status,
+  hue,
+  lookAt,
+  travel,
+}: {
+  name: string;
+  size: number;
+  status: AgentStatus | undefined;
+  hue: number | undefined;
+  lookAt: GazeTarget | undefined;
+  travel: number;
+}): React.JSX.Element {
+  const gaze = useGaze({ travel, lookAt: aimOf(status, lookAt) });
 
   return (
     <span
@@ -86,8 +156,10 @@ export function Blob({
             variables on the element at all times, so a status change morphs between two poses
             instead of appearing from nothing. */}
         <Blobatar
+          ref={gaze.ref}
           name={name}
           size={size}
+          traits={SHAPE_TRAITS}
           animate="always"
           expression={poseFor(status) ?? idle}
           {...(hue === undefined ? {} : { hue })}
@@ -95,6 +167,57 @@ export function Blob({
       </span>
     </span>
   );
+}
+
+/**
+ * The gaze's excursion when a call site does not name one, in viewBox units — 1% of the face
+ * each, so one number is the same proportion at every drawn size.
+ *
+ * The quiet setting, and the only one inside the range the library documents for a follow (1.5
+ * to 4). It sits under the `thinking` seesaw's 8.4, so a face wearing this reads as attention
+ * beneath motion that reads as working rather than as a second channel beside it. It is what
+ * the transcript's pending face gets, where anything larger would be movement next to words
+ * somebody is reading.
+ */
+export const TRAVEL = 2.5;
+
+/**
+ * The excursion where the gaze is meant to be *seen*: the rail, and the preview in the hire and
+ * edit dialogs.
+ *
+ * Several times the floor and above the status signal rather than under it, which inverts the
+ * amplitude argument the idle layer is admitted on. That reversal is deliberate and the author's
+ * — a gaze pitched under the signal is a channel nobody notices, which is the same as not having
+ * built it. What keeps it payable is the other half of DESIGN.md's rule rather than the first:
+ * this moves nothing until a pointer moves, so it is answering the user's own hand, and the
+ * driver stands itself down under `prefers-reduced-motion`.
+ *
+ * Short of the ceiling by a wide margin. The projection saturates at the limb, so a large
+ * excursion cannot throw an eye off the face — but at 24 the turn is most of a head and the eye
+ * arrives at the edge with almost no width, which reads as a face turning *away*. This is half
+ * of that: a head turning to follow you.
+ */
+export const SEEN = 12;
+
+/**
+ * Where a face actually looks, once status has had its say.
+ *
+ * `waiting` takes the pointer and overrides whatever the call site asked for, and it is the one
+ * status that reaches into this at all. The state's literal content is *an agent is blocked
+ * until a human looks at it*, which is why it already wears `surprised` — the only pose that
+ * grows the eyes. Following the cursor is that same sentence continued rather than a new claim:
+ * the face tracks you until you answer, and stops the moment you do.
+ *
+ * It is bounded by the state being rare. At most one or two agents are ever `waiting`, so this
+ * never becomes a column of faces turning in unison — which is the thing gaze must not do here,
+ * and the reason the rail's idle behaviours are phased off each agent's name while this is not.
+ *
+ * Everything else defers to the call site, and `undefined` collapses to `null`: a face that was
+ * not aimed looks at nothing and goes on living its own life.
+ */
+export function aimOf(status: AgentStatus | undefined, lookAt: GazeTarget | undefined): GazeTarget {
+  if (status === 'waiting') return 'pointer';
+  return lookAt ?? null;
 }
 
 /**

@@ -1,6 +1,10 @@
 import {
+  CLAUDE_CEILINGS,
+  CODEX_CEILINGS,
   ClaudeAgentRuntime,
   CodexAgentRuntime,
+  FxAgentRuntime,
+  OPENCODE_CEILINGS,
   OpencodeAgentRuntime,
   claudeCeiling,
   codexCeiling,
@@ -81,6 +85,14 @@ export function runtimeFor(request: RuntimeRequest): AgentRuntime {
           ? {}
           : { codexExecutable: request.executablePath }),
       });
+    // fx takes no `agentName`: OpenCode needs one because the persona is an agent definition
+    // with a key, and Codex because it names the agent in its own vocabulary. fx has neither —
+    // the persona rides the prompt — so passing one would be a field with nowhere to go.
+    case 'fx':
+      return new FxAgentRuntime({
+        ...shared,
+        ...(request.executablePath === undefined ? {} : { fxExecutable: request.executablePath }),
+      });
     default:
       throw new Error(`${request.agentName} is set up for ${request.runtimeId}, which blobot cannot run`);
   }
@@ -114,3 +126,18 @@ export function ceilingFor(runtimeId: string, model: string | undefined): number
       return undefined;
   }
 }
+
+/**
+ * The same knowledge as a table rather than a question, for the one screen that lists it.
+ *
+ * Settings draws a row per model blobot has an entry for, so that a number blobot ships is
+ * visible before it surprises somebody — and that needs the keys, which a lookup cannot give.
+ * It is here for the reason everything else in this file is: this is the one module allowed to
+ * know what a `runtime_id` means, and a second dispatch elsewhere is a second one to keep in
+ * step. What crosses to the renderer is rows, never this.
+ */
+export const CEILING_TABLES: Readonly<Record<string, Readonly<Record<string, number>>>> = {
+  'claude-code': CLAUDE_CEILINGS,
+  opencode: OPENCODE_CEILINGS,
+  codex: CODEX_CEILINGS,
+};

@@ -439,31 +439,77 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    of them. Enough ground to keep the placeholder legible, enough blur that what passes under
    it is unreadable — a half-legible sentence sliding behind the field is worse than either.
    No tint and no saturation: `--raised` is the ground it always had, only thinner. */
-.pill{position:relative;z-index:1;width:100%;max-width:900px;display:flex;gap:10px;align-items:flex-end;background:color-mix(in srgb, var(--raised) 78%, transparent);backdrop-filter:blur(16px) saturate(.9);-webkit-backdrop-filter:blur(16px) saturate(.9);border:1px solid var(--line);border-radius:22px;padding:8px 8px 8px 16px}
+.pill{position:relative;z-index:1;width:100%;max-width:900px;display:flex;gap:10px;align-items:flex-end;background:color-mix(in srgb, var(--raised) 78%, transparent);backdrop-filter:blur(16px) saturate(.9);-webkit-backdrop-filter:blur(16px) saturate(.9);border:1px solid var(--line);border-radius:22px;padding:8px}
 .pill:focus-within{border-color:var(--muted)}
 .send{border:1px solid var(--line);padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px}
 .send[disabled]{opacity:.35;cursor:not-allowed}
 /* Send is the page's primary action and it shared the grey of every secondary button. Once it
    is armed it inverts, which answers "will this go anywhere?" before it is read.
 
-   Disarmed it is the same control turned down, not a control being erased. `.send`'s own
-   `opacity:.35` is for a button in a row of buttons, where the neighbours say where you are; the
-   composer's send is alone at the end of the field, and faded to a third it stopped being a
-   shape at all — the arrow and the lead's name both went with it. So the disabled state keeps
-   full opacity and moves down the ramp instead: `--raised` fill, `--line` edge, `--muted` ink.
-   Same size, same round, same name, one step quieter. */
-.composer .send{flex:0 0 auto;width:32px;height:32px;padding:0;border-radius:50%;justify-content:center;color:var(--muted)}
+   Disarmed it is **the primary control turned down, and never an outline**. *Amended
+   2026-08-31.* It has been through two wrong versions of the same mistake: `opacity:.35` first,
+   which faded the arrow until the button stopped being a shape, and then a `--raised` fill
+   inside a `--line` border, which is the secondary-button costume — so the one filled control
+   in the composer changed *kind* the moment it was unarmed, and the field read as having two
+   different buttons at its end depending on whether a key had been pressed. It keeps the fill
+   and steps it down the ramp instead: a low mix of `--ink`, no border at all, `--muted` arrow.
+   Same shape, same weight, one state of the same control. */
+/* Press feedback, and the arming is a cross-fade. Every other pressable thing here answers the
+   pointer with `scale:.97` and the one control the app is built around did not. The fill and the
+   ink fade too, at the hover duration: arming happens on the first character of every message,
+   which is a path walked all day — but a cross-fade is not motion by this file's own rule, and
+   what it removes is the primary control changing colour between two frames. `:active` is a
+   pointer state, so **Enter never animates**, which is the right answer for the way this button
+   is actually used. */
+.composer .send{flex:0 0 auto;width:32px;height:32px;padding:0;border-radius:50%;justify-content:center;color:var(--muted);scale:1;transition:scale 160ms var(--ease-out),background-color 140ms var(--ease-out),border-color 140ms var(--ease-out),color 140ms var(--ease-out)}
+.composer .send:active:not([disabled]){scale:.97}
 .composer .send:not([disabled]){background:var(--ink);border-color:var(--ink);color:var(--ground)}
-.composer .send[disabled]{opacity:1;background:var(--raised);border-color:var(--line);color:var(--muted)}
+.composer .send[disabled]{opacity:1;background:color-mix(in srgb, var(--ink) 17%, transparent);border-color:transparent;color:var(--muted)}
 /* the team pane's send says who, because there the recipient can be one nobody typed: a name
    the placeholder stops saying the moment the first key is pressed. */
 .composer .send.named{width:auto;padding:0 9px 0 13px;border-radius:16px;gap:7px}
 .composer .send .to{font-size:12px}
 /* The paperclip: the discoverable door, since paste and drop are invisible. `.iconbtn`'s
-   dimensions without its class, because it sits inside the pill and not in the chrome. */
-.composer .clip{flex:0 0 auto;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:0;background:none;color:var(--muted);border-radius:50%}
+   dimensions without its class, because it sits inside the pill and not in the chrome.
+   **At the head of the pill**, which is why the pill's left padding is now the same as its
+   right: an icon button needs its own room, and 16px of text inset in front of one put it
+   nearer the field than the edge. */
+.composer .clip{flex:0 0 auto;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:0;background:none;color:var(--muted);border-radius:50%;scale:1;transition:scale 160ms var(--ease-out)}
+.composer .clip:active:not([disabled]){scale:.97}
 .composer .clip:hover:not([disabled]){color:var(--ink)}
 .composer .clip[disabled]{opacity:.35;cursor:not-allowed}
+/* The context ring: how full the window this message is going into is, where the paperclip was.
+   A dial and not a bar, because a bar at the end of a field is a progress indicator and this is
+   not a process — and it is monochrome for the governing rule: `--ink` for what is used against
+   `--line` for what is left, with nothing turning red. A full window is a thing blobot handles
+   by itself, not an alarm to raise over the composer. */
+.ctxring{flex:0 0 auto;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:0;background:none;border-radius:50%;scale:1;transition:scale 160ms var(--ease-out)}
+.ctxring:active{scale:.97}
+.ctxring .track{stroke:var(--line)}
+.ctxring .arc{stroke:var(--muted);transition:stroke 120ms var(--ease-out)}
+/* **The arc does not animate to its new length.** It shipped growing over 320ms, which was two
+   rules broken at once: data does not move for style — the turn pips next to it snap, and this
+   is the same kind of number — and a `usage_updated` arrives from the runtime while nobody is
+   touching anything, so a growing arc is *ambient* motion, the budget that is spoken for by the
+   blobatar. Only the hover colour fades, which is a cross-fade and not motion. */
+.ctxring:hover .arc,.ctxring[data-state='open'] .arc{stroke:var(--ink)}
+/* The numbers, one row per recipient. `.wspop`'s ground and radius, because it hangs off the
+   same pill and a second popover shape at the foot of the window would be one too many. */
+/* It arrives on a hover, so it arrives at all: a panel that appears between two frames under a
+   pointer that only crossed something reads as a glitch rather than as an answer. The house
+   entrance — 200ms's little sister, since this is a tooltip-sized thing and Emil's range for one
+   is 125 to 200 — from a dim frame rather than an invisible one, for the reason written over
+   `enterperm`. **Origin-aware**: it scales out of the ring rather than out of its own middle,
+   which is the one thing that makes a panel feel attached to the control it belongs to. Radix
+   hands us the corner. */
+.ctxpop{transform-origin:var(--radix-popper-transform-origin);animation:enterpop 140ms var(--ease-out);width:auto;min-width:210px;max-width:calc(100vw - 24px);background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.45);z-index:20;display:flex;flex-direction:column;gap:6px}
+.ctxpophead{font-size:10px;letter-spacing:.06em}
+.ctxpoprow{display:flex;align-items:center;gap:7px;font-size:12px}
+.ctxpoprow .who{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctxpoprow .n{font-size:10px}
+.ctxpoprow .p{font-size:10px;flex:0 0 auto}
+.ctxpoprow .p.past{color:var(--ink)}
+@keyframes enterpop{from{opacity:.3;scale:.97}}
 /* A drop target nobody can see is not one. The border it already has, moved to `--muted`:
    the same change focus makes, because it means the same thing — this field is about to take
    what you are doing. */
@@ -509,6 +555,9 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* The same object as the select's menu — a floating list of rows over a control, with one
    active item — so it takes the same numbers rather than a second set that happens to be close.
    `.selectmenu` and `.selectitem` are the definition; if those move, move these with them. */
+/* **The one menu that does not animate**, and it is the rule rather than an oversight: the
+   `@mention` list opens on a keystroke, mid-sentence, dozens of times a day. Frequency is the
+   disqualifier. Everything else that opens off a control gets `enterpop`. */
 .suggest{position:absolute;bottom:calc(100% + 10px);left:-6px;background:var(--raised);border:1px solid var(--line);border-radius:12px;min-width:196px;padding:5px;z-index:20;box-shadow:0 20px 60px rgba(0,0,0,.65)}
 /* cmdk's own DOM: the list wraps its items in a sizer div, and an item is a div with
    `role="option"`, not a button. `data-selected` is set by the arrow keys *and* by pointer
@@ -797,6 +846,24 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .stepaside{margin-left:auto}
 .stepbody{display:flex;flex-direction:column;gap:10px;align-items:flex-start;padding-left:35px}
 .stepbody > .field,.stepbody > .note,.stepbody > .refusal,.stepbody > .roster,.stepbody > .reposcope{align-self:stretch}
+/* A step you have answered folds to its answer. The numeral and the title stay, so the page
+   still reads as the same four questions from top to bottom; what goes is the tail of a step
+   behind you, which on the folder step is a repository list and an icon.
+
+   The chevron sits after the title. In front of the numeral it would push the numerals of the
+   two steps that fold out of line with the two that do not; pinned to the right edge it is a
+   marker a whole column away from the thing it discloses. It rotates the way the transcript's
+   does, so the app has one disclosure gesture and not two. */
+.stephead.fold{width:100%;padding:0;text-align:left;align-items:baseline;gap:10px}
+.stephead.fold .stepn{margin-right:4px}
+.stephead.fold .subhead{flex:0 0 auto}
+.stephead.fold svg{flex:0 0 auto;align-self:center;color:var(--muted);transition:rotate 180ms var(--ease-out)}
+.stephead.fold svg.shut{rotate:-90deg}
+.stephead.fold:hover svg{color:var(--ink)}
+.stepsum{min-width:0;display:flex;gap:6px;align-items:baseline;font-size:11px;color:var(--muted)}
+.stepsum .pathline{min-width:0}
+.stephead.fold:hover .stepsum{color:var(--ink)}
+
 .sheet .row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .pathline{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
 /* Prose, not a row. It was a wrapping flex box, which made every inline `<span>` mid-sentence
@@ -844,17 +911,24 @@ textarea.field{resize:vertical;line-height:1.5}
 
 /* ---------- your agents: a roster that exists before any team does ---------- */
 .roster{display:flex;flex-direction:column;gap:6px}
-.rosterrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:9px 12px;border:1px solid var(--line);border-radius:14px;background:transparent}
-.rosterrow:hover{background:var(--raised)}
-.rosterrow.on{background:var(--raised);border-color:var(--muted)}
-.rosterrow .who{min-width:0;flex:1;display:flex;flex-direction:column}
-.rosterrow .nm b{font-weight:500}
-.rosterrow .sub{line-height:1.4;font-size:11px}
+/* A picker row is a `.listrow` that has not been chosen yet.
+   *Converged 2026-08-31.* It used to be its own control — 14px radius, 9/12 padding, a 12px
+   gap, no gap between the two lines of text — so the same agent, with the same face and the
+   same two lines, was a visibly different object on *your agents* than in the roster you pick
+   it from. The one difference that carries meaning is the one kept: a row whose job is
+   chosen-or-not needs its unchosen state to be the quiet one, so it is outlined at rest and
+   takes the filled ground only when it is on. Everything else — the geometry, the two-line
+   block, the way the name and the role sit on one baseline — is `.listrow`'s.
+   The line is an inset shadow rather than a border, so choosing a row does not reflow it and an
+   unchosen picker row is the same height as a row on any other screen. */
+.listrow.pick{background:transparent;box-shadow:inset 0 0 0 1px var(--line)}
+.listrow.pick:hover{background:var(--raised)}
+.listrow.pick.on{background:var(--raised);box-shadow:inset 0 0 0 1px var(--muted)}
 /* An empty circle rather than a blank column: the row has to look ticked *or* untickable, and
    a checkmark that appears out of nothing reads as the row having changed shape. */
-.rosterrow .tick{width:20px;height:20px;flex:0 0 auto;border:1px solid var(--line);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ground)}
-.rosterrow .tick.on{background:var(--ink);border-color:var(--ink)}
-.rosterrow:disabled{opacity:.45;cursor:default}
+.listrow .tick{width:20px;height:20px;flex:0 0 auto;border:1px solid var(--line);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ground)}
+.listrow .tick.on{background:var(--ink);border-color:var(--ink)}
+.listrow:disabled{opacity:.45;cursor:default}
 /* who leads: the same faces the roster just showed, one of them marked. Not a status, so it
    takes the raised ground and the border every other chosen thing here takes. */
 .leadpick{display:flex;flex-direction:column;gap:8px;align-self:stretch}
@@ -864,7 +938,7 @@ textarea.field{resize:vertical;line-height:1.5}
 .leadface.on{background:var(--raised);border-color:var(--muted)}
 .leadface .nm{font-size:12px;color:var(--muted)}
 .leadface.on .nm{color:var(--ink)}
-.rosterrow:disabled:hover{background:none}
+.listrow:disabled:hover{background:none}
 
 /* the team's icon, previewed as the mark it will become rather than as a thumbnail */
 .iconpick{margin-top:14px}
@@ -890,6 +964,10 @@ textarea.field{resize:vertical;line-height:1.5}
    walked the sheet a few pixels sideways on the way in. */
 .modal{position:fixed;top:50%;left:50%;translate:-50% -50%;animation:entermodal 200ms var(--ease-out);width:min(560px,calc(100vw - 48px));max-height:calc(100vh - 48px);overflow:auto;background:var(--ground);border:1px solid var(--line);border-radius:20px;padding:24px 26px 22px;display:flex;flex-direction:column;gap:22px;box-shadow:0 30px 90px rgba(0,0,0,.7);z-index:61}
 @keyframes entermodal{from{opacity:.3;scale:.97}}
+/* The agent form only. A dialog holding eight fields needs the room to put two or three on a
+   row; the ones holding a sentence and two buttons must not get it, because a paragraph set to
+   760px is a paragraph nobody reads to the end of. */
+.modal.roomy{width:min(760px,calc(100vw - 48px))}
 .modalhead{display:flex;align-items:flex-start;gap:16px}
 .modalhead > div{flex:1;min-width:0}
 .modalhead .display{margin-top:2px}
@@ -902,7 +980,10 @@ textarea.field{resize:vertical;line-height:1.5}
    selected cell takes an ink ring, which is the one emphasis this page spends. */
 /* Seven by two, exactly filled: a ragged wrap reads as a list that ran out of room, and a
    fixed block reads as a set that was chosen. */
-.swatches{display:grid;grid-template-columns:repeat(7,26px);gap:10px;justify-content:center}
+/* One row, not two. Fourteen swatches at 26px fit the roomy dialog, and a 7x2 block read as a
+   palette to be studied rather than as a strip to be picked from. Wraps on a narrow window
+   rather than overflowing. */
+.swatches{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 .swatch{width:26px;height:26px;border-radius:50%;flex:0 0 auto;padding:0;border:1px solid transparent;scale:1;transition:scale 140ms var(--ease-out)}
 .swatch:hover{scale:1.08}
 .swatch.on{box-shadow:0 0 0 2px var(--ground),0 0 0 3px var(--ink)}
@@ -912,6 +993,22 @@ textarea.field{resize:vertical;line-height:1.5}
 @media (prefers-reduced-motion:reduce){.swatch:hover{scale:1}}
 .fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .fields > .labelled:nth-child(n+3){grid-column:1 / -1}
+/* An agent's definition is eight fields, and stacked one per row it ran past the fold on a
+   1080-tall screen: the standing instructions were below the window on the dialog whose whole
+   job is stating them. Six columns rather than two, so a row can hold two halves or three
+   thirds. Its own grid rather than a modifier on `.fields`, which the Routine form also wears
+   and which must keep its two-column rule. Positional like `.fields` above, for the same
+   reason: these eight are a fixed sequence, not a list. */
+.agentfields{display:grid;grid-template-columns:repeat(6,1fr);gap:14px 16px}
+/* Name and role, then the runtime and what it advertises: the machine question, twice. */
+.agentfields > .labelled{grid-column:span 3}
+/* blobot's own three words, side by side, because they are one row of questions about one
+   agent and reading them as a run is the point. Bottom-aligned: at a third of the width two
+   of these labels wrap to a second line, and without this the three selects sat at three
+   different heights. */
+.agentfields > .labelled:nth-child(n+5){grid-column:span 2;justify-content:flex-end}
+/* Standing instructions take the width they are written at. */
+.agentfields > .labelled:nth-child(8){grid-column:1 / -1}
 .modalfoot{display:flex;justify-content:flex-end;gap:10px}
 /* A note in a modal is a paragraph, not a row of labels: the flex line the creation flow's
    notes need would put a sentence and the button beside it on one baseline. */
@@ -931,7 +1028,7 @@ textarea.field{resize:vertical;line-height:1.5}
 .selecttrigger > .selectvalue{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .selecttrigger[data-state=open]{border-color:var(--muted)}
 .selecttrigger svg{color:var(--muted);flex:0 0 auto}
-.selectmenu{background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:5px;min-width:var(--radix-select-trigger-width);box-shadow:0 20px 60px rgba(0,0,0,.65);z-index:62}
+.selectmenu{transform-origin:var(--radix-popper-transform-origin);animation:enterpop 140ms var(--ease-out);background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:5px;min-width:var(--radix-select-trigger-width);box-shadow:0 20px 60px rgba(0,0,0,.65);z-index:62}
 .selectitem{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;font-size:13px;cursor:pointer;outline:none}
 .selectitem[data-highlighted]{background:var(--ground)}
 .selectitem[data-disabled]{color:var(--muted);cursor:default}
@@ -1048,12 +1145,11 @@ textarea.field{resize:vertical;line-height:1.5}
 /* the repositories in a folder of repositories, ticked into scope */
 .reposcope{align-self:stretch;display:flex;flex-direction:column;gap:2px;border-left:1px solid var(--line);padding-left:12px}
 .reposcope .fieldlabel{margin-bottom:4px}
-.reposcope .rosterrow:disabled{opacity:.45;cursor:default}
-.reposcope .rosterrow:disabled:hover{background:none}
+
 
 /* A team that would not open. A line the user can read and dismiss, not a dialog to clear:
    whatever was on screen is still there and still correct. */
-.openerror{display:flex;align-items:center;gap:12px;margin:10px 20px;padding:9px 14px;border:1px solid var(--line);border-left:2px solid var(--ink);border-radius:0 12px 12px 0;background:var(--raised);font-size:13px;line-height:1.45}
+.openerror{display:flex;align-items:center;gap:12px;margin:10px 20px;padding:9px 14px;border:1px solid var(--line);border-radius:12px;background:var(--raised);font-size:13px;line-height:1.45}
 .openerror .dismiss{margin-left:auto;flex:0 0 auto;color:var(--muted);font-size:16px;line-height:1;padding:0 4px}
 .openerror .dismiss:hover{color:var(--ink)}
 
@@ -1085,11 +1181,10 @@ textarea.field{resize:vertical;line-height:1.5}
 .subhead.lg{font-size:24px;margin-top:2px}
 /* Three lines rather than two, so the blobatar sits with the name instead of centred against a
    block of text whose height depends on whether this agent has standing instructions. */
-.rosterrow .who > .sub{margin-top:1px}
 /* What the agent is told on every team it joins. Clamped: it is a paragraph the user wrote, and
    at full height one verbose agent would push the rest of the roster off the screen. */
 .standing{font-size:12px;line-height:1.45;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.rosterrow:hover .standing{color:var(--ink)}
+.listrow:hover .standing{color:var(--ink)}
 /* The same hover-and-focus reveal the rail's team rows use, and for the same reason: retiring
    somebody must not be the loudest thing on a screen whose job is "here is everybody". */
 .agentcardwrap{position:relative}
@@ -1142,7 +1237,7 @@ textarea.field{resize:vertical;line-height:1.5}
    one row the pointer is on. An outline rather than a border so nothing reflows, and only on
    rows that are pressable: a list you cannot click must not answer the pointer. */
 .listrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;border-radius:12px;background:var(--raised)}
-button.listrow:hover{outline:1px solid var(--line);outline-offset:-1px}
+button.listrow:not(.pick):hover{outline:1px solid var(--line);outline-offset:-1px}
 .listrow .who{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
 .listrow .nm{display:flex;align-items:baseline;gap:8px}
 .listrow .nm b{font-weight:500}
@@ -1154,6 +1249,12 @@ button.listrow:hover{outline:1px solid var(--line);outline-offset:-1px}
 /* A runtime's row is not pressable and its facts are its whole content, so the name does not
    take the width a pressable row's does. */
 .runtimerow .who{flex:0 1 auto}
+/* A model's row on the context section. Its facts are its content, like a runtime's, and the
+   control at the end is a number rather than a door: the field is `.narrow`, so it reads as a
+   figure being edited in place instead of a form dropped into a list. Baseline-aligned to the
+   first line, because that is where the model name is and where the number belongs beside it. */
+.ceilingrow .who{flex:0 1 auto}
+.ceilingrow .field.narrow{flex:0 0 auto;padding:5px 8px;font-size:12px}
 
 /* A command in the composer's menu. Mono, because it is a literal string the user is about to
    put in a message, and monochrome, because a command is not an agent.
@@ -1246,8 +1347,12 @@ button.listrow:hover{outline:1px solid var(--line);outline-offset:-1px}
   @keyframes entersheet{from{opacity:.3}}
   @keyframes entermodal{from{opacity:.3}}
   @keyframes enterpeer{from{opacity:0}}
-  .btn,.iconbtn,.swatch{transition:none}
-  .btn:active:not([disabled]),.iconbtn:active,.swatch:hover{scale:1}
+  @keyframes enterpop{from{opacity:.3}}
+  .btn,.iconbtn,.swatch,.ctxring,.composer .clip{transition:none}
+  /* The send keeps its cross-fade and loses its scale, which is the withdrawal rule stated
+     exactly: colour is not motion, and the fill is how this button says it is armed. */
+  .composer .send{transition:background-color 140ms var(--ease-out),border-color 140ms var(--ease-out),color 140ms var(--ease-out)}
+  .btn:active:not([disabled]),.iconbtn:active,.swatch:hover,.ctxring:active,.composer .clip:active:not([disabled]),.composer .send:active:not([disabled]){scale:1}
   .peer .route svg{transition:none}
 }
 
@@ -1374,7 +1479,11 @@ button.listrow:hover{outline:1px solid var(--line);outline-offset:-1px}
 /* The popover the pull request is opened from. `.field`'s ground, border and radius, at the
    width a command line needs to be read at without wrapping mid-flag. Anchored above its
    trigger, because the tray it hangs off sits at the foot of the window. */
-.wspop{width:420px;max-width:calc(100vw - 24px);background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.45);z-index:20}
+/* Same entrance as every other panel that hangs off a control. `--radix-popper-transform-origin`
+   rather than the per-primitive alias, because one class here is worn by a Select's content and
+   a Popover's both, and the popper variable is the one all of them set on the content element
+   itself. */
+.wspop{transform-origin:var(--radix-popper-transform-origin);animation:enterpop 140ms var(--ease-out);width:420px;max-width:calc(100vw - 24px);background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.45);z-index:20}
 .wspublish{display:flex;flex-direction:column;gap:8px}
 .wstitle{width:100%;background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-family:var(--sans);font-size:12px;color:var(--ink)}
 .wstitle:focus{border-color:var(--muted);outline:none}
@@ -1456,14 +1565,23 @@ button.listrow:hover{outline:1px solid var(--line);outline-offset:-1px}
    above the list rather than sorted into it, and two verbs — there is no third that quietly
    keeps one around unanswered. The prompt is in full rather than clamped, because a person is
    being asked to read it and that is the entire mechanism. */
-/* A proposal wears the standard list ground and keeps its ink edge. *Amended 2026-08-30.* It
-   was an ink edge on the page's own ground, which was right while it was the only block on the
-   screen and wrong once every other list here became a filled row: it read as the one thing on
-   the Routines screen that was not a Routine. The edge is what says *you have not seen this*,
-   so it stays; the ground is what says *this is one of these*, so it arrives. */
-.proposal{position:relative;border-left:2px solid var(--ink);border-radius:12px;background:var(--raised);padding:11px 12px 11px 13px;display:flex;flex-direction:column;gap:6px}
+/* A proposal wears the standard list ground and **no edge**. *Amended 2026-08-31.* It arrived
+   on the page's own ground with an ink edge, took the ground when every other list here became
+   a filled row, and kept the edge — which is the thing the permission card already threw out:
+   a 2px ink rule down one side of a shape that is already closed is a highlight stuck to it,
+   not containment. What says *you have not seen this* is where it sits and what it says — above
+   the list, and `<agent> scheduled this · running` in its own line. */
+.proposal{position:relative;border-radius:12px;background:var(--raised);padding:11px 12px;display:flex;flex-direction:column;gap:6px}
 .proposal > .mono{font-size:10px;letter-spacing:.06em}
-.proposedprompt{font-size:12.5px;line-height:1.5;white-space:pre-wrap}
+/* **A peek, not the paragraph.** The prompt was shown in full on the argument that a person is
+   being asked to read it — and a real one is thirty lines, which pushes `keep` and `disarm` off
+   the screen and leaves the block asking a question whose answers are not on it. Five lines and
+   a control that opens the rest: the words are still all reachable, and the two verbs are
+   visible at the same time as them, which is what the mechanism actually needed. */
+.proposedprompt{font-size:12.5px;line-height:1.5;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+.proposedprompt.all{display:block;overflow:visible}
+.morepr{align-self:flex-start;font-size:10px}
+.morepr:hover{color:var(--ink)}
 .proposalacts{display:flex;gap:8px;margin-top:2px}
 /* `--ground` under a small icon button is for the rail, where the row it sits on is recessed.
    On the raised block it would read as a hole punched in it. */
