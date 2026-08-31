@@ -706,9 +706,14 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    to watch instead. */
 .msg.pending .dots{height:21px}
 .tool{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;gap:8px;align-items:baseline;margin-left:40px}
-/* The verb is a fixed column, blank for a tool blobot has no word for. A ragged left edge is
-   the reason a stack of calls stops reading as a list, which is the whole value of the fold. */
-.tool .v{flex:0 0 34px;color:var(--muted)}
+/* The kind is a fixed column, empty for a tool blobot has no word for. A ragged left edge is
+   the reason a stack of calls stops reading as a list, which is the whole value of the fold.
+   It holds a glyph rather than the word it used to hold (2026-08-31): the shape is what makes
+   a run of calls differentiable at a glance, and drawing both would be one fact in two channels
+   in the narrowest column in the app. Centred rather than on the row's baseline, which is what
+   `.inflight` already does with the only other non-text thing on this line. */
+.tool .v{flex:0 0 16px;display:inline-flex;align-items:center;align-self:center;color:var(--muted)}
+.tool .v svg{flex:0 0 auto}
 .tool .k{min-width:0;overflow-wrap:anywhere}
 /* The one exception to the governing rule, taken deliberately (DESIGN.md, ticket 12). Held
    well below the blobatars' chroma so the rail still wins the eye: these are two glyphs of
@@ -734,6 +739,25 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .ran .route svg{flex:0 0 auto;transition:rotate 180ms var(--ease-out)}
 .ran .route svg.shut{rotate:-90deg}
 .ran .route .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);transition:color 120ms}
+/* What the run touched, drawn only while it is shut: the one question a reader has about a fold
+   they are not going to open. Opened, the same numbers are on the calls that made them.
+   The counts wear `--added` and `--removed` because they are the same object at a different
+   altitude, and colouring one while greying the other reads as an inconsistency rather than a
+   rule (DESIGN.md, the composer tray's `+412 −7` making the same point). It is the filename and
+   not the workspace-relative path the call's own line carries: shut is a glance, and a row of
+   shared prefixes puts the one distinguishing word at the end of every entry in it.
+   Each file is a chip, in `.md code`'s own vocabulary — the hairline colour as a fill, no
+   border, 5px corners — and not a shape invented for this. The transcript already pills a
+   filename wherever an agent writes one in backticks, so a row of bare filenames directly under
+   a paragraph full of chips read as the unfinished version of the same object. It is the fill
+   that separates two entries now, so the column gap goes back down: at 18px between chips the
+   row was spaced for text that no longer needs it. */
+.ran .touched{display:flex;flex-wrap:wrap;gap:5px 7px;margin:6px 0 2px 19px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.ran .touched .file{display:inline-flex;align-items:baseline;gap:6px;min-width:0;background:var(--line);padding:2px 6px;border-radius:5px}
+.ran .touched .p{overflow-wrap:anywhere}
+.ran .touched .diff{display:inline-flex;gap:6px;flex:0 0 auto;font-variant-numeric:tabular-nums}
+.ran .touched .add{color:var(--added)}
+.ran .touched .del{color:var(--removed)}
 /* Opened, the calls sit on the fold's own left edge rather than the transcript's gutter, so a
    dozen of them read as one thing that was opened and not as a dozen new items in the column. */
 .ran .did{margin:7px 0 4px 5px;padding-left:13px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:5px;animation:enterpeer 200ms var(--ease-out)}

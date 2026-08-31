@@ -269,6 +269,50 @@ Other transcript rules:
   rather than an accent — see `--composer`. A zero is drawn where it was measured, because `+12 −0` is a
   different edit from `+12 −8`; **absent is not zero** — a call that changed nothing, a diff too
   large to measure and a runtime that sends no diff block all draw nothing.
+
+  **The kind is a glyph, and the header counts notes. Added 2026-08-31, at the author's
+  direction, off a mockup.** A shape is differentiable at a glance in a way three lowercase
+  words at 11.5px are not, and that is the whole job of the column. Three things make it a swap
+  rather than the mockup's per-row label:
+
+  - **The glyph took the verb's column and did not join it.** An icon beside the word it denotes
+    is one fact in two channels in the narrowest place in the app, which is the argument that
+    took the status word out from beside the dots. The word survives as the glyph's label, so
+    nothing is lost to a reader not reading shapes.
+  - **The column is still fixed**, at 16px. The mockup sized each row's label to its own text,
+    which starts every target at a different x, and a ragged left edge is the entire reason the
+    column exists.
+  - **MCP gets no glyph and the slot stays empty.** It is the blank verb's own argument, harder:
+    an MCP tool's name belongs to its server, and a shape is a paraphrase with even less room to
+    hedge than a word. Empty reads as *blobot has no word for this*, which is true.
+
+  Lucide at 13px and `--muted`, which is the icons rule and not an exception to it: `FileText`,
+  `Pencil`, `SquareTerminal`.
+
+  **And a shut block says what the run touched.** A footer of `selection.ts +5 −1
+  Interactive.tsx +8 −0`, filenames and the counts summed per file, **each one a chip in
+  `.md code`'s own vocabulary** — the hairline colour as a fill, no border, 5px corners, and not
+  a shape invented for this. The transcript already pills a filename wherever an agent writes one
+  in backticks, so a row of bare filenames under a paragraph full of chips read as the unfinished
+  version of the same object. It is a set of discrete facts and not a column, which is why the
+  chip is right here and stays wrong on the call lines inside the fold: those are rows that have
+  to align, and a ground sized to each row's own text is the ragged edge again with a border
+  around it. It answers the one question
+  a reader has about a fold they are not going to open, which the call count never did. Three
+  things it is careful about: it is drawn **shut only**, because opened the same numbers are on
+  the calls that made them and beside *which* call that was, so drawing both is the same fact
+  twice inside one block; it is the **filename**, not the workspace-relative path the call's own
+  line carries, because shut is a glance and a column of shared prefixes puts the distinguishing
+  word at the end of every entry — except where two touched files share a filename, when **both**
+  keep their whole path, since the short form would otherwise be a lie about how many files
+  there are; and **absent is still not zero**, so a file only ever touched by calls with no
+  measured diff is not listed at all rather than listed as `+0 −0`.
+
+  The header counts them too: `ran 6 tools · 6 notes`. The captions really are folded in here, so
+  a reader deciding whether to open one should know there is prose behind the count. They are
+  **notes and never messages** — a message in blobot is what an agent says to you or mails to a
+  peer, and a block swallows neither. A failure takes that slot whenever there is one, because
+  the caption count is trivia beside it.
 - **A permission block is a transcript item, not a modal.** An agent that has been asked to run
   something dangerous stops until a human answers, and two agents can be stopped at once: a
   modal would serialise them into whichever arrived first. It stands where that tool's line

@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, FileText, Pencil, SquareTerminal } from 'lucide-react';
 import type { AgentStatus, ToolKind } from '@blobot/core/domain';
 import type { PermissionChoice, UiAgent, UiPermissionOutcome } from '../../../shared/api.js';
 import {
   compactionLine,
   continuesSpeaker,
   failuresIn,
+  filesChangedIn,
   isPending,
+  notesIn,
   rowsOf,
   toolsIn,
   type Item,
@@ -359,7 +361,9 @@ function lastItemOf(row: Row | undefined): Item | undefined {
  *
  * The header counts calls, not seconds. A duration would be a claim about effort blobot cannot
  * make honestly across a permission wait, and the count is the thing a reader wants before
- * deciding whether to open it.
+ * deciding whether to open it. It counts the captions too, as `notes`, because they really are
+ * folded in here — and never as `messages`, which is a word already spent on what an agent says
+ * to you and on what it mails a peer, neither of which a block ever swallows.
  *
  * No ticks. The pattern this borrows from puts a checkmark on every finished step, and ticket
  * 08 exists because a cancelled call reports `completed` with `exit: null` — a tick beside one
@@ -374,6 +378,8 @@ function Steps({ row, teamPane }: { row: Extract<Row, { kind: 'steps' }>; teamPa
   const [open, setOpen] = useState(false);
   const calls = toolsIn(row.items);
   const failed = failuresIn(row.items);
+  const notes = notesIn(row.items);
+  const touched = filesChangedIn(row.items);
 
   return (
     <div className="ran">
@@ -381,9 +387,27 @@ function Steps({ row, teamPane }: { row: Extract<Row, { kind: 'steps' }>; teamPa
         <ChevronDown size={12} className={open ? '' : 'shut'} aria-hidden />
         <span className="lbl">
           ran {calls} {calls === 1 ? 'tool' : 'tools'}
-          {failed > 0 && ` · ${failed} failed`}
+          {/* Failure takes the second slot whenever there is one. The caption count is trivia
+              beside it, and two qualifiers on a ten-pixel label is a sentence nobody reads. */}
+          {failed > 0 ? ` · ${failed} failed` : notes > 0 && ` · ${notes} ${notes === 1 ? 'note' : 'notes'}`}
         </span>
       </button>
+      {/* What the run touched, at the altitude where nothing else answers it. Shut only: opened,
+          every one of these numbers is on the call that made it, next to which call that was.
+          Filenames, for the same reason: shut is the glance and open is the record. */}
+      {!open && touched.length > 0 && (
+        <div className="touched">
+          {touched.map((file) => (
+            <span className="file" key={file.path}>
+              <span className="p">{file.name}</span>
+              <span className="diff">
+                <span className="add">+{file.added}</span>
+                <span className="del">&minus;{file.removed}</span>
+              </span>
+            </span>
+          ))}
+        </div>
+      )}
       {open && (
         <div className="did">
           {row.items.map((item) => {
@@ -409,10 +433,10 @@ function Steps({ row, teamPane }: { row: Extract<Row, { kind: 'steps' }>; teamPa
  * One call: what it was, what it was to, and what happened only when what happened is worth a
  * word.
  *
- * The verb comes from the four kinds core already carries off both runtimes. The renderer used
- * to drop them and print the title alone, so a fold would have been thirty shell strings in a
- * stack with nothing to scan down. It is a fixed column, blank for `other`, because a ragged
- * left edge is the reason a list of calls stops being a list.
+ * The kind comes from the four core already carries off both runtimes, and is drawn as a glyph.
+ * The renderer used to drop the kind entirely and print the title alone, so a fold would have
+ * been thirty shell strings in a stack with nothing to scan down. It is a fixed column, empty
+ * for `other`, because a ragged left edge is the reason a list of calls stops being a list.
  *
  * Nothing prints for an ordinary completion. That is silence, not a success claim: `failed` is
  * a status and `exit: null` is a cancelled call wearing `completed`, and both of those speak.
@@ -420,9 +444,21 @@ function Steps({ row, teamPane }: { row: Extract<Row, { kind: 'steps' }>; teamPa
 function ToolLine({ item }: { item: Extract<Item, { kind: 'tool' | 'permission' }> }): React.JSX.Element {
   const said = item.kind === 'permission' ? outcomeWord(item.outcome) : toolSaid(item);
   const changed = item.kind === 'permission' ? undefined : item.changed;
+  const kind = item.kind === 'permission' ? undefined : item.toolKind;
+  const Glyph = kind === undefined ? undefined : GLYPH[kind];
   return (
     <div className="tool">
-      <span className="v">{item.kind === 'permission' ? '' : VERB[item.toolKind]}</span>
+      {/* The glyph took the verb's column, 2026-08-31, and did not join it: an icon beside the
+          word it denotes is the same claim twice in the narrowest place in the app, which is
+          what took WORKING out from beside the dots. The column itself is untouched and is the
+          whole reason this is a swap rather than the mockup's per-row label — a fixed slot is
+          what keeps every target starting at the same x. The word survives as the label, so a
+          reader not reading shapes loses nothing. */}
+      <span className="v">
+        {Glyph !== undefined && kind !== undefined && (
+          <Glyph size={13} role="img" aria-label={VERB[kind]} />
+        )}
+      </span>
       <span className="k">{item.title}</span>
       {/* The app's one saturated thing that is not a blobatar, by the author, 2026-08-30. Two
           small signed numbers whose sign already carries the meaning, so the colour reinforces
@@ -454,7 +490,7 @@ function ToolLine({ item }: { item: Extract<Item, { kind: 'tool' | 'permission' 
   );
 }
 
-/** blobot's own four words for a call, in the register the rest of the mono labels use. */
+/** blobot's own four words for a call. Drawn as the glyph's label rather than as text. */
 const VERB: Record<ToolKind, string> = {
   read: 'read',
   edit: 'edit',
@@ -462,6 +498,21 @@ const VERB: Record<ToolKind, string> = {
   // An MCP tool is whatever its server called it, and a verb blobot invented for it would be a
   // guess printed in the same column as three facts.
   other: '',
+};
+
+/**
+ * The same four kinds as shapes. Lucide at 13px and `--muted`, which is the icons rule.
+ *
+ * `other` has none, and the slot is held empty rather than filled with something meaning
+ * "unknown". It is the same argument the blank verb was already making: an MCP tool's name
+ * belongs to its server, and a glyph is a paraphrase with even less room to hedge than a word.
+ * Empty is legible in its own right — it is the one row in a fold that blobot has no word for.
+ */
+const GLYPH: Record<ToolKind, React.ComponentType<{ size?: number; role?: string; 'aria-label'?: string }> | undefined> = {
+  read: FileText,
+  edit: Pencil,
+  execute: SquareTerminal,
+  other: undefined,
 };
 
 function toolSaid(item: Extract<Item, { kind: 'tool' }>): string | undefined {

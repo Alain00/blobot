@@ -1365,6 +1365,72 @@ export function failuresIn(items: readonly Item[]): number {
   ).length;
 }
 
+/**
+ * How many captions a block folded away. The header says it because they really are in here:
+ * `Steps` draws every `agent` item in the run inside the fold, and a reader deciding whether to
+ * open one wants to know there is prose behind the count and not only calls.
+ *
+ * They are `notes` and never `messages`. A message in blobot is what an agent says to you or
+ * mails to a peer, and neither of those is ever folded — `rowsOf` trims the answer off the end
+ * and a peer item is nobody's turn. Borrowing the word here would name two different things.
+ */
+export function notesIn(items: readonly Item[]): number {
+  return items.filter((item) => item.kind === 'agent').length;
+}
+
+/**
+ * What the run changed, per file, summed across the calls that touched each one.
+ *
+ * Shut, a block used to say only how many calls it stood for, so the one question a reader
+ * actually has about a fold they are not going to open — what did this turn touch — had no
+ * answer at that altitude. Opened, the same fact is on the lines themselves and more precisely,
+ * which is why the footer is drawn only while the block is shut rather than at both.
+ *
+ * `absent is not zero` survives the sum: a call with no measured diff contributes nothing, so a
+ * file only ever edited by calls the runtime sent no diff block for is not listed at all. The
+ * alternative is a `+0 −0` that reads as "changed nothing", which is a different claim.
+ *
+ * `name` is what the footer draws and `path` is what it is: the filename alone, because this is
+ * a glance at what a turn touched and four workspace-relative paths in a row is a wall of shared
+ * prefixes with the distinguishing word at the end of each. The line inside the fold keeps the
+ * whole path, which is the same trade the block itself makes — shut is the glance, open is the
+ * record. Where two touched files share a filename the short form would be a lie about how many
+ * files there are, so **both** of them keep their whole path rather than one arbitrary winner.
+ */
+export function filesChangedIn(
+  items: readonly Item[],
+): readonly { path: string; name: string; added: number; removed: number }[] {
+  const byPath = new Map<string, { path: string; name: string; added: number; removed: number }>();
+  for (const item of items) {
+    if (item.kind !== 'tool' || item.changed === undefined) continue;
+    const seen = byPath.get(item.title);
+    if (seen === undefined) {
+      byPath.set(item.title, {
+        path: item.title,
+        name: fileName(item.title),
+        added: item.changed.added,
+        removed: item.changed.removed,
+      });
+      continue;
+    }
+    seen.added += item.changed.added;
+    seen.removed += item.changed.removed;
+  }
+
+  const files = [...byPath.values()];
+  const shared = new Set(
+    files.map((file) => file.name).filter((name, index, all) => all.indexOf(name) !== index),
+  );
+  return files.map((file) => (shared.has(file.name) ? { ...file, name: file.path } : file));
+}
+
+/** The last segment of a path, on either separator, and the whole string if it has neither. */
+function fileName(path: string): string {
+  const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+  const tail = cut === -1 ? path : path.slice(cut + 1);
+  return tail.length === 0 ? path : tail;
+}
+
 /** The transcript's rows: every item as itself, except settled runs of work, which fold. */
 export function rowsOf(items: readonly Item[]): Row[] {
   const rows: Row[] = [];

@@ -132,6 +132,9 @@ function draw(
   pane: Pane,
   statuses: Record<string, AgentStatus> = { a: 'working', b: 'idle' },
   then?: (host: HTMLElement) => void,
+  // Counting nodes rather than reading text needs the render `then` provoked to have happened,
+  // and inside `then` it has not: that callback runs inside the `act` that flushes it.
+  read?: (host: HTMLElement) => void,
 ): string {
   const host = document.createElement('div');
   document.body.append(host);
@@ -151,6 +154,7 @@ function draw(
     );
   });
   if (then !== undefined) act(() => then(host));
+  if (read !== undefined) read(host);
   const text = host.querySelector('.col')?.textContent ?? '';
   const grouped = host.querySelectorAll('.msg.grouped').length;
   act(() => root.unmount());
@@ -324,10 +328,23 @@ describe('the voices, after the roster stopped being passed down', () => {
     expect(shut).not.toContain('Now the selection store.');
     expect(shut).not.toContain('npx astro check');
 
-    // Opened: the verb column, from the kind the runtimes send and the renderer used to drop.
-    const opened = draw(items, { kind: 'team' }, undefined, open);
-    expect(opened).toContain('editsrc/store.ts');
-    expect(opened).toContain('runnpx astro check');
+    // Opened: the kind column, from the kind the runtimes send and the renderer used to drop.
+    // It is a glyph now, so the word it stands for is read off the label and not off the text.
+    let kinds: string[] = [];
+    const opened = draw(
+      items,
+      { kind: 'team' },
+      undefined,
+      open,
+      (host) => {
+        kinds = [...host.querySelectorAll('.tool .v [aria-label]')].map(
+          (glyph) => glyph.getAttribute('aria-label') ?? '',
+        );
+      },
+    );
+    expect(kinds).toEqual(['edit', 'run']);
+    expect(opened).toContain('src/store.ts');
+    expect(opened).toContain('npx astro check');
     expect(opened).toContain('Now the selection store.');
     // And no word for a call that finished the ordinary way: silence, never a success claim.
     expect(opened).not.toContain('completed');
@@ -355,11 +372,11 @@ describe('the voices, after the roster stopped being passed down', () => {
     const drawn = draw(items, { kind: 'team' }, undefined, (host) => {
       hairlines = host.querySelectorAll('.tool .inflight').length;
     });
-    expect(drawn).toContain('runnpx astro check');
+    expect(drawn).toContain('npx astro check');
     expect(drawn).not.toContain('running');
     expect(hairlines).toBe(1);
 
-    // And the verb column survives it: the hairline is at the end, not in place of `run`.
+    // And the kind column survives it: the hairline is at the end, not in place of the glyph.
     let settled = -1;
     draw(
       [{ ...(items[0] as Extract<Item, { kind: 'tool' }>), status: 'completed' }],
@@ -407,6 +424,89 @@ describe('the voices, after the roster stopped being passed down', () => {
       (host) => host.querySelector<HTMLButtonElement>('.ran .route')?.click(),
     );
     expect(zero).toContain('\u22120');
+  });
+
+  it('says what a shut run touched, per file, and stops saying it once the calls are on screen', () => {
+    const items: Item[] = [
+      { kind: 'agent', id: 'c1', at, agentId: 'a', text: 'The schedule first.', live: false },
+      {
+        kind: 'tool',
+        id: 't1',
+        at: at + 1,
+        agentId: 'a',
+        title: 'src/ChurnSchedule.tsx',
+        toolKind: 'edit',
+        status: 'completed',
+        changed: { added: 70, removed: 41 },
+      },
+      // The same file again: a footer is per file, not per call, so the two sum.
+      {
+        kind: 'tool',
+        id: 't2',
+        at: at + 2,
+        agentId: 'a',
+        title: 'src/ChurnSchedule.tsx',
+        toolKind: 'edit',
+        status: 'completed',
+        changed: { added: 4, removed: 0 },
+      },
+      // Measured nowhere, so it is not in the footer at all: absent is not zero.
+      {
+        kind: 'tool',
+        id: 't3',
+        at: at + 3,
+        agentId: 'a',
+        title: 'src/menu.ts',
+        toolKind: 'edit',
+        status: 'completed',
+      },
+      { kind: 'agent', id: 'a1', at: at + 4, agentId: 'a', text: 'Done.', live: false },
+    ];
+
+    let shutFiles = -1;
+    const shut = draw(items, { kind: 'team' }, undefined, (host) => {
+      shutFiles = host.querySelectorAll('.ran .touched .file').length;
+    });
+    expect(shutFiles).toBe(1);
+    // The filename, not the path the line inside the fold carries.
+    expect(shut).toContain('ChurnSchedule.tsx');
+    expect(shut).not.toContain('src/ChurnSchedule.tsx');
+    expect(shut).toContain('+74');
+    expect(shut).toContain('\u221241');
+    expect(shut).not.toContain('menu.ts');
+    // And the captions it swallowed are counted, in blobot's own word for them.
+    expect(shut).toContain('ran 3 tools \u00b7 1 note');
+
+    // Opened, every one of those numbers is on the call that made it. Saying it twice in one
+    // block is the noise the altitude argument was never about.
+    let openFiles = -1;
+    draw(
+      items,
+      { kind: 'team' },
+      undefined,
+      (host) => host.querySelector<HTMLButtonElement>('.ran .route')?.click(),
+      (host) => {
+        openFiles = host.querySelectorAll('.ran .touched .file').length;
+      },
+    );
+    expect(openFiles).toBe(0);
+  });
+
+  it('keeps the whole path on both of two touched files that share a filename', () => {
+    const twin = (id: string, title: string): Item => ({
+      kind: 'tool',
+      id,
+      at,
+      agentId: 'a',
+      title,
+      toolKind: 'edit',
+      status: 'completed',
+      changed: { added: 3, removed: 1 },
+    });
+    const items: Item[] = [twin('t1', 'src/store/index.ts'), twin('t2', 'src/scene/index.ts')];
+    const shut = draw(items, { kind: 'team' });
+    expect(shut).toContain('src/store/index.ts');
+    expect(shut).toContain('src/scene/index.ts');
   });
 
   it('says what happened to a call that did not finish, in the header and on its line', () => {
