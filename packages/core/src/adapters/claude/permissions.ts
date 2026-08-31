@@ -1,4 +1,4 @@
-import type { TrustLevel } from '../../trust.js';
+import { ATTENDED_TRUST_LEVELS, TRUST_LEVELS, type TrustLevel } from '../../trust.js';
 
 /**
  * What blobot vouches for on a Claude session, as `allowedTools` rules.
@@ -113,9 +113,140 @@ const TRUSTING_BASH = [
  * because it is ticket 15's and belongs to the servers blobot injected rather than to this
  * posture. An agent that had to ask permission to answer its teammate would not be careful, it
  * would be broken.
+ *
+ * `unattended` takes `trusting`'s list **unchanged**, and that is the point rather than an
+ * oversight. `allowedTools` is consulted before the permission path, so every rule here is a call
+ * the classifier never sees and never charges an inference call for. The fourth level buys a
+ * decider for the tail; giving it a wider list would be widening what blobot vouches for, which
+ * is a different decision nobody made.
  */
+const WIDE_BASH_LEVELS: readonly TrustLevel[] = ['trusting', 'unattended'];
+
 export function vouchedTools(trust: TrustLevel): readonly string[] {
   if (trust === 'careful') return [];
-  const bash = trust === 'trusting' ? [...VOUCHED_BASH, ...TRUSTING_BASH] : VOUCHED_BASH;
+  const bash = WIDE_BASH_LEVELS.includes(trust)
+    ? [...VOUCHED_BASH, ...TRUSTING_BASH]
+    : VOUCHED_BASH;
   return [...EDITING_TOOLS, ...bash.map((prefix) => `Bash(${prefix}:*)`)];
+}
+
+/**
+ * The `session/set_mode` id blobot puts a Claude session in, per trust level.
+ *
+ * The third instance of a shape the other two adapters already have -- `codexModeFor` and
+ * `fxModeFor` -- and the first where the trust word actually moves the answer. Claude is the only
+ * one of the four runtimes with more than one usable position.
+ *
+ * ## Why `auto` is here now, having been refused
+ *
+ * `first-demo/14` took `default` and named `auto` as the thing it would not inherit: *"an
+ * inference call we do not control makes safety decisions for an unattended teammate."* That
+ * sentence is still true and is now the *description of a level the user picks* rather than a
+ * reason to withhold one. What changed is the author asking twice and the objection being
+ * answerable rather than fatal:
+ *
+ * - **It is chosen, not inherited.** Ticket 14's version of `auto` was blobot dropping the forced
+ *   `set_mode` and taking whatever the user's `settings.json` said, per agent, invisibly. This is
+ *   a word on the agent form with a sentence under it.
+ * - **It is no longer silent when unavailable.** `auto` is advertised *"only when the model
+ *   supports it"*, and until `wire.ts` grew `availableModes` blobot could not see whether it was
+ *   offered. The adapter probes and falls back to `default`, saying so, which is the opposite
+ *   direction from Codex's fatal `#assertPosture`: falling back here is falling back to *stricter*,
+ *   and refusing to launch would punish the user for their model choice.
+ * - **The vouched list still runs first.** `allowedTools` is consulted before the permission path,
+ *   so `unattended` costs no inference call on anything `normal` already allowed. It buys a
+ *   decider for the tail.
+ *
+ * `acceptEdits`, `dontAsk`, `plan` and `bypassPermissions` stay unoffered. The first three are
+ * decisions blobot has already made and the fourth is the one ticket 14 refuses, which
+ * `.scratch/sandboxing/04` is the place to reopen.
+ */
+export type ClaudeMode = 'default' | 'auto';
+
+/** What a Claude session is put in when the user has not reached for the fourth level. */
+export const CLAUDE_POSTURE_MODE: ClaudeMode = 'default';
+
+export function claudeModeFor(trust: TrustLevel): ClaudeMode {
+  return trust === 'unattended' ? 'auto' : CLAUDE_POSTURE_MODE;
+}
+
+/**
+ * The mode id blobot needs to find in `modes.availableModes` before it will ask for it.
+ *
+ * `default` is advertised unconditionally, so only the fourth level has anything to check.
+ */
+export function claudeModeNeedsProbe(mode: ClaudeMode): boolean {
+  return mode !== CLAUDE_POSTURE_MODE;
+}
+
+/**
+ * Which positions are real on this runtime, which is all four.
+ *
+ * The counterpart to `CODEX_EXPRESSES_TRUST` and `FX_EXPRESSES_TRUST`, widened from a boolean
+ * because the question stopped being *does the word do anything* and became *which words does
+ * this runtime have*. Codex, fx and OpenCode answer `ATTENDED_TRUST_LEVELS`; only Claude has a
+ * classifier, so only Claude answers with the fourth.
+ *
+ * Advertised rather than assumed at the point of use: an agent form that hardcoded four rows
+ * would offer `unattended` beside a Codex runtime, where it means precisely nothing.
+ */
+export const CLAUDE_TRUST_LEVELS: readonly TrustLevel[] = TRUST_LEVELS;
+
+/** Kept so the three-level runtimes have one import for the thing they all say. */
+export { ATTENDED_TRUST_LEVELS };
+
+/**
+ * The nine verbs `unattended` refuses outright, as `disallowedTools` rules.
+ *
+ * ## Measured, after this level shipped claiming otherwise
+ *
+ * `trust.ts` and ticket 14 both said the refusals survived the fourth level -- *"what changes is
+ * who answers, not whether it is asked about."* **That was false, and three live runs against a
+ * real `claude` on 2026-08-31 disproved it one after another.** Under `auto`, with these commands
+ * absent from `allowedTools` exactly as designed, the classifier approved every one of them and
+ * **no permission request ever reached blobot**:
+ *
+ * - `chmod 777` on a workspace file ran; the mode went 664 to 777.
+ * - `git push -u origin main` ran; the commit landed on the remote.
+ * - `sudo -n true` ran; only the operating system's password prompt stopped it.
+ *
+ * Absent from an allowlist is not the same as refused. `auto` does not consult blobot's list at
+ * all: it decides for itself, and it decided yes. `unattended` as first shipped was far closer to
+ * `bypassPermissions` than its own copy admitted, and it contradicted the rule in `CLAUDE.md`
+ * that **a pull request is the user's action and never an agent's**.
+ *
+ * ## What makes the claim true
+ *
+ * `disallowedTools` **is** honoured under `auto` -- measured in the same session, on the same
+ * push, which was refused with `Permission denied` and left the remote empty, again with no
+ * permission request reaching blobot. So the fix is a deny list rather than a retraction, and the
+ * level survives with its promise intact.
+ *
+ * ## Why only at `unattended`
+ *
+ * At the other three levels these commands **ask**, and asking is what the copy promises and what
+ * the user can answer. Denying them there would turn *"still asks before deleting, publishing, or
+ * changing who can do what"* into *"cannot delete, publish, or change who can do what"* -- a
+ * different product, silently, for every agent already hired. The deny list exists because
+ * `unattended` is the one level where nobody can be asked, so the alternative to refusing is not
+ * prompting, it is the silent yes measured above.
+ *
+ * The list is ticket 14's own, unchanged: what deletes, publishes, or changes who can do what.
+ * `gh`'s writing verbs are not here because `Bash(gh:*)` would deny the reading half that
+ * `VOUCHED_BASH` allows from `normal`, and a prefix rule cannot see the difference; they remain
+ * un-vouched rather than denied, which is the same asymmetry running in the safe direction.
+ */
+const REFUSED_AT_UNATTENDED = [
+  'rm', 'sudo', 'chmod', 'chown', 'ssh', 'scp', 'docker', 'git push', 'git remote',
+];
+
+/**
+ * What the session refuses outright, beside the two shadowing tools the adapter always excludes.
+ *
+ * Empty at every attended level, because there a human is the answer to these and the block in
+ * the transcript is how they give it.
+ */
+export function refusedTools(trust: TrustLevel): readonly string[] {
+  if (trust !== 'unattended') return [];
+  return REFUSED_AT_UNATTENDED.map((prefix) => `Bash(${prefix}:*)`);
 }

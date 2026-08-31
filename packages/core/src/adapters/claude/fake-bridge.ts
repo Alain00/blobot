@@ -32,6 +32,7 @@ export class FakeBridge implements LineTransport {
   #loadSession: boolean;
   #failLoad: string | undefined;
   #replayOnLoad: readonly SessionUpdate[];
+  #availableModes: readonly { readonly id: string }[];
   #agentRequestId = 0;
 
   constructor(
@@ -45,6 +46,12 @@ export class FakeBridge implements LineTransport {
       failLoad?: string;
       /** What a load replays before it answers, the way the real bridge replays a transcript. */
       replayOnLoad?: readonly SessionUpdate[];
+      /**
+       * What `modes.availableModes` advertises. Empty by default, which is the honest shape of a
+       * model without a classifier: Claude offers `auto` *"only when the model supports it"*, and
+       * a fake that always offered it would let the fallback path ship untested.
+       */
+      availableModes?: readonly { readonly id: string }[];
     } = {},
   ) {
     this.sessionId = options.sessionId ?? 'session_fake';
@@ -53,6 +60,7 @@ export class FakeBridge implements LineTransport {
     this.#loadSession = options.loadSession ?? true;
     this.#failLoad = options.failLoad;
     this.#replayOnLoad = options.replayOnLoad ?? [];
+    this.#availableModes = options.availableModes ?? [];
   }
 
   // ------------------------------------------------------------------ LineTransport
@@ -198,7 +206,7 @@ export class FakeBridge implements LineTransport {
         if (this.#sessionsOpened > 1) this.sessionId = `session_fake_${this.#sessionsOpened}`;
         this.#reply(message, {
           sessionId: this.sessionId,
-          modes: { currentModeId: 'auto', availableModes: [] },
+          modes: { currentModeId: 'auto', availableModes: this.#availableModes },
           configOptions: this.#configOptions(),
         });
         return;
@@ -222,7 +230,7 @@ export class FakeBridge implements LineTransport {
         for (const update of this.#replayOnLoad) this.update(update);
         this.#reply(message, {
           sessionId: asked,
-          modes: { currentModeId: 'auto', availableModes: [] },
+          modes: { currentModeId: 'auto', availableModes: this.#availableModes },
           configOptions: this.#configOptions(),
         });
         return;

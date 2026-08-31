@@ -1042,8 +1042,16 @@ textarea.field{resize:vertical;line-height:1.5}
 /* What an agent may do without asking. Three rows, each a word over the sentence that says what
    the word costs: this is the one control here whose vocabulary is blobot's own, so it is also
    the one that has to explain itself. The row is two lines, so the tick cannot sit on the
-   baseline of a flex row like it does in every other menu. The menu takes the trigger's width
-   like every other select, so the sentence wraps at the width of the field it belongs to. */
+   baseline of a flex row like it does in every other menu.
+
+   `.trustmenu` caps the width, and it has to. This comment used to say the menu took the
+   trigger's width so a sentence wrapped at the width of its own field -- but `min-width` is a
+   floor, not a ceiling, so the menu had always sized to its longest row and simply happened to
+   look right while every sentence was short. The fourth level's was not, and the menu grew past
+   the dialog holding it. The cap is `.optionsmenu`'s answer to the same problem one rule below,
+   and it makes the stated behaviour true rather than lucky: a sentence wraps, and a longer one
+   written later wraps further instead of widening the control. */
+.trustmenu{max-width:min(420px,calc(100vw - 32px))}
 .trustitem{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:2px 10px;padding:8px 10px}
 .trustitem .selecttick{grid-column:2;grid-row:1;margin-left:0}
 .trustsays{grid-column:1/-1;font-size:12px;color:var(--muted);line-height:1.45}

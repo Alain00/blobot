@@ -672,6 +672,16 @@ export interface UiRuntimeChoice {
    * works reads as blobot doubting the answer it just gave.
    */
   readonly remedies: readonly UiRuntimeRemedy[];
+  /**
+   * Which trust positions this runtime can actually express, weakest first.
+   *
+   * Three on most of them and four on the one with a classifier of its own. It rides this row
+   * rather than being hardcoded in the picker for the reason everything else here does: the
+   * renderer draws the rows it is handed and never learns which provider produced them, so a
+   * form that offered `unattended` beside a runtime that has no such thing is impossible to
+   * write rather than merely discouraged.
+   */
+  readonly trustLevels: readonly TrustLevel[];
 }
 
 /**

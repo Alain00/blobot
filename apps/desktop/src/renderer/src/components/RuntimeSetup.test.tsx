@@ -52,6 +52,7 @@ const MISSING: UiRuntimeChoice = {
       note: "This is OpenCode's own install command.",
     },
   ],
+  trustLevels: ['careful', 'normal', 'trusting'],
 };
 
 const READY: UiRuntimeChoice = {
@@ -62,6 +63,7 @@ const READY: UiRuntimeChoice = {
   detail: 'Signed in on this machine',
   version: '2.1.251',
   remedies: [],
+  trustLevels: ['careful', 'normal', 'trusting', 'unattended'],
 };
 
 const drawn: { unmount: () => void; host: HTMLElement }[] = [];

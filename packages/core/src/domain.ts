@@ -39,7 +39,12 @@ export type { AttachmentKind, AttachmentSupport } from './runtime.js';
 export { findAgentByName } from './orchestrator/roster.js';
 export { AgentStatusTracker, statusAfter } from './status.js';
 export type { TrustLevel } from './trust.js';
-export { DEFAULT_TRUST, trustLevelOf } from './trust.js';
+export {
+  ATTENDED_TRUST_LEVELS,
+  DEFAULT_TRUST,
+  TRUST_LEVELS,
+  trustLevelOf,
+} from './trust.js';
 export type { VerbosityLevel } from './verbosity.js';
 export { DEFAULT_VERBOSITY, verbosityInstruction, verbosityLevelOf } from './verbosity.js';
 /**

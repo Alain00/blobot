@@ -42,9 +42,26 @@ export interface AuthMethod {
   readonly _meta?: { readonly terminal?: { readonly command?: string } };
 }
 
+/**
+ * One position a session's permission mode can be put in, as the runtime advertises it.
+ *
+ * ACP sends these beside `currentModeId` and blobot threw them away until 2026-08-31, which is
+ * why ticket 14 could only say Claude's `auto` is *"only when the model supports it"* and not
+ * whether it was supported here. A mode blobot wants and cannot see in this list is a mode it
+ * must not assume: see `claudeModeFor` and the fallback in the Claude adapter.
+ */
+export interface SessionModeWire {
+  readonly id?: string;
+  readonly name?: string;
+  readonly description?: string;
+}
+
 export interface NewSessionResult {
   readonly sessionId?: string;
-  readonly modes?: { readonly currentModeId?: string };
+  readonly modes?: {
+    readonly currentModeId?: string;
+    readonly availableModes?: readonly SessionModeWire[];
+  };
   readonly configOptions?: readonly ConfigOption[];
 }
 

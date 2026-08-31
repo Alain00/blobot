@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { AgentEvent } from '../../events.js';
 import type { RuntimeLifecycle } from '../../runtime.js';
+import type { TrustLevel } from '../../trust.js';
 import { ClaudeAgentRuntime } from './claude-agent-runtime.js';
 import { FakeBridge } from './fake-bridge.js';
 
@@ -31,7 +32,10 @@ interface Started {
   readonly outOfBand: AgentEvent[];
 }
 
-async function started(options: ConstructorParameters<typeof FakeBridge>[0] = {}): Promise<Started> {
+async function started(
+  options: ConstructorParameters<typeof FakeBridge>[0] = {},
+  extra: { trust?: TrustLevel; onStderr?: (line: string) => void } = {},
+): Promise<Started> {
   const bridge = new FakeBridge(options);
   const runtime = new ClaudeAgentRuntime({
     agentId: 'bob',
@@ -39,6 +43,8 @@ async function started(options: ConstructorParameters<typeof FakeBridge>[0] = {}
     persona: 'You are Bob.',
     claudeExecutable: '/usr/bin/true',
     spawn: () => bridge,
+    ...(extra.trust === undefined ? {} : { trust: extra.trust }),
+    ...(extra.onStderr === undefined ? {} : { onStderr: extra.onStderr }),
   });
   const lifecycles: RuntimeLifecycle[] = [];
   const outOfBand: AgentEvent[] = [];
@@ -843,5 +849,80 @@ describe('starting the session again', () => {
     await expect(runtime.restart()).rejects.toThrow(/mid-turn/);
     await runtime.stop();
     await reading;
+  });
+});
+
+describe('the fourth trust level', () => {
+  const modeOf = (bridge: FakeBridge): string =>
+    (bridge.received.find((message) => message.method === 'session/set_mode')?.params as {
+      modeId: string;
+    }).modeId;
+
+  it('asks for auto when the model offers it', async () => {
+    const { bridge, runtime } = await started(
+      { availableModes: [{ id: 'default' }, { id: 'auto' }] },
+      { trust: 'unattended' },
+    );
+    expect(modeOf(bridge)).toBe('auto');
+    expect(runtime.permissionMode).toBe('auto');
+  });
+
+  it('keeps default at the three attended levels even where auto is offered', async () => {
+    // The mode follows the trust word and never the model's capability list. A runtime that
+    // took `auto` because it was on offer would be inheriting a posture nobody chose, which is
+    // the exact thing ticket 14 forced `default` to prevent.
+    const offered = { availableModes: [{ id: 'default' }, { id: 'auto' }] };
+    expect(modeOf((await started(offered, { trust: 'trusting' })).bridge)).toBe('default');
+    expect(modeOf((await started(offered, { trust: 'careful' })).bridge)).toBe('default');
+    expect(modeOf((await started(offered)).bridge)).toBe('default');
+  });
+
+  it('falls back to default, and says so, on a model that does not offer auto', async () => {
+    // `auto` is advertised "only when the model supports it". Silently asking for a mode that
+    // is not there is what ticket 14 held against the fourth level; the probe is the answer to
+    // it, so the fallback has to be observable or the answer is not real.
+    const said: string[] = [];
+    const { bridge, runtime } = await started(
+      { availableModes: [{ id: 'default' }] },
+      { trust: 'unattended', onStderr: (line) => said.push(line) },
+    );
+    expect(modeOf(bridge)).toBe('default');
+    expect(runtime.permissionMode).toBe('default');
+    expect(said.join('\n')).toContain('will ask you instead');
+  });
+
+  it('falls back rather than failing the launch, unlike Codex', async () => {
+    // Deliberately not fatal: the fallback here is *stricter* than what was asked for, so the
+    // failure `#assertPosture` exists to prevent cannot happen in this direction.
+    const { lifecycles } = await started(
+      { availableModes: [{ id: 'default' }] },
+      { trust: 'unattended' },
+    );
+    expect(lifecycles).toEqual(['starting', 'ready']);
+  });
+});
+
+describe('what the fourth level denies on the wire', () => {
+  const optionsOf = (bridge: FakeBridge): { disallowedTools: string[] } =>
+    (bridge.received[1]?.params as { _meta: { claudeCode: { options: { disallowedTools: string[] } } } })
+      ._meta.claudeCode.options;
+
+  it('sends the nine verbs as disallowedTools at unattended', async () => {
+    const { bridge } = await started(
+      { availableModes: [{ id: 'default' }, { id: 'auto' }] },
+      { trust: 'unattended' },
+    );
+    const denied = optionsOf(bridge).disallowedTools;
+    expect(denied).toContain('Bash(sudo:*)');
+    expect(denied).toContain('Bash(git push:*)');
+    expect(denied).toContain('Bash(rm:*)');
+    // The two that are excluded at every level stay excluded beside them.
+    expect(denied).toContain('SendMessage');
+    expect(denied).toContain('ListAgents');
+  });
+
+  it('sends only the shadowing tools at the attended levels', async () => {
+    const { bridge } = await started({}, { trust: 'trusting' });
+    expect(optionsOf(bridge).disallowedTools).toEqual(['SendMessage', 'ListAgents']);
   });
 });

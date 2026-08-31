@@ -70,7 +70,7 @@ import {
   scheduledRoutines,
   toRunRow,
 } from './routine-rows.js';
-import { CEILING_TABLES } from './runtime-for.js';
+import { CEILING_TABLES, trustLevelsFor } from './runtime-for.js';
 import { ceilingIsSane, ceilingRows, resolveCeiling } from './context-ceilings.js';
 import type {
   EditAgentResult,
@@ -239,6 +239,9 @@ function asUiRuntime(detection: RuntimeDetection): UiRuntimeChoice {
       shown: remedy.shown,
       note: remedy.note,
     })),
+    // Static per runtime, unlike the remedies above, and looked up in the one module allowed to
+    // know what a `runtime_id` means. Three levels or four, and the renderer is not told why.
+    trustLevels: trustLevelsFor(detection.runtimeId),
   };
 }
 

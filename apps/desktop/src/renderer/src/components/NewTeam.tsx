@@ -446,10 +446,34 @@ export function NewTeam({
  * agent and false of a Claude one, in the same product, on the same screen. blobot writes a list
  * for each runtime now, so the copy says so without naming what is on it.
  *
- * It names the three levels and does not offer them. The control is on the agent, because an
+ * It names the levels and does not offer them. The control is on the agent, because an
  * AgentWorkspace is per agent and a team-wide switch would imply trusting Alice says something
  * about Bob. What this paragraph owes the reader is knowing the choice exists and where it
  * lives, which is one sentence, on the screen where the consequence is being taken on.
+ *
+ * ## The fourth level, 2026-08-31
+ *
+ * `unattended` is the first level for which *"each runtime is set to prompt"* is false, and the
+ * copy could not keep saying it. `first-demo/14` predicted this exactly -- *"a fourth level makes
+ * that disclosure false for the agents it applies to, so the copy has to change with it, and the
+ * honest version of that copy is hard to write without it reading as a warning nobody heeds."*
+ *
+ * What this draft does about that: it **splits the claim instead of weakening it**. The first
+ * three levels keep the sentence they always had, unqualified, because it is still true of them.
+ * The fourth gets its own sentence, and that sentence says the two things a warning would have
+ * buried: *the runtime decides, not blobot*, and what is refused outright anyway.
+ *
+ * The second half was rewritten the day it shipped. It first said *it can refuse as well as
+ * allow* -- a warning about a classifier denying silently, which was a guess, and three live runs
+ * found the opposite: `auto` approved `chmod`, a `git push` that reached a real remote, and
+ * `sudo`, with no request reaching blobot at all. So the copy stopped predicting the runtime's
+ * behaviour and started stating blobot's own, which is a deny list this app controls and a test
+ * covers. See `adapters/claude/permissions.ts`.
+ *
+ * `and on some runtimes unattended` is the only place in this app where the copy admits the
+ * levels are not the same everywhere. It says *some runtimes* and does not say which, which is
+ * the same line `AgentRuntime.accepts` draws: the user learns the shape of the limit here and
+ * meets its specifics on the agent form, where the row is either there or it is not.
  */
 function Disclosure({
   agents,
@@ -479,13 +503,15 @@ function Disclosure({
       <h2 className="subhead">Before you create this team</h2>
       <p>
         {who} {get} {copy} of <b>{where}</b>. Inside that copy they read, edit and run commands,
-        and how much of that they do without asking you is set on each agent: careful, normal or
-        trusting, on the agent itself, where you hired it.
+        and how much of that they do without asking you is set on each agent, where you hired
+        it: careful, normal, trusting, and on some runtimes unattended.
       </p>
       <p>
-        Everything blobot has not vouched for, they ask about. It sets each agent&apos;s runtime
-        to prompt, at every level, and the question appears in the conversation with the agent
-        waiting for you.
+        Everything blobot has not vouched for, they ask about, and the question appears in the
+        conversation with the agent waiting for you. That is the first three levels. An agent
+        set to <b>unattended</b> asks its own runtime instead of asking you, so it keeps going
+        while you are away: the runtime decides, not blobot. Deleting, publishing and changing
+        who can do what are refused outright at that level, because nobody is there to ask.
       </p>
       <p>
         They also have whatever tools your own MCP servers provide, and they are asked about

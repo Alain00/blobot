@@ -37,7 +37,12 @@ export type {
 } from './runtime.js';
 
 export type { TrustLevel } from './trust.js';
-export { DEFAULT_TRUST, trustLevelOf } from './trust.js';
+export {
+  ATTENDED_TRUST_LEVELS,
+  DEFAULT_TRUST,
+  TRUST_LEVELS,
+  trustLevelOf,
+} from './trust.js';
 export type { VerbosityLevel } from './verbosity.js';
 export { DEFAULT_VERBOSITY, verbosityInstruction, verbosityLevelOf } from './verbosity.js';
 export type { WorkingCeiling } from './context-ceiling.js';
@@ -142,6 +147,13 @@ export type {
 // The Claude Code adapter. Exported from the full entry point only: it spawns a process, so
 // it has no business in `@blobot/core/domain`, which the renderer imports.
 export { ClaudeAgentRuntime } from './adapters/claude/claude-agent-runtime.js';
+export {
+  CLAUDE_POSTURE_MODE,
+  CLAUDE_TRUST_LEVELS,
+  claudeModeFor,
+  refusedTools,
+} from './adapters/claude/permissions.js';
+export type { ClaudeMode } from './adapters/claude/permissions.js';
 export type {
   ClaudeAgentRuntimeOptions,
   McpHttpServer,

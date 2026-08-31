@@ -18,7 +18,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { TrustLevel } from '../../../shared/api.js';
-import { LEVELS, TrustPick } from './TrustPick.js';
+import { LEVELS, levelsFor, TrustPick } from './TrustPick.js';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 Element.prototype.scrollIntoView ??= function scrollIntoView(): void {};
@@ -33,14 +33,22 @@ afterEach(() => {
   });
 });
 
-function draw(value: TrustLevel): { host: HTMLElement; chosen: TrustLevel[] } {
+const ALL: readonly TrustLevel[] = ['careful', 'normal', 'trusting', 'unattended'];
+const ATTENDED: readonly TrustLevel[] = ['careful', 'normal', 'trusting'];
+
+function draw(
+  value: TrustLevel,
+  available: readonly TrustLevel[] = ALL,
+): { host: HTMLElement; chosen: TrustLevel[] } {
   const chosen: TrustLevel[] = [];
   const host = document.createElement('div');
   document.body.append(host);
   const root = createRoot(host);
   drawn.push({ unmount: () => root.unmount(), host });
   act(() => {
-    root.render(<TrustPick value={value} onChange={(next) => chosen.push(next)} />);
+    root.render(
+      <TrustPick value={value} available={available} onChange={(next) => chosen.push(next)} />,
+    );
   });
   return { host, chosen };
 }
@@ -62,8 +70,56 @@ describe('the trust picker', () => {
     expect(says('trusting')).toContain('Still asks before deleting, publishing');
   });
 
-  it('is three levels and stays three', () => {
-    expect(LEVELS.map((level) => level.id)).toEqual(['careful', 'normal', 'trusting']);
+  it('keeps every row’s sentence near the length of the others', () => {
+    // The menu sizes to its longest row, so a sentence here is a layout decision as much as a
+    // copy one: the fourth level's first draft was 156 characters and pushed the menu past the
+    // dialog holding it. `.trustmenu` caps the width, so the failure is now wrapping rather
+    // than overflow -- but a row that wraps to a paragraph beside three one-liners still reads
+    // as the important one, and none of them is. A ceiling and no ratio, because `careful`
+    // being the shortest by far is right rather than a violation.
+    const longest = Math.max(...LEVELS.map((level) => level.says.length));
+    expect(longest).toBeLessThanOrEqual(140);
+  });
+
+  it('says who answers at the fourth level, and what it refuses outright', () => {
+    // The two facts a reader will otherwise supply wrongly for themselves. The first is the
+    // whole of what `unattended` costs; the second is the failure they will actually meet
+    // first, because a classifier that denies stops the work with nothing on screen.
+    expect(says('unattended')).toContain('answered by the runtime, not by you');
+    // Measured live before this sentence was written: under `auto` the classifier ran `chmod`,
+    // pushed a branch and reached for `sudo` with no request reaching blobot. The refusal is a
+    // deny list now, and the row has to say refused rather than asked, because at this level
+    // asking is the one thing that cannot happen.
+    expect(says('unattended')).toContain('are refused');
+    expect(says('unattended')).not.toContain('asks before');
+  });
+
+  it('is four levels and stays four', () => {
+    expect(LEVELS.map((level) => level.id)).toEqual([
+      'careful',
+      'normal',
+      'trusting',
+      'unattended',
+    ]);
+  });
+
+  it('draws only the levels the runtime can express', () => {
+    // Absent rather than disabled: a greyed row invites *why not*, and the honest answer names
+    // a provider this component is not allowed to know about.
+    expect(levelsFor(ATTENDED).map((level) => level.id)).toEqual([
+      'careful',
+      'normal',
+      'trusting',
+    ]);
+    expect(levelsFor(ALL)).toHaveLength(4);
+  });
+
+  it('shows whichever level is set on the closed control, fourth included', () => {
+    // The menu rows themselves are a Radix portal that exists only while open, so what a
+    // closed picker can be asked is which word it is currently showing. `levelsFor` above is
+    // what decides the rows, and it is tested as a function for that reason.
+    const trigger = draw('unattended', ALL).host.querySelector('.selecttrigger');
+    expect(trigger?.querySelector('span')?.textContent).toBe('unattended');
   });
 
   it('shows the word alone on the closed control', () => {
@@ -73,3 +129,4 @@ describe('the trust picker', () => {
     expect(trigger?.querySelector('span')?.textContent).toBe('trusting');
   });
 });
+

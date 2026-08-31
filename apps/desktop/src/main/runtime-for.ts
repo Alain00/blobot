@@ -1,5 +1,7 @@
 import {
+  ATTENDED_TRUST_LEVELS,
   CLAUDE_CEILINGS,
+  CLAUDE_TRUST_LEVELS,
   CODEX_CEILINGS,
   ClaudeAgentRuntime,
   CodexAgentRuntime,
@@ -141,3 +143,22 @@ export const CEILING_TABLES: Readonly<Record<string, Readonly<Record<string, num
   opencode: OPENCODE_CEILINGS,
   codex: CODEX_CEILINGS,
 };
+
+/**
+ * Which trust positions are real on a runtime, which is not the same on all four.
+ *
+ * Here for the reason `ceilingFor` and `CEILING_TABLES` are here: this is the one module allowed
+ * to know what a `runtime_id` means, and a second dispatch elsewhere is a second one to keep in
+ * step. What crosses to the renderer is the list of levels, never the id that produced it, so the
+ * agent form draws three rows or four and still cannot tell which provider it is looking at.
+ *
+ * Only Claude has a classifier, so only Claude answers with `unattended`. The other three each
+ * have their own reason for stopping at three and each states it in its own adapter --
+ * `CODEX_EXPRESSES_TRUST` and `FX_EXPRESSES_TRUST` go further and say the word moves nothing at
+ * all there. An unknown id gets the three every runtime can express: refusing to draw a picker is
+ * not the right answer to a runtime blobot cannot place, and `runtimeFor` will refuse the launch
+ * anyway.
+ */
+export function trustLevelsFor(runtimeId: string): readonly TrustLevel[] {
+  return runtimeId === 'claude-code' ? CLAUDE_TRUST_LEVELS : ATTENDED_TRUST_LEVELS;
+}

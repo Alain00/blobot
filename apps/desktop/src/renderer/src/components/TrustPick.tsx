@@ -6,9 +6,15 @@ import type { TrustLevel } from '../../../shared/api.js';
 /**
  * What this agent may do in its own copy before its runtime starts asking.
  *
- * Three positions and no more. The step above `trusting` is Claude's `bypassPermissions` or
- * OpenCode's unqualified allow, and ticket 14 refuses both, so the control has no fourth row
- * for the same reason the runtime options menu has no `mode` group.
+ * Four positions where the runtime has a decider of its own and three everywhere else, which is
+ * why the rows are handed in rather than hardcoded: `trustLevelsFor` in main is the one place
+ * allowed to know what a `runtime_id` means, and a picker that spelled the fourth row itself
+ * would be offering `unattended` beside a Codex agent, where it means nothing.
+ *
+ * The step this control still refuses is `bypassPermissions` and OpenCode's unqualified allow:
+ * nothing asks and nothing decides. `unattended` is not that. Something still answers every
+ * request; it is the provider's classifier rather than the person, and the sentence on the row
+ * says so in those words.
  *
  * The one control in this app whose words are blobot's own rather than a provider's. Everything
  * else in the agent form either prints a label the runtime gave it or sends back an opaque id;
@@ -53,7 +59,24 @@ export const LEVELS: readonly Level[] = [
       'Also installs packages and fetches from the network. Still asks before deleting, ' +
       'publishing, or changing who can do what.',
   },
+  {
+    id: 'unattended',
+    word: 'unattended',
+    says:
+      'The rest is answered by the runtime, not by you, so it works while you are away. ' +
+      'Deleting and publishing are refused: nobody can be asked.',
+  },
 ];
+
+/**
+ * The rows to draw, given what the runtime can express.
+ *
+ * A level the runtime does not have is not greyed out, it is absent: a disabled row invites the
+ * question *why not*, and the honest answer is about a provider the form is not allowed to name.
+ */
+export function levelsFor(available: readonly TrustLevel[]): readonly Level[] {
+  return LEVELS.filter((level) => available.includes(level.id));
+}
 
 /**
  * The sentence is on the menu row and not under the closed control. *2026-08-31.* Three of these
@@ -64,11 +87,15 @@ export const LEVELS: readonly Level[] = [
  */
 export function TrustPick({
   value,
+  available,
   onChange,
 }: {
   value: TrustLevel;
+  /** What this agent's runtime can express. Weakest first, and never empty. */
+  available: readonly TrustLevel[];
   onChange: (value: TrustLevel) => void;
 }): React.JSX.Element {
+  const levels = levelsFor(available);
   return (
     <Select.Root value={value} onValueChange={(next) => onChange(next as TrustLevel)}>
       <Select.Trigger className="field selecttrigger" aria-label="What it can do without asking">
@@ -78,9 +105,9 @@ export function TrustPick({
         </Select.Icon>
       </Select.Trigger>
       <Select.Portal>
-        <Select.Content className="selectmenu" position="popper" sideOffset={6}>
+        <Select.Content className="selectmenu trustmenu" position="popper" sideOffset={6}>
           <Select.Viewport>
-            {LEVELS.map((level) => (
+            {levels.map((level) => (
               <Select.Item key={level.id} value={level.id} className="selectitem trustitem">
                 <Select.ItemText>{level.word}</Select.ItemText>
                 <Select.ItemIndicator className="selecttick">

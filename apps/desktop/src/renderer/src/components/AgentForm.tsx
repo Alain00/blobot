@@ -11,6 +11,7 @@ import type {
   VerbosityLevel,
   UiRuntimeChoice,
 } from '../../../shared/api.js';
+import { ATTENDED_TRUST_LEVELS } from '@blobot/core/domain';
 import { Blob, SEEN } from './Blob.js';
 import { READINESS_WORD } from './readiness.js';
 import { RuntimeMark } from './RuntimeMark.js';
@@ -262,7 +263,11 @@ function AgentFields({
             never said anything about Bob and the control should not imply it does. */}
         <div className="labelled">
           <span className="fieldlabel mono">WHAT IT CAN DO WITHOUT ASKING</span>
-          <TrustPick value={trust} onChange={setTrust} />
+          <TrustPick
+            value={trust}
+            available={runtime?.trustLevels ?? ATTENDED_TRUST_LEVELS}
+            onChange={setTrust}
+          />
         </div>
         {/* Beside the others for the same reason they are beside each other: a run of
             questions about one agent, in blobot's own words, that no runtime advertises. It is

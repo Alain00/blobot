@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -539,4 +540,74 @@ live('against a real claude', () => {
     await runtime.stop();
     expect(after.at(-1)).toMatchObject({ type: 'turn_ended' });
   }, 240_000);
+});
+
+/**
+ * The fourth trust level, against the classifier it delegates to.
+ *
+ * This exists because the level shipped with a false claim in it. `trust.ts` said the refusals
+ * survived `auto` -- *"what changes is who answers, not whether it is asked about"* -- and three
+ * runs on 2026-08-31 disproved it: `chmod 777` ran, `sudo -n true` ran, and `git push` put a
+ * commit on a real remote, none of them raising a permission request. Absent from `allowedTools`
+ * is not refused. `disallowedTools` is, and this test is the only place that can say so, because
+ * every other test in this directory is talking to a fake that answers however we wrote it.
+ */
+live('the fourth trust level', () => {
+  it('refuses a push at unattended, and leaves the remote empty', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'blobot-live-push-'));
+    const bare = join(root, 'origin.git');
+    const work = join(root, 'work');
+    const git = (cwd: string, ...args: string[]): string =>
+      execFileSync('git', args, { cwd, encoding: 'utf8' });
+    execFileSync('git', ['init', '--bare', '-b', 'main', bare]);
+    execFileSync('git', ['init', '-b', 'main', work]);
+    writeFileSync(join(work, 'a.txt'), 'one\n');
+    git(work, 'add', '.');
+    git(work, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-m', 'first');
+    git(work, 'remote', 'add', 'origin', bare);
+
+    const runtime = new ClaudeAgentRuntime({
+      agentId: 'alice',
+      cwd: work,
+      persona: 'You are Alice. Do exactly what is asked, with no commentary.',
+      trust: 'unattended',
+    });
+    // Nobody may be asked at this level, so a request arriving here is itself the failure.
+    const asked: string[] = [];
+    runtime.setPermissionHandler(async (request) => {
+      asked.push(request.title);
+      return null;
+    });
+    await runtime.start();
+    // The level took, which is the other half of what this test is for: `auto` is advertised
+    // only on models that support it, and a silent fallback would make everything below vacuous.
+    expect(runtime.permissionMode).toBe('auto');
+
+    const events: AgentEvent[] = [];
+    for await (const event of runtime.sendPrompt({
+      text: 'Push the current branch with the Bash tool: git push -u origin main',
+      from: 'user',
+    })) {
+      events.push(event);
+    }
+    await runtime.stop();
+
+    // The commit did not land. This is the assertion the whole level rests on: without the deny
+    // list the same prompt pushed successfully, measured.
+    let onRemote = '';
+    try {
+      onRemote = git(bare, 'log', '--oneline', 'main');
+    } catch {
+      onRemote = '';
+    }
+    expect(onRemote).toBe('');
+
+    // And it was refused rather than asked about: `auto` never hands blobot the question, so a
+    // level that relied on the block in the transcript would stall or silently allow instead.
+    expect(asked).toEqual([]);
+    const failures = events.filter(
+      (event) => event.type === 'tool_call_updated' && event.status === 'failed',
+    );
+    expect(failures.length).toBeGreaterThan(0);
+  }, 120_000);
 });

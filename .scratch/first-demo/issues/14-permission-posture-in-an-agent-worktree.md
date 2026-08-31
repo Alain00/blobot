@@ -638,3 +638,133 @@ there is an outside for them to reach, and Claude's own help recommends bypass *
 sandboxes with no internet access"*, which is the vendor drawing this exact line. That effort's
 ticket 04 carries the question in the form it would have to be answered in; this section stays
 open and stays the record of the refusal as it stands.
+
+**Update, 2026-08-31, second asking.** The question came back in a narrower form -- *"why we
+cannot use claude auto mode?"* -- and it is worth recording that `auto` specifically is refused
+on grounds that do not depend on the reopened ceiling above. Three, of which the third is new:
+
+1. The bridge discards `permissionMode`, so "use auto" means dropping the forced
+   `set_mode("default")` and inheriting the user's own `defaultMode` rather than choosing a
+   posture.
+2. `auto` is availability-gated -- *"only when the model supports it"* -- so it can be **silently
+   unavailable**, the same asymmetric-guarantee failure as `ALLOW_BYPASS`. And no other runtime
+   has a classifier at all, so the word would mean something categorically different on three of
+   four.
+3. **Measured on the author's own machine: it would not have fixed the complaint that prompted
+   it.** `~/.claude/settings.json` already carries `permissions.defaultMode: "auto"`, and the
+   session that prompted this was still asked for every MCP call, because auto carries its own
+   `autoMode.allow` and MCP servers are not in `$defaults`. The lever the author is reaching for
+   is an allowlist, not a mode.
+
+That third point moved the effort: the narrow half is now `.scratch/mcp-permissions/`, opened on
+the finding that **this ticket and `07` are individually correct and jointly broken** -- `07`
+inherits the user's MCP servers onto a Claude agent, this ticket's amendment makes every one of
+them prompt, and the block this ticket shipped offers no way to ever stop being asked. That
+effort's `03` is where `allow_always` having no path to the UI gets reopened, if it does; it
+carries an alternative under which this ticket's sentence stays literally true.
+
+## Resolved, 2026-08-31: `unattended` ships, and it is not the level this ticket refused
+
+The author, a third time and explicitly: *"i want auto mode of claude code inside blobot claude
+code runtime, how can we do that?"* Built. `trust.ts` has a fourth position and its old closing
+sentence -- *"there is no fourth position above `trusting`, and there will not be one"* -- is
+withdrawn, in that file, with the reason on it.
+
+**What was refused above is still refused.** The step this ticket declined was
+`bypassPermissions` and OpenCode's `'*': allow`: nothing asks, nothing decides, and the
+disclosure becomes false with no one to notice. `unattended` is a different position on the same
+axis. Claude's `auto` hands each request blobot has not already vouched for to the *provider's*
+classifier, which approves or denies it. Something still decides. `.scratch/sandboxing/04` remains
+the place the fifth position would be argued, and remains unanswered.
+
+Four things answer this ticket's four objections, one each.
+
+- **"An inference call we do not control makes safety decisions for an unattended teammate."**
+  Still true, and now the description of a level a person picks with a sentence under it, rather
+  than a posture inherited from `settings.json` per agent and invisibly. The disclosure says
+  *the runtime decides, not blobot*; the picker row says the rest is *answered by the runtime,
+  not by you*. Both end on *it can refuse as well as allow*, which is there because a reader
+  told only about approval will expect the failure mode to be an agent doing too much, and the
+  one they meet first is an agent quietly stopped.
+
+  **Two corrections from the author's first minutes with it, both recorded rather than tidied
+  away.** The picker's fourth row was written at 156 characters and pushed the menu wider than
+  the dialog holding it: `.trustmenu` now caps the width, which makes true a thing the
+  stylesheet had asserted since the control shipped -- *"the menu takes the trigger's width, so
+  the sentence wraps at the width of the field"* -- and which had never been enforced, because
+  `min-width` is a floor. The sentence is 138 characters now and a test holds the ceiling. And
+  the first `TrustPick` test written for the fourth row passed vacuously: it asserted a Radix
+  menu's rows were absent while the menu was closed, which is true of every row. The rows are
+  tested through `levelsFor`, and `trustLevelsFor` is tested in main, which is where the
+  answer is actually made.
+- **"It can be silently unavailable."** No longer silent. `wire.ts` grew `availableModes`, which
+  ACP always sent and blobot always discarded, so the adapter now probes for `auto` and falls
+  back to `default` **saying so on stderr**. Tested in both directions, including that the
+  fallback does not fail the launch: unlike Codex's `#assertPosture` the fallback here is
+  *stricter*, so the failure that assert exists to prevent cannot occur in this direction.
+- **"A level that is real for Alice and refused for Bob."** `trustLevelsFor` in `runtime-for.ts`
+  is the one place a `runtime_id` becomes a list of levels, beside `ceilingFor` and for the same
+  reason. It rides `UiRuntimeChoice.trustLevels` to the agent form, which draws three rows or
+  four and cannot tell which provider produced them. A level a runtime lacks is **absent, not
+  disabled**: a greyed row invites *why not*, and the honest answer names a provider the form is
+  not allowed to know about.
+- **"It releases the four operations that are unrecoverable outside the worktree."** **This
+  answer was wrong when first written, and the live run the author asked for is what caught it.**
+  It said the verbs stay absent from `allowedTools` at every level, so *"what changed is who
+  answers"* -- true of the allowlist and false of the behaviour. Absent from an allowlist is not
+  refused. Measured against a real `claude`, three times, each with **no permission request
+  reaching blobot at all**: `chmod 777` ran and the mode went 664 to 777; `git push -u origin
+  main` ran and the commit landed on a real remote; `sudo -n true` ran, and only the operating
+  system's password prompt stopped it. `auto` does not consult blobot's list. It decided yes.
+
+  As first shipped, `unattended` was far closer to `bypassPermissions` than its own copy admitted,
+  and it contradicted `CLAUDE.md`'s rule that **a pull request is the user's action and never an
+  agent's**.
+
+  **The fix, measured in the same session: `disallowedTools` *is* honoured under `auto`.** The
+  same push came back `Permission denied`, the remote stayed empty, and again nothing reached
+  blobot. So `refusedTools(trust)` denies the nine verbs at `unattended` and at no other level --
+  at the attended three they still ask, because there somebody can answer, and denying them there
+  would turn *"still asks before deleting"* into *"cannot delete"* for every agent already hired.
+  `live.test.ts` pins it, `vouchedTools('unattended')` is still `trusting`'s list unchanged, and
+  `gh` stays out of the deny list because `Bash(gh:*)` would deny the reading half `normal`
+  vouches for.
+
+### The disclosure, which this ticket predicted would be the hard part
+
+It was right: *"the copy has to change with it, and the honest version of that copy is hard to
+write without it reading as a warning nobody heeds."*
+
+The draft **splits the claim rather than weakening it**. The first three levels keep *"everything
+blobot has not vouched for, they ask about"* unqualified, because it is still true of them; the
+fourth gets its own sentence. `and on some runtimes unattended` is the only line in the app that
+admits the levels differ by runtime, and it says *some* without saying which -- the same line
+`AgentRuntime.accepts` draws, with the specifics met on the agent form where the row is either
+there or it is not.
+
+### The live run, 2026-08-31, and what it found
+
+Asked for by the author on the strength of the paragraph this replaces, which worried about a
+classifier **denying** silently. It denied nothing. In four turns against a real `claude` it
+approved every dangerous thing it was handed, which is the opposite failure and the more urgent
+one. The correction is in the fourth bullet above.
+
+Two further findings, neither of them blobot's doing, both unaddressed:
+
+- **The provider fell back to another model mid-session, in the agent's own voice.** A `chmod 777`
+  prompt tripped a usage-policy refusal on `claude-opus-5[1m]`, and the retry text -- *"Model
+  fallback: claude-opus-5[1m] declined this request (cyber); retried with claude-opus-4-8"* --
+  arrived as `agent_message_delta`, indistinguishable in the transcript from what the model said.
+  That is `.scratch/fx-runtime/issues/05`'s finding word for word, on a second runtime: **a
+  vendor's diagnostics ride the message stream and blobot has no frame that tells them apart.**
+  It is now two of four runtimes, which makes it the protocol's problem rather than fx's quirk.
+- **The context gauge's denominator changed underneath it.** The same fallback moved `size` from
+  1,000,000 to 200,000 mid-turn. Ticket 09's working ceiling and the compaction trigger are both
+  fractions of that number, so a fallback nobody chose silently redefines when blobot compacts.
+
+### Still not measured
+
+Whether the classifier **ever** denies, and what that looks like when it does. Three attempts to
+provoke one failed. The transcript consequence of a denial -- a turn that did less than was asked,
+with `waiting` never entered and no reason on screen -- remains the open risk, and probably wants
+a stop-reason line in the register of `turn stopped · the context window is full`.
