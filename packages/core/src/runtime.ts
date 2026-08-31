@@ -151,6 +151,43 @@ export interface RoutineProposalAck {
 export type RoutineProposalHandler = (call: RoutineProposalCall) => Promise<RoutineProposalAck>;
 
 /**
+ * One entry on a `record_entry` call.
+ *
+ * `source` is the agent's own answer to *did someone tell you this, or did you work it out?* and
+ * it cannot be derived: the agent calls the tool in every case, including the one that looks
+ * like the user's, because *add one* in the panel opens the composer rather than a text field.
+ * Inferring it from whether the user's message contained an instruction is inference blobot does
+ * not provide. An agent may answer wrongly; that is not this design's threat model, because the
+ * block is on screen in the turn it happened and a mislabelled entry is removable like any other.
+ */
+export interface HandbookEntryInput {
+  readonly text: string;
+  readonly source: 'told' | 'noticed';
+  /**
+   * The number of an entry this one corrects, as the Handbook draws it.
+   *
+   * A withdrawal and a write in **one atomic call**, so a Handbook never briefly says both
+   * things or neither. Only an entry the caller authored as `noticed` can be replaced: an agent
+   * removing what it was told is an agent editing the user.
+   */
+  readonly replaces?: number;
+}
+
+export interface RecordEntryCall {
+  readonly from: string;
+  readonly entries: readonly HandbookEntryInput[];
+}
+
+/** What the recording agent is told, and what the transcript block is built from. */
+export interface RecordEntryAck {
+  readonly recorded: readonly { readonly id: string; readonly ordinal: number; readonly text: string }[];
+  /** Entries withdrawn by a `replaces`, by the number the agent named. */
+  readonly withdrew: readonly number[];
+}
+
+export type RecordEntryHandler = (call: RecordEntryCall) => Promise<RecordEntryAck>;
+
+/**
  * Process-level state, distinct from Status (ticket 09), which is derived from the event
  * stream. `starting` is the one Status that comes from here rather than from events.
  */

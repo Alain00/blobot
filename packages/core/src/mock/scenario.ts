@@ -1,5 +1,5 @@
 import type { StopReason, ToolKind } from '../events.js';
-import type { AvailableCommand } from '../runtime.js';
+import type { AvailableCommand, HandbookEntryInput } from '../runtime.js';
 
 /**
  * Scenarios are the backbone: named, checked in, and what both the tests and demo mode play.
@@ -57,6 +57,10 @@ export type ScenarioStep =
       readonly name: string;
       readonly prompt: string;
       readonly schedule: unknown;
+    }
+  | {
+      readonly kind: 'record_entry';
+      readonly entries: readonly HandbookEntryInput[];
     }
   | {
       readonly kind: 'usage';
@@ -158,6 +162,18 @@ export class Scenario {
    */
   proposeRoutine(name: string, prompt: string, schedule: unknown): Scenario {
     return this.#with({ kind: 'propose_routine', name, prompt, schedule });
+  }
+
+  /**
+   * Entries recorded from inside a turn, through the same handler the loopback tool calls, and
+   * a **list** because the tool takes one.
+   *
+   * Here for the reason the step above is: the two character bounds and the `replaces` rule are
+   * only real if a refusal comes back to the model as a tool error inside the turn, and that is
+   * not observable from outside it.
+   */
+  recordEntry(entries: readonly HandbookEntryInput[]): Scenario {
+    return this.#with({ kind: 'record_entry', entries });
   }
 
   /**

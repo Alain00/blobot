@@ -168,6 +168,20 @@ export const demoScripts = {
     alice: scenarios['schedules-itself'],
     bob: scenarios['bob-reviews'],
   },
+  /**
+   * An agent is briefed and writes it down, and the block that pays for that opens in the turn
+   * that did it. The same argument as the run above: no other script records anything, so the
+   * only other place to look at this block is a real agent being briefed on somebody's real
+   * repository.
+   */
+  'writes-it-down': {
+    summary: 'Alice is told how the work goes here, and records it where you can see her do it',
+    prompt:
+      'Before you start: the client is Vlue, a two-person agency, they sign off on all copy, ' +
+      'and nothing ships on a Friday.',
+    alice: scenarios['writes-it-down'],
+    bob: scenarios['bob-reviews'],
+  },
 } as const satisfies Record<string, DemoScript>;
 
 export type DemoScriptName = keyof typeof demoScripts;
@@ -219,6 +233,9 @@ export async function createDemoTeam(
         // came back `blobot_propose_routine failed`, which is the mock reporting an unattached
         // handler and not a refusal blobot ever makes.
         proposeRoutine: (call) => orchestrator.handleProposeRoutine(call),
+        // Ticket 03's tool, wired for the same reason: without it a scripted write comes back
+        // `blobot_record_entry failed`, which is the mock reporting an unattached handler.
+        recordEntry: (call) => orchestrator.handleRecordEntry(call),
         script: script.alice,
       }),
     ],
@@ -233,6 +250,7 @@ export async function createDemoTeam(
         // came back `blobot_propose_routine failed`, which is the mock reporting an unattached
         // handler and not a refusal blobot ever makes.
         proposeRoutine: (call) => orchestrator.handleProposeRoutine(call),
+        recordEntry: (call) => orchestrator.handleRecordEntry(call),
         script: script.bob,
       }),
     ],
@@ -270,6 +288,9 @@ export async function createDemoTeam(
     // failed` back, and the transcript block that is the *price* of letting it schedule itself
     // was the one block in the app no demo could show.
     routines: store,
+    // And the Handbook, in the same throwaway database, so the block that is the *price* of
+    // letting an agent write into its own persona is one a demo can show.
+    handbooks: store,
   });
   await orchestrator.start();
 

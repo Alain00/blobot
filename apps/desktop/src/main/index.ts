@@ -55,6 +55,7 @@ import {
   type NewAgentSpec,
   type NewTeamSpec,
 } from './team-store.js';
+import { asUiHandbookEntry, handbooksOf, handbookWrites } from './handbook-rows.js';
 import { choicesOf } from './permission-choices.js';
 import { runtimeLabel } from './runtime-labels.js';
 import { describeRuntimeOptions, rememberRuntimeOptionsIn } from './runtime-options.js';
@@ -465,6 +466,9 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
     // these agents were carrying when they were last awake is what they will resume with.
     usage: store?.lastUsageOfTeam(team.id) ?? {},
     log: store?.logOfTeam(team.id) ?? { running: [], tools: [], turns: [], compactions: [] },
+    // Read while the processes are still coming up, like the roster and the transcript: a
+    // Handbook is a persisted fact and nothing about it waits on a session.
+    handbooks: store === undefined ? {} : handbooksOf(store, team.id, records),
     // Composed but not yet sent: the personas exist, and nothing has been woken.
     injection: Object.fromEntries(
       records.map((record) => [
@@ -598,6 +602,7 @@ function snapshot(): UiSnapshot {
       statuses: {},
       commands: {},
       usage: {},
+      handbooks: {},
       log: { running: [], tools: [], turns: [], compactions: [] },
       injection: {},
       messages: [],
@@ -655,6 +660,7 @@ function snapshot(): UiSnapshot {
     ),
     usage: team.store.lastUsageOfTeam(team.team.id),
     log: team.store.logOfTeam(team.team.id),
+    handbooks: handbooksOf(team.store, team.team.id, team.agents),
     injection: Object.fromEntries(
       team.agents.map((agent) => [
         agent.id,
@@ -678,6 +684,9 @@ function snapshot(): UiSnapshot {
       team.agents.map((agent) => agent.id),
       oldestOf(team.store, team.team.id),
     ),
+    // The same restoration, for the same reason: a disclosure you could miss by having been on
+    // another team when it happened would not be one.
+    handbook: handbookWrites(team.store, team.team.id, oldestOf(team.store, team.team.id)),
     unread: unreadAgents(),
     turnsThisPrompt: team.orchestrator.turnsThisPrompt,
     demoMode: team.demoMode,
@@ -752,6 +761,33 @@ function attach(team: RunningTeam): void {
   orchestrator.onRoutineScheduled((one) =>
     send('blobot:routine-scheduled', teamId, { ...one, armed: true }),
   );
+  // An agent wrote into its own persona. The same rule as the line above, for the same reason:
+  // the write is allowed *because* it opens in the turn that made it. Recorded before it is
+  // sent, so a switch away and back finds it there rather than only in a window that was open.
+  orchestrator.onHandbookWrite((write) => {
+    // `team.store`, not the module's: the demo team has a database of its own, and this block
+    // is one a demo has to be able to show.
+    const id = uuidv7(write.at);
+    team.store.recordHandbookWrite(id, teamId, {
+      kind: write.kind,
+      agentId: write.agentId,
+      at: write.at,
+      ...(write.kind === 'recorded'
+        ? {
+            entryIds: write.entries.map((entry) => entry.id),
+            withdrewIds: write.withdrew.map((entry) => entry.id),
+          }
+        : {}),
+    });
+    send('blobot:handbook-write', teamId, {
+      id,
+      agentId: write.agentId,
+      at: write.at,
+      kind: write.kind,
+      entries: write.kind === 'recorded' ? write.entries.map(asUiHandbookEntry) : [],
+      withdrew: write.kind === 'recorded' ? write.withdrew.map(asUiHandbookEntry) : [],
+    });
+  });
   // A proposal is the one thing an agent can put in front of the user without saying anything,
   // so the screens that draw Routines are told rather than left to notice on the next open.
   orchestrator.onRoutinesChanged(() => send('blobot:team'));
@@ -974,6 +1010,19 @@ void app.whenReady().then(async () => {
       await current()?.orchestrator.promptFromUser(agentIds, text, attachmentIds);
     },
   );
+
+  /**
+   * *brief them*, from the notice card above an unbriefed agent's composer.
+   *
+   * Its own channel and not `blobot:prompt` with a canned string, because the string is not the
+   * renderer's: what goes on the wire is core's `BRIEFING_KNOCK` and the renderer must not be
+   * able to say it. That is `detect/remedies.ts`'s rule about argv drawn again — two ids travel
+   * and the words are looked up on the far side.
+   */
+  ipcMain.handle('blobot:brief', async (_event, agentId: string) => {
+    if (opening !== undefined) return;
+    await current()?.orchestrator.promptForBriefing(agentId);
+  });
 
   /**
    * Picking a file up. Three doors, one place that reads bytes, and the checks before the
@@ -1366,6 +1415,17 @@ void app.whenReady().then(async () => {
   );
   ipcMain.handle('blobot:seenRoutineRuns', (_event, agentId: string) => {
     store?.markRoutineRunsSeen(agentId, clock.now());
+  });
+  /**
+   * Take an entry out of a Handbook, from the transcript block or from the pane.
+   *
+   * The row stays and the block stays: a transcript is a record of what happened and is never
+   * rewritten, which is why a Routine the user later disarmed still shows the turn that armed
+   * it. What changes is what the next session is composed from.
+   */
+  ipcMain.handle('blobot:removeHandbookEntry', (_event, entryId: string) => {
+    // The team's own store, so the demo's block is a working control rather than a picture.
+    current()?.store.removeHandbookEntry(entryId, clock.now());
   });
 
   ipcMain.handle('blobot:createTeam', async (_event, spec: NewTeamSpec): Promise<TeamCreationResult> => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Command, useCommandState } from 'cmdk';
 import { ArrowUp, Plus } from 'lucide-react';
 import { findAgentByName } from '@blobot/core/domain';
@@ -60,7 +60,10 @@ export function Composer({
   lead,
   onSend,
   footer,
+  notice,
+  suggest,
   opening = false,
+  place,
 }: {
   agents: readonly UiAgent[];
   /** Each agent's own slash menu. Per session, so two teammates can offer different ones. */
@@ -89,12 +92,40 @@ export function Composer({
    */
   footer?: React.ReactNode;
   /**
+   * A statement about the recipient, above the field: today the Handbook's unbriefed card.
+   *
+   * Above rather than in the tray below, because the tray's rule is that nothing on it is a
+   * description. A node and not a status, like `footer`, so the composer still knows nothing
+   * about what it is saying.
+   */
+  notice?: React.ReactNode;
+  /**
+   * Words put into the field for the user to finish, and the moment they were offered.
+   *
+   * The `at` is what makes it fire: the same text offered twice is two offers, and a prop that
+   * carried only the string would refill the field on any re-render after the user cleared it.
+   * Never a send — the user completes the sentence and presses send themselves, because the
+   * whole of `add one` is that `record_entry` stays the single path into a Handbook and the
+   * words going to the agent are the user's own.
+   */
+  suggest?: { readonly text: string; readonly at: number };
+  /**
    * The team is still starting. Sending is closed, because there is no session to send to yet,
    * but the field stays open: a cold start is seconds and the thing the user came to say is
    * worth more than the wait. The draft is still here when the team arrives.
    */
   opening?: boolean;
+  /**
+   * A place, named. Whenever it changes the field takes focus, because arriving at a team or at
+   * an agent is arriving somewhere you came to say something: the composer is what you are
+   * here for, and a click on the rail followed by a click on the field is one click too many.
+   *
+   * A string rather than the pane, because the team behind the pane counts too — switching
+   * teams leaves you in the team pane you were already in, and that is still an arrival.
+   */
+  place?: string;
 }): React.JSX.Element {
+  const field = useRef<HTMLTextAreaElement>(null);
   const [draft, setDraft] = useState('');
   /** The item the arrow keys are on. cmdk owns it; this mirrors it so Tab can read it. */
   const [active, setActive] = useState('');
@@ -110,6 +141,23 @@ export function Composer({
   /** A file is over the field. Drawn, because a drop target nobody can see is not one. */
   const [over, setOver] = useState(false);
   const roster = agents as unknown as readonly Agent[];
+
+  // Arriving somewhere puts the cursor where the arrival was for. Not on every render — only
+  // when the place changes — so it never fights the user for focus while they are working.
+  useEffect(() => {
+    if (place === undefined) return;
+    field.current?.focus();
+  }, [place]);
+
+  // Words offered, not sent. Appended to whatever is already there rather than replacing it: a
+  // control that silently ate a half-written message would be the worst thing on this screen.
+  useEffect(() => {
+    if (suggest === undefined) return;
+    setDraft((held) => (held === '' ? suggest.text : `${held.replace(/\s*$/, '')}\n${suggest.text}`));
+    field.current?.focus();
+    // The offer is identified by its moment, so the same words twice are two offers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [suggest?.at]);
 
   const addressed = addressedBy(draft, roster);
   const implicit = pane.kind === 'agent' ? pane.agentId : lead;
@@ -304,6 +352,7 @@ export function Composer({
       onDragLeave={() => setOver(false)}
       onDrop={drop}
     >
+      {notice}
       {refused !== undefined && <div className="stranded">{refused}</div>}
       {attached.length > 0 && (
         <div className="attached">
@@ -409,6 +458,7 @@ export function Composer({
           {'\u200b'}
         </div>
         <MentionInput
+          ref={field}
           draft={draft}
           open={open}
           onPaste={paste}
@@ -508,16 +558,20 @@ function MentionInput({
   onChange,
   onKeyDown,
   onPaste,
+  ref,
 }: {
   draft: string;
   open: boolean;
   onChange: (text: string) => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onPaste: (event: React.ClipboardEvent<HTMLTextAreaElement>) => void;
+  /** The field itself, for the one caller that has to put the cursor in it. */
+  ref?: React.Ref<HTMLTextAreaElement>;
 }): React.JSX.Element {
   const activeId = useCommandState((state) => state.selectedItemId);
   return (
     <textarea
+      ref={ref}
       rows={1}
       value={draft}
       onChange={(event) => onChange(event.target.value)}

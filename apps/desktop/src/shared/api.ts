@@ -87,6 +87,42 @@ export interface UiScheduledRoutine {
   readonly armed: boolean;
 }
 
+/**
+ * An agent wrote to its own Handbook, as the transcript draws it.
+ *
+ * The disclosure that pays for letting an agent write into its own persona at all: it opens in
+ * the turn that did it, carrying removal, so the write is exactly as visible as it is durable.
+ *
+ * `full` is the refusal, and it is here for a reason none of the others are: the Handbook is
+ * full, nothing was recorded, and the fix is a person removing an entry. Every other refusal in
+ * `bounds.ts` is the agent's own to act on and stays between blobot and the agent.
+ */
+export interface UiHandbookWrite {
+  readonly id: string;
+  readonly agentId: string;
+  readonly at: number;
+  readonly kind: 'recorded' | 'full';
+  /** What was written, with what each entry says **now** and whether it is still there. */
+  readonly entries: readonly UiHandbookEntry[];
+  /** What the same call withdrew, which is a correction rather than a second act. */
+  readonly withdrew: readonly UiHandbookEntry[];
+}
+
+export interface UiHandbookEntry {
+  readonly id: string;
+  /** The number the Handbook draws it under, and the number the agent names to correct it. */
+  readonly ordinal: number;
+  readonly text: string;
+  readonly source: 'told' | 'noticed';
+  /**
+   * When it was recorded. The panel draws `author · age` and this is the age half; the author
+   * half is `source`, which is why an entry carries no third field for it.
+   */
+  readonly at: number;
+  /** Removed since, by the user or withdrawn by the agent. The line stays; the control goes. */
+  readonly removed: boolean;
+}
+
 /** One firing, as the run history draws it. */
 export interface UiRoutineRun {
   readonly id: string;
@@ -396,7 +432,15 @@ export interface UiInjection {
   readonly attachmentBytes: number;
   /** The cached system prefix this agent's session was opened with. */
   readonly personaChars: number;
-  /** How much of that persona is the operator's own standing instructions. */
+  /**
+   * How much of that persona is the operator's own standing instructions.
+   *
+   * The Handbook's own figure is deliberately **not** here, though it belongs to the same
+   * breakdown and draws beside this row. It is derived in the renderer from
+   * {@link UiSnapshot.handbooks}, so the number in the gauge is provably the sum of the entries
+   * the panel lists rather than a second count of them that can drift. See
+   * `.scratch/handbooks/issues/05`.
+   */
   readonly instructionsChars: number;
   /** The last prompt the orchestrator composed: envelopes, the roster line, the numbering. */
   readonly lastWakeChars: number;
@@ -436,6 +480,16 @@ export interface UiSnapshot {
   readonly usage: Record<string, UiUsage>;
   /** What the activity column showed before this snapshot, from the rows that recorded it. */
   readonly log: UiLog;
+  /**
+   * Each agent's Handbook, live, keyed by agent id: what it has been told about this team's
+   * work, oldest first, removed entries absent.
+   *
+   * In the snapshot rather than fetched when the panel opens, because three surfaces need it and
+   * two of them are drawn before anybody asks for it: the notice card above the composer has to
+   * know an agent is unbriefed, and the gauge's handbook row is a sum of exactly these entries.
+   * It is small — the whole thing is bounded at 8,000 characters per agent by `HANDBOOK_LIMIT`.
+   */
+  readonly handbooks: Record<string, readonly UiHandbookEntry[]>;
   /** What blobot put into each agent's turn, for the breakdown under the gauge. */
   readonly injection: Record<string, UiInjection>;
   readonly messages: readonly Message[];
@@ -483,6 +537,14 @@ export interface UiSnapshot {
    * being on another team.
    */
   readonly scheduled?: readonly UiScheduledRoutine[];
+  /**
+   * Handbook writes within the transcript window, restored the same way and for the same
+   * reason: a disclosure you could miss by having been on another team would not be one.
+   *
+   * The event says which entries the call touched; the rows say what they say and whether they
+   * are still there, so a block never draws a removal control beside something already gone.
+   */
+  readonly handbook?: readonly UiHandbookWrite[];
   readonly turnsThisPrompt: number;
   /** Named so nobody mistakes the demo for real agents. */
   readonly demoMode: boolean;
@@ -1048,6 +1110,24 @@ export interface BlobotApi {
   runRoutineNow(routineId: string): Promise<{ ok: boolean; error?: string }>;
   /** What this Routine has done, newest first. The surface that says whether automation is real. */
   routineRuns(routineId: string): Promise<readonly UiRoutineRun[]>;
+  /**
+   * Take an entry out of an agent's Handbook.
+   *
+   * Reachable from the transcript block as well as from the pane, and they are the same act:
+   * the whole justification for letting an agent write into its own persona is that you see it
+   * happen and can undo it **there**. Sending the user to a panel to act turns a disclosure
+   * into a notification. It takes at that team's next start, like every other persona change.
+   */
+  removeHandbookEntry(entryId: string): Promise<void>;
+  /**
+   * Start the briefing interview with an agent that has never been told anything.
+   *
+   * **No text travels.** What goes on the wire is core's `BRIEFING_KNOCK`, looked up on the far
+   * side, so the renderer cannot compose a word of what an agent is sent. It never enters the
+   * `messages` row either: there is no third party in the room, and the first words in the
+   * transcript are the agent's own.
+   */
+  brief(agentId: string): Promise<void>;
   /** Opening that agent's pane, which is the only thing that clears issue 11's unread mark. */
   seenRoutineRuns(agentId: string): Promise<void>;
   createTeam(spec: NewTeamSpec): Promise<TeamCreationResult>;
@@ -1189,6 +1269,10 @@ export interface BlobotApi {
   /** An agent put itself on a schedule. It is already running when this arrives. */
   onRoutineScheduled(
     listener: (teamId: string, scheduled: UiScheduledRoutine) => void,
+  ): () => void;
+  /** An agent wrote to its own Handbook, or was refused because it is full. */
+  onHandbookWrite(
+    listener: (teamId: string, write: UiHandbookWrite) => void,
   ): () => void;
   /**
    * An agent named a teammate you named, and wrote to nobody. An observation, never a repair:

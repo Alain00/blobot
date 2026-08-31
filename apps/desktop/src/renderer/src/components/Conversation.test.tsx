@@ -82,6 +82,7 @@ function costPerDelta(depth: number, deltas: number): number {
           onAnswerPermission: () => {},
         routineArmed: {},
         onDisarmRoutine: () => {},
+      onRemoveHandbookEntry: () => {},
         }),
       );
     });
@@ -145,6 +146,7 @@ function draw(
         onAnswerPermission: () => {},
         routineArmed: {},
         onDisarmRoutine: () => {},
+      onRemoveHandbookEntry: () => {},
       }),
     );
   });
@@ -209,6 +211,7 @@ describe('the voices, after the roster stopped being passed down', () => {
           onAnswerPermission: () => {},
           routineArmed: {},
           onDisarmRoutine: () => {},
+      onRemoveHandbookEntry: () => {},
         }),
       );
     });
@@ -506,6 +509,7 @@ describe('a session blobot replaced', () => {
           onAnswerPermission: () => {},
         routineArmed: {},
         onDisarmRoutine: () => {},
+      onRemoveHandbookEntry: () => {},
         }),
       );
     });

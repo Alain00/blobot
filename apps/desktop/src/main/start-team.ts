@@ -112,11 +112,22 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     // Issue 05. Offered because this team's Routines are rows in the same file everything else
     // is in; an agent may propose one and no agent may arm one.
     proposeRoutine: (call) => orchestrator.handleProposeRoutine(call),
+    // Offered for the same reason and on the same condition: the Handbook is rows in the file
+    // everything else is in, so there is somewhere for an entry to go.
+    recordEntry: (call) => orchestrator.handleRecordEntry(call),
     onLog: (line) => log(line),
   });
   await mcp.start();
 
-  const personas = new Map(agents.map((agent) => [agent.id, composePersona(agent, team, agents)]));
+  // The Handbook is read here and passed in, because `composePersona` is pure and reads no
+  // store. Keyed on `(team, agent name)`, so it is the same Handbook after somebody was taken
+  // off this roster and put back on.
+  const personas = new Map(
+    agents.map((agent) => [
+      agent.id,
+      composePersona(agent, team, agents, store.handbookOf(team.id, agent.name)),
+    ]),
+  );
   const runtimeLabels: Record<string, string> = {};
   /**
    * What blobot knows about each model's usable context, resolved here because this is where
@@ -185,6 +196,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     contextCeilings: new Map(Object.entries(contextCeilings)),
     handoffs: new FileHandoffArchive(),
     routines: store,
+    handbooks: store,
   });
   await orchestrator.start();
 

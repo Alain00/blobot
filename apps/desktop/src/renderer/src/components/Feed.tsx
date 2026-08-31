@@ -3,6 +3,7 @@ import { workingCeiling } from '@blobot/core/domain';
 import { percent, tokens } from '../usage.js';
 import type {
   UiAgent,
+  UiHandbookEntry,
   UiInjection,
   UiPublishResult,
   UiUsage,
@@ -25,6 +26,7 @@ export function Feed({
   agents,
   usage,
   injection,
+  handbooks,
   pane,
   workspaces,
   looking,
@@ -36,6 +38,8 @@ export function Feed({
   agents: readonly UiAgent[];
   usage: Record<string, UiUsage>;
   injection: Record<string, UiInjection>;
+  /** Every member's Handbook. The gauge's handbook row is a sum of exactly these entries. */
+  handbooks: Record<string, readonly UiHandbookEntry[]>;
   pane: Pane;
   /**
    * Every member's workspace, in the team pane only. An agent's pane draws its own under the
@@ -71,7 +75,7 @@ export function Feed({
         <div className="feedhead">
           <span className="mono muted">ACTIVITY</span>
         </div>
-        <Context agents={agents} usage={usage} injection={injection} />
+        <Context agents={agents} usage={usage} injection={injection} handbooks={handbooks} />
         <WorkspacePanel
           statuses={workspaces}
           agents={agents}
@@ -126,10 +130,12 @@ function Context({
   agents,
   usage,
   injection,
+  handbooks,
 }: {
   agents: readonly UiAgent[];
   usage: Record<string, UiUsage>;
   injection: Record<string, UiInjection>;
+  handbooks: Record<string, readonly UiHandbookEntry[]>;
 }): React.JSX.Element | null {
   const [open, setOpen] = useState<string | undefined>(undefined);
   const rows = agents
@@ -174,7 +180,13 @@ function Context({
               </>
             )}
           </button>
-          {open === agent.id && <Sent id={`sent-${agent.id}`} sent={injection[agent.id]} />}
+          {open === agent.id && (
+            <Sent
+              id={`sent-${agent.id}`}
+              sent={injection[agent.id]}
+              handbookChars={handbookChars(handbooks[agent.id])}
+            />
+          )}
         </div>
       ))}
     </div>
@@ -192,7 +204,20 @@ function Context({
  * and cannot know what they cost in tokens, because tokenizing is the provider's. They are
  * never added to the gauge above, which is the runtime's own count.
  */
-function Sent({ id, sent }: { id: string; sent: UiInjection | undefined }): React.JSX.Element {
+function Sent({
+  id,
+  sent,
+  handbookChars,
+}: {
+  id: string;
+  sent: UiInjection | undefined;
+  /**
+   * The entries' own text, summed. Passed in rather than carried on `UiInjection`, so this is
+   * provably the same list the panel draws instead of a second count of it that can drift — and
+   * it moves the moment an agent records one, because the entries are live in the snapshot state.
+   */
+  handbookChars: number;
+}): React.JSX.Element {
   if (sent === undefined) {
     return (
       <div className="sent" id={id}>
@@ -206,6 +231,27 @@ function Sent({ id, sent }: { id: string; sent: UiInjection | undefined }): Reac
         <span>persona</span>
         <span className="v">{estimate(sent.personaChars)}</span>
       </div>
+      {/* The two parts of the persona the user owns, in the order the persona puts them in: what
+          is true of this work, then what is true of you. One relationship, drawn where it is
+          composed and drawn again here, contradicted in neither.
+
+          `handbook` carries no possessive and no count. *Your* is load-bearing on the row below,
+          where the words really are the user's; a Handbook is partly the agent's, so the same
+          word would be a small lie in a column whose whole job is being accurate about cost. The
+          count belongs in the panel, where a person can act on it.
+
+          It never warns as it nears its bound, and that is not the context ring's reason. The
+          ring stays quiet because blobot *will* act: a full window is what the session boundary
+          is for. This row stays quiet because blobot will **not** — the remedy is a person
+          removing an entry, and the number they act on stands in the panel beside the entries
+          they would remove. A warning in a column nothing can be done from is an alarm pointing
+          somewhere else. Two rows in one block, quiet for opposite reasons, both right. */}
+      {handbookChars > 0 && (
+        <div className="sentrow sub">
+          <span>handbook</span>
+          <span className="v">{estimate(handbookChars)}</span>
+        </div>
+      )}
       {sent.instructionsChars > 0 && (
         <div className="sentrow sub">
           <span>your standing instructions</span>
@@ -264,3 +310,14 @@ function estimate(chars: number): string {
   return `~${tokens(Math.ceil(chars / 4))}`;
 }
 
+/**
+ * The entries' own text, and nothing of the prose blobot wraps them in.
+ *
+ * Not the ordinals, not the dates, not the four lines telling the agent when to record. Three
+ * reasons and they agree: it is what `HANDBOOK_LIMIT` is measured against, it is what the panel's
+ * foot stands beside the entries with, and it is the only part of the block a person can change.
+ * Counting the framing would put a number in a column about cost that nobody can act on.
+ */
+export function handbookChars(entries: readonly UiHandbookEntry[] | undefined): number {
+  return (entries ?? []).reduce((total, entry) => total + entry.text.length, 0);
+}

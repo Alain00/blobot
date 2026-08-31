@@ -474,7 +474,7 @@ up. Read it before starting work.
   `attachment:` uri as *project instructions*, asking for an absolute local path, which is the
   thing ADR-0004 refuses, while reading the content block regardless.
 
-- **Handbooks are planned, and nothing is built.** `.scratch/handbooks/`, ten tickets, all
+- **Handbooks are built, and nothing has been run live.** `.scratch/handbooks/`, ten tickets, all
   resolved, frontier empty. A **Handbook** is what an Agent knows about *this team's* work, held at
   `<team>/<agent>` — the identity the AgentWorkspace branch is named for and a Routine belongs to,
   and the one thing that grain never held. Standing instructions are about the person and travel
@@ -498,11 +498,29 @@ up. Read it before starting work.
   (`-32602`), accepted gracefully by Claude and Codex, and **confabulated on by OpenCode**, which
   invented a task and went reading files. So the control sends a minimal instruction on the wire
   that is never drawn. And an empty turn is not a free turn: ~36,000 tokens of cached prefix for
-  seventeen output tokens. `.scratch/handbooks/build.md` has the build order and what will bite.
+  seventeen output tokens. And a person meets it in the **agent's pane and nowhere else**: a notice card above the composer
+while the Handbook is empty, carrying *brief them*, and once it is not, a `handbook · 4` door on
+the tray with a **dialog** behind it. It shipped as a panel under the composer and became a dialog
+the same day, from the first real Handbook: two entries and 774 characters took two thirds of the
+pane against a bound of 8,000, and a body with no ceiling cannot live in the composer's footing.
+It is a dialog rather than a screen over the surface because *your agents* is a **place** and this
+is one agent's Handbook reached from that agent's own tray, where what you do changes what it
+believes at the next start. The dialog offers **removal and never editing** (an entry you
+edited is neither yours nor the agent's), and its *add one* is **a composer prefill rather than a
+text field**, so `record_entry` stays the single path into a Handbook and every entry has a
+disclosure block behind it. Its foot reads `1,240 of 8,000 characters`, which is not the gauge's
+row said twice: the gauge answers what blobot spends on this turn, this answers how much room is
+left in the thing being edited, standing beside the entries a person would remove. In the team
+pane a Handbook is a **figure and never a body**, the opposite of `WORKSPACE`'s answer to the same
+problem, because four Handbooks do not fold into one the way four statuses fold into a
+`StatusWord`. `.scratch/handbooks/build.md` has what was decided while building and what bit.
 
-Next: building Handbooks, starting at the store, `.scratch/handbooks/build.md`. Then surfacing
-whether an agent resumed or started fresh, and a ticket for fx's diagnostics in the message voice.
-Each effort's `build.md` has the order and the reasons.
+Next: **brief a real agent**, which is the only thing left in that effort and what every
+provisional number in it is waiting on: measure the Handbook a real interview produces, watch
+whether ticket 04's empty-state block actually opens the conversation, and do it on OpenCode as
+well, since it is the runtime that confabulated. Then surfacing whether an agent resumed or
+started fresh, and a ticket for fx's diagnostics in the message voice. Each effort's `build.md`
+has the order and the reasons.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that
 reproduces every observed trap on purpose — ragged deltas, a cancelled tool reporting

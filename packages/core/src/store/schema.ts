@@ -539,3 +539,68 @@ export const contextCeilings = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.runtimeId, table.model] })],
 );
+
+/**
+ * A **Handbook**'s entries — what an Agent knows about this team's work. See
+ * `.scratch/handbooks/issues/07`.
+ *
+ * **Keyed on `(team_id, agent name)`, with no foreign key to `agents`**, so a Handbook outlives
+ * the row it belongs to. `editTeamRoster` mints a fresh id for every joiner and never revives a
+ * tombstone, so a Handbook keyed on `agents.id` would be lost every time somebody was removed
+ * and added back — which is the ordinary way a user fixes a mistake.
+ *
+ * **This key is safe only because ADR-0002 forbids renaming an agent.** An edit restates the
+ * definition and keeps the name, which is what makes a name stable enough to key on. A future
+ * rename feature would silently orphan every Handbook unless it moved them, and this sentence
+ * is here rather than in a changelog somebody reads afterwards.
+ *
+ * `team_id` rather than the team's name for the opposite reason: a team **can** be renamed, and
+ * `tombstoneTeam` renames it on the way out.
+ *
+ * Tombstoned with the team, never hard deleted. A tombstoned team can never be reopened, so its
+ * Handbook is never composed again, and hard-deleting would make this the one table that breaks
+ * the rule the rest of the schema keeps — rows are never removed — for a few kilobytes. It is
+ * also absent from the full clean's recovery figure on purpose: that number answers *what work
+ * am I destroying*, and a Handbook is kilobytes rather than work.
+ */
+export const handbookEntries = sqliteTable(
+  'handbook_entries',
+  {
+    id: text('id').primaryKey(),
+    teamId: text('team_id')
+      .notNull()
+      .references(() => teams.id),
+    /** The agent's name, not its id. See the note above about why, and about what would break it. */
+    agentName: text('agent_name').notNull(),
+    /**
+     * What the Handbook draws this entry under, and what `record_entry`'s `replaces` names.
+     *
+     * **Stored rather than derived, and it never changes.** Two things went wrong when it was a
+     * position in a list. Numbering the *live* entries one to n renumbers everything under a
+     * removal while the agent is still reading the persona it was given at session start, so it
+     * would correct entry 3 and withdraw what used to be entry 4. And deriving it from
+     * `ORDER BY created_at, id` scrambles the entries *inside* one call: `record_entry` takes a
+     * list, all of it is written in the same millisecond, and a uuidv7's tail is random — so a
+     * briefing came back in an order nobody wrote it in. Counted over every entry this Handbook
+     * ever had, so a removal leaves a gap, which is honest and is the same act being visible.
+     */
+    ordinal: integer('ordinal').notNull(),
+    text: text('text').notNull(),
+    /** `told` — the user said it. `noticed` — the agent worked it out, or a teammate said it. */
+    source: text('source', { enum: ['told', 'noticed'] }).notNull(),
+    createdAt: integer('created_at').notNull(),
+    /**
+     * When it stopped being part of the Handbook: removed by the user, or withdrawn by the
+     * agent that authored it as `noticed`.
+     *
+     * A tombstone rather than a delete, like everything else here, and for a reason of its own
+     * as well: the transcript block that disclosed the write is never rewritten, so a reopened
+     * team has to be able to tell that the entry it names is gone rather than draw a removal
+     * control beside something that is already removed.
+     */
+    removedAt: integer('removed_at'),
+    /** Set with `removed_at` when the team was tombstoned, rather than by anybody's decision. */
+    deletedAt: integer('deleted_at'),
+  },
+  (table) => [index('handbook_entries_agent').on(table.teamId, table.agentName)],
+);

@@ -199,3 +199,54 @@ describe('a message longer than a line', () => {
     expect(drawn.sent).toEqual([[['alice'], 'first line']]);
   });
 });
+
+/**
+ * Arriving at a team, or at one of its agents, is arriving somewhere you came to say something.
+ * The rail click is the arrival; a second click into the field to be able to type is one click
+ * too many, so the composer takes the cursor whenever the place under it changes.
+ */
+describe('the field takes the cursor on arrival', () => {
+  function drawWith(place: string): { rerender: (next: string) => void; field: HTMLTextAreaElement } {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    const render = (place: string): void => {
+      act(() => {
+        root.render(
+          React.createElement(Composer, {
+            agents: AGENTS,
+            commands: {},
+            pane: { kind: 'team' } as Pane,
+            usage: {},
+            place: place,
+            onSend: () => {},
+          }),
+        );
+      });
+    };
+    render(place);
+    return { rerender: render, field: host.querySelector('textarea') as HTMLTextAreaElement };
+  }
+
+  it('focuses on mount, and again when the pane under it changes', () => {
+    const drawn = drawWith('t1:');
+    expect(document.activeElement).toBe(drawn.field);
+
+    drawn.field.blur();
+    expect(document.activeElement).not.toBe(drawn.field);
+
+    drawn.rerender('t1:alice');
+    expect(document.activeElement).toBe(drawn.field);
+  });
+
+  it('leaves focus alone when the place has not changed', () => {
+    const drawn = drawWith('t1:alice');
+    drawn.field.blur();
+
+    // A redraw is not an arrival: an agent coming up, a status moving, a message landing. None
+    // of those are the user going anywhere, and all of them redraw this.
+    drawn.rerender('t1:alice');
+
+    expect(document.activeElement).not.toBe(drawn.field);
+  });
+});

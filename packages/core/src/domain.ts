@@ -62,6 +62,16 @@ export { COMPACTION_TRIGGER } from './orchestrator/compaction.js';
 
 export type { AgentStatus } from './status.js';
 
+// Handbooks. The renderer draws a Handbook in the agent's pane, so the type is pure and here.
+export type { EntrySource, HandbookEntry, HandbookWrite } from './handbook/domain.js';
+export { shortDate } from './handbook/persona.js';
+/**
+ * The whole-Handbook bound, on the same argument as `COMPACTION_TRIGGER`: the panel's foot says
+ * `1,240 of 8,000` beside the entries a person would remove, so the screen that carries the only
+ * remedy for a full Handbook has to be able to name the limit it is against.
+ */
+export { HANDBOOK_LIMIT } from './orchestrator/bounds.js';
+
 // Routines. Pure by construction: a schedule is arithmetic on a wall clock and the scheduler
 // reads no clock of its own, so the renderer can say *next run* without asking main.
 export type { Routine, RoutineOutcome, RoutineRun, Schedule } from './routines/domain.js';

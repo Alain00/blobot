@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type {
   PeerMessageAck,
   PeerMessageCall,
+  RecordEntryAck,
+  RecordEntryCall,
   RoutineProposalAck,
   RoutineProposalCall,
 } from '../runtime.js';
@@ -431,5 +433,126 @@ describe('the proposal tool', () => {
     });
     expect((reply['result'] as { isError?: boolean }).isError).toBe(true);
     expect(toolText(reply)).toContain('already proposed');
+  });
+});
+
+/**
+ * Ticket 03's `record_entry`, on the wire. An agent writes to its own Handbook and to no other.
+ */
+describe('the recording tool', () => {
+  async function recording(
+    answer?: (call: RecordEntryCall) => Promise<RecordEntryAck>,
+  ): Promise<{ calls: RecordEntryCall[]; json: Harness['json'] }> {
+    const calls: RecordEntryCall[] = [];
+    const server = new PeerMessageServer({
+      handler: async () => ({ delivered: true, recipient: 'Bob', status: 'started' }),
+      recordEntry: async (call) => {
+        calls.push(call);
+        if (answer !== undefined) return answer(call);
+        return {
+          recorded: call.entries.map((entry, index) => ({
+            id: `e${index + 1}`,
+            ordinal: index + 1,
+            text: entry.text,
+          })),
+          withdrew: [],
+        };
+      },
+    });
+    await server.start();
+    running = server;
+    const endpoint = server.endpointFor('alice');
+    const json = async (method: string, params?: unknown): Promise<Record<string, unknown>> =>
+      (await fetch(endpoint.url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${endpoint.token}`,
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method,
+          ...(params === undefined ? {} : { params }),
+        }),
+      }).then((response) => response.json())) as Record<string, unknown>;
+    return { calls, json };
+  }
+
+  it('is not advertised by a server with nowhere to keep a Handbook', async () => {
+    const { json } = await harness();
+    const tools = (
+      (await json('tools/list'))['result'] as { tools: { name: string }[] }
+    ).tools;
+    expect(tools.map((tool) => tool.name)).toEqual(['message_agent']);
+  });
+
+  it('takes a list, and names no agent, because the token is the caller', async () => {
+    const { json } = await recording();
+    const tools = (
+      (await json('tools/list'))['result'] as {
+        tools: { name: string; inputSchema: { properties: Record<string, unknown> } }[];
+      }
+    ).tools;
+    const schema = tools.find((tool) => tool.name === 'record_entry')?.inputSchema;
+    // There is no argument by which Bob could write into Mara's Handbook, and no check is
+    // needed for it: the absence of the field is the rule, as it is on propose_routine.
+    expect(Object.keys(schema?.properties ?? {})).toEqual(['entries']);
+  });
+
+  it('carries the caller from the token and the entries as given', async () => {
+    const { calls, json } = await recording();
+    await json('tools/call', {
+      name: 'record_entry',
+      arguments: {
+        entries: [
+          { text: 'nothing ships on a Friday', source: 'told' },
+          { text: 'the tone is dry', source: 'noticed', replaces: 2 },
+        ],
+      },
+    });
+
+    expect(calls[0]?.from).toBe('alice');
+    expect(calls[0]?.entries).toEqual([
+      { text: 'nothing ships on a Friday', source: 'told' },
+      { text: 'the tone is dry', source: 'noticed', replaces: 2 },
+    ]);
+  });
+
+  it('tells the agent what was recorded, and that a person can remove it', async () => {
+    const { json } = await recording();
+    const reply = await json('tools/call', {
+      name: 'record_entry',
+      arguments: { entries: [{ text: 'nothing ships on a Friday', source: 'told' }] },
+    });
+
+    expect(toolText(reply)).toContain('Recorded 1 in your Handbook');
+    expect(toolText(reply)).toContain('can remove any of it');
+  });
+
+  it('hands a refusal back as a tool error the model has to account for', async () => {
+    const { json } = await recording(async () => {
+      throw new Error('your handbook would be 9,000 characters and the limit is 8,000');
+    });
+    const reply = await json('tools/call', {
+      name: 'record_entry',
+      arguments: { entries: [{ text: 'one more thing', source: 'told' }] },
+    });
+
+    expect((reply['result'] as { isError?: boolean }).isError).toBe(true);
+    expect(toolText(reply)).toContain('the limit is 8,000');
+  });
+
+  it('refuses an entry with no source rather than choosing one', async () => {
+    const { calls, json } = await recording();
+    const reply = await json('tools/call', {
+      name: 'record_entry',
+      arguments: { entries: [{ text: 'something' }] },
+    });
+
+    // It cannot be derived: the agent calls this tool in every case, including the one that
+    // looks like the user's, so there is nothing to infer an author from.
+    expect((reply['result'] as { isError?: boolean }).isError).toBe(true);
+    expect(calls).toEqual([]);
   });
 });

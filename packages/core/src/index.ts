@@ -114,6 +114,8 @@ export {
 } from './orchestrator/compaction.js';
 export type { HandoffArchive, HandoffRecord } from './orchestrator/compaction.js';
 export {
+  HANDBOOK_ENTRY_LIMIT,
+  HANDBOOK_LIMIT,
   IMAGE_ATTACHMENT_LIMIT,
   ROUTINE_NAME_LIMIT,
   ROUTINE_PROPOSALS_PER_TURN,
@@ -227,6 +229,7 @@ export type {
 export {
   MESSAGE_AGENT_TOOL,
   PROPOSE_ROUTINE_TOOL,
+  RECORD_ENTRY_TOOL,
   PeerMessageServer,
 } from './mcp/peer-message-server.js';
 export type {
@@ -284,6 +287,16 @@ export type {
   SessionRecord,
 } from './store/sqlite-store.js';
 export { SqliteRecorder } from './store/recorder.js';
+
+// Handbooks: what an Agent knows about this team's work. See `.scratch/handbooks/`.
+export type {
+  EntrySource,
+  HandbookEntry,
+  HandbookWrite,
+  NewHandbookEntry,
+} from './handbook/domain.js';
+export { composeHandbookBlock, shortDate } from './handbook/persona.js';
+export type { HandbookStore } from './orchestrator/orchestrator.js';
 
 // Ticket 09's Routines. The scheduler decides only what is due; main owns the timer, the window
 // check and the calling, exactly as main owns the pool and core owns the wake policy.

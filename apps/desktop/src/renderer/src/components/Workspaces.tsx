@@ -71,6 +71,7 @@ export function WorkspaceLine({
   onCommitted,
   onPublish,
   onPlan,
+  door,
 }: {
   status: UiWorkspaceStatus | undefined;
   teamId: string | undefined;
@@ -81,8 +82,31 @@ export function WorkspaceLine({
   onCommitted: () => void;
   onPublish: (options: { title?: string; draft?: boolean }) => Promise<UiPublishResult>;
   onPlan: (options: { title?: string; draft?: boolean }) => Promise<readonly string[]>;
+  /**
+   * A way in to something that is not a workspace fact, on the right of the tray: today the
+   * Handbook's `handbook · 4`.
+   *
+   * A node rather than a status, so this file still knows nothing about Handbooks — the same
+   * arrangement the composer has with this whole tray. It is the only thing here that may be a
+   * door to prose, and it is allowed because it *is* a door: the tray's rule is that everything
+   * on it is a live number or a door and nothing on it is a description.
+   */
+  door?: React.ReactNode;
 }): React.JSX.Element | null {
-  if (status === undefined || status.branch === undefined || teamId === undefined) return null;
+  // The workspace half is missing on a `plain` Workspace, which is a copy with no branch, and
+  // whenever blobot could not look. The tray still draws if something else has a door on it: a
+  // Handbook is per `<team>/<agent>` and has nothing to do with whether git can hold the folder,
+  // so hiding it because there is no branch would be one feature's absence deciding another's.
+  if (status === undefined || status.branch === undefined || teamId === undefined) {
+    if (door === undefined) return null;
+    return (
+      <div className="wsline">
+        <div className="wstray">
+          <span className="wsdest">{door}</span>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="wsline">
       <div className="wstray">
@@ -119,6 +143,10 @@ export function WorkspaceLine({
             branch={status.branch}
             onSwitched={onSwitched}
           />
+          {/* Last, past the branch, because left to right on this row is the order the work
+              moves in and a Handbook is not a stage of it. No separator: nothing else on this
+              row carries one, and the gap is what holds these apart. */}
+          {door}
         </span>
       </div>
     </div>

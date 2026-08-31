@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { AgentStatus, ToolKind } from '@blobot/core/domain';
 import type { PermissionChoice, UiAgent, UiPermissionOutcome } from '../../../shared/api.js';
@@ -28,11 +28,13 @@ export function Conversation({
   onAnswerPermission,
   routineArmed,
   onDisarmRoutine,
+  onRemoveHandbookEntry,
   opening = false,
   workspacePath,
   chrome,
   moreAbove = false,
   onLoadEarlier,
+  place,
 }: {
   pane: Pane;
   agents: readonly UiAgent[];
@@ -46,6 +48,14 @@ export function Conversation({
    */
   routineArmed: Record<string, boolean>;
   onDisarmRoutine: (routineId: string) => void;
+  /**
+   * Take an entry out of an agent's Handbook, from the block that disclosed it.
+   *
+   * The block carries removal rather than sending the reader to the pane's panel, because that
+   * would turn a disclosure into a notification: the reason an agent may write into its own
+   * persona at all is that you see it happen and can undo it here.
+   */
+  onRemoveHandbookEntry: (entryId: string) => void;
   /** Whether the team said anything above this window. False means this is the beginning. */
   moreAbove?: boolean;
   /** Fetch the window above. Resolves when the pane has it, which is what ends the wait. */
@@ -57,12 +67,21 @@ export function Conversation({
   chrome?: React.ReactNode;
   /** The team is still starting. Nobody has asked these agents anything yet. */
   opening?: boolean;
+  /**
+   * Where the reader is, named: a team and, when they are in one, an agent. Whenever it
+   * changes the column goes to the newest line and follows it again.
+   *
+   * The scroll container is one node for every pane, so without this a switch keeps the pixel
+   * offset it had — a position measured into a transcript the reader is no longer looking at.
+   */
+  place?: string;
 }): React.JSX.Element {
   const byId = new Map(agents.map((agent) => [agent.id, agent]));
   const focused = pane.kind === 'agent' ? byId.get(pane.agentId) : undefined;
-  const stream = useStickToBottom();
+  const stream = useStickToBottom(place);
   const answer = useLatest(onAnswerPermission);
   const disarm = useLatest(onDisarmRoutine);
+  const removeEntry = useLatest(onRemoveHandbookEntry);
   const rows = rowsOf(items);
   const earlier = useLoadEarlier(stream, onLoadEarlier);
   // Where the pending faces look, and null whenever the user is not in the composer.
@@ -169,6 +188,7 @@ export function Conversation({
                     teamPane={pane.kind === 'team'}
                     onAnswerPermission={answer}
                     onDisarmRoutine={disarm}
+                    onRemoveHandbookEntry={removeEntry}
                     {...castOf(row.item, pane, byId, statuses, routineArmed)}
                   />
                 )}
@@ -313,6 +333,8 @@ function castOf(
     // Same rule for a compaction, which is a system line that opens: in an agent's pane the
     // agent is the pane, and in the team pane the line has to say whose session it was.
     case 'compaction':
+    // And for a Handbook write, which is the same shape again and names whose Handbook it was.
+    case 'handbook':
       // No fallback to the id: an unrecognised agent leaves the line unattributed rather than
       // prefixing it with a row id nobody can read.
       return { fromName: pane.kind === 'team' ? byId.get(item.agentId)?.name : undefined };
@@ -492,12 +514,14 @@ const ItemView = React.memo(function ItemView({
   status,
   armed = false,
   onDisarmRoutine,
+  onRemoveHandbookEntry,
 }: {
   item: Item;
   grouped: boolean;
   teamPane: boolean;
   onAnswerPermission: (requestId: string, choice: PermissionChoice) => void;
   onDisarmRoutine: (routineId: string) => void;
+  onRemoveHandbookEntry: (entryId: string) => void;
 } & Cast): React.JSX.Element | null {
   switch (item.kind) {
     // From you: a solid bubble on the right. There is only ever one "you", so the side is an
@@ -611,6 +635,12 @@ const ItemView = React.memo(function ItemView({
     // rule, which this ticket freed the *trigger* from and not the gauge.
     case 'compaction':
       return <Compaction item={item} fromName={fromName} />;
+
+    // An agent wrote into its own persona, and this is what pays for that being allowed.
+    case 'handbook':
+      return (
+        <HandbookWrite item={item} fromName={fromName} onRemove={onRemoveHandbookEntry} />
+      );
 
     // An agent put itself on a schedule, and it is already running.
     //
@@ -744,6 +774,98 @@ function Permission({
 }
 
 /**
+ * An agent wrote to its own Handbook, or was refused because it is full.
+ *
+ * `Compaction`'s shape rather than a card, and that comment is the argument, about this exactly:
+ * *"this is a thing that happened, not a thing to read, until the reader asks why their agent
+ * stopped remembering yesterday. Then it is the whole answer."* An entry recorded is a thing
+ * that happened. A card would put several sentences of an agent's notes into the middle of a
+ * conversation every time it learns something, which is how the disclosure that makes
+ * agent-written entries safe becomes the noise that makes the conversation unreadable.
+ *
+ * One line for the call, not one per entry: `record_entry` takes a list, so the turn produced
+ * one act and it draws as one line whether it recorded one thing or four.
+ *
+ * The line stays after a removal, and says the same words. A transcript is a record of what
+ * happened and is never rewritten, which is the same reason a Routine that was later disarmed
+ * still shows the turn that armed it.
+ */
+function HandbookWrite({
+  item,
+  fromName,
+  onRemove,
+}: {
+  item: Extract<Item, { kind: 'handbook' }>;
+  fromName: string | undefined;
+  onRemove: (entryId: string) => void;
+}): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+  // The one refusal in the app that leaves the room. Every other one in `bounds.ts` is the
+  // agent's own to fix; this one's remedy is a person removing an entry, and the agent will hit
+  // the same wall on every turn until somebody does. It opens nothing: there is nothing to show.
+  if (item.write === 'full') {
+    const said = 'handbook is full, nothing was recorded';
+    return (
+      <div className="sysline">
+        <span>{fromName === undefined ? said : `${fromName} · ${said}`}</span>
+      </div>
+    );
+  }
+  const line = wroteDown(item.entries.length, item.withdrew.length);
+  const said = fromName === undefined ? line : `${fromName} · ${line}`;
+  return (
+    <div className="hbwrite">
+      <button className="route" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <ChevronDown size={12} className={open ? '' : 'shut'} aria-hidden />
+        <span className="lbl">{said}</span>
+      </button>
+      {open && (
+        <div className="note">
+          {item.entries.map((entry) => (
+            <div className="hbentry" key={entry.id}>
+              {/* The number is what the agent names to correct this later, and what the persona
+                  draws it under, so it is the same value in both places and therefore mono. */}
+              <span className="mono muted">{entry.ordinal}</span>
+              <span className="said">{entry.text}</span>
+              {entry.removed ? (
+                // Gone, and it says so rather than the row disappearing: what the turn did is
+                // not undone by what happened afterwards.
+                <span className="mono muted">removed</span>
+              ) : (
+                <button className="btn" onClick={() => onRemove(entry.id)}>
+                  remove
+                </button>
+              )}
+            </div>
+          ))}
+          {/* A correction is one act, so what it withdrew is on the same block rather than in a
+              second line: *that one is wrong, this is right.* No control beside it, because it
+              is already gone. */}
+          {item.withdrew.map((entry) => (
+            <div className="hbentry gone" key={entry.id}>
+              <span className="mono muted">{entry.ordinal}</span>
+              <span className="said">{entry.text}</span>
+              <span className="mono muted">withdrawn</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * `wrote down 3 things`, and `wrote down 1 thing, replacing 1` when the call was a correction.
+ *
+ * Plain words and a count. The reader is deciding whether to open it, and *what* was written is
+ * the thing behind the click.
+ */
+function wroteDown(entries: number, withdrew: number): string {
+  const wrote = `wrote down ${entries} ${entries === 1 ? 'thing' : 'things'}`;
+  return withdrew === 0 ? wrote : `${wrote}, replacing ${withdrew}`;
+}
+
+/**
  * A session blobot replaced, or kept, with the agent's own note under it.
  *
  * The disclosure is `.route`'s again rather than a third gesture, and it is shut by default for
@@ -854,9 +976,33 @@ function useLoadEarlier(
   return { load, loading };
 }
 
-function useStickToBottom(): React.RefObject<HTMLDivElement | null> {
+function useStickToBottom(place: string | undefined): React.RefObject<HTMLDivElement | null> {
   const ref = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
+
+  /**
+   * Arriving somewhere lands on the newest line, and starts following it again.
+   *
+   * Both halves matter. The offset is the obvious one: this container is shared by every pane,
+   * so a reader who had scrolled up in one used to arrive somewhere arbitrary in the next — or
+   * at its end, if the new transcript is the shorter of the two, which is the same wrong answer
+   * reached by accident. The pin is the quiet one: `pinned` is a fact about a reader in a
+   * transcript, and it must not follow them out of it, or an agent whose pane you have just
+   * opened streams off the bottom of the screen because you were reading history somewhere
+   * else. Re-pinning rather than scrolling once is also what makes this survive markdown: the
+   * column lays out over the next few frames, and the observer below keeps the end in view for
+   * all of them.
+   *
+   * A layout effect, before the browser paints, so the arrival is never a visible jump. Not
+   * smooth: a pane is a different place, and animating between two transcripts would say they
+   * are one column the reader travelled along.
+   */
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (node === null || place === undefined) return;
+    pinned.current = true;
+    node.scrollTop = node.scrollHeight;
+  }, [place]);
 
   useEffect(() => {
     const node = ref.current;

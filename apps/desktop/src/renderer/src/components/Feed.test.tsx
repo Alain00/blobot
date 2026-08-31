@@ -13,7 +13,7 @@ import React from 'react';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, expect, it } from 'vitest';
-import type { UiAgent, UiInjection } from '../../../shared/api.js';
+import type { UiAgent, UiHandbookEntry, UiInjection } from '../../../shared/api.js';
 import { Feed } from './Feed.js';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -27,6 +27,7 @@ function render(
   usage: Record<string, { used: number; size: number }>,
   injection: Record<string, UiInjection> = {},
   agents: readonly UiAgent[] = AGENTS,
+  handbooks: Record<string, readonly UiHandbookEntry[]> = {},
 ): HTMLElement {
   const host = document.createElement('div');
   document.body.append(host);
@@ -37,6 +38,7 @@ function render(
         agents={agents}
         usage={usage}
         injection={injection}
+        handbooks={handbooks}
         pane={{ kind: 'team' }}
         workspaces={[]}
         looking={false}
@@ -138,6 +140,40 @@ describe('what blobot sent', () => {
     expect(host.querySelector('.sentnote')?.textContent).toContain('estimated');
   });
 
+  /** 1,240 characters of entries, so the row estimates ~310 tokens at four to a token. */
+  const ENTRIES: readonly UiHandbookEntry[] = [
+    { id: 'e1', ordinal: 1, text: 'x'.repeat(600), source: 'told', at: 1, removed: false },
+    { id: 'e2', ordinal: 2, text: 'x'.repeat(640), source: 'noticed', at: 2, removed: false },
+  ];
+
+  it('draws the handbook under persona, above standing instructions', () => {
+    const host = render(
+      { alice: { used: 37_000, size: 1_000_000 } },
+      { alice: SENT },
+      AGENTS,
+      { alice: ENTRIES },
+    );
+    click(host, 0);
+    const lines = [...(host.querySelectorAll('.sentrow') ?? [])].map((row) => row.textContent);
+    // The order the persona puts them in, which is the whole point of drawing them adjacent:
+    // what is true of this work, then what is true of you. And no possessive and no count —
+    // *your* is load-bearing on the row below it and would be a small lie on this one.
+    expect(lines.slice(0, 3)).toEqual([
+      'persona~460',
+      'handbook~310',
+      'your standing instructions~105',
+    ]);
+  });
+
+  it('says nothing about a handbook that is empty', () => {
+    const host = render({ alice: { used: 37_000, size: 1_000_000 } }, { alice: SENT });
+    click(host, 0);
+    const lines = [...(host.querySelectorAll('.sentrow') ?? [])].map((row) => row.textContent);
+    // Hidden at zero like both neighbours. The notice card above the composer is where an
+    // unbriefed agent is named, unmissably, and two surfaces saying it is one too many.
+    expect(lines.some((line) => line?.startsWith('handbook'))).toBe(false);
+  });
+
   it('reports attachments in bytes, and says they are still there', () => {
     const host = render(
       { alice: { used: 37_000, size: 1_000_000 } },
@@ -192,6 +228,7 @@ describe('the head of the column', () => {
           agents={AGENTS}
           usage={{ alice: { used: 1000, size: 200_000 } }}
           injection={{}}
+          handbooks={{}}
           pane={{ kind: 'team' }}
           workspaces={workspaces}
           looking={false}

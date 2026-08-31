@@ -1002,3 +1002,157 @@ describe('Routines', () => {
     expect(store.byId('m2')?.routineRunId).toBeUndefined();
   });
 });
+
+describe('a Handbook', () => {
+  const entry = (id: string, text: string, at: number, source: 'told' | 'noticed' = 'told') => ({
+    id,
+    teamId: team.id,
+    agentName: alice.name,
+    text,
+    source,
+    createdAt: at,
+  });
+
+  it('is written as one act and read oldest first', () => {
+    store.recordHandbookEntries([
+      entry('e1', 'we deploy on Fridays', 10),
+      entry('e2', 'the ICP is a two-person agency', 10, 'noticed'),
+    ]);
+
+    expect(store.handbookOf(team.id, alice.name).map((row) => [row.text, row.source])).toEqual([
+      ['we deploy on Fridays', 'told'],
+      ['the ICP is a two-person agency', 'noticed'],
+    ]);
+  });
+
+  it('belongs to one agent on one team, and to no other', () => {
+    store.recordHandbookEntries([entry('e1', 'ours', 10)]);
+
+    expect(store.handbookOf(team.id, bob.name)).toEqual([]);
+    expect(store.handbookOf('team_other', alice.name)).toEqual([]);
+  });
+
+  // The key is the name pair, so nothing here goes through `agents`. This is what lets a
+  // Handbook come back when somebody removed from a roster is added again — `editTeamRoster`
+  // mints a fresh id for every joiner and never revives a tombstone, so an id key would lose it.
+  it('outlives the agent row it belongs to', () => {
+    store.recordHandbookEntries([entry('e1', 'we deploy on Fridays', 10)]);
+    store.tombstoneAgent(alice.id, 20);
+
+    expect(store.handbookOf(team.id, alice.name)).toHaveLength(1);
+  });
+
+  // The number is what `replaces` names, so it must mean the same entry next week as it did
+  // when the persona was composed. Counted over every entry the Handbook ever had, so a removal
+  // leaves a gap rather than renumbering everything under it while an agent is reading.
+  // One call writes its whole list in one millisecond, so nothing about time or id can order
+  // them. A briefing that comes back in an order nobody wrote it in makes every number a lie.
+  it('numbers a call in the order the agent wrote it', () => {
+    store.recordHandbookEntries([
+      entry('e3', 'the client is Vlue', 10),
+      entry('e1', 'nothing ships on a Friday', 10),
+      entry('e2', 'the tone in /marketing is the one', 10),
+    ]);
+
+    expect(store.handbookOf(team.id, alice.name).map((row) => [row.ordinal, row.text])).toEqual([
+      [1, 'the client is Vlue'],
+      [2, 'nothing ships on a Friday'],
+      [3, 'the tone in /marketing is the one'],
+    ]);
+  });
+
+  it('numbers entries so that a removal never renumbers the ones after it', () => {
+    store.recordHandbookEntries([
+      entry('e1', 'first', 10),
+      entry('e2', 'second', 20),
+      entry('e3', 'third', 30),
+    ]);
+    store.removeHandbookEntry('e2', 40);
+
+    expect(store.handbookOf(team.id, alice.name).map((row) => [row.ordinal, row.text])).toEqual([
+      [1, 'first'],
+      [3, 'third'],
+    ]);
+
+    store.recordHandbookEntries([entry('e4', 'fourth', 50)]);
+    expect(store.handbookOf(team.id, alice.name).map((row) => row.ordinal)).toEqual([1, 3, 4]);
+  });
+
+  it('keeps a removed entry as a row, and out of the Handbook', () => {
+    store.recordHandbookEntries([entry('e1', 'wrong now', 10), entry('e2', 'right now', 20)]);
+    store.removeHandbookEntry('e1', 30);
+
+    expect(store.handbookOf(team.id, alice.name).map((row) => row.id)).toEqual(['e2']);
+    // The transcript block that disclosed the write names it and is never rewritten, so the
+    // row has to still be readable after the entry is gone.
+    expect(store.handbookEntryById('e1')?.removedAt).toBe(30);
+  });
+
+  it('is not removed twice', () => {
+    store.recordHandbookEntries([entry('e1', 'once', 10)]);
+    store.removeHandbookEntry('e1', 30);
+    store.removeHandbookEntry('e1', 40);
+
+    expect(store.handbookEntryById('e1')?.removedAt).toBe(30);
+  });
+
+  // Both the rows and the events, and they answer different questions. The rows are the
+  // Handbook; this is what happened in a turn, and it is the only record of the two things a
+  // row cannot hold: that one call wrote these entries together, and that a call was refused
+  // for a full Handbook, where nothing was written at all.
+  it('keeps a write as an event, and reads what the entries say now', () => {
+    store.recordHandbookEntries([entry('e1', 'wrong now', 10), entry('e2', 'right now', 10)]);
+    store.recordHandbookWrite('w1', team.id, {
+      kind: 'recorded',
+      agentId: alice.id,
+      at: 10,
+      entryIds: ['e1', 'e2'],
+      withdrewIds: [],
+    });
+    store.removeHandbookEntry('e1', 20);
+
+    const writes = store.handbookWritesOfTeam(team.id, 0);
+    expect(writes).toHaveLength(1);
+    // Live rather than remembered: a block that offered to remove something already gone would
+    // be two surfaces disagreeing about one row.
+    expect(writes[0]?.entries.map((row) => [row.text, row.removedAt])).toEqual([
+      ['wrong now', 20],
+      ['right now', undefined],
+    ]);
+  });
+
+  it('keeps a refusal, which is the only write with no rows behind it', () => {
+    store.recordHandbookWrite('w2', team.id, { kind: 'full', agentId: alice.id, at: 30 });
+
+    const writes = store.handbookWritesOfTeam(team.id, 0);
+    expect(writes[0]?.kind).toBe('full');
+    expect(writes[0]?.entries).toEqual([]);
+  });
+
+  it('does not carry a briefing from last month into this afternoon', () => {
+    store.recordHandbookWrite('w3', team.id, { kind: 'full', agentId: alice.id, at: 10 });
+    expect(store.handbookWritesOfTeam(team.id, 20)).toEqual([]);
+  });
+
+  // A Handbook is live context for a team, and dies with it. The transcript is a record of what
+  // happened and is kept — the difference is deliberate and is ticket 07's.
+  it('dies with the team, and the transcript does not', () => {
+    store.recordHandbookEntries([entry('e1', 'we deploy on Fridays', 10)]);
+    store.commit({
+      id: 'm1',
+      teamId: team.id,
+      fromAgentId: null,
+      toAgentId: alice.id,
+      body: 'hello',
+      at: 10,
+    });
+
+    store.tombstoneTeam(team.id, 50);
+
+    expect(store.handbookOf(team.id, alice.name)).toEqual([]);
+    expect(store.forTeam(team.id)).toHaveLength(1);
+    // Tombstoned, never deleted: rows are never removed here, and a cascade would tear holes
+    // in a transcript.
+    expect(store.handbooksOfTeam(team.id)).toHaveLength(1);
+  });
+});

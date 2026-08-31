@@ -318,6 +318,43 @@ export const schedulesItself: Scenario = scenario('schedules-itself')
   .say('That is on now. Disarm it above if you would rather I did not.')
   .end();
 
+/**
+ * An agent is told how the work goes here, and writes it down.
+ *
+ * The disclosure block is what pays for an agent writing into its own persona, and it was
+ * unreachable in demo mode for exactly the reason the Routine block was: no scripted run
+ * recorded anything, so the only way to look at it was to brief a real agent in somebody's real
+ * repository. Same argument as `asks-before-deleting` and `schedules-itself`.
+ *
+ * One call with three entries, because `record_entry` takes a list: an agent that has just been
+ * briefed records what it heard as one act, and the block says so as one line.
+ *
+ * **The third entry is a paragraph on purpose**, and it is the trap this scenario carries. Every
+ * entry here was a tidy one-liner until a real agent auditing a real ad account recorded 500
+ * characters of ids and campaign names in one go, which is what an agent writing down *state*
+ * actually produces. Against three one-liners the panel looked fine and the dialog it became
+ * looked fine; against one real entry both needed the fold they now have. A kind mock produces a
+ * UI that shatters on first contact, which is ticket 08's whole argument.
+ */
+export const writesItDown: Scenario = scenario('writes-it-down')
+  .say('Understood. Let me note the parts of that I will need again.')
+  .recordEntry([
+    { text: 'The client is Vlue, a two-person agency, and they sign off on all copy.', source: 'told' },
+    { text: 'Nothing ships on a Friday.', source: 'told' },
+    {
+      text:
+        'As of 2026-08-31 the live pages are /pricing (rewritten last week, signed off), ' +
+        '/marketing (the tone reference, not to be touched without asking), and /changelog ' +
+        '(stale since June, nobody owns it). The two behind the flag are /compare and ' +
+        '/enterprise, both waiting on legal because they name a competitor, which needs 24 ' +
+        'hours. Everything under /docs is generated and any edit there is thrown away on the ' +
+        'next build.',
+      source: 'noticed',
+    },
+  ])
+  .say('Written down. Remove any of it above if I have it wrong.')
+  .end();
+
 export const scenarios = {
   'alice-asks-bob': aliceAsksBob,
   'bob-reviews': bobReviews,
@@ -330,6 +367,7 @@ export const scenarios = {
   'works-through-a-list': worksThroughAList,
   'asks-before-deleting': asksBeforeDeleting,
   'schedules-itself': schedulesItself,
+  'writes-it-down': writesItDown,
   'advertises-commands': advertisesCommands,
   'loses-commands': losesCommands,
   'runs-out-of-room': runsOutOfRoom,

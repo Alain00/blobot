@@ -2,8 +2,11 @@ import { createHash, randomBytes } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type {
+  HandbookEntryInput,
   PeerMessageAck,
   PeerMessageHandler,
+  RecordEntryAck,
+  RecordEntryHandler,
   RoutineProposalAck,
   RoutineProposalHandler,
 } from '../runtime.js';
@@ -37,6 +40,11 @@ export interface PeerMessageServerOptions {
    * must not be told otherwise.
    */
   readonly proposeRoutine?: RoutineProposalHandler;
+  /**
+   * Ticket 03's `record_entry`. Omitted the same way and for the same reason as
+   * `proposeRoutine`: a team with nowhere to keep a Handbook must not be told it has one.
+   */
+  readonly recordEntry?: RecordEntryHandler;
   /** 0 takes an ephemeral port, which is what everything but a test wants. */
   readonly port?: number;
   readonly onLog?: (line: string) => void;
@@ -44,6 +52,7 @@ export interface PeerMessageServerOptions {
 
 /** The MCP protocol version the runtimes negotiated in ticket 15's transcripts. */
 import {
+  HANDBOOK_ENTRY_LIMIT,
   PEER_CONTEXT_LIMIT,
   PEER_MESSAGE_LIMIT,
   ROUTINE_NAME_LIMIT,
@@ -153,6 +162,72 @@ export const PROPOSE_ROUTINE_TOOL = {
   },
 } as const;
 
+/**
+ * Ticket 03's tool. Exported beside the other two for the third time and for the same reason:
+ * **its size is context**, on the wire to every agent on every turn, whether or not anybody ever
+ * briefs anybody. That is why it is this short. The test an agent applies is in the persona,
+ * inside the Handbook block, where it is said once.
+ *
+ * It takes a **list**. One entry per call was the charting recommendation, ported from
+ * `propose_routine`, and ticket 03 reversed it: an agent that has just been told the
+ * positioning, the ICP, the tone and who signs off would be able to record one of them, and
+ * briefing would become five turns of an agent asking permission to keep listening. A Routine
+ * proposal is a commitment and an entry is a note.
+ *
+ * It is **not** called `remember`. Ticket 01 banned that word in blobot's mouth, and a tool
+ * description is blobot's mouth: it promises persistence blobot does not give, since a Handbook
+ * dies with its team and travels to no other.
+ *
+ * There is no recipient field, and no agent field. The bearer token is the identity, so an agent
+ * can only write to its own Handbook, and there is no argument by which Bob could name Mara's.
+ */
+export const RECORD_ENTRY_TOOL = {
+  name: 'record_entry',
+  description:
+    'Write something down in your Handbook for this team: what you have been told about the ' +
+    'work here, which you will be given again at the start of every session. Send everything ' +
+    'you learned in one call.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      entries: {
+        type: 'array',
+        minItems: 1,
+        items: {
+          type: 'object',
+          properties: {
+            text: {
+              type: 'string',
+              description: 'One thing, in a sentence or two.',
+              maxLength: HANDBOOK_ENTRY_LIMIT,
+            },
+            source: {
+              type: 'string',
+              enum: ['told', 'noticed'],
+              // Plain words, because there is nothing to derive it from and the agent is the
+              // only one who knows. A teammate is not the operator, so what one tells you is
+              // something you worked out.
+              description:
+                'Did someone tell you this, or did you work it out? A teammate telling you ' +
+                'something counts as working it out.',
+            },
+            replaces: {
+              type: 'integer',
+              description:
+                'The number of an entry this one corrects. Only something you worked out ' +
+                'yourself: you cannot withdraw what you were told.',
+            },
+          },
+          required: ['text', 'source'],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ['entries'],
+    additionalProperties: false,
+  },
+} as const;
+
 const TOOL = MESSAGE_AGENT_TOOL;
 
 interface JsonRpcRequest {
@@ -169,6 +244,7 @@ interface JsonRpcRequest {
 export class PeerMessageServer {
   readonly #handler: PeerMessageHandler;
   readonly #proposeRoutine: RoutineProposalHandler | undefined;
+  readonly #recordEntry: RecordEntryHandler | undefined;
   readonly #onLog: ((line: string) => void) | undefined;
   readonly #requestedPort: number;
   /** token → agentId. The token is the identity: it is how we know who is calling. */
@@ -183,6 +259,7 @@ export class PeerMessageServer {
   constructor(options: PeerMessageServerOptions) {
     this.#handler = options.handler;
     this.#proposeRoutine = options.proposeRoutine;
+    this.#recordEntry = options.recordEntry;
     this.#onLog = options.onLog;
     this.#requestedPort = options.port ?? 0;
   }
@@ -380,12 +457,19 @@ export class PeerMessageServer {
   }
 
   #tools(): object[] {
-    return this.#proposeRoutine === undefined ? [TOOL] : [TOOL, PROPOSE_ROUTINE_TOOL];
+    return [
+      TOOL,
+      ...(this.#proposeRoutine === undefined ? [] : [PROPOSE_ROUTINE_TOOL]),
+      ...(this.#recordEntry === undefined ? [] : [RECORD_ENTRY_TOOL]),
+    ];
   }
 
   async #callTool(agentId: string, message: JsonRpcRequest): Promise<object> {
     if (message.params?.name === PROPOSE_ROUTINE_TOOL.name) {
       return this.#callProposeRoutine(agentId, message);
+    }
+    if (message.params?.name === RECORD_ENTRY_TOOL.name) {
+      return this.#callRecordEntry(agentId, message);
     }
     if (message.params?.name !== TOOL.name) {
       return toolError(`no tool named '${message.params?.name ?? ''}' on this server`);
@@ -473,6 +557,60 @@ export class PeerMessageServer {
       // A refused cap or an unparseable schedule is the caller's to read and account for, which
       // is the point: a proposal that vanished quietly is how a model ends up reporting work as
       // scheduled that nobody will ever run.
+      return toolError(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /**
+   * The write, and the sentence the model reads back.
+   *
+   * Everything difficult is upstream of here: the caps, the two character bounds and the
+   * `replaces` rule are the orchestrator's, refused at that boundary and never trimmed, so a
+   * refusal comes back as a tool error the model has to account for. This end shapes the call
+   * and says plainly what happened, including how many entries went in, because an agent that
+   * is not told stops being able to tell the user.
+   */
+  async #callRecordEntry(agentId: string, message: JsonRpcRequest): Promise<object> {
+    const record = this.#recordEntry;
+    if (record === undefined) return toolError('no tool named `record_entry` on this server');
+    const raw = message.params?.arguments?.['entries'];
+    if (!Array.isArray(raw) || raw.length === 0) {
+      return toolError('record_entry requires `entries`, a list of at least one entry');
+    }
+    const entries: HandbookEntryInput[] = [];
+    for (const item of raw) {
+      const entry = item as Record<string, unknown>;
+      const text = typeof entry['text'] === 'string' ? entry['text'] : undefined;
+      const source = entry['source'];
+      if (text === undefined || (source !== 'told' && source !== 'noticed')) {
+        return toolError('every entry needs `text` and a `source` of "told" or "noticed"');
+      }
+      const replaces = typeof entry['replaces'] === 'number' ? entry['replaces'] : undefined;
+      entries.push({ text, source, ...(replaces === undefined ? {} : { replaces }) });
+    }
+    try {
+      const ack: RecordEntryAck = await record({ from: agentId, entries });
+      this.#log(`${agentId} recorded ${ack.recorded.length} handbook entries`);
+      const withdrew =
+        ack.withdrew.length === 0
+          ? ''
+          : ` Withdrew ${ack.withdrew.map((ordinal) => `#${ordinal}`).join(', ')}.`;
+      return {
+        content: [
+          {
+            type: 'text',
+            text:
+              `Recorded ${ack.recorded.length} in your Handbook for this team, as ` +
+              `${ack.recorded.map((entry) => `#${entry.ordinal}`).join(', ')}.${withdrew} ` +
+              'The person you are working with can see what you wrote and can remove any of it.',
+          },
+        ],
+        structuredContent: ack,
+      };
+    } catch (error) {
+      // Including the one refusal in the app whose fix belongs to somebody who is not in the
+      // room. The agent is told plainly that it cannot fix it, rather than being invited to
+      // retry against a wall. Ticket 08 puts that case in front of the user as well.
       return toolError(error instanceof Error ? error.message : String(error));
     }
   }

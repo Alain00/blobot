@@ -220,3 +220,78 @@ export function tooManyProposalsStanding(standing: number): string {
     'can give yourself, not a queue: waiting will not clear it.'
   );
 }
+
+/**
+ * One Handbook entry, in characters.
+ *
+ * An entry is a note about the work, not the work. This is generous enough for a paragraph
+ * somebody dictated and short enough that a model cannot file a document under it.
+ *
+ * **Provisional.** Ticket 03 set both of these deliberately unmeasured, to be checked against a
+ * real Handbook after the first live briefing interview and moved only if that contradicts them.
+ * Record the measurement either way. See `.scratch/handbooks/build.md`.
+ */
+export const HANDBOOK_ENTRY_LIMIT = 1_000;
+
+/**
+ * A whole Handbook, in characters, and this is the bound that matters.
+ *
+ * It is what lands in the persona on every session on three runtimes, and on **every turn** on
+ * fx, whose persona has no channel. About five percent of what an agent already pays per turn.
+ */
+export const HANDBOOK_LIMIT = 8_000;
+
+/**
+ * Why one entry was refused, addressed to the agent that wrote it.
+ *
+ * It carries the fix, like every other refusal here, and the fix is the agent's own: the entry
+ * ran long and it can write the short one in the same turn.
+ */
+export function entryTooLong(length: number, limit = HANDBOOK_ENTRY_LIMIT): string {
+  return (
+    `that entry is ${length.toLocaleString('en-US')} characters and the limit is ` +
+    `${limit.toLocaleString('en-US')}. an entry is a note about the work, not the work: ` +
+    'write the one sentence you would want to find in six months.'
+  );
+}
+
+/**
+ * Why nothing was recorded, addressed to the agent, and **the first refusal in this file whose
+ * fix belongs to somebody who is not in the room.**
+ *
+ * Every other one here can be acted on by the caller: send the short version, pick a smaller
+ * file, disarm a Routine. This one cannot. The Handbook is full, the remedy is a person removing
+ * an entry from the pane, and the wording has to be honest about that rather than implying the
+ * agent can try again. Ticket 08 is what puts it in front of the person as well, because an
+ * agent paraphrasing a limit it hit is exactly what users read as the agent being confused.
+ */
+export function handbookFull(would: number, limit = HANDBOOK_LIMIT): string {
+  return (
+    `your handbook would be ${would.toLocaleString('en-US')} characters and the limit is ` +
+    `${limit.toLocaleString('en-US')}, so nothing was recorded. this is not something you can ` +
+    'fix: an entry has to be removed, and only the person you are working with can do that. ' +
+    'say so if it matters, and carry on.'
+  );
+}
+
+/**
+ * How many `record_entry` calls an agent may make in one turn.
+ *
+ * One **call**, not one entry, and the difference is ticket 03 reversing its own charting. The
+ * cap that makes a Routine proposal safe would make a Handbook useless: an agent that has just
+ * been told the positioning, the ICP, the tone and who signs off on copy would be able to record
+ * one of them, and briefing would become five turns of an agent asking permission to keep
+ * listening. A Routine proposal is a commitment and an entry is a note.
+ *
+ * So the tool takes a list, and what is bounded is interruptions, which is what the Routine cap
+ * was about anyway. Knowledge stays bounded only by characters, which is where a context cost
+ * honestly belongs.
+ */
+export const HANDBOOK_CALLS_PER_TURN = 1;
+
+export function alreadyRecordedThisTurn(): string {
+  return (
+    'You have already recorded this turn. record_entry takes a list, so write everything you ' +
+    'learned in one call.'
+  );
+}

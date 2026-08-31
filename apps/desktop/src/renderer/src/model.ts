@@ -15,6 +15,8 @@ import type {
   UiCommand,
   UiInjection,
   UiLog,
+  UiHandbookEntry,
+  UiHandbookWrite,
   UiScheduledRoutine,
   UiSnapshot,
   UiUsage,
@@ -126,6 +128,27 @@ export type Item =
       frequency: string;
     }
   /**
+   * An agent wrote to its own Handbook, or was refused because it is full.
+   *
+   * The disclosure that pays for the write. An agent changing its own persona off screen is the
+   * version of this feature that must not exist, so the block opens in the turn that did it and
+   * carries removal: the whole justification is that you see it happen and can undo it **there**.
+   *
+   * It is one line for the call rather than one per entry, because `record_entry` takes a list
+   * and the turn produced one act. Nothing marks the rail for it: that mark is earned by origin,
+   * and a turn you started is not unread.
+   */
+  | {
+      kind: 'handbook';
+      id: string;
+      at: number;
+      agentId: string;
+      /** `full` wrote nothing, and is the one refusal in the app that leaves the room. */
+      write: 'recorded' | 'full';
+      entries: readonly UiHandbookEntry[];
+      withdrew: readonly UiHandbookEntry[];
+    }
+  /**
    * A tool call an agent is blocked on. It is an item rather than a banner because it belongs
    * where the turn stopped: two agents can be waiting at once, and the team pane has to say
    * which one is asking and what about.
@@ -220,6 +243,12 @@ export interface AppState {
   /** What blobot itself put into each agent's turn. Snapshot-only: nothing streams it. */
   injection: Record<string, UiInjection>;
   /**
+   * Each agent's Handbook, live. Unlike `injection` this **does** stream: an agent records into
+   * its own mid-turn, and three surfaces read it — the panel under the composer, the notice card
+   * above it, and the gauge's handbook row, which is the sum of exactly these entries.
+   */
+  handbooks: Record<string, readonly UiHandbookEntry[]>;
+  /**
    * Agents carrying a Routine run the user has not looked at. Issue 11's unread mark.
    *
    * A set of agent ids and never a count: two unread reports and five are the same decision, and
@@ -286,6 +315,10 @@ export type Action =
   | { type: 'scheduled'; scheduled: UiScheduledRoutine }
   /** The user answered one of those blocks, or answered it on the Routines screen. */
   | { type: 'routineArmed'; routineId: string; armed: boolean }
+  /** An agent wrote to its own Handbook, or hit the wall only a person can clear. */
+  | { type: 'handbookWrite'; write: UiHandbookWrite }
+  /** An entry was taken out, from the block or from the pane. The block stays; the control goes. */
+  | { type: 'handbookRemoved'; entryId: string }
   | { type: 'budget'; used: number; budget: number }
   | { type: 'silentHandoff'; agentId: string; named: readonly string[]; at: number }
   | { type: 'turns'; turnsThisPrompt: number }
@@ -302,6 +335,7 @@ export const initialState: AppState = {
   budget: undefined,
   usage: {},
   injection: {},
+  handbooks: {},
   moreAbove: false,
   oldest: undefined,
   unread: [],
@@ -310,12 +344,16 @@ export const initialState: AppState = {
 };
 
 /**
- * blobot's own `message_agent` tool. Its lifecycle is real — a peer message *is* an MCP call —
- * but the conversation renders it as the dashed peer enclosure instead, from the orchestrator's
- * message record. Matching on the name is the seam ticket 04 warned about: the clean version is
- * for the adapter to tag its own tool so the UI never has to know a name at all.
+ * blobot's own loopback tools. Their lifecycles are real — each one *is* an MCP call — but the
+ * conversation draws what each one did instead of the call: the dashed peer enclosure from the
+ * orchestrator's message record, the Routine block from the row, the Handbook block from the
+ * write. The raw line beside those says the same thing twice, in the one register a reader can
+ * do nothing with, and the disclosure is the thing that was designed.
+ *
+ * Matching on the name is the seam ticket 04 warned about: the clean version is for the adapter
+ * to tag its own tool so the UI never has to know a name at all.
  */
-const OWN_TOOL = /(^|_)message_agent$/;
+const OWN_TOOL = /(^|_)(message_agent|propose_routine|record_entry)$/;
 
 /**
  * The two halves of a stored transcript as items, through one function.
@@ -414,6 +452,7 @@ export function reduce(state: AppState, action: Action): AppState {
         commands: { ...action.snapshot.commands },
         usage: { ...action.snapshot.usage },
         injection: { ...action.snapshot.injection },
+        handbooks: { ...action.snapshot.handbooks },
         turnsThisPrompt: action.snapshot.turnsThisPrompt,
         unread: action.snapshot.unread ?? [],
         routineOrigins: action.snapshot.routineOrigins ?? {},
@@ -489,6 +528,10 @@ export function reduce(state: AppState, action: Action): AppState {
           // block that only existed while the app happened to be watching would be one the user
           // could miss by being on another team when the agent scheduled it.
           ...(action.snapshot.scheduled ?? []).map(scheduledItem),
+          // The same restoration for the same reason. What each entry says, and whether it is
+          // still in the Handbook, is read off the rows at snapshot time, so a block never
+          // offers to remove something that is already gone.
+          ...(action.snapshot.handbook ?? []).map(handbookItem),
           ...action.snapshot.permissions.map(
             (request): Item => ({
               kind: 'permission',
@@ -624,9 +667,93 @@ export function reduce(state: AppState, action: Action): AppState {
         ...state,
         routineArmed: { ...state.routineArmed, [action.routineId]: action.armed },
       };
+    case 'handbookWrite': {
+      if (state.items.some((item) => item.id === action.write.id)) return state;
+      return {
+        ...state,
+        items: [...state.items, handbookItem(action.write)],
+        // The Handbook itself follows, because it is the one part of the persona that changes
+        // while somebody is watching it. Standing instructions only move through a dialog, which
+        // refreshes the snapshot on its way out; nothing refreshes when an agent records
+        // something mid-turn, so a panel and a gauge row read only at snapshot would both sit at
+        // nothing for the whole of the session in which the agent was first briefed. Which is
+        // the session the whole feature is about.
+        //
+        // A `full` write changes nothing, correctly: nothing was recorded.
+        handbooks: withWrite(state.handbooks, action.write),
+      };
+    }
+    case 'handbookRemoved': {
+      // The line stays and says the same thing it said: a transcript is a record of what
+      // happened and is never rewritten, which is why a Routine the user later disarmed still
+      // shows the turn that armed it. What goes is the control beside the entry.
+      return {
+        ...state,
+        items: state.items.map((item) =>
+          item.kind !== 'handbook'
+            ? item
+            : {
+                ...item,
+                entries: item.entries.map((entry) =>
+                  entry.id === action.entryId ? { ...entry, removed: true } : entry,
+                ),
+              },
+        ),
+        handbooks: without(state.handbooks, action.entryId),
+      };
+    }
     case 'event':
       return applyEvent(state, action.event);
   }
+}
+
+/**
+ * One agent's Handbook after a write: what the call withdrew is gone, what it added is on the
+ * end. Appended rather than re-sorted, because the ordinal is the order and the store hands
+ * entries back in it.
+ */
+function withWrite(
+  handbooks: Record<string, readonly UiHandbookEntry[]>,
+  write: UiHandbookWrite,
+): Record<string, readonly UiHandbookEntry[]> {
+  if (write.kind !== 'recorded') return handbooks;
+  const withdrew = new Set(write.withdrew.map((entry) => entry.id));
+  const held = (handbooks[write.agentId] ?? []).filter((entry) => !withdrew.has(entry.id));
+  return { ...handbooks, [write.agentId]: [...held, ...write.entries] };
+}
+
+/**
+ * The Handbook without one entry, whoever it belonged to.
+ *
+ * Swept across every agent rather than told which one, because a removal arrives as an entry id
+ * and nothing else — the transcript block that raises it belongs to the agent that *wrote* the
+ * entry, and ids are unique, so looking for it is both simpler and correct.
+ */
+function without(
+  handbooks: Record<string, readonly UiHandbookEntry[]>,
+  entryId: string,
+): Record<string, readonly UiHandbookEntry[]> {
+  const owner = Object.keys(handbooks).find((agentId) =>
+    (handbooks[agentId] ?? []).some((entry) => entry.id === entryId),
+  );
+  if (owner === undefined) return handbooks;
+  return {
+    ...handbooks,
+    [owner]: (handbooks[owner] ?? []).filter((entry) => entry.id !== entryId),
+  };
+}
+
+/** One Handbook write as the transcript draws it. */
+function handbookItem(write: UiHandbookWrite): Item {
+  return {
+    kind: 'handbook',
+    id: write.id,
+    at: write.at,
+    agentId: write.agentId,
+    write: write.kind,
+    entries: write.entries,
+    withdrew: write.withdrew,
+  };
 }
 
 /** One agent-scheduled Routine as the transcript draws it. */
@@ -1107,6 +1234,31 @@ function lastIndexOf(items: readonly Item[], predicate: (item: Item) => boolean)
     if (predicate(items[index] as Item)) return index;
   }
   return -1;
+}
+
+/**
+ * Which pane a fresh snapshot leaves the reader in.
+ *
+ * Switching teams resets the pane, because the agent it was showing belongs to the team that
+ * just went away. But the channel that carries that news carries more than that: a cold start
+ * reports each agent up as it comes up, and a Routine changing reports itself the same way. So
+ * the reset is keyed on the team having actually changed, and on an agent's pane it also asks
+ * whether that agent is still on the roster — an edit can take them off it.
+ *
+ * `wanted` is the navigator's wish: an agent on a team that was not open yet, honoured once the
+ * roster naming them has arrived.
+ */
+export function paneAfterSnapshot(options: {
+  readonly open: Pane;
+  readonly arrived: boolean;
+  readonly roster: readonly { readonly id: string }[];
+  readonly wanted?: string;
+}): Pane {
+  const { open, arrived, roster, wanted } = options;
+  const onRoster = (agentId: string): boolean => roster.some((agent) => agent.id === agentId);
+  if (wanted !== undefined && onRoster(wanted)) return { kind: 'agent', agentId: wanted };
+  if (!arrived && open.kind === 'agent' && onRoster(open.agentId)) return open;
+  return { kind: 'team' };
 }
 
 /**

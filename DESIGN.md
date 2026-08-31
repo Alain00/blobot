@@ -328,6 +328,33 @@ Other transcript rules:
   gauge, and the line must not conflate them. A refusal leads with what did *not* happen, because
   a reader scanning the column needs to know the agent is still carrying everything it was.
   Nothing here offers `/compact`; the gauge does not advise and neither does this.
+- **An agent writing to its own Handbook draws in that same shape, and carries removal.** One
+  collapsed system line, `mara · wrote down 3 things`, opening to the entries with their numbers
+  and a `remove` beside each. It is `Compaction`'s gesture rather than a fourth one for the
+  reason that comment gives, about this exactly: this is a thing that happened, not a thing to
+  read, until the reader asks what their agent now believes. A **card** was rejected — several
+  sentences of an agent's notes in the middle of a conversation every time it learns something
+  is how the disclosure that makes agent-written entries safe becomes the noise that makes the
+  conversation unreadable.
+
+  **One line per call, not per entry**, because `record_entry` takes a list and the turn
+  produced one act. The line **carries removal** on the same argument the permission card does:
+  the whole justification for letting an agent write into its own persona is that you see it
+  happen and can undo it *there*, and sending the reader to a panel to act turns a disclosure
+  into a notification. It **stays after a removal**, saying what it said, with the entry marked
+  gone: a transcript is a record of what happened and is never rewritten, which is why a Routine
+  the user later disarmed still shows the turn that armed it.
+
+  **Nothing marks the rail for it.** That mark is earned by origin, so a turn you started is not
+  unread, and an entry written during a Routine run is already marked by the run. There is no
+  *unreviewed* state on an entry to draw. A Handbook that is **full** is the exception that
+  leaves the room: one plain system line, `mara · handbook is full, nothing was recorded`,
+  because it is the one refusal in the app whose remedy belongs to somebody who is not in it.
+
+  **blobot's own loopback tools draw no tool line.** `message_agent`, `propose_routine` and
+  `record_entry` are each rendered as what they did — the peer enclosure, the Routine block, this
+  one — so the raw mono call beside that says the same thing twice in the one register a reader
+  can do nothing with.
 - **The transcript follows its own height, not the item list.** Markdown lays out after it is
   handed its text, a code block is highlighted a frame later, and a fold opens by hundreds of
   pixels on a click — so the stick-to-bottom is a `ResizeObserver` on the column, and it lets go
@@ -699,6 +726,18 @@ One flat file, one flat namespace, no build step between it and the DOM.
   inside a folder, and past three the last slot is a `+N` rather than a face, because a bare
   stack has no panel to write a count on. A team without an icon is not a team missing one and
   there is no placeholder in either direction, which was true before and stays true.
+  **The icon is inset and rounded, because half of the artwork brings its own plate.** *Added
+  2026-08-31.* It filled the slot edge to edge, which is right for a transparent logo and wrong
+  for an opaque square PNG: the other state is two 11px faces floating in a 20px box, so a
+  filled square covering the whole box is around four times the ink and the only hard corner in
+  a column of round things, and the rail read as two kinds of object rather than as one mark
+  drawn two ways. The answer is **not a container under the faces** — the folder above was
+  removed on purpose and that argument is untouched — it is that the icon stops claiming a
+  footprint the faces never take: 10% of the slot on every side, and 30% of what is left as the
+  round. Fractions rather than pixels, because the mark is 20px on the rail and larger in the
+  navigator and the icon picker, and it is the relationship that has to survive the size.
+  Transparent artwork barely moves, since `contain` was already letterboxing it well inside the
+  box.
 - **The lead is named on the lead's own row, as `LEAD`.** *Amended 2026-08-30.* It was `led by
   Alice` under the team's name, and the reason was that leading is a fact about *the team* and
   not about the agent: the same agent leads one team and not another, which is why it cannot
@@ -772,6 +811,77 @@ One flat file, one flat namespace, no build step between it and the DOM.
   `--recessed`, no radius, no shadow, no translucency, nothing that reads as a card. It carries
   its own ceiling and scrolls inside itself past it, because a six-agent roster with a `sent`
   panel open would otherwise pin the whole column and leave the log no room.
+  *Added 2026-08-31:* a row opens to **what blobot put in there**, and a **Handbook is part of
+  the persona rather than a fourth thing blobot injects**, so it draws as a sub-row under
+  `persona` — `handbook`, then `your standing instructions`, in the order the persona composes
+  them. The persona row is the total and the two sub-rows are the two parts of it the user owns
+  and can change; the pair placed adjacent in the persona is drawn adjacent here, one
+  relationship stated in two places and contradicted in neither. **No possessive and no count**:
+  *your* is load-bearing on the row below, where the words really are the user's, and a Handbook
+  is partly the agent's, so the same word would be a small lie in a column whose whole job is
+  being accurate about cost. The count lives in the panel, where a person can act on it. Hidden
+  when the Handbook is empty, like both its neighbours — the notice card above the composer is
+  where an unbriefed agent is named, unmissably, and two surfaces saying it is one too many.
+  **It never warns as it fills, and not for the ring's reason.** The ring stays quiet because
+  blobot *will* act: a full window is what the session boundary is for. This row stays quiet
+  because blobot will **not** — the remedy is a person removing an entry, and the number they
+  act on stands in the panel beside the entries they would remove. Two rows in one block, quiet
+  for opposite reasons, both right.
+- **A Handbook, under the composer, in the agent's pane only.** What an Agent knows about *this
+  team's* work, held at `<team>/<agent>`. Two shapes, and which one you get is a fact about the
+  agent rather than a preference; they are **never both present**.
+  **Unbriefed: a notice card above the composer**, taking the composer's width exactly with no
+  inset of its own, because it is the composer's own notice and any margin would say it is a
+  separate thing on the page. `Mara has not been briefed`, a muted line under it, and *brief them*
+  pushed right. It is **`.openerror`'s shape**, which the app already owned: `--raised` ground, a
+  `--line` hairline, a 12px radius, the control at `margin-left:auto`, and no ink edge under the
+  ban on an ink edge on a closed shape. Two shapes invented for this both lost to it. **No icon**:
+  every icon at rest is `--muted`, so a muted glyph in that slot would have to mean something, and
+  not yet briefed is the ordinary condition of a new hire rather than a kind of thing. It
+  **persists** while the Handbook is empty, because it states a fact rather than announcing an
+  event, and there is **no dismiss** — that would invent *unbriefed and hidden*, a third state
+  nothing could then draw. Its control is the quiet button, not the loud one: the loud one grants
+  authority, and the whole charting decision was that ignoring this should cost nothing.
+  **Briefed: a door on the tray, and a dialog behind it.** The tray's rule is that everything on
+  it is a live number or a door and nothing on it is a description, so a Handbook, which is prose,
+  cannot sit on it and the only thing that can is `handbook · 4`. *Amended 2026-08-31: what the
+  door opens is `.modal`, not a panel under the composer.* It was a panel, drawn against a
+  four-entry mock; the first real Handbook was two entries and **774 characters** taking two
+  thirds of the pane, against a bound of 8,000. A body with no ceiling cannot live in the
+  composer's footing, which is a strip of chrome under a field, and the dialog brings the height
+  cap and the internal scroll with it. **A dialog and not a screen over the surface**, which is
+  where *your agents* went: that is a **place**, reached from the rail, about every AgentProfile
+  the user has, and this is one agent's Handbook reached from that agent's own tray, where what
+  you do changes what the agent believes at the team's next start. Not `.roomy` either: entries
+  are paragraphs, and a paragraph set to 760px is a paragraph nobody reads to the end of.
+  Entries are `.listrow`'s filled rows on `--raised`, each **folded to its first line**,
+  then `author · age` in mono, then removal on hover **and on focus** — a control only a pointer
+  can find is one a keyboard cannot reach. The fold is `.route`'s chevron, by the rule the
+  transcript wrote for it: *a chevron promises the thing is already here and folded*, true here
+  and false of `load earlier`. What folds is the **tail** and never the row, so the list still
+  reads as a list of somethings; rows open independently, because the reason to open two is to
+  compare them; and the whole text is in the DOM either way, since the fold is the stylesheet
+  clamping it rather than the component withholding it. **Open, the entry takes the whole row and
+  `author · age` drops under it as a byline**: 22 characters of mono beside a paragraph was
+  deciding the measure that paragraph is read at, and metadata's width must never set the width of
+  the thing it is about. One real entry is a paragraph of ids and
+  campaign names, and three of those are a wall wherever you put them: the dialog fixed the
+  container, this fixes the row. **Removal only, never editing**: an entry you edited is
+  neither yours nor the agent's, and the author field exists precisely so the app can tell those
+  apart. **`add one` is not a text field** — it hands the composer the words and the agent records
+  what you say next, which is what keeps `record_entry` the single path into a Handbook and
+  therefore keeps the transcript disclosure complete. On the foot, `1,240 of 8,000 characters`,
+  which is **not** a duplicate of the gauge's handbook row: the gauge answers what blobot is
+  spending on this turn, and this answers how much room is left in the thing being edited,
+  standing beside the entries a person would remove. And one sentence saying a change takes at the
+  team's next start, because ADR-0002's rule applies unchanged and without it a user removes an
+  entry and watches the agent go on believing it.
+  **In the team pane it is a figure and never a body.** `WORKSPACE` is drawn twice and becomes a
+  block in the activity column there, because one branch name would be false about the other
+  members. A Handbook has the same problem and takes the opposite answer: four Handbooks do not
+  fold into one the way four statuses fold into a `StatusWord`, and four agents' entries in a
+  232px column is a wall. The team pane says what a Handbook **costs**; the agent's pane is the
+  only place it says what a Handbook **is**.
 - **The creation flow** — the one *editorial* page. It ends with ticket 14's disclosure: an
   unnumbered block with an ink edge, above the button that spawns the first agent. Stated, never
   consented to, and it may only claim what blobot actually arranged. It says the runtimes are

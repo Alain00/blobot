@@ -12,6 +12,7 @@ import type {
   UiRoutine,
   UiRoutineRun,
   UiRoutineTarget,
+  UiHandbookWrite,
   UiScheduledRoutine,
   RoutineSaveResult,
   UiAgentProfile,
@@ -126,6 +127,10 @@ const api: BlobotApi = {
     }>,
   routineRuns: (routineId: string) =>
     ipcRenderer.invoke('blobot:routineRuns', routineId) as Promise<readonly UiRoutineRun[]>,
+  removeHandbookEntry: (entryId: string) =>
+    ipcRenderer.invoke('blobot:removeHandbookEntry', entryId) as Promise<void>,
+  /** Start the briefing interview. No text travels: the words are core's, not the renderer's. */
+  brief: (agentId: string) => ipcRenderer.invoke('blobot:brief', agentId) as Promise<void>,
   seenRoutineRuns: (agentId: string) =>
     ipcRenderer.invoke('blobot:seenRoutineRuns', agentId) as Promise<void>,
   createTeam: (spec: NewTeamSpec) =>
@@ -206,6 +211,10 @@ const api: BlobotApi = {
   onRoutineScheduled: (listener) =>
     subscribe('blobot:routine-scheduled', (_e, teamId: string, scheduled: UiScheduledRoutine) =>
       listener(teamId, scheduled),
+    ),
+  onHandbookWrite: (listener) =>
+    subscribe('blobot:handbook-write', (_e, teamId: string, write: UiHandbookWrite) =>
+      listener(teamId, write),
     ),
   onSilentHandoff: (listener) =>
     subscribe(

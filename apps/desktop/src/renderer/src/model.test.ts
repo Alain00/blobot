@@ -10,6 +10,7 @@ import {
   isPending,
   lastLineOf,
   itemsFor,
+  paneAfterSnapshot,
   commandMenu,
   reduce,
   rowsOf,
@@ -54,6 +55,7 @@ describe('a snapshot', () => {
     usage: {},
     log: { running: [], tools: [], turns: [], compactions: [] },
     injection: {},
+    handbooks: {},
     messages: [peerMessage],
     answers: [{ id: 'a1', agentId: 'bob', text: 'on it', at: 20 }],
     turnsThisPrompt: 0,
@@ -491,6 +493,7 @@ describe('a permission block', () => {
         usage: {},
         log: { running: [], tools: [], turns: [], compactions: [] },
         injection: {},
+        handbooks: {},
         messages: [],
         answers: [],
         permissions: [request],
@@ -731,6 +734,7 @@ describe('the context gauge', () => {
         usage: { alice: { used: 37_000, size: 1_000_000 } },
         log: { running: [], tools: [], turns: [], compactions: [] },
         injection: {},
+        handbooks: {},
         messages: [],
         answers: [],
         permissions: [],
@@ -797,6 +801,7 @@ describe('the activity column, after a team switch', () => {
         usage: {},
         log,
         injection: {},
+        handbooks: {},
         messages: [],
         answers: [],
         permissions: [],
@@ -1020,6 +1025,7 @@ describe('a restored transcript', () => {
         usage: {},
         log: { running: [], tools, turns: [], compactions: [] },
         injection: {},
+        handbooks: {},
         messages: [],
         answers,
         permissions: [],
@@ -1107,6 +1113,7 @@ it('brings back a call that was in flight when the snapshot was read, and lets i
         compactions: [],
       },
       injection: {},
+      handbooks: {},
       messages: [],
       answers: [],
       permissions: [],
@@ -1263,6 +1270,7 @@ describe('a session blobot replaced', () => {
         commands: {},
         usage: {},
         injection: {},
+        handbooks: {},
         messages: [],
         answers: [],
         permissions: [],
@@ -1307,6 +1315,7 @@ describe('a turn a clock started', () => {
     usage: {},
     log: { running: [], tools: [], turns: [], compactions: [] },
     injection: {},
+    handbooks: {},
     answers: [],
     turnsThisPrompt: 0,
     demoMode: false,
@@ -1408,6 +1417,7 @@ describe('an agent that put itself on a schedule', () => {
     usage: {},
     log: { running: [], tools: [], turns: [], compactions: [] },
     injection: {},
+    handbooks: {},
     messages: [],
     answers: [],
     turnsThisPrompt: 0,
@@ -1471,5 +1481,163 @@ describe('an agent that put itself on a schedule', () => {
     const twice = reduce(once, { type: 'scheduled', scheduled });
 
     expect(twice.items).toHaveLength(1);
+  });
+
+  /**
+   * An agent writing into its own persona. The same three claims as above, for the same reason:
+   * the write is only allowed because it is disclosed where it happened, so the disclosure has
+   * to survive a team switch and must not be rewritten afterwards.
+   */
+  const write = {
+    id: 'w1',
+    agentId: 'alice',
+    at: 500,
+    kind: 'recorded' as const,
+    entries: [
+      { id: 'e1', ordinal: 1, text: 'nothing ships on a Friday', source: 'told' as const, at: 500, removed: false },
+    ],
+    withdrew: [],
+  };
+
+  it('opens a Handbook block in the turn that wrote it', () => {
+    const state = reduce(reduce(initialState, { type: 'snapshot', snapshot: base }), {
+      type: 'handbookWrite',
+      write,
+    });
+
+    expect(state.items).toMatchObject([{ kind: 'handbook', agentId: 'alice', write: 'recorded' }]);
+  });
+
+  it('comes back with the transcript, and once however often it is announced', () => {
+    const restored = reduce(initialState, {
+      type: 'snapshot',
+      snapshot: { ...base, handbook: [write] },
+    });
+    expect(restored.items).toMatchObject([{ kind: 'handbook', id: 'w1' }]);
+
+    expect(reduce(restored, { type: 'handbookWrite', write }).items).toHaveLength(1);
+  });
+
+  it('keeps the line after the entry is removed, and drops only the control', () => {
+    const opened = reduce(initialState, {
+      type: 'snapshot',
+      snapshot: { ...base, handbook: [write] },
+    });
+
+    const after = reduce(opened, { type: 'handbookRemoved', entryId: 'e1' });
+
+    expect(after.items).toMatchObject([{ kind: 'handbook', id: 'w1' }]);
+    expect(after.items[0]).toMatchObject({ entries: [{ id: 'e1', removed: true }] });
+  });
+
+  /**
+   * The Handbook itself follows both live paths, because it is the one part of the persona that
+   * changes while somebody is watching it. Standing instructions move only through a dialog that
+   * refreshes the snapshot on its way out; nothing refreshes when an agent records something
+   * mid-turn, so a panel and a gauge row read only at snapshot would both sit at nothing for the
+   * whole of the session in which the agent was first briefed.
+   */
+  it('adds what was written and takes what the same call withdrew', () => {
+    const opened = reduce(initialState, { type: 'snapshot', snapshot: base });
+
+    const after = reduce(opened, { type: 'handbookWrite', write });
+    expect(after.handbooks.alice?.map((entry) => entry.text)).toEqual([
+      'nothing ships on a Friday',
+    ]);
+
+    // A correction is one act: what it adds and what it takes away land together.
+    const corrected = reduce(after, {
+      type: 'handbookWrite',
+      write: {
+        ...write,
+        id: 'w2',
+        entries: [
+          {
+            id: 'e2',
+            ordinal: 2,
+            text: 'they ship on Thursdays',
+            source: 'noticed' as const,
+            at: 500,
+            removed: false,
+          },
+        ],
+        withdrew: [write.entries[0]!],
+      },
+    });
+    expect(corrected.handbooks.alice?.map((entry) => entry.text)).toEqual([
+      'they ship on Thursdays',
+    ]);
+  });
+
+  it('takes the entry out when the user removes it, whoever holds it', () => {
+    const opened = reduce(reduce(initialState, { type: 'snapshot', snapshot: base }), {
+      type: 'handbookWrite',
+      write,
+    });
+
+    const after = reduce(opened, { type: 'handbookRemoved', entryId: 'e1' });
+    expect(after.handbooks.alice).toEqual([]);
+
+    // Already gone, so a second removal is a no-op rather than an error.
+    expect(reduce(after, { type: 'handbookRemoved', entryId: 'e1' }).handbooks.alice).toEqual([]);
+  });
+
+  it('changes nothing when the Handbook was full, because nothing was recorded', () => {
+    const opened = reduce(reduce(initialState, { type: 'snapshot', snapshot: base }), {
+      type: 'handbookWrite',
+      write,
+    });
+
+    const after = reduce(opened, {
+      type: 'handbookWrite',
+      write: { id: 'w9', agentId: 'alice', at: 900, kind: 'full' as const, entries: [], withdrew: [] },
+    });
+
+    expect(after.handbooks.alice?.map((entry) => entry.text)).toEqual([
+      'nothing ships on a Friday',
+    ]);
+  });
+});
+
+/**
+ * The `blobot:team` channel says more than "the team changed": a cold start reports every agent
+ * as it comes up, and a Routine being proposed reports itself the same way. Resetting the pane
+ * on all of those threw the agent the user had just clicked back to the team pane, mid-start,
+ * which is exactly when a cold team sends the most of them.
+ */
+describe('which pane a snapshot leaves you in', () => {
+  const roster = [{ id: 'alice' }, { id: 'bob' }];
+
+  it('keeps the agent you clicked while the team is still coming up', () => {
+    const open = { kind: 'agent', agentId: 'alice' } as const;
+
+    expect(paneAfterSnapshot({ open, arrived: false, roster })).toEqual(open);
+  });
+
+  it('resets to the team when a different team arrives', () => {
+    expect(
+      paneAfterSnapshot({ open: { kind: 'agent', agentId: 'alice' }, arrived: true, roster }),
+    ).toEqual({ kind: 'team' });
+  });
+
+  it('resets when the agent is no longer on the roster', () => {
+    // An edit took them off the team. The pane they were in is not a place any more.
+    expect(
+      paneAfterSnapshot({
+        open: { kind: 'agent', agentId: 'carol' },
+        arrived: false,
+        roster,
+      }),
+    ).toEqual({ kind: 'team' });
+  });
+
+  it('honours the navigator once the roster naming that agent has arrived', () => {
+    expect(
+      paneAfterSnapshot({ open: { kind: 'team' }, arrived: true, roster, wanted: 'bob' }),
+    ).toEqual({ kind: 'agent', agentId: 'bob' });
+
+    expect(
+      paneAfterSnapshot({ open: { kind: 'team' }, arrived: true, roster, wanted: 'carol' }),
+    ).toEqual({ kind: 'team' });
   });
 });

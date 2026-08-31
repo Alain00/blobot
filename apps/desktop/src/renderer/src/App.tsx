@@ -4,14 +4,14 @@ import { Agents } from './components/Agents.js';
 import { Composer } from './components/Composer.js';
 import { Conversation } from './components/Conversation.js';
 import { Feed } from './components/Feed.js';
-import { WorkspaceLine } from './components/Workspaces.js';
+import { ComposerFooter, HandbookNotice } from './components/Handbook.js';
 import { Navigator } from './components/Navigator.js';
 import { NewTeam } from './components/NewTeam.js';
 import { Rail } from './components/Rail.js';
 import { Routines } from './components/Routines.js';
 import { Settings } from './components/Settings.js';
 import { DeleteTeam, EditTeam } from './components/TeamEdits.js';
-import { initialState, itemsFor, reduce, type Pane } from './model.js';
+import { initialState, itemsFor, paneAfterSnapshot, reduce, type Pane } from './model.js';
 import { useFeedVisible } from './useFeedVisible.js';
 import { useWorkspaces } from './useWorkspaces.js';
 import { useRailWidth } from './useRailWidth.js';
@@ -50,6 +50,14 @@ export function App(): React.JSX.Element {
   const [deleting, setDeleting] = useState<string | undefined>(undefined);
   /** Why the last team the user clicked would not open. Cleared by the next click. */
   const [openError, setOpenError] = useState<string | undefined>(undefined);
+  /**
+   * Words the panel's `add one` put in the composer for the user to finish.
+   *
+   * Held here rather than in the composer because the control that offers them is in the tray
+   * under it, and the two are siblings. Never cleared: the composer keys off the moment, so a
+   * stale offer cannot re-fire.
+   */
+  const [suggest, setSuggest] = useState<{ text: string; at: number } | undefined>(undefined);
   const rail = useRailWidth();
   /** The composer floats over the transcript; this keeps the transcript's last line clear of it. */
   const convRoom = useComposerRoom();
@@ -109,16 +117,20 @@ export function App(): React.JSX.Element {
 
   const refresh = useCallback((resetPane = false) => {
     void window.blobot.snapshot().then((snapshot) => {
+      const arrived = showing.current !== snapshot.team?.id;
       showing.current = snapshot.team?.id;
       setOpenError(snapshot.openError);
       dispatch({ type: 'snapshot', snapshot });
       if (!resetPane) return;
       const want = wanted.current;
       wanted.current = undefined;
-      setPane(
-        want !== undefined && snapshot.agents.some((agent) => agent.id === want)
-          ? { kind: 'agent', agentId: want }
-          : { kind: 'team' },
+      setPane((open) =>
+        paneAfterSnapshot({
+          open,
+          arrived,
+          roster: snapshot.agents,
+          ...(want === undefined ? {} : { wanted: want }),
+        }),
       );
     });
   }, []);
@@ -189,6 +201,11 @@ export function App(): React.JSX.Element {
       // the block is restored from the Routine row rather than from this event.
       window.blobot.onRoutineScheduled((teamId, scheduled) => {
         if (mine(teamId)) dispatch({ type: 'scheduled', scheduled });
+      }),
+      // An agent wrote into its own persona. Filtered to the team on screen like every other
+      // transcript channel; a backgrounded team's block comes back with its snapshot.
+      window.blobot.onHandbookWrite((teamId, write) => {
+        if (mine(teamId)) dispatch({ type: 'handbookWrite', write });
       }),
       window.blobot.onSilentHandoff((teamId, agentId, named, at) => {
         if (mine(teamId)) dispatch({ type: 'silentHandoff', agentId, named, at });
@@ -292,6 +309,17 @@ export function App(): React.JSX.Element {
   // The open team, narrowed once. The callbacks below run after this render and cannot lean on
   // the early return above.
   const team = snapshot.team;
+  /**
+   * Where the reader is, as one string, handed to the two things that answer an arrival: the
+   * transcript goes to the newest line, and the composer takes the cursor.
+   *
+   * The team is in it as well as the agent, because switching teams can leave you in the team
+   * pane you were already in, and that is still somewhere new.
+   */
+  const place = `${team.id}:${pane.kind === 'agent' ? pane.agentId : ''}`;
+  /** The roster's own word for an agent. The Handbook's copy is about a person, so it uses it. */
+  const nameOf = (agentId: string): string =>
+    snapshot.agents.find((agent) => agent.id === agentId)?.name ?? 'this agent';
 
   return (
     <div className="app">
@@ -339,6 +367,7 @@ export function App(): React.JSX.Element {
         <div className="conv" ref={convRoom}>
           <Conversation
             pane={pane}
+            place={place}
             agents={snapshot.agents}
             statuses={state.statuses}
             items={items}
@@ -355,6 +384,12 @@ export function App(): React.JSX.Element {
             onDisarmRoutine={(routineId) => {
               dispatch({ type: 'routineArmed', routineId, armed: false });
               void window.blobot.setRoutineArmed(routineId, false);
+            }}
+            // The same act as removing it in the pane's panel, on the same row. The block stays
+            // where it is and keeps saying what happened; the control beside the entry goes.
+            onRemoveHandbookEntry={(entryId) => {
+              dispatch({ type: 'handbookRemoved', entryId });
+              void window.blobot.removeHandbookEntry(entryId);
             }}
             chrome={
               <>
@@ -399,6 +434,9 @@ export function App(): React.JSX.Element {
               ? {}
               : { lead: snapshot.team.leadAgentId })}
             opening={snapshot.opening === true}
+            /* Where the user just arrived. The composer puts the cursor in the field whenever
+               this changes, which is what a click on the rail was for. */
+            place={place}
             onSend={(agentIds, text, attachmentIds) =>
               void window.blobot.prompt(agentIds, text, attachmentIds)
             }
@@ -406,11 +444,27 @@ export function App(): React.JSX.Element {
                one possible pull request, which is a sentence that can be true. The team pane's
                answer is N of them, and it is drawn in the activity column instead. Passed as a
                node, so the composer still knows nothing about branches. */
+            {...(suggest === undefined ? {} : { suggest })}
             {...(pane.kind !== 'agent'
               ? {}
               : {
+                  /* Unbriefed, and only then: the card is the invitation and the tray's door is
+                     absent while it is up, so the two are never both on screen. */
+                  ...((state.handbooks[pane.agentId] ?? []).length > 0
+                    ? {}
+                    : {
+                        notice: (
+                          <HandbookNotice
+                            agentName={nameOf(pane.agentId)}
+                            teamName={snapshot.team?.name ?? 'this team'}
+                            busy={(state.statuses[pane.agentId] ?? 'idle') !== 'idle'}
+                            onBrief={() => void window.blobot.brief(pane.agentId)}
+                          />
+                        ),
+                      }),
                   footer: (
-                    <WorkspaceLine
+                    <ComposerFooter
+                      key={pane.agentId}
                       status={workspaces.statuses.find((row) => row.agentId === pane.agentId)}
                       teamId={openTeamId}
                       busy={(state.statuses[pane.agentId] ?? 'idle') !== 'idle'}
@@ -418,6 +472,14 @@ export function App(): React.JSX.Element {
                       onCommitted={workspaces.refresh}
                       onPublish={(options) => publish(pane.agentId, options)}
                       onPlan={(options) => plan(pane.agentId, options)}
+                      entries={state.handbooks[pane.agentId] ?? []}
+                      agentName={nameOf(pane.agentId)}
+                      onRemoveEntry={(entryId) => {
+                        dispatch({ type: 'handbookRemoved', entryId });
+                        void window.blobot.removeHandbookEntry(entryId);
+                      }}
+                      onAddOne={() => setSuggest({ text: 'Remember this: ', at: Date.now() })}
+                      startOpen={opened.get('screen') === 'handbook'}
                     />
                   ),
                 })}
@@ -429,6 +491,7 @@ export function App(): React.JSX.Element {
             agents={snapshot.agents}
             usage={state.usage}
             injection={state.injection}
+            handbooks={state.handbooks}
             pane={pane}
             workspaces={pane.kind === 'team' ? workspaces.statuses : []}
             looking={workspaces.looking}

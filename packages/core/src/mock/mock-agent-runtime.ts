@@ -10,6 +10,7 @@ import type {
   AvailableCommand,
   PeerMessageAck,
   PeerMessageHandler,
+  RecordEntryHandler,
   RoutineProposalHandler,
   PermissionHandler,
   Prompt,
@@ -47,6 +48,8 @@ export interface MockAgentRuntimeOptions {
   readonly peerMessageHandler?: PeerMessageHandler;
   /** Issue 05's `propose_routine`, called directly, exactly as the peer handler is. */
   readonly proposeRoutine?: RoutineProposalHandler;
+  /** Ticket 03's `record_entry`, the same way again. */
+  readonly recordEntry?: RecordEntryHandler;
   readonly startupMs?: number;
   /** When set, `start()` rejects with this message: the spawn-failure path. */
   readonly spawnFailure?: string;
@@ -97,6 +100,7 @@ export class MockAgentRuntime implements AgentRuntime {
   readonly #script: ScenarioScript;
   readonly #peerMessageHandler: PeerMessageHandler | undefined;
   readonly #proposeRoutine: RoutineProposalHandler | undefined;
+  readonly #recordEntry: RecordEntryHandler | undefined;
   readonly #startupMs: number;
   readonly #spawnFailure: string | undefined;
   readonly #restartFailure: string | undefined;
@@ -126,6 +130,7 @@ export class MockAgentRuntime implements AgentRuntime {
     this.#script = options.script;
     this.#peerMessageHandler = options.peerMessageHandler;
     this.#proposeRoutine = options.proposeRoutine;
+    this.#recordEntry = options.recordEntry;
     this.#startupMs = options.startupMs ?? 250;
     this.#spawnFailure = options.spawnFailure;
     this.#restartFailure = options.restartFailure;
@@ -370,6 +375,10 @@ export class MockAgentRuntime implements AgentRuntime {
           await this.#runProposeRoutine(queue, step);
           break;
         }
+        case 'record_entry': {
+          await this.#runRecordEntry(queue, step);
+          break;
+        }
         case 'commands': {
           this.#setCommands(step.commands);
           break;
@@ -582,6 +591,52 @@ export class MockAgentRuntime implements AgentRuntime {
         prompt: step.prompt,
         schedule: step.schedule,
       });
+      this.#emitTo(queue, {
+        type: 'tool_call_updated',
+        toolCallId,
+        status: 'completed',
+        output: JSON.stringify(ack),
+        exit: 0,
+      });
+    } catch (error) {
+      this.#emitTo(queue, {
+        type: 'tool_call_updated',
+        toolCallId,
+        status: 'failed',
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * A write, and its refusal. A refused write is a **failed tool call and never a failed turn**,
+   * the same as a refused proposal: the model reads why and gets to say something honest about
+   * it, which is the point of refusing at the boundary rather than trimming.
+   */
+  async #runRecordEntry(
+    queue: AsyncQueue<AgentEvent>,
+    step: Extract<ScenarioStep, { kind: 'record_entry' }>,
+  ): Promise<void> {
+    const toolCallId = this.#nextToolCallId();
+    this.#emitTo(queue, {
+      type: 'tool_call_started',
+      toolCallId,
+      title: 'blobot_record_entry',
+      kind: 'other',
+      rawInput: { entries: step.entries },
+    });
+    this.#emitTo(queue, { type: 'tool_call_updated', toolCallId, status: 'in_progress' });
+    if (this.#recordEntry === undefined) {
+      this.#emitTo(queue, {
+        type: 'tool_call_updated',
+        toolCallId,
+        status: 'failed',
+        error: 'no record_entry handler is attached to this runtime',
+      });
+      return;
+    }
+    try {
+      const ack = await this.#recordEntry({ from: this.agentId, entries: step.entries });
       this.#emitTo(queue, {
         type: 'tool_call_updated',
         toolCallId,

@@ -11,6 +11,7 @@ import type {
   Team,
 } from '../orchestrator/domain.js';
 import type { AttachmentStore, MessageStore } from '../orchestrator/message-store.js';
+import type { EntrySource, HandbookEntry, NewHandbookEntry } from '../handbook/domain.js';
 import type { Routine, RoutineOutcome, RoutineRun, Schedule } from '../routines/domain.js';
 import { trustLevelOf, type TrustLevel } from '../trust.js';
 import { verbosityLevelOf, type VerbosityLevel } from '../verbosity.js';
@@ -23,6 +24,7 @@ import {
   attachments,
   contextCeilings,
   events,
+  handbookEntries,
   messageAttachments,
   messages,
   routineRuns,
@@ -214,6 +216,13 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       .update(teams)
       .set({ deletedAt: at, name: `${team.name} · deleted · ${team.id}` })
       .where(eq(teams.id, teamId))
+      .run();
+    // A Handbook dies with its team, unlike the transcript, which is kept. The transcript is a
+    // record of what happened; a Handbook is live context for a team that no longer exists.
+    this.#db
+      .update(handbookEntries)
+      .set({ deletedAt: at })
+      .where(and(eq(handbookEntries.teamId, teamId), isNull(handbookEntries.deletedAt)))
       .run();
   }
 
@@ -999,6 +1008,199 @@ export class SqliteStore implements MessageStore, AttachmentStore {
     return counts;
   }
 
+  // ------------------------------------------------------------------ Handbooks
+
+  /**
+   * What this agent knows about this team's work, oldest first.
+   *
+   * Ordered by `created_at` because the persona numbers the entries and an agent naming number
+   * three has to mean the same entry it meant last session. Removed entries are absent: the
+   * Handbook is what is live, and the record of a removal lives in the transcript.
+   */
+  handbookOf(teamId: string, agentName: string): HandbookEntry[] {
+    return this.#everyEntry(teamId, agentName).filter(
+      (entry) => entry.removedAt === undefined,
+    );
+  }
+
+  /** One entry by id, removed or not, because the transcript block names entries that are gone. */
+  handbookEntryById(entryId: string): HandbookEntry | undefined {
+    const row = this.#db
+      .select()
+      .from(handbookEntries)
+      .where(eq(handbookEntries.id, entryId))
+      .get();
+    return row === undefined ? undefined : toHandbookEntry(row);
+  }
+
+  /**
+   * Every entry this Handbook ever had, in the order it got them, **including removed ones**,
+   * which is what makes the ordinal stable. Private: a caller that wanted the removed ones
+   * wants {@link handbooksOfTeam}, which says so in its name.
+   */
+  #everyEntry(teamId: string, agentName: string): HandbookEntry[] {
+    return this.#db
+      .select()
+      .from(handbookEntries)
+      .where(
+        and(
+          eq(handbookEntries.teamId, teamId),
+          eq(handbookEntries.agentName, agentName),
+          isNull(handbookEntries.deletedAt),
+        ),
+      )
+      // By the number itself, which is what the persona draws and what an agent names. Never by
+      // `created_at, id`: one call writes its whole list in the same millisecond and a uuidv7's
+      // tail is random, so a briefing came back in an order nobody wrote it in.
+      .orderBy(asc(handbookEntries.ordinal))
+      .all()
+      .map(toHandbookEntry);
+  }
+
+  /**
+   * Write entries. A list rather than one, because `record_entry` takes a list: an agent that
+   * has just been briefed records what it heard as one act, and one call, and one disclosure.
+   */
+  recordHandbookEntries(entries: readonly NewHandbookEntry[]): HandbookEntry[] {
+    if (entries.length === 0) return [];
+    const first = entries[0] as NewHandbookEntry;
+    // Numbered from what this Handbook has ever held, removed entries included, so a number
+    // means the same entry next week as it did when the persona was composed. Read and written
+    // in one synchronous call on one connection, which is the whole of the concurrency story.
+    const held = this.#everyEntry(first.teamId, first.agentName).length;
+    const written = entries.map((entry, index) => ({ ...entry, ordinal: held + index + 1 }));
+    this.#db
+      .insert(handbookEntries)
+      .values(
+        written.map((entry) => ({
+          id: entry.id,
+          teamId: entry.teamId,
+          agentName: entry.agentName,
+          ordinal: entry.ordinal,
+          text: entry.text,
+          source: entry.source,
+          createdAt: entry.createdAt,
+        })),
+      )
+      .run();
+    return written;
+  }
+
+  /**
+   * Take an entry out of the Handbook: the user removing one, or the agent withdrawing one it
+   * authored as `noticed`.
+   *
+   * The row stays. Whether this caller was allowed to do it is not decided here — the tool
+   * boundary owns that, the way it owns every other refusal.
+   */
+  removeHandbookEntry(entryId: string, at: number): void {
+    this.#db
+      .update(handbookEntries)
+      .set({ removedAt: at })
+      .where(and(eq(handbookEntries.id, entryId), isNull(handbookEntries.removedAt)))
+      .run();
+  }
+
+  /**
+   * A Handbook write, kept as an event so the transcript block survives a team switch.
+   *
+   * **Both the rows and the events, and they answer different questions.** The rows *are* the
+   * Handbook and are what the persona is composed from. This is what happened, in a turn, and it
+   * is the only record of the two things a row cannot hold: that one call wrote these particular
+   * entries together, and that a call was refused because the Handbook was full, where nothing
+   * was written at all.
+   *
+   * What it stores is **ids and never text**. The text and whether an entry is still there are
+   * read back off the rows, so a reopened team never draws a removal control beside something
+   * that is already gone.
+   */
+  recordHandbookWrite(
+    id: string,
+    teamId: string,
+    write: { kind: 'recorded' | 'full'; agentId: string; at: number; entryIds?: readonly string[]; withdrewIds?: readonly string[] },
+  ): void {
+    this.#db
+      .insert(events)
+      .values({
+        id,
+        teamId,
+        agentId: write.agentId,
+        kind: write.kind === 'full' ? 'handbook_full' : 'handbook_recorded',
+        payload: JSON.stringify({
+          entryIds: write.entryIds ?? [],
+          withdrewIds: write.withdrewIds ?? [],
+        }),
+        at: write.at,
+      })
+      .run();
+  }
+
+  /**
+   * The writes in this team's transcript window, with what each entry says **now**.
+   *
+   * Bounded by `since` the way the Routine blocks are, so a briefing from last month does not
+   * reappear at the top of a pane showing this afternoon.
+   */
+  handbookWritesOfTeam(
+    teamId: string,
+    since: number,
+  ): {
+    id: string;
+    agentId: string;
+    at: number;
+    kind: 'recorded' | 'full';
+    entries: HandbookEntry[];
+    withdrew: HandbookEntry[];
+  }[] {
+    return this.#db
+      .select()
+      .from(events)
+      .where(
+        and(
+          eq(events.teamId, teamId),
+          inArray(events.kind, ['handbook_recorded', 'handbook_full']),
+        ),
+      )
+      .orderBy(asc(events.at))
+      .all()
+      .flatMap((row) => {
+        if (row.agentId === null || row.at < since) return [];
+        const payload = JSON.parse(row.payload) as {
+          entryIds?: string[];
+          withdrewIds?: string[];
+        };
+        const resolve = (ids: readonly string[] | undefined): HandbookEntry[] =>
+          (ids ?? []).flatMap((entryId) => {
+            const entry = this.handbookEntryById(entryId);
+            return entry === undefined ? [] : [entry];
+          });
+        return [
+          {
+            id: row.id,
+            agentId: row.agentId,
+            at: row.at,
+            kind: row.kind === 'handbook_full' ? ('full' as const) : ('recorded' as const),
+            entries: resolve(payload.entryIds),
+            withdrew: resolve(payload.withdrewIds),
+          },
+        ];
+      });
+  }
+
+  /**
+   * Every entry of a team, dead ones included, for the panel and for a purge that wants to say
+   * what it is holding.
+   */
+  handbooksOfTeam(teamId: string): HandbookEntry[] {
+    return this.#db
+      .select()
+      .from(handbookEntries)
+      .where(eq(handbookEntries.teamId, teamId))
+      .orderBy(asc(handbookEntries.createdAt), asc(handbookEntries.id))
+      .all()
+      .map(toHandbookEntry);
+  }
+
   // ------------------------------------------------------------------ Routines
 
   createRoutine(routine: Routine): Routine {
@@ -1268,6 +1470,19 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       .where(and(eq(contextCeilings.runtimeId, runtimeId), eq(contextCeilings.model, model ?? '')))
       .run();
   }
+}
+
+function toHandbookEntry(row: typeof handbookEntries.$inferSelect): HandbookEntry {
+  return {
+    id: row.id,
+    ordinal: row.ordinal,
+    teamId: row.teamId,
+    agentName: row.agentName,
+    text: row.text,
+    source: row.source as EntrySource,
+    createdAt: row.createdAt,
+    ...(row.removedAt === null ? {} : { removedAt: row.removedAt }),
+  };
 }
 
 type MessageRow = typeof messages.$inferSelect;

@@ -363,7 +363,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    with no face rather than as a count. */
 .mark .more{position:absolute;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--ground);border-radius:50%;font-size:9px;line-height:1;color:var(--muted)}
 .teamrow.sel .mark .more{background:var(--raised)}
-/* The team's own icon, filling the mark.
+/* The team's own icon, inside the mark.
 
    Greyed, and that is the design decision rather than a taste: the blobatars are the only
    saturated thing on screen, and a column of teams wearing full-colour favicons would put the
@@ -371,8 +371,21 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    silhouette mask, because luminance is most of what makes a logo recognisable at this size and
    a flat silhouette of one is usually a blob. `contain`, so a wordmark is letterboxed rather
    than cropped into initials nobody chose — which is also why there is no background behind it:
-   a plate under a letterboxed image draws a box the artwork does not fill. */
-.mark .teamicon{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:6px;opacity:.92;filter:grayscale(1)}
+   a plate under a letterboxed image draws a box the artwork does not fill.
+
+   **Inset, and rounded, because half of the artwork brings its own plate.** It filled the slot
+   edge to edge, which is right for a transparent logo and wrong for an opaque square PNG: down
+   a column where the other state is two 11px faces floating in a 20px box, a filled square
+   covering the whole box is four times the ink and the only hard corner among round things. So
+   the row read as two different kinds of object rather than as one mark drawn two ways. The
+   answer is not a container under the faces — that folder was removed on purpose, and the
+   argument above it still holds — it is to stop the icon claiming a footprint the faces never
+   take. 10% of the slot on every side puts an opaque icon at the faces' own optical height, and
+   30% of what is left is enough round that it belongs to the same family. Both are fractions
+   rather than pixels, because the mark is drawn at 20px on the rail and larger in the navigator
+   and the icon picker, and the relationship is what has to survive the size. Transparent
+   artwork barely moves: `contain` was already letterboxing it well inside the box. */
+.mark .teamicon{position:absolute;inset:10%;width:80%;height:80%;object-fit:contain;border-radius:30%;opacity:.92;filter:grayscale(1)}
 /* The faces in a mark do not move. The mark used to wear the folded team status as a body
    animation, which is how a hop on one team's `working` became the loudest thing in a column
    whose job is quiet. The folded status is still on the row, said by the same word and the same
@@ -746,6 +759,30 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .handoff .note .said{font-size:12.5px;color:var(--muted);line-height:1.55;white-space:pre-wrap}
 .handoff .note .where{font-family:var(--mono);font-size:10px;color:var(--muted);opacity:.7;word-break:break-all}
 @media (prefers-reduced-motion:reduce){.handoff .route svg{transition:none}.handoff .note{animation:none}}
+
+/* An agent wrote to its own Handbook. `.handoff`'s shape rather than a card, because it is the
+   same kind of event: something happened here, and it is not something to read until the reader
+   asks what their agent now believes. One line for the call and not one per entry, since
+   `record_entry` takes a list and the turn produced one act.
+   Its own prefix rather than reusing `.handoff`: the two are one grammar today and a class named
+   after a compaction, restyled for a Handbook, is the `.preview` grenade again. */
+.hbwrite{display:flex;flex-direction:column;padding:2px 0}
+.hbwrite .route{display:flex;align-items:center;gap:7px;text-align:left;color:var(--muted)}
+.hbwrite .route:hover .lbl{color:var(--ink)}
+.hbwrite .route svg{flex:0 0 auto;transition:rotate 180ms var(--ease-out)}
+.hbwrite .route svg.shut{rotate:-90deg}
+.hbwrite .route .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.07em;color:var(--muted);transition:color 120ms}
+.hbwrite .note{margin:7px 0 4px 5px;padding-left:13px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:7px;animation:enterpeer 200ms var(--ease-out)}
+/* The number, what it says, and the control. The number is the value the persona draws this
+   entry under and the one the agent names to correct it later, so it is mono in both places.
+   The control sits at the end of the row rather than under the block: it is about this entry
+   and there can be four of them. */
+.hbwrite .hbentry{display:flex;align-items:baseline;gap:9px}
+.hbwrite .hbentry .said{flex:1;font-size:12.5px;color:var(--muted);line-height:1.55}
+/* Already gone, so the row says so and keeps its place. A transcript is a record of what
+   happened and is never rewritten. */
+.hbwrite .hbentry.gone .said{text-decoration:line-through;opacity:.6}
+@media (prefers-reduced-motion:reduce){.hbwrite .route svg{transition:none}.hbwrite .note{animation:none}}
 
 /* Ticket 14's permission block. It stands where the in-flight tool line would have stood, in
    the same gutter, because it is the same thing at a moment when it cannot proceed.
@@ -1668,3 +1705,84 @@ button.listrow:not(.pick):hover{outline:1px solid var(--line);outline-offset:-1p
 /* Not `.btn.primary`. The loud one is the control that *grants* authority, and here the
    authority was already taken: what this offers is taking it back, which is a reduction. */
 .scheduled .btn{font-size:11px;padding:4px 11px}
+
+/* ---------------------------------------------------------------- the Handbook, in the pane
+
+   What an Agent knows about *this team's* work. Two shapes and never both: a notice card above
+   the composer while it is empty, and a door on the tray with a panel behind it once it is not.
+
+   Every class here is prefixed. The prototype named the notice's action slot `.act`, which is
+   the activity column's class in the same file, and it inherited `--recessed` and 18px of
+   padding and drew a box round the button. That is DESIGN.md's `.preview` story reproduced
+   within an hour of reading the warning about it. */
+
+/* The panel, under the tray and continuing it: same inset, same ground, the tray's bottom
+   corners squared into this one's. It hangs below the tray rather than replacing it, which is
+   `Sent`'s arrangement in the activity column and for the same two reasons — a toggle you
+   pressed has to still be there to press again, and the workspace facts beside it are live
+   numbers somebody may want while they read. */
+/* **Amended 2026-08-31: what is behind the door is a dialog.** It was a panel under the
+   composer, in the tray's shape, and that was drawn against a two-entry mock. A real Handbook is
+   prose: two entries from one live audit ran to 774 characters and took two thirds of the pane,
+   against a bound of 8,000. `.modal` caps its height and scrolls inside itself, which is what a
+   body with no ceiling needs and what the composer's footing cannot give it. */
+.hbnote{color:var(--muted);margin:0}
+.hbentries{display:flex;flex-direction:column;gap:6px}
+/* The count sits on the dialog's own foot, pushed away from the two controls: it is what those
+   controls are about, not a third one. */
+.hbused{margin-right:auto;align-self:center;font-size:11.5px;color:var(--muted)}
+/* `.listrow`'s fill, radius and padding, because it is that row: the list row is filled
+   everywhere in this app and a picker row is that same row outlined. `--raised` and not
+   `--ground`, which is what it was while the panel hung under the composer — `.modal`'s own
+   ground is `--ground`, so the rows had no fill left at all inside it. */
+.hbentry{background:var(--raised);border-radius:12px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;font-size:13px;line-height:1.55}
+/* Open, the text takes the whole row and `author · age` drops under it as a byline.
+   `COMPAIGN AUDITOR · 14M` is 22 characters of mono, and while it sat beside a paragraph it was
+   setting the measure that paragraph was read at: a 500-character entry wrapped into a column
+   two thirds of the dialog wide with a mono label and a gutter beside it. The metadata's width
+   must not decide the width of the thing it is about. Shut, they share a line, which is what a
+   one-liner and its byline want. */
+.hbentry.open .hbt{flex-basis:100%}
+.hbentry.open .m{margin-left:auto;padding-top:0}
+/* The text is the fold's control and the row is not: the row also carries removal, and a button
+   inside a button is not a thing. It takes the row's width so the whole line is the target. */
+.hbentry .hbt{flex:1;min-width:0;display:flex;align-items:flex-start;gap:8px;background:none;border:0;padding:0;margin:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.hbentry .hbt svg{flex:0 0 auto;margin-top:4px;color:var(--muted);transition:rotate 180ms var(--ease-out)}
+.hbentry .hbt svg.shut{rotate:-90deg}
+.hbentry .hbt:hover svg{color:var(--ink)}
+.hbentry .t{flex:1;min-width:0}
+/* Shut, an entry is its first line. Open, it is all of it. What folds is the **tail**: the first
+   line stays either way, so the list reads as a list of somethings rather than a stack of
+   chevrons. A real Handbook is what forced this — one entry can be a paragraph of ids, and the
+   question the list answers first is *what does my agent believe*, which is a scan. */
+.hbentry:not(.open) .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Author and age, and that is the whole of an entry's metadata. Mono and uppercase, because it
+   is a label on a thing and not a sentence about it. */
+.hbentry .m{font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);white-space:nowrap;padding-top:4px;flex:0 0 auto}
+/* On hover, and on focus, which is the half a mouse never finds: a control that only exists
+   under a pointer is a control a keyboard cannot reach. */
+.hbentry .hbx{opacity:0;color:var(--muted);background:none;border:0;cursor:pointer;font-size:15px;line-height:1;padding:1px 3px;border-radius:6px;flex:0 0 auto;margin-top:2px}
+.hbentry:hover .hbx,.hbentry .hbx:focus-visible{opacity:1}
+.hbentry .hbx:hover{color:var(--ink)}
+
+/* The notice card, above the composer and taking its width exactly: it sits inside `.composer`,
+   which already centres its children at 900px, so it takes no horizontal margin of its own. Any
+   inset would say it is a separate thing on the page, and it is the composer's own notice.
+
+   `.openerror`'s shape, which the app already owns: `--raised` ground, a `--line` hairline, a
+   12px radius, and the control pushed right. Two shapes invented for this both lost to it. No
+   ink edge, under DESIGN.md's ban on an ink edge on a closed shape, and no icon: every icon at
+   rest is `--muted`, so a muted glyph in that slot would have to mean something, and not yet
+   briefed is the ordinary condition of a new hire rather than a kind of thing. */
+.hbnotice{width:100%;max-width:900px;box-sizing:border-box;display:flex;align-items:center;gap:14px;padding:10px 12px 10px 15px;border:1px solid var(--line);border-radius:12px;background:var(--raised)}
+.hbnbody{flex:1;min-width:0}
+.hbnt{font-size:13px;color:var(--ink);margin-bottom:2px}
+.hbnd{font-size:12px;color:var(--muted);line-height:1.5}
+/* Named for what it belongs to and not for what it contains. This slot was `.act` in the
+   prototype: see the note at the top of this block. */
+.hbnact{flex:0 0 auto}
+/* The quiet button, not the loud one. The loud one grants authority; this offers a turn, and
+   the whole charting decision was that ignoring it should cost nothing. */
+.hbnbtn{background:var(--raised);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:6px 13px;font:inherit;font-size:12.5px;cursor:pointer}
+.hbnbtn:hover:not([disabled]){border-color:var(--muted)}
+.hbnbtn[disabled]{opacity:.4;cursor:not-allowed}

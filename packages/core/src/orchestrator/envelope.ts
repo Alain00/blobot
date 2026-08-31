@@ -1,3 +1,5 @@
+import type { HandbookEntry } from '../handbook/domain.js';
+import { composeHandbookBlock } from '../handbook/persona.js';
 import type { AgentStatus } from '../status.js';
 import { DEFAULT_VERBOSITY, verbosityInstruction } from '../verbosity.js';
 import type { Agent, Message, Team } from './domain.js';
@@ -9,8 +11,19 @@ import type { Agent, Message, Team } from './domain.js';
  *
  * Core composes the text; each adapter owns the mechanism for injecting it, and fakes one
  * with a first-prompt preamble if its runtime has none. No capability flag on `AgentRuntime`.
+ *
+ * `handbook` is a **parameter and never a store read**: this function stays pure, and every
+ * adapter carries the Handbook by whatever mechanism it already uses for a persona. fx pays for
+ * it per turn because its persona has no channel, which is fx's own cost exactly as its persona
+ * already is; an adapter treating the Handbook specially would be provider-specific behaviour
+ * above the adapter in everything but name.
  */
-export function composePersona(agent: Agent, team: Team, roster: readonly Agent[]): string {
+export function composePersona(
+  agent: Agent,
+  team: Team,
+  roster: readonly Agent[],
+  handbook: readonly HandbookEntry[] = [],
+): string {
   const teammates = roster.filter((member) => member.id !== agent.id);
   const lines = [
     `You are ${agent.name}, ${agent.role}, on the team "${team.name}".`,
@@ -42,6 +55,12 @@ export function composePersona(agent: Agent, team: Team, roster: readonly Agent[
     // they sit below the paragraph above and never outweigh it.
     'Write plainly. Do not use em dashes.',
     ...verbosityInstruction(agent.verbosity ?? DEFAULT_VERBOSITY),
+    // Immediately before standing instructions, which is a decision about **rank** rather than
+    // about layout. The two sit adjacent, so the order states the contrast the word was chosen
+    // for: what is true of this work, then what is true of you, and you win. And it falls out
+    // of the placement that an entry the agent wrote never outranks a sentence the user wrote.
+    '',
+    ...composeHandbookBlock(handbook),
     // Last, and deliberately. An agent exists across teams, so its standing instructions are
     // static about *it* rather than about this team, which is what belongs in the cached
     // prefix — and putting them here rather than at the top is what makes them the user's

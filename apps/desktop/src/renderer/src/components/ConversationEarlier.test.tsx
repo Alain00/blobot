@@ -64,6 +64,7 @@ function render(
         onAnswerPermission={() => {}}
         routineArmed={{}}
         onDisarmRoutine={() => {}}
+        onRemoveHandbookEntry={() => {}}
         moreAbove={moreAbove}
         {...(onLoadEarlier === undefined ? {} : { onLoadEarlier })}
       />,

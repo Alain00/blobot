@@ -62,6 +62,12 @@ export function overCompactionThreshold(used: number, ceiling: number): boolean 
  * of the transcript is the one thing the fresh session does not need and the thing an agent will
  * default to producing.
  *
+ * The Handbook clause is the same argument once more, and it is safe to promise because the
+ * fresh session's persona is composed by the same function from the same entries: nothing is
+ * dropped in the hope it is recoverable, it is already there. An agent spending 1,500 of its
+ * 6,000 characters repeating entries has burned the most expensive turn in the app on knowledge
+ * that was never at risk.
+ *
  * No length limit is stated. One is enforced instead — `HANDOFF_LIMIT` — because a number in the
  * prompt is a target an agent writes up to, and a refusal at the boundary is the shape this repo
  * already uses for what blobot injects. See `bounds.ts`.
@@ -75,6 +81,7 @@ export const HANDOFF_PROMPT =
   'you are trying to do and why, what you have already established, what you tried that did ' +
   'not work, and what you were about to do next. Name the files and the branches you care ' +
   'about. Do not summarize this conversation and do not restate code you can read again. ' +
+  'Do not restate your Handbook: the fresh session already has it. ' +
   'Answer with the handoff and nothing else.';
 
 /**

@@ -134,6 +134,13 @@
       "when": 1788176377894,
       "tag": "0018_tough_adam_destine",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1788198854409,
+      "tag": "0019_strange_scream",
+      "breakpoints": true
     }
   ]
 }

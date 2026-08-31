@@ -210,3 +210,81 @@ describe('the lead brief', () => {
     expect(prompt).not.toContain('Teammates you can message:');
   });
 });
+
+describe('the Handbook in the persona', () => {
+  const entry = (
+    ordinal: number,
+    text: string,
+    at: number,
+    source: 'told' | 'noticed' = 'told',
+  ) => ({
+    id: `e${ordinal}`,
+    ordinal,
+    teamId: team.id,
+    agentName: bob.name,
+    text,
+    source,
+    createdAt: at,
+  } as const);
+
+  it('says it is empty, and what to do about it, when nobody has briefed the agent', () => {
+    const persona = composePersona(bob, team, [alice, bob]);
+
+    // The conditional is the whole mechanism: woken with nothing to do it opens the
+    // conversation, given work it does the work. Both readings have to be in the same sentence.
+    expect(persona).toContain('Your Handbook for this team is empty.');
+    expect(persona).toContain('If you are started with nothing to do, introduce yourself');
+    expect(persona).toContain('If you are\ngiven work, do the work.');
+  });
+
+  it('numbers the entries and dates them absolutely', () => {
+    const at = new Date(2026, 2, 11, 12).getTime();
+    const persona = composePersona(bob, team, [alice, bob], [
+      entry(1, 'we deploy on Fridays', at),
+      entry(2, 'the ICP is a two-person agency', at, 'noticed'),
+    ]);
+
+    expect(persona).toContain('1. [2026-03-11] we deploy on Fridays');
+    expect(persona).toContain('2. [2026-03-11] the ICP is a two-person agency');
+    expect(persona).not.toContain('Your Handbook for this team is empty.');
+    // A relative age would change on every composition and invalidate the cached prefix.
+    expect(persona).not.toMatch(/months? ago/);
+  });
+
+  it('names the scope, because an agent on two teams must not carry one to the other', () => {
+    const persona = composePersona(bob, team, [alice, bob], [entry(1, 'ours', 0)]);
+
+    expect(persona).toContain('not follow you to any other team you are on');
+  });
+
+  it('asks for durable knowledge that is not in the files, briefed or not', () => {
+    for (const handbook of [[], [entry(1, 'ours', 0)]]) {
+      const persona = composePersona(bob, team, [alice, bob], handbook);
+      expect(persona).toContain('still be true next month and is not in the');
+      expect(persona).toContain('files');
+      // Err shy, and the persona says why: an entry not recorded today can be recorded
+      // tomorrow, and one recorded is in every session until a person goes and finds it.
+      expect(persona).toContain('When you are\nunsure, leave it out');
+      // The bound is never named. An agent that knows its budget economises unasked.
+      expect(persona).not.toMatch(/\b\d{1,2},?000 characters\b/);
+    }
+  });
+
+  it('sits above standing instructions, so the user keeps the last word', () => {
+    const briefed: Agent = { ...bob, instructions: 'Explain your reasoning in full.' };
+    const persona = composePersona(briefed, team, [alice, bob], [entry(1, 'ours', 0)]);
+
+    // Rank, not layout: an entry the agent wrote never outranks a sentence the user wrote.
+    expect(persona.indexOf('Your Handbook for this team,')).toBeLessThan(
+      persona.indexOf('Standing instructions'),
+    );
+    expect(persona.trimEnd().endsWith('Explain your reasoning in full.')).toBe(true);
+  });
+
+  it('tells a briefed agent how to correct itself, and where that stops', () => {
+    const persona = composePersona(bob, team, [alice, bob], [entry(1, 'ours', 0)]);
+
+    expect(persona).toContain('name the number it');
+    expect(persona).toContain('cannot withdraw something you were told');
+  });
+});

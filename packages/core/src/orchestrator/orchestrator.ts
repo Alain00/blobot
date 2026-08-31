@@ -7,6 +7,8 @@ import type {
   AttachmentSupport,
   PeerMessageAck,
   PeerMessageCall,
+  RecordEntryAck,
+  RecordEntryCall,
   RoutineProposalAck,
   RoutineProposalCall,
   PermissionOption,
@@ -19,15 +21,23 @@ import { AgentStatusTracker, type AgentStatus } from '../status.js';
 import { DEFAULT_COMPACTION, type Agent, type Message, type Team } from './domain.js';
 import type { ScheduledRoutine } from '../routines/domain.js';
 import { findAgentByName, namesMentioned } from './roster.js';
+import type { HandbookEntry, HandbookWrite, NewHandbookEntry } from '../handbook/domain.js';
+import { BRIEFING_KNOCK } from '../handbook/persona.js';
 import {
+  HANDBOOK_CALLS_PER_TURN,
+  HANDBOOK_ENTRY_LIMIT,
+  HANDBOOK_LIMIT,
   PEER_CONTEXT_LIMIT,
   PEER_MESSAGE_LIMIT,
   ROUTINE_PROPOSALS_PER_TURN,
   ROUTINE_PROPOSALS_STANDING,
   ROUTINE_TURN_BUDGET,
   WAKE_BATCH_LIMIT,
+  alreadyRecordedThisTurn,
   attachmentNotAccepted,
   contextTooLong,
+  entryTooLong,
+  handbookFull,
   tooLongToSend,
   tooManyProposalsStanding,
   tooManyProposalsThisTurn,
@@ -89,6 +99,11 @@ export interface OrchestratorOptions {
    * honest answer for a team whose database is thrown away when the window closes.
    */
   readonly routines?: RoutineStore;
+  /**
+   * Where Handbooks are kept. Omit and `record_entry` is not offered, on the same argument the
+   * line above makes: a tool a model can see is a capability it will believe in.
+   */
+  readonly handbooks?: HandbookStore;
 }
 
 /**
@@ -98,6 +113,16 @@ export interface OrchestratorOptions {
 export interface RoutineStore {
   createRoutine(routine: Routine): Routine;
   routinesOfAgent(agentId: string): Routine[];
+}
+
+/**
+ * The half of the store a Handbook needs. Structural, like {@link RoutineStore}, so the
+ * orchestrator still imports no SQLite.
+ */
+export interface HandbookStore {
+  handbookOf(teamId: string, agentName: string): HandbookEntry[];
+  recordHandbookEntries(entries: readonly NewHandbookEntry[]): HandbookEntry[];
+  removeHandbookEntry(entryId: string, at: number): void;
 }
 
 /**
@@ -296,6 +321,9 @@ export class Orchestrator {
    * a decision that is not its own.
    */
   readonly #routines: RoutineStore | undefined;
+  readonly #handbooks: HandbookStore | undefined;
+  readonly #recordedThisTurn = new Map<string, number>();
+  readonly #handbookListeners = new Set<(write: HandbookWrite) => void>();
   readonly #routineListeners = new Set<() => void>();
   readonly #scheduledListeners = new Set<(scheduled: ScheduledRoutine) => void>();
   /**
@@ -339,6 +367,7 @@ export class Orchestrator {
     this.#handoffs = options.handoffs;
     this.#budgetCeiling = options.team.turnBudget;
     this.#routines = options.routines;
+    this.#handbooks = options.handbooks;
 
     for (const agent of this.#agents) {
       const tracker = new AgentStatusTracker(agent.id);
@@ -642,6 +671,33 @@ export class Orchestrator {
     );
   }
 
+  /**
+   * *brief them*: a turn the user started that carries **none of the user's words**.
+   *
+   * A sibling of {@link promptFromUser} rather than a flag on it, on the same argument
+   * {@link promptFromRoutine} is: what differs is a thing you never want reaching an ordinary
+   * turn by accident. Here it is the `messages` row, which this one **does not write**. There is
+   * no third party in the room, so nothing blobot composed may enter the conversation the user
+   * reads; {@link BRIEFING_KNOCK} rides the wire and the first words on screen are the agent's.
+   *
+   * The budget is the team's, reset like any prompt a person started, because a person did start
+   * it and they are watching. The knock is passed through `#withBrief` like every other user
+   * turn, so a lead being briefed still gets its lead brief.
+   */
+  async promptForBriefing(agentId: string): Promise<void> {
+    const agent = this.#requireAgent(agentId);
+    // A session runs one turn at a time. Unlike a peer message there is no mailbox to fall back
+    // on: the knock is a knock, and one that arrives while the agent is mid-turn is not a thing
+    // to deliver later. The card the user pressed is still there and still true.
+    if (this.#busy.has(agent.id)) return;
+    this.#turnsThisPrompt = 0;
+    this.#budgetCeiling = this.team.turnBudget;
+    await this.#runTurn(agent, {
+      text: this.#withBrief(agent.id, BRIEFING_KNOCK),
+      from: 'user',
+    });
+  }
+
   // ------------------------------------------------------------------ a Routine's prompt
 
   /**
@@ -839,6 +895,123 @@ export class Orchestrator {
     return () => this.#routineListeners.delete(listener);
   }
 
+  // ------------------------------------------------------------------ the recording tool
+
+  /**
+   * The `record_entry` tool handler. **An agent writes only to its own Handbook**, which needs
+   * no check: the bearer token is the caller's identity, so there is no argument by which Bob
+   * could name Mara's. The same property that makes `message_agent`'s sender unforgeable.
+   *
+   * Every refusal is here, before anything is written, and none of them trims. A half-recorded
+   * call would leave a Handbook saying something nobody wrote, and the whole justification for
+   * letting an agent write into its own persona is that what happens is exactly what is
+   * disclosed in the turn it happened.
+   */
+  async handleRecordEntry(call: RecordEntryCall): Promise<RecordEntryAck> {
+    const agent = this.#requireAgent(call.from);
+    const handbooks = this.#handbooks;
+    if (handbooks === undefined) throw new Error('This team does not keep Handbooks.');
+    if (call.entries.length === 0) throw new Error('record_entry needs at least one entry.');
+
+    if ((this.#recordedThisTurn.get(agent.id) ?? 0) >= HANDBOOK_CALLS_PER_TURN) {
+      throw new Error(alreadyRecordedThisTurn());
+    }
+
+    // Per entry first, because it is the refusal the agent can act on: the entry ran long and
+    // it can write the short one in the same turn.
+    for (const entry of call.entries) {
+      const text = entry.text.trim();
+      if (text === '') throw new Error('an entry cannot be empty.');
+      if (text.length > HANDBOOK_ENTRY_LIMIT) throw new Error(entryTooLong(text.length));
+    }
+
+    const live = handbooks.handbookOf(agent.teamId, agent.name);
+    // The `replaces` rule, and it is the seam where "no rewriting its own Handbook" was
+    // narrowed. A `noticed` entry is the agent's own conclusion, and retracting yourself is not
+    // editing the user; a `told` entry is the user's words and stays untouchable.
+    const withdrawing: HandbookEntry[] = [];
+    for (const entry of call.entries) {
+      if (entry.replaces === undefined) continue;
+      const target = live.find((candidate) => candidate.ordinal === entry.replaces);
+      if (target === undefined) {
+        throw new Error(
+          `there is no entry ${entry.replaces} in your handbook. record it without replaces, or ` +
+            'name one of the numbers you were shown.',
+        );
+      }
+      if (target.source === 'told') {
+        throw new Error(
+          `entry ${entry.replaces} is something you were told, so it is not yours to withdraw. ` +
+            'record what you have learned and say that it contradicts that one.',
+        );
+      }
+      if (withdrawing.some((already) => already.id === target.id)) {
+        throw new Error(`two entries in this call both replace entry ${entry.replaces}.`);
+      }
+      withdrawing.push(target);
+    }
+
+    // The bound that matters, measured against what the Handbook *would* be: what survives this
+    // call plus what it adds. A correction that replaces a long entry with a short one is
+    // therefore not refused for the space the old one was taking.
+    const kept = live.filter((entry) => !withdrawing.some((gone) => gone.id === entry.id));
+    const would =
+      kept.reduce((total, entry) => total + entry.text.length, 0) +
+      call.entries.reduce((total, entry) => total + entry.text.trim().length, 0);
+    if (would > HANDBOOK_LIMIT) {
+      // Published as well as refused, and it is the only refusal in the app that is. The agent
+      // is told and can do nothing about it; the person can.
+      this.#publishHandbook({ kind: 'full', agentId: agent.id, at: this.#clock.now() });
+      throw new Error(handbookFull(would));
+    }
+
+    const now = this.#clock.now();
+    for (const target of withdrawing) handbooks.removeHandbookEntry(target.id, now);
+    const written = handbooks.recordHandbookEntries(
+      call.entries.map((entry) => ({
+        id: this.#createId(now),
+        teamId: agent.teamId,
+        agentName: agent.name,
+        text: entry.text.trim(),
+        source: entry.source,
+        createdAt: now,
+      })),
+    );
+    this.#recordedThisTurn.set(agent.id, (this.#recordedThisTurn.get(agent.id) ?? 0) + 1);
+    this.#publishHandbook({
+      kind: 'recorded',
+      agentId: agent.id,
+      entries: written,
+      withdrew: withdrawing,
+      at: now,
+    });
+    return {
+      recorded: written.map((entry) => ({
+        id: entry.id,
+        ordinal: entry.ordinal,
+        text: entry.text,
+      })),
+      withdrew: withdrawing.map((entry) => entry.ordinal),
+    };
+  }
+
+  /**
+   * An agent wrote to its own persona. **The user is told where it happened**, which is the
+   * whole reason an agent is allowed to do it at all.
+   *
+   * Carries the full-Handbook refusal too, because that one's remedy is a person removing an
+   * entry and the agent will hit the same wall every turn until somebody does. It is the only
+   * refusal in the app that leaves the room.
+   */
+  onHandbookWrite(listener: (write: HandbookWrite) => void): Unsubscribe {
+    this.#handbookListeners.add(listener);
+    return () => this.#handbookListeners.delete(listener);
+  }
+
+  #publishHandbook(write: HandbookWrite): void {
+    for (const listener of this.#handbookListeners) listener(write);
+  }
+
   // ------------------------------------------------------------------ the peer-message tool
 
   /**
@@ -1005,6 +1178,7 @@ export class Orchestrator {
     // defined by what a turn *did*, never by who did it or what started it.
     this.#wroteThisTurn.set(agent.id, new Set());
     this.#proposedThisTurn.set(agent.id, 0);
+    this.#recordedThisTurn.set(agent.id, 0);
 
     const turn = (async () => {
       // What the agent actually said, and whether the turn got to the end of itself.
