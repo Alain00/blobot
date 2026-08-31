@@ -11,7 +11,10 @@ contradicts becomes instead.
 The map is done when nothing is left to *decide* before someone writes that code. It plans; it
 does not build.
 
-**Not reached.** Five tickets are resolved, five are open. The frontier is ticket 06.
+**Reached, 2026-08-31.** All ten tickets are resolved and the frontier is empty. Do not run
+`/wayfinder` on this map: there is no next ticket. What remains under *Not yet specified* is fog
+**beyond** this destination, not work blocking it. Decisions are binding; if one is wrong, reopen
+its ticket and say so on it rather than quietly contradicting it.
 
 Raised by the author, 2026-08-31, from <https://velvet-ui-eight.vercel.app/>: *"i want to
 implement the sounds, what do u think?"*, then *"i thinking of interaction, and notification, a
@@ -80,18 +83,27 @@ to the same way.
 - **04 · Thirteen switches persist, three switches ship.** The state is one flat map of event id to
   boolean, unkeyed by team or agent, because sound is a property of this machine and this person.
   `issues/04-every-sound-switchable.md`
-- **05 · What 1031 becomes.** Drafted, not yet applied to `DESIGN.md`.
-  `issues/05-the-amendment.md`
+- **05 · What 1031 becomes.** The sentence keeps its first two clauses; sound gets its own rule
+  next to the motion budgets. `issues/05-the-amendment.md`
+- **06 · Settings gains its third section, and both groups default on.** Stated rather than
+  consented to, because a consent dialog for something one click reverses is theatre.
+  `issues/06-the-mute-and-the-default.md`
+- **07 · There is no `prefers-reduced-sound`, and blobot infers nothing.** Reusing
+  `prefers-reduced-motion` is refused: it is a signal about a different sense and would take the
+  accessible channel away from some of the people who rely on it. The consequence is a standing
+  constraint: **no sound may be the only carrier of its fact.**
+  `issues/07-no-prefers-reduced-sound.md`
+- **08 · One `waiting` per two seconds, app-wide, and never for a team you are looking at.**
+  The count is not encoded, because the rail carries it.
+  `issues/08-many-at-once-and-the-unfocused-window.md`
+- **09 · One renderer module; notification subscribed, interaction called at the act.**
+  `vocabulary.ts` names no runtime, ever. `issues/09-the-seam.md`
+- **10 · `--screenshot` is a hard mute above the switch; `--demo` sounds.**
+  `issues/10-silence-where-it-is-owed.md`
 
 ## Fog
 
-Open, in frontier order:
-
-- **06** where the mute lives, what the default is, and what a first run hears
-- **07** there is no `prefers-reduced-sound`, so what does blobot honour
-- **08** three teams reach `waiting` at once, and the window is not focused
-- **09** the seam: where the player lives and what it must never know
-- **10** demo mode, screenshots and tests must be silent
+Empty. See *Not yet specified* for what lies beyond the destination.
 
 ## Not yet specified
 

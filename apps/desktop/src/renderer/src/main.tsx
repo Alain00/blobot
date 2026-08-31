@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App.js';
+import { SoundProvider } from './sound/useSound.js';
 /*
  * The three typefaces, **self-hosted**, from `@fontsource`.
  *
@@ -32,8 +33,16 @@ import './styles.css';
 
 const root = document.getElementById('root');
 if (root === null) throw new Error('no #root');
+/*
+ * `silent=1` is `--screenshot` on the main process, and it is a hard mute the settings switch
+ * cannot override: a switch somebody set on their own machine should not make an automated
+ * capture noisy. `.scratch/sound/issues/10-silence-where-it-is-owed.md`.
+ */
+const silent = new URLSearchParams(window.location.hash.slice(1)).get('silent') === '1';
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <SoundProvider silent={silent}>
+      <App />
+    </SoundProvider>
   </StrictMode>,
 );

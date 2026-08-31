@@ -16,9 +16,17 @@ import { useFeedVisible } from './useFeedVisible.js';
 import { useWorkspaces } from './useWorkspaces.js';
 import { useRailWidth } from './useRailWidth.js';
 import { useComposerRoom } from './useComposerRoom.js';
+import { usePlaySound } from './sound/useSound.js';
 
 export function App(): React.JSX.Element {
   const [state, dispatch] = useReducer(reduce, initialState);
+  /*
+   * `.scratch/sound/issues/09-the-seam.md`. Interaction sounds are called at the committed act,
+   * which is a small stable set and almost all of it is in this file. Notification sounds are
+   * *subscribed* below rather than called, because a component only ever sees the open team and
+   * the whole point of `waiting` is the team you are not looking at.
+   */
+  const playSound = usePlaySound();
   // `--pane=<agentId>` and `--screen=agents` on the main process land here, so a screenshot can
   // review a surface the reviewer cannot click into.
   const opened = new URLSearchParams(window.location.hash.slice(1));
@@ -39,7 +47,10 @@ export function App(): React.JSX.Element {
   const [browsingRoutines, setBrowsingRoutines] = useState(
     opened.get('screen') === 'routines' || opened.get('screen') === 'new-routine',
   );
-  /** *Settings*, the third door. `--screen=settings`, or `settings:context`, for a screenshot. */
+  /**
+   * *Settings*, the third door. `--screen=settings`, or `settings:context` or `settings:sound`,
+   * for a screenshot.
+   */
   const [inSettings, setInSettings] = useState(
     (opened.get('screen') ?? '').startsWith('settings'),
   );
@@ -169,6 +180,10 @@ export function App(): React.JSX.Element {
     const unsubscribe = [
       window.blobot.onEvent((teamId, event) => {
         if (mine(teamId)) dispatch({ type: 'event', event });
+        // A compaction handoff, on any team. blobot chose the moment and the agent kept its
+        // worktree, so nothing is asked of the user: the quietest thing in the set, and the one
+        // `.scratch/sound/issues/02` names as the first to come back out if one has to.
+        if (event.type === 'context_compacted') playSound('handoff');
       }),
       window.blobot.onTurns((teamId, turnsThisPrompt) => {
         if (mine(teamId)) dispatch({ type: 'turns', turnsThisPrompt });
@@ -215,6 +230,14 @@ export function App(): React.JSX.Element {
       // the moment it is opened, because status comes with the snapshot.
       window.blobot.onPermission((teamId, request) => {
         if (mine(teamId)) dispatch({ type: 'permission', request, at: Date.now() });
+        // The one notification that ships, and the reason DESIGN.md was amended at all. It fires
+        // only in the case that justified it: **never for a team you are already looking at**, in
+        // a focused window, where the inline block is in the transcript in front of you and the
+        // status word is in the column. A sound there is the same claim twice in one moment.
+        //
+        // This channel receives every team rather than only the open one, which is exactly what
+        // that rule needs, and is why it is expressed here once instead of at a call site.
+        if (!mine(teamId) || !document.hasFocus()) playSound('waiting');
       }),
       window.blobot.onPermissionSettled((teamId, requestId, outcome) => {
         if (mine(teamId)) dispatch({ type: 'permissionSettled', id: requestId, outcome });
@@ -226,7 +249,7 @@ export function App(): React.JSX.Element {
     return () => {
       for (const stop of unsubscribe) stop();
     };
-  }, [refresh]);
+  }, [refresh, playSound]);
 
   /** Open a team, and optionally land on one of its agents once its roster arrives. */
   const openTeam = useCallback((teamId: string, agentId?: string) => {
@@ -375,13 +398,27 @@ export function App(): React.JSX.Element {
             workspacePath={snapshot.team.workspacePath}
             moreAbove={state.moreAbove}
             onLoadEarlier={loadEarlier}
-            onAnswerPermission={(requestId, choice) =>
-              void window.blobot.answerPermission(requestId, choice)
-            }
+            onAnswerPermission={(requestId, choice) => {
+              // Yes rises a fifth and no falls the same fifth: one interval, mirrored. `allow
+              // always` is the rise plus the whispered repeat that means a standing rule was
+              // written, because `allowed` and `allowed_always` are separate values in
+              // `PermissionOutcome` and must not be the same sound.
+              playSound(
+                choice === 'reject'
+                  ? 'reject'
+                  : choice === 'allow_always'
+                    ? 'allowAlways'
+                    : 'allow',
+              );
+              void window.blobot.answerPermission(requestId, choice);
+            }}
             routineArmed={state.routineArmed}
             // The same call the Routines screen makes, which also marks it answered: pressing
             // this is a person deciding, and the two surfaces must not disagree about one row.
             onDisarmRoutine={(routineId) => {
+              // `arm` reversed with its echo removed, and removing it is the statement: the echo
+              // was the part that meant it recurs.
+              playSound('disarm');
               dispatch({ type: 'routineArmed', routineId, armed: false });
               void window.blobot.setRoutineArmed(routineId, false);
             }}
@@ -437,9 +474,13 @@ export function App(): React.JSX.Element {
             /* Where the user just arrived. The composer puts the cursor in the field whenever
                this changes, which is what a click on the rail was for. */
             place={place}
-            onSend={(agentIds, text, attachmentIds) =>
-              void window.blobot.prompt(agentIds, text, attachmentIds)
-            }
+            onSend={(agentIds, text, attachmentIds) => {
+              // The most frequent committed act in the app, and the shortest and quietest sound
+              // in the set because of it. It survives the frequency because it is the one
+              // committed act whose completion nothing else reports once the eye has moved.
+              playSound('send');
+              void window.blobot.prompt(agentIds, text, attachmentIds);
+            }}
             /* The tray under the field, and only in an agent's pane: there it is one branch and
                one possible pull request, which is a sentence that can be true. The team pane's
                answer is N of them, and it is drawn in the activity column instead. Passed as a
@@ -533,7 +574,11 @@ export function App(): React.JSX.Element {
         {inSettings && (
           <Settings
             onClose={() => setInSettings(false)}
-            {...(opened.get('screen') === 'settings:context' ? { section: 'context' as const } : {})}
+            {...(opened.get('screen') === 'settings:context'
+              ? { section: 'context' as const }
+              : opened.get('screen') === 'settings:sound'
+                ? { section: 'sound' as const }
+                : {})}
           />
         )}
         {deletingTeam !== undefined && (

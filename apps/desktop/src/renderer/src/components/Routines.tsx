@@ -4,6 +4,7 @@ import type { UiRoutine, UiRoutineRun, UiRoutineTarget } from '../../../shared/a
 import { lastActive, nextRun } from '../time.js';
 import { Blob } from './Blob.js';
 import { RoutineForm } from './RoutineForm.js';
+import { usePlaySound } from '../sound/useSound.js';
 
 /**
  * Routines: everything that runs on a clock, over the working surface.
@@ -39,6 +40,7 @@ export function Routines({
   /** Which row has its run history open. One at a time, and closed is the resting state. */
   const [showing, setShowing] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
+  const playSound = usePlaySound();
 
   const reload = useCallback(async (): Promise<void> => {
     setRows(await window.blobot.listRoutines());
@@ -166,7 +168,10 @@ export function Routines({
               </button>
               <button
                 className="btn primary"
-                onClick={() => void act(window.blobot.setRoutineArmed(row.id, false))}
+                onClick={() => {
+                  playSound('disarm');
+                  void act(window.blobot.setRoutineArmed(row.id, false));
+                }}
                 disabled={!row.armed}
               >
                 disarm
@@ -189,7 +194,12 @@ export function Routines({
                 open={showing === row.id}
                 onToggleRuns={() => setShowing(showing === row.id ? undefined : row.id)}
                 onEdit={() => setEditing(row.id)}
-                onArm={(armed) => void act(window.blobot.setRoutineArmed(row.id, armed))}
+                onArm={(armed) => {
+                  // The echo in `arm` is the schedule: a thing that will happen more than once.
+                  // `disarm` is the same rise reversed with the echo taken away.
+                  playSound(armed ? 'arm' : 'disarm');
+                  void act(window.blobot.setRoutineArmed(row.id, armed));
+                }}
                 onDelete={() => void act(window.blobot.deleteRoutine(row.id))}
                 onRunNow={() => {
                   setError(undefined);

@@ -680,6 +680,70 @@ Both budgets answer to the same withdrawal rule:
   goes. That block is **last in the stylesheet**, because it and the rules it overrides carry
   the same specificity and order is the only thing deciding them.
 
+## Sound
+
+**Sound is a fourth channel, and it answers to the same two budgets motion does.** *2026-08-31.*
+The effort is `.scratch/sound/`, ten tickets, and the prototype everything here was tuned against
+is `.scratch/sound/prototype.html`.
+
+One test decides which budget a sound belongs to, and there is no third:
+
+> **Did the person cause this sound in the last 200ms by an act they committed?**
+
+- **Yes: it is interaction**, and it cannot interrupt by definition. Admitted on exactly the
+  grounds the second motion budget is admitted on — it runs once, because a person just did
+  something, and is over before the eye gets back to the status column. Eight of them: sending a
+  prompt, the three permission answers, arming and disarming a Routine, deleting a team and
+  deleting it with a full clean.
+- **No: it is notification**, and it can. This is **one event**: an agent is `waiting`, blocked on
+  a permission request, on a team you are not looking at. That exception is bought and not
+  assumed — with nobody listening a permission request is **cancelled, never allowed**, so silence
+  there loses work the user did not choose to lose. It fires **only** in the case that justified
+  it: never for a team already on screen in a focused window, where the inline block and the
+  status word are in front of you and a sound would be the same claim twice in one moment. At most
+  one in any two seconds, **app-wide and not per team**, and the count is never encoded, because
+  the rail already carries who and how many.
+
+**What does not sound**, each refused for its own reason and none of them a matter of taste:
+
+- **A Routine firing.** The rail's unread mark is earned by origin: a turn you did not start is
+  marked, not announced.
+- **A turn ending.** One prompt to four agents ends four turns, which is the failure the ambient
+  motion budget exists to prevent.
+- **Anything navigational** — hover, keystroke, a panel opening. The `@mention` list was refused
+  its open animation on frequency alone and opens silently; frequency is a **harsher** disqualifier
+  for a sound than for a motion, because a sound cannot be looked away from.
+- **Anything outside this window.** No OS notification, no dock badge, no tray. Those are a
+  different feature, and the sentence in the Routines bullet still forbids them.
+
+**One voice for the whole app**, synthesized and never a file, so no two plays are identical. A
+second timbre would be a fourth channel inside a fourth channel, which is the governing colour
+rule's mistake made one channel over: which category a sound belongs to is already carried by what
+the user just did, by where the sound falls relative to their own action, and by the pitch grammar.
+**No per-agent voices** — an agent's identity is its blobatar's colour and its face, and giving
+identity a second channel takes it from the first.
+
+**The grammar is three rules, and it is what makes twelve sounds one system.** Yes rises a fifth
+and no falls the same fifth: one interval mirrored, which is the audio counterpart of the page
+having exactly one inversion, and which lets a rejection be *informative rather than punitive*
+without a buzz. A repeated note at a whisper means **a standing rule was written**, so `arm` and
+`allow always` share it and `disarm` is `arm` with the echo taken away. Consequence goes down and
+takes longer, and the full clean is the only place the range goes below everything else.
+
+**Attention is bought with duration and never with volume.** A notification that is the loudest
+thing in the app breaks the same rule the governing colour rule states. The pitch set is
+pentatonic, so two sounds landing together never clash, which matters because this app has
+fan-out.
+
+**Everything sits behind a switch**, the way everything decorative sits behind
+`prefers-reduced-motion`. There is no `prefers-reduced-sound` to query and **blobot infers
+nothing** — reusing `prefers-reduced-motion` is refused, because it is a signal about a different
+sense and some of the people who set it rely on audio *more*. So the switch is the whole
+accommodation: three of them in Settings, on by default, visible, persistent and remembered, and
+stated rather than consented to. The consequence is a standing constraint with no exceptions:
+**no sound may be the only carrier of its fact.** Every one of the twelve leaves a mark the eye
+can find, and that is the bar a thirteenth has to clear.
+
 ## Words
 
 - **No em dashes** in anything a user reads: UI strings, placeholders, tooltips, demo lines,
@@ -1043,7 +1107,10 @@ One flat file, one flat namespace, no build step between it and the DOM.
   status quo would read as the agent asking permission. It was not asking. Once answered the
   block **stays and says `disarmed`** rather than vanishing — the transcript is a record of what
   happened here, and a block that disappeared would take the fact that an agent scheduled
-  anything with it. blobot still never interrupts: no notification, no badge, no sound.
+  anything with it. blobot still never interrupts: no notification, no badge, no sound. *That last
+  clause is about this bullet's own subject and was never an app-wide prohibition on audio, which
+  was not on the table when it was written; see **Sound** below, and `.scratch/sound/issues/01`. A
+  Routine firing still makes no sound, refused by name.*
   **The schedule is three shapes and a time, never an expression**, and the word `cron` appears
   nowhere: the runaway case is not bounded, it is not offered. Where the shape is chosen it says
   **what the shape costs, as a count of firings** (`every day at 09:00 · 1 firing a day`) — a
