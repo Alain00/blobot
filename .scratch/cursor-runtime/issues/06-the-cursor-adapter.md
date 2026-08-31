@@ -1,5 +1,5 @@
 Type: task
-Status: open
+Status: resolved
 Blocked by: 01, 02, 03, 04, 05, 07, 08
 
 # The Cursor adapter
@@ -73,3 +73,35 @@ orchestrator's mailbox; a mixed team runs a turn each on two runtimes; and
 offered — the door contradicts the docs and must fail by name if a release closes it), the
 **sandbox does not break the loopback** to `127.0.0.1`, the git-split allow syntax, the
 extension reply shapes, and the same live-edit title assertion the other four runtimes make.
+
+## Answer
+
+Built and verified live, 2026-08-31, on `feat/cursor-runtime`. Everything the body ordered is
+in `packages/core/src/adapters/cursor/` plus the wiring named under "Outside it"; typecheck,
+tests (742 core + 450 desktop) and build pass; a two-axis review ran before the live phase
+(`build.md` records what it changed). The done-when list, spent with the author's
+authorization:
+
+- **The live suite** (`BLOBOT_LIVE_CURSOR=1`, seven tests, all passing): the persona holds on
+  a real turn; a workspace edit runs **without prompting** under `normal` and the shared layer
+  titles it `notes.txt` — no fx-style repair owed; **the git split is real**: `git status` ran
+  unasked and `git push origin main` raised a permission request; **the canary**: a
+  `session/new`-supplied server's tool was offered and called through the enabled sandbox to
+  `127.0.0.1`, arriving under the agent's own bearer token with no prompt (`Mcp(blobot:*)`);
+  the model lever verified — `session/set_config_option` applied `grok-4.6` and the session
+  reports it; a turn inviting `create_plan` ended cleanly instead of hanging.
+- **Two real Cursor agents on one team** (`--live-cursor=<dir>`): both ready, both handshaked
+  the loopback with their own token, the mailbox carried messages **in both directions**, Bob
+  recorded Handbook entries, Alice edited `retry.ts +83 -5`, and a compound
+  `git add … && git commit` drew ticket 14's inline permission block — a compound matches no
+  prefix rule, so it asks, which is the safe direction working on screen.
+- **The mixed team** (`--live-cursor-mixed=<dir>`): a Claude lead and a Cursor teammate
+  exchanged messages both ways about a real file, and the Cursor pair from the earlier run
+  **resumed through `session/load`** when the pool restored it — sessions live in the per-agent
+  config dir, as ticket 01 measured.
+
+One deviation from this body, measured and recorded in `build.md`: `sandbox.networkAccess`'s
+canonical value is `allow_all` (the CLI rewrote `enabled` on first start), so blobot writes
+the vendor's own word. The extension reply shapes remain verified only to the hanging half —
+neither method has been observed firing on the wire — which stays a note on ticket 04's
+answer, not a blocker.

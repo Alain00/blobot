@@ -47,10 +47,14 @@ handoff.
   future cross-runtime effort; the measured `mcp disable` door is its inventory.
 - [Where the persona goes](issues/08-where-the-persona-goes.md):
   Rides the prompt every turn, fx's shape. Config-dir rules measured unread; `AGENTS.md` refused.
+- [The Cursor adapter](issues/06-the-cursor-adapter.md):
+  Built and verified live on `feat/cursor-runtime` — the full done-when spent: the seven-test
+  live suite, two Cursor agents messaging both ways, and a mixed Claude+Cursor team. The map
+  is complete and the effort is closed.
 
 ## Not yet specified
 
-(nothing — the frontier is empty; ticket 06 is the execution handoff)
+(nothing — the frontier is empty and every ticket is resolved; the effort is closed)
 
 ## Out of scope
 

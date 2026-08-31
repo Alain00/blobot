@@ -33,20 +33,24 @@ all pass. The map (`map.md`) stays the decision index; every resolution held und
 - The `initialize` result carries **no `agentInfo`** (measured), so the adapter's version
   report usually says nothing; detection reads `cursor-agent --version` instead.
 
-## What is NOT yet done
+## Verified live, 2026-08-31 (night), with the author's authorization
 
-1. **The live done-when suite has not run.** `BLOBOT_LIVE_CURSOR=1 pnpm --filter @blobot/core
-   exec vitest run src/adapters/cursor/live.test.ts` spends real turns on the user's Cursor
-   subscription (~5 turns) — ask before running. It covers: persona/streaming/mode, the edit
-   title (and whether Cursor populates `locations` or an fx-style repair is owed), the
-   **git-split allow syntax** (ticket 03 orders fallback to git-wholly-unlisted if it fails),
-   the **loopback canary** (ticket 02; the door contradicts the docs), sandbox-versus-loopback,
-   and the palette. Extension reply shapes verify opportunistically (a wrong shape hangs a turn
-   into its timeout).
-2. **Two Cursor agents on one team** (`--live-cursor=<dir>`) and **the mixed team**
-   (`--live-cursor-mixed=<dir>`) — the rest of ticket 06's done-when.
-3. Close ticket 06 (`Status: resolved`) once the live suite passes, then **open a fresh PR**
-   from `feat/cursor-runtime` to `main` — never a push to PR #1.
+Everything that was pending ran and passed. The seven-test live suite (`BLOBOT_LIVE_CURSOR=1`):
+persona, unprompted vouched edit titled by the shared layer (no fx-style repair owed), **the
+git split real on the wire** (`git status` unasked, `git push` prompted), the loopback canary
+through the enabled sandbox with the per-agent token and no prompt, the model lever
+(`set_config_option` applied and reported `grok-4.6`), and a `create_plan`-inviting turn that
+ended instead of hanging. Then `--live-cursor=`: two real Cursor agents, mailbox both ways,
+Handbook entries, a real edit, and a compound `git add && git commit` drawing the inline
+permission block (a compound matches no prefix rule — the safe direction on screen). Then
+`--live-cursor-mixed=`: Claude lead and Cursor teammate exchanging messages both ways, and the
+earlier Cursor pair **resuming via `session/load`** when the pool restored it. One canonical
+correction from the free smoke: `sandbox.networkAccess` is written as `allow_all`, the CLI's
+own word. Ticket 06 is resolved; the map is closed.
+
+Two scratch teams from those runs (`team-cursor`, `team-mixed`) remain in the app's own
+database pointing at throwaway workspaces; delete them from the rail when convenient — the
+delete flow removes their worktrees under `~/.local/share/blobot/worktrees/`.
 
 ## Reviewed, 2026-08-31
 
