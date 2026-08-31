@@ -49,8 +49,23 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
   one. A file that is already in the Workspace is not an Attachment — the Agent opens it itself.
 - **Envelope** — the framing wrapped around a peer Message: sender, their role, their optional
   context line, and the note that a peer carries no operator authority.
+- **Handbook** — what an Agent knows about *this team's* work. Held at `<team>/<agent>`, the
+  same identity the AgentWorkspace branch is named for and a Routine belongs to. Made of
+  **entries**, folded into the Persona, and read and edited in the Agent's own pane. The
+  counterpart to Standing instructions and the contrast is the whole of the word: **standing
+  instructions are about the person and travel with them; a Handbook is about the work and stays
+  with the team.** Nobody takes a handbook with them to a new job. It survives its Agent being
+  removed from the roster and dies with the Team. See `.scratch/handbooks/`.
+- **Entry** — one thing in a Handbook. Written by the user briefing the Agent, or by the Agent
+  itself, which discloses every one inline in the turn that made it. Not a *fact*: an Agent
+  recording something it inferred is not asserting one.
+- **To brief** — the act. An Agent with an empty Handbook is **unbriefed**, which puts a control
+  in its pane that starts the conversation. *Unbriefed is not a Status*: Status is the fold over
+  the event stream, derived in memory and never persisted, and being unbriefed is not an
+  activity. It never folds into a StatusWord.
 - **Standing instructions** — what is true of an AgentProfile on *every* team it is on. Folded
-  into its Persona, and said as such, so it is never mistaken for this team's framing.
+  into its Persona, and said as such, so it is never mistaken for this team's framing — which is
+  the **Handbook**, and is the thing that sentence was written before there was.
 - **Persona** — an Agent's system prompt. Carries the static facts about its situation (role,
   Workspace, AgentWorkspace path, roster, the rules). Adapter-owned.
 - **Mailbox** — an Agent's queue of undelivered Messages. Delivered as one prompt when the Agent
@@ -105,5 +120,13 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
 - **"Authenticated"** for runtime detection — the probe cannot prove a credential works. Say
   *Ready*, *Needs sign-in*, *Not installed*, or *Status unknown*.
 - **"done"** as an Agent Status — it was dropped; an Agent that finishes a Turn is *idle*.
+- **"Context"** for a Handbook — the context window, this file, and the `CONTEXT` block on screen
+  are three existing meanings already.
+- **"Memory"**, and *remembers*, *learns*, *training* — for a Handbook. It promises persistence
+  blobot does not give (a Handbook dies with its Team and travels to no other), and it borrows a
+  vendor's word for what is a persona block, implying the Agent itself is changed rather than
+  told something. **The exception is the user's own mouth**: *remember that* is a plain
+  instruction to an Agent and must keep working. It is wrong in blobot's mouth, on screen or in a
+  persona, and never wrong in theirs.
 - **"Cron"** — it names a mechanism blobot does not implement and promises a guarantee it cannot
   keep: a Routine does not fire while the app is closed, and a missed firing is never run late. Say *Routine*, and say *every day at 09:00* rather than a schedule expression.

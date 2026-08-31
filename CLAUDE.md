@@ -474,9 +474,35 @@ up. Read it before starting work.
   `attachment:` uri as *project instructions*, asking for an absolute local path, which is the
   thing ADR-0004 refuses, while reading the content block regardless.
 
-Next: surfacing whether an agent resumed or started fresh, and a ticket for fx's diagnostics in
-the message voice.
-`build.md`'s *Next session* has the order and the reasons.
+- **Handbooks are planned, and nothing is built.** `.scratch/handbooks/`, ten tickets, all
+  resolved, frontier empty. A **Handbook** is what an Agent knows about *this team's* work, held at
+  `<team>/<agent>` — the identity the AgentWorkspace branch is named for and a Routine belongs to,
+  and the one thing that grain never held. Standing instructions are about the person and travel
+  with them; a Handbook is about the work and stays with the team, and nobody takes a handbook to a
+  new job. Made of **entries**, folded into the Persona immediately **before** standing
+  instructions, so the layout states the precedence and an entry the agent wrote never outranks a
+  sentence the user wrote. It is **elicited, not authored**: an unbriefed agent's pane carries a
+  notice card above the composer, and *brief her* starts a turn whose first words are the agent's
+  own, because **there is no third party in the room** — the author's own correction, and the rule
+  that killed a `system` line naming blobot. Agents add to their own with `record_entry`, which
+  takes a **list** (a Routine proposal is a commitment and an entry is a note, so the one-per-turn
+  cap that makes the first safe would make briefing take five turns), records **durable and not in
+  the files**, and discloses every write inline in `Compaction`'s collapsed shape. **No new mark on
+  the rail**: that mark is earned by origin, so a turn you started is not unread and a Routine run
+  already marks the row. An agent may **withdraw an entry it authored as `noticed`** — the seam
+  where *no rewriting its own Handbook* was narrowed, on the grounds that the load-bearing words
+  were *freely* and *off screen* — and never a `told` one. Bounded at 1,000 and 8,000 characters,
+  **provisional**, refused at the boundary and never truncated; the whole-Handbook refusal is the
+  first in the app whose fix belongs to somebody who is not in the room, which is why it is the
+  only one that leaves it. **Measured live on all four runtimes**: an empty prompt is refused by fx
+  (`-32602`), accepted gracefully by Claude and Codex, and **confabulated on by OpenCode**, which
+  invented a task and went reading files. So the control sends a minimal instruction on the wire
+  that is never drawn. And an empty turn is not a free turn: ~36,000 tokens of cached prefix for
+  seventeen output tokens. `.scratch/handbooks/build.md` has the build order and what will bite.
+
+Next: building Handbooks, starting at the store, `.scratch/handbooks/build.md`. Then surfacing
+whether an agent resumed or started fresh, and a ticket for fx's diagnostics in the message voice.
+Each effort's `build.md` has the order and the reasons.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that
 reproduces every observed trap on purpose — ragged deltas, a cancelled tool reporting

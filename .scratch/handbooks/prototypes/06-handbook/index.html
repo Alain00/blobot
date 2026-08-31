@@ -1,0 +1,251 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Handbook — where it is read and edited</title>
+<style>
+:root{
+  --recessed:#060608; --ground:#0a0a0b; --tray:#0e0e10; --raised:#131315;
+  --ink:#fafaf8; --muted:#8a8a93; --line:#232327;
+  --sans:'Geist',ui-sans-serif,system-ui,sans-serif;
+  --mono:'Geist Mono',ui-monospace,'SF Mono',monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px}
+.page{max-width:1180px;margin:0 auto;padding:40px 28px 80px}
+h1{font-size:18px;font-weight:500;margin:0 0 4px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 34px;max-width:76ch;line-height:1.6}
+.mono{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+section{margin:0 0 46px}
+.shead{display:flex;align-items:baseline;gap:12px;margin:0 0 6px}
+.snote{color:var(--muted);font-size:12.5px;line-height:1.65;max-width:74ch;margin:0 0 18px}
+
+/* ---- the pane: transcript ground, composer, tray ---- */
+.pane{background:var(--ground);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.panetop{padding:22px 26px 4px;min-height:96px}
+.msg{max-width:62ch;line-height:1.65;font-size:13.5px}
+.msg.agent{color:var(--ink)}
+.msg.you{background:var(--raised);border-radius:12px;padding:9px 13px;display:inline-block;font-size:13.5px}
+.who{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.blob{width:20px;height:20px;border-radius:50%;background:linear-gradient(150deg,#e0a44c,#c2603f);display:inline-block;vertical-align:-5px;margin-right:8px}
+.blob.b{background:linear-gradient(150deg,#5aa9c8,#3f6fc2)}
+
+.composerwrap{padding:0 26px 26px;position:relative}
+.composer{background:var(--raised);border:1px solid var(--line);border-radius:22px;padding:11px 8px 11px 18px;display:flex;align-items:center;gap:10px;position:relative;z-index:1}
+.composer .ph{color:var(--muted);flex:1;font-size:13.5px}
+.circle{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto}
+.circle.add{background:transparent;color:var(--muted);border:0;font-size:17px}
+.circle.send{background:color-mix(in srgb,var(--ink) 14%,transparent);color:var(--muted)}
+.tray{margin:-25px 22px 0;background:color-mix(in srgb,var(--tray) 88%,transparent);border:1px solid var(--line);border-top:0;border-radius:0 0 14px 14px;padding:28px 14px 7px;display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--muted)}
+.trayL{display:flex;align-items:center;gap:10px}
+.trayR{margin-left:auto;display:flex;align-items:center;gap:10px}
+.flat{background:none;border:0;color:var(--muted);font:inherit;font-size:11.5px;padding:3px 6px;border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.flat:hover{background:var(--raised);color:var(--ink)}
+.flat.on{color:var(--ink)}
+.sep{color:var(--line)}
+.add{color:#8fbf8f}.del{color:#c98b8b}
+
+/* ---- the handbook panel ---- */
+.hb{margin:-25px 22px 0;background:var(--raised);border:1px solid var(--line);border-top:0;border-radius:0 0 14px 14px;padding:30px 16px 14px}
+.hbhead{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}
+.hbnote{color:var(--muted);font-size:11.5px;line-height:1.6;margin:0 0 13px;max-width:66ch}
+.entries{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.entry{background:var(--ground);border-radius:12px;padding:10px 12px;display:flex;gap:12px;align-items:flex-start;font-size:13px;line-height:1.55}
+.entry .txt{flex:1}
+.entry .meta{font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);white-space:nowrap;padding-top:2px}
+.entry .x{opacity:0;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding-top:2px}
+.entry:hover .x{opacity:1}
+.hbfoot{display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+
+/* ---- the invitation, two versions ---- */
+.invite{padding:16px 0 4px;max-width:64ch}
+.invite p{margin:0 0 12px;color:var(--muted);font-size:13px;line-height:1.65}
+.btn{background:var(--ink);color:#0a0a0b;border:0;border-radius:999px;padding:8px 15px;font:inherit;font-size:13px;cursor:pointer}
+.btn.sec{background:var(--raised);color:var(--ink);border:1px solid var(--line)}
+.refusal{border-left:2px solid var(--ink);padding:8px 0 8px 12px;font-size:13px;color:var(--muted);max-width:62ch;line-height:1.6}
+
+
+/* ---- C: the notice card above the composer ---- */
+/* Width is the composer's: this sits inside .composerwrap, which already pads 26px, so it
+   takes no horizontal margin of its own. The card is the composer's own notice and any inset
+   of its own would say it is a separate thing on the page. */
+.hbnotice{background:var(--raised);border:1px solid var(--line);border-radius:14px;padding:12px 12px 12px 15px;display:flex;align-items:center;gap:14px;margin:0 0 9px}
+.hbnotice .hbnbody{flex:1;min-width:0}
+.hbnotice .hbnt{font-size:13.5px;color:var(--ink);margin-bottom:3px}
+.hbnotice .hbnd{font-size:12.5px;color:var(--muted);line-height:1.5}
+/* Named for what it belongs to, not for what it contains. This slot was `.act`, which is the
+   activity column's class in section 4 of this same file: it inherited --recessed and 18px of
+   padding and drew a box round the button. DESIGN.md's stylesheet rule, demonstrated. */
+.hbnotice .hbnact{flex:0 0 auto}
+.btn.sm{padding:6px 12px;font-size:12.5px}
+
+/* ---- activity column ---- */
+.cols{display:grid;grid-template-columns:1fr 232px;gap:0;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.act{background:var(--recessed);padding:18px 16px;display:flex;flex-direction:column;gap:20px}
+.actblock .mono{display:block;margin-bottom:10px}
+.gauge{display:flex;align-items:center;gap:9px;margin-bottom:9px;font-size:12px}
+.ring{width:22px;height:22px;border-radius:50%;background:conic-gradient(var(--ink) 0 38%,var(--line) 38% 100%);flex:0 0 auto;position:relative}
+.ring::after{content:'';position:absolute;inset:5px;border-radius:50%;background:var(--recessed)}
+.brk{font-size:11px;color:var(--muted);line-height:1.75}
+.stub{background:var(--ground);height:100%;padding:20px;color:var(--muted);font-size:12.5px}
+.ab{display:flex;gap:22px;flex-wrap:wrap}
+.ab > div{flex:1 1 440px;min-width:0}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:2px 6px}
+</style>
+<div class="page">
+
+<h1>Handbook — where it is read and edited</h1>
+<p class="sub">Prototype for <b>The screen</b>. Dark-only, tokens from DESIGN.md. The constraint that shaped
+it: the tray under the composer says <i>everything on it is a live number or a door, and nothing on it is a
+description</i>. A Handbook is prose, so it cannot sit on the tray. Only a door to it can, which is what
+<span class="mono">handbook · 4</span> is below.</p>
+
+<!-- 1 -->
+<section>
+  <div class="shead"><span class="mono">1 · unbriefed</span><span class="tag">empty state</span></div>
+  <p class="snote">Mara has just joined team Vlue. Her Handbook is empty, so the tray carries the door in its
+  unbriefed form. This is the only place in the app that teaches the feature exists.</p>
+  <div class="pane">
+    <div class="panetop"><div class="msg" style="color:var(--muted);font-size:13px">Nothing here yet.</div></div>
+    <div class="composerwrap">
+      <div class="composer"><span class="circle add">+</span><span class="ph">Message Mara</span><span class="circle send">↑</span></div>
+      <div class="tray">
+        <span class="trayL"><span class="flat" style="cursor:default">clean</span><span class="sep">·</span><span class="flat">commit</span></span>
+        <span class="trayR"><button class="flat on">handbook · unbriefed</button><span class="sep">·</span><span class="flat">blobot/vlue/mara</span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section>
+  <div class="shead"><span class="mono">2 · the invitation</span><span class="tag">two versions, pick one</span></div>
+  <p class="snote">Pressing the door on an unbriefed agent opens this. The control sends nothing into the
+  transcript: it starts a turn, and the agent's persona already knows what to do with a turn that arrives
+  with no work in it.</p>
+  <div class="ab">
+    <div>
+      <div class="mono" style="margin-bottom:8px">A · in the panel</div>
+      <div class="pane">
+        <div class="panetop"><div class="msg" style="color:var(--muted);font-size:13px">Nothing here yet.</div></div>
+        <div class="composerwrap">
+          <div class="composer"><span class="circle add">+</span><span class="ph">Message Mara</span><span class="circle send">↑</span></div>
+          <div class="hb">
+            <div class="hbhead"><span class="mono">handbook</span><span style="color:var(--muted);font-size:11.5px">empty</span></div>
+            <div class="invite">
+              <p>Mara has not been told anything about this team's work. What you tell her here stays with
+              Vlue and does not follow her to her other teams.</p>
+              <button class="btn">brief her</button>
+              <button class="btn sec" style="margin-left:8px">not now</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="mono" style="margin-bottom:8px">B · one line, no panel</div>
+      <div class="pane">
+        <div class="panetop"><div class="msg" style="color:var(--muted);font-size:13px">Nothing here yet.</div></div>
+        <div class="composerwrap">
+          <div class="composer"><span class="circle add">+</span><span class="ph">Message Mara</span><span class="circle send">↑</span></div>
+          <div class="hb" style="padding-bottom:11px">
+            <div class="refusal" style="margin-top:4px">Mara has not been told anything about this team's
+            work. <b style="color:var(--ink);font-weight:500">brief her</b> to start, or just give her
+            something to do.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="shead"><span class="mono">2c · the notice card</span><span class="tag">above the composer</span></div>
+  <p class="snote">A card sitting on top of the composer rather than in the tray under it. It states a fact
+  about the agent and carries its one action at the right. It is a closed shape, so by DESIGN.md it takes a
+  hairline and a raised ground and never an ink edge, and it says what it is in words rather than with a
+  colour. Nothing on it is saturated.</p>
+  <div class="pane">
+    <div class="panetop"><div class="msg" style="color:var(--muted);font-size:13px">Nothing here yet.</div></div>
+    <div class="composerwrap">
+      <div class="hbnotice">
+        <div class="hbnbody">
+          <div class="hbnt">Mara has not been briefed</div>
+          <div class="hbnd">She knows nothing about this team's work yet. What you tell her stays with Vlue.</div>
+        </div>
+        <div class="hbnact"><button class="btn sec sm">brief her</button></div>
+      </div>
+      <div class="composer"><span class="circle add">+</span><span class="ph">Message Mara</span><span class="circle send">↑</span></div>
+      <div class="tray">
+        <span class="trayL"><span class="flat" style="cursor:default">clean</span><span class="sep">·</span><span class="flat">commit</span></span>
+        <span class="trayR"><button class="flat">handbook</button><span class="sep">·</span><span class="flat">blobot/vlue/mara</span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section>
+  <div class="shead"><span class="mono">3 · briefed</span><span class="tag">the list</span></div>
+  <p class="snote">Four entries, two from the interview and two the agent recorded later. Author and age are
+  the only metadata an entry carries. Removal is the user's, on hover. The door on the tray now reads
+  <span class="mono">handbook · 4</span>, and the panel is shut until pressed.</p>
+  <div class="pane">
+    <div class="panetop">
+      <div class="who"><span class="blob"></span>Mara</div>
+      <div class="msg agent">That is everything I need for now. I have written down four things so I still
+      have them next session.</div>
+    </div>
+    <div class="composerwrap">
+      <div class="composer"><span class="circle add">+</span><span class="ph">Message Mara</span><span class="circle send">↑</span></div>
+      <div class="hb">
+        <div class="hbhead"><span class="mono">handbook</span><span style="color:var(--muted);font-size:11.5px">4 entries</span></div>
+        <p class="hbnote">What Mara has been told about this team's work. It does not follow her to her
+        other teams. Changes here reach her when the team next starts.</p>
+        <div class="entries">
+          <div class="entry"><span class="txt">Vlue sells a scheduling tool to clinic managers, not to
+          clinicians. The buyer is the person who owns the rota.</span><span class="meta">you · 2d</span><span class="x">×</span></div>
+          <div class="entry"><span class="txt">Tone is plain and unexcited. No exclamation marks, and never
+          the word "seamless".</span><span class="meta">you · 2d</span><span class="x">×</span></div>
+          <div class="entry"><span class="txt">Legal reviews any copy that names a competitor, and needs 24
+          hours.</span><span class="meta">mara · 2d</span><span class="x">×</span></div>
+          <div class="entry"><span class="txt">Launch copy ships Fridays, because the client reviews on
+          Thursday.</span><span class="meta">mara · 4h</span><span class="x">×</span></div>
+        </div>
+        <div class="hbfoot"><span>1,240 of 8,000 characters</span><span class="sep">·</span><span class="flat">add one</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section>
+  <div class="shead"><span class="mono">4 · the team pane</span><span class="tag">does it appear at all?</span></div>
+  <p class="snote">WORKSPACE is drawn twice, and in the team pane it becomes a block in the activity column
+  because one branch name would be false about the other members. A Handbook has the same problem and may
+  have a different answer: four Handbooks do not fold into one the way four statuses fold into a StatusWord.
+  Drawn here as the recommendation, which is that it does not appear as a body, only as a figure under the
+  gauge that already counts what blobot injects.</p>
+  <div class="cols">
+    <div class="stub">the team transcript</div>
+    <div class="act">
+      <div class="actblock">
+        <span class="mono">context</span>
+        <div class="gauge"><span class="ring"></span><span><span class="blob"></span>Mara</span><span style="margin-left:auto;color:var(--muted)">38%</span></div>
+        <div class="brk">
+          peer messages · ~310<br>
+          handbook · ~340<br>
+          attachments · 2 · 480 KB · sent this session
+        </div>
+      </div>
+      <div class="actblock">
+        <span class="mono">workspace</span>
+        <div class="brk">
+          mara · <span class="add">+412</span> <span class="del">−7</span> · #218<br>
+          bob · clean · no pull request
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
