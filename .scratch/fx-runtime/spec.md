@@ -95,7 +95,12 @@ All five resolved, 2026-08-31.
 - `04` Provider is a config option, and it is account-wide. **The choice is per session, the login
   is account-wide, and *signed in* is not the same as *able to run*.**
 - `05` The adapter itself. **Built, and the shared ACP layer took a fourth-party runtime with one
-  edit.**
+  edit.** Finished 2026-08-31: two real fx agents on one team behind the UI messaging each other
+  both ways (`--live-fx=`, and `--live-fx-mixed=` beside a Claude agent), and the first live
+  attachment against any runtime, which fx is the right one to spend because it is the only one
+  that says no to images. Two findings on the ticket, neither blobot's doing: fx writes its own
+  diagnostics into the agent message stream, where they draw in the agent's voice, and it declines
+  the `attachment:` uri as *project instructions* while reading the block anyway.
 
 ## Out of scope
 

@@ -893,6 +893,11 @@ textarea.field{resize:vertical;line-height:1.5}
 .btn[disabled]:hover{border-color:var(--line)}
 /* The one armed action on the page, inverted exactly like the composer's send. */
 .btn.primary:not([disabled]){background:var(--ink);color:var(--ground);border-color:var(--ink)}
+/* And unarmed it is the same control turned down, which is DESIGN.md's *a disabled primary keeps
+   its fill* — written for the composer's send on 2026-08-31 and never applied here, so the
+   commit popover's own button faded to 40% of a secondary and read as a third, broken kind of
+   button. Keep the shape, step the fill down the ramp, drop the border, mute the word. */
+.btn.primary[disabled]{opacity:1;background:color-mix(in srgb, var(--ink) 17%, transparent);border-color:transparent;color:var(--muted)}
 .iconbtn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);color:var(--muted);flex:0 0 auto;scale:1;transition:scale 160ms var(--ease-out)}
 .iconbtn:hover{color:var(--ink);border-color:var(--muted)}
 .iconbtn:active{scale:.97}
@@ -1423,7 +1428,11 @@ button.listrow:not(.pick):hover{outline:1px solid var(--line);outline-offset:-1p
    as controls inside a control, so the resting state is a line of facts and the hover ground is
    what says some of them are doors. The negative margin keeps the resting state aligned with
    type while the ground still has padding to draw. */
-.wsflat{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted);background:transparent;border:0;border-radius:7px;padding:3px 7px;margin:-3px -7px;cursor:pointer}
+/* Fully round, because the ground it lifts to is a *filled* shape, and every filled shape here
+   is round: `.btn`, the composer's send, the `waiting` pill. A 7px corner under the word `commit`
+   was the tray quietly inventing a fourth radius, and it read as a square patch behind type
+   rather than as a control the row had always contained. */
+.wsflat{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted);background:transparent;border:0;border-radius:999px;padding:3px 9px;margin:-3px -9px;cursor:pointer}
 .wsflat + .wsflat{margin-left:3px}
 .wsflat:hover,.wsflat[data-state='open']{background:var(--raised);color:var(--ink)}
 .wsflat svg{color:var(--muted);flex:0 0 auto}
@@ -1454,7 +1463,7 @@ button.listrow:not(.pick):hover{outline:1px solid var(--line);outline-offset:-1p
 
    Negative margins so the hover ground can have padding without the row shifting when it is not
    showing: the resting state has to line up with type, and the ground is drawn around it. */
-.wsbranchpick{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink);background:transparent;border:0;border-radius:7px;padding:3px 7px;margin:-3px -7px;cursor:pointer;max-width:340px;overflow:hidden;white-space:nowrap}
+.wsbranchpick{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink);background:transparent;border:0;border-radius:999px;padding:3px 9px;margin:-3px -9px;cursor:pointer;max-width:340px;overflow:hidden;white-space:nowrap}
 .wsbranchpick:hover,.wsbranchpick[data-state='open']{background:var(--raised)}
 /* The two glyphs stay muted at rest and come up with the row, so the name is the thing being
    read and the chevron is the thing being offered. */
@@ -1491,17 +1500,42 @@ button.listrow:not(.pick):hover{outline:1px solid var(--line);outline-offset:-1p
    rather than the per-primitive alias, because one class here is worn by a Select's content and
    a Popover's both, and the popper variable is the one all of them set on the content element
    itself. */
-.wspop{transform-origin:var(--radix-popper-transform-origin);animation:enterpop 140ms var(--ease-out);width:420px;max-width:calc(100vw - 24px);background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.45);z-index:20}
-.wspublish{display:flex;flex-direction:column;gap:8px}
-.wstitle{width:100%;background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-family:var(--sans);font-size:12px;color:var(--ink)}
+/* A column with a gap in it, which it was not: the field, the commands and the buttons were
+   three children stacked with nothing between them, so the input's bottom border and the plan's
+   top border met and read as one badly drawn box. The gap is the popover's own, not each
+   child's, so anything added here inherits the spacing instead of remembering it. */
+.wspop{transform-origin:var(--radix-popper-transform-origin);animation:enterpop 140ms var(--ease-out);display:flex;flex-direction:column;gap:10px;width:420px;max-width:calc(100vw - 24px);background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:0 10px 30px rgba(0,0,0,.45);z-index:20}
+.wspublish{display:flex;flex-direction:column;gap:10px}
+/* What the commit takes, at the head of the popover: the same two numbers the tray already
+   shows, restated where the decision is made, so the button underneath can be one word instead
+   of a label that grows by a word per file. Ink for the count, because it is the subject. */
+.wshead{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.wshead .wschurn{font-size:12px}
+.wsfiles{font-family:var(--mono);font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+/* The point of the popover, so it is sized like one: `.field`'s padding rather than the five
+   pixels it had, which made the one thing being typed into the smallest thing in the panel. */
+.wstitle{width:100%;background:var(--ground);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-family:var(--sans);font-size:12.5px;color:var(--ink)}
+.wstitle::placeholder{color:var(--muted)}
 .wstitle:focus{border-color:var(--muted);outline:none}
 .wsdraft{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted)}
 /* The commands themselves, not a description of them. The user is agreeing to what they would
    have pasted, which is `detect/remedies.ts`'s rule for the other place blobot runs a vendor
    CLI on their behalf. */
-.wsplan{font-family:var(--mono);font-size:10.5px;color:var(--muted);background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:6px 8px;word-break:break-all}
+/* Recessed rather than bordered, and one line per command with a prompt in the gutter. The
+   border made a second box under the field's box; the ground alone says *this is quoted from
+   somewhere else*, which is what `--recessed` means everywhere here, and the `$` says the
+   somewhere else is a shell. `break-word` and not `break-all`, because a command broken
+   mid-flag is a command the reader has to reassemble before they can agree to it. */
+.wsplan{display:flex;flex-direction:column;gap:3px;font-family:var(--mono);font-size:10.5px;line-height:1.5;color:var(--muted);background:var(--recessed);border:0;border-radius:9px;padding:8px 10px;overflow-wrap:break-word}
+.wscmd{display:flex;gap:8px}
+.wscmd::before{content:'$';color:color-mix(in srgb, var(--muted) 55%, transparent);flex:0 0 auto}
 .wsfailed{font-family:var(--mono);font-size:10.5px;color:var(--ink)}
-.wsactions{display:flex;gap:8px;justify-content:flex-end}
+/* The keyboard path sits at the far end of the same row as the buttons, where it is read once
+   and then never again, rather than under the field where it would be a line of prose in a
+   panel whose only prose is the placeholder. */
+.wsactions{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-top:2px}
+.wshint{margin-right:auto;font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.wsactions .btn{padding:6px 14px;font-size:12.5px}
 
 /* The top of the loaded window.
 

@@ -170,6 +170,15 @@ function Churn({ churn }: { churn: UiChurn | undefined }): React.JSX.Element | n
  * is halfway through writing, and the resulting commit is not a state anything was ever in. The
  * control says so rather than disappearing, because a control that vanishes while an agent
  * happens to be thinking reads as a bug.
+ *
+ * *Redrawn 2026-08-31.* Three children stacked with no gap between them, so the field's border
+ * met the plan's border and the panel read as one badly drawn box; the count lived inside the
+ * button's label, where a live number set the width of a control; and the button, unarmed, wore
+ * 40% of a secondary, which is the fade DESIGN.md's *a disabled primary keeps its fill* was
+ * written against. Now: the numbers at the head, where the decision is made; the field at the
+ * size of the thing the popover exists for; the commands quoted out of `--recessed` with a
+ * shell prompt in the gutter rather than boxed a second time; and one word on a button that
+ * stays a shape when it is off. Enter commits, because nothing else in here takes a keystroke.
  */
 function CommitButton({
   teamId,
@@ -203,7 +212,10 @@ function CommitButton({
 
   if (churn === undefined || (churn.added === 0 && churn.removed === 0)) return null;
 
+  const armed = !running && message.trim() !== '';
+
   const go = (): void => {
+    if (!armed) return;
     setRunning(true);
     setFailed(undefined);
     void window.blobot
@@ -225,38 +237,62 @@ function CommitButton({
         if (!next) setFailed(undefined);
       }}
     >
-      <Popover.Trigger className="wsflat" disabled={busy} title={busy ? 'this agent is working' : 'commit what is here'}>
+      <Popover.Trigger
+        className="wsflat"
+        disabled={busy}
+        title={busy ? 'this agent is working' : 'commit what is here'}
+      >
         <GitCommitHorizontal size={11} aria-hidden />
         commit
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content className="wspop" side="top" align="start" sideOffset={8} collisionPadding={12}>
+        <Popover.Content className="wspop" side="top" align="start" sideOffset={10} collisionPadding={12}>
+          {/* What the commit would take, restated at the head of the panel. It was carried by
+              the button's own label (`commit 1 file`), which put a live number inside the width
+              of a control and left the panel opening on a field with nothing above it saying
+              what it was about. The figure belongs beside the thing it describes; the button
+              underneath is one word at every count. */}
+          <div className="wshead">
+            <span className="wschurn">
+              <span className="wsadd">+{churn.added}</span>
+              <span className="wsdel">−{churn.removed}</span>
+            </span>
+            <span className="wsfiles">
+              {churn.files} file{churn.files === 1 ? '' : 's'}
+            </span>
+          </div>
           <input
             className="wstitle"
             placeholder="what this commit does"
             value={message}
             onChange={(event) => setMessage(event.target.value)}
+            // The field is the whole popover, so the key that finishes a field finishes this.
+            // Nothing else in here takes a keystroke, and reaching for the mouse to press the
+            // button beside a message you just typed is the gesture this saves.
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter' || !armed) return;
+              event.preventDefault();
+              go();
+            }}
             autoFocus
           />
           {plan.length > 0 && (
             <div className="wsplan">
               {plan.map((command) => (
-                <div key={command}>{command}</div>
+                <div className="wscmd" key={command}>
+                  {command}
+                </div>
               ))}
             </div>
           )}
           {failed !== undefined && <div className="wsfailed">{failed}</div>}
           <div className="wsactions">
+            {armed && <span className="wshint">enter to commit</span>}
             <button type="button" className="btn" onClick={() => setOpen(false)} disabled={running}>
               cancel
             </button>
-            <button
-              type="button"
-              className="btn primary"
-              onClick={go}
-              disabled={running || message.trim() === ''}
-            >
-              {running ? 'committing' : `commit ${churn.files} file${churn.files === 1 ? '' : 's'}`}
+            <button type="button" className="btn primary" onClick={go} disabled={!armed}>
+              {running ? 'committing' : 'commit'}
             </button>
           </div>
         </Popover.Content>

@@ -950,6 +950,24 @@ One flat file, one flat namespace, no build step between it and the DOM.
   direction each number goes. The commit **refuses while the agent is working** and stays on
   screen saying so, because a control that vanishes while an agent happens to be thinking reads
   as a bug, and a commit taken mid-turn captures a file that is halfway written.
+  **Nothing in the tray is boxed, and what it lifts to is round.** The hover and open ground
+  under `commit`, the pull request and the branch is a *filled* shape, and every filled shape
+  here is round — `.btn`, the composer's send, the `waiting` pill. It shipped at 7px, a fourth
+  radius nothing else in the app uses, which read as a square patch behind the word rather than
+  as a control the row had always contained. *Rounded 2026-08-31.*
+
+  **The popovers that hang off it are one column with a gap in it**, and their parts are ranked.
+  *Redrawn 2026-08-31, after the commit one shipped as three children stacked with no space
+  between them, so the field's border met the plan's border and the panel read as a single badly
+  drawn box.* The **numbers are at the head** — `+51 −37` against a file count — because the
+  figure the user is deciding on belongs beside the field, not inside the width of a button:
+  `commit 1 file` was a live number setting the size of a control, and the button is one word at
+  every count now. The **field is the largest thing in the panel**, since it is the thing the
+  popover exists for. The **commands are quoted, not boxed**: `--recessed` ground, no border of
+  their own, one line each behind a `$` in the gutter, which says *this came out of a shell*
+  where a second hairline only said *this is another box*. **Enter is the commit**, because
+  nothing else in there takes a keystroke, and the row of buttons carries the words that say so.
+
 - **Modals** — for things that outlive the screen that opened them. Hiring an agent is a modal
   because the agent exists afterwards whether or not the team is created. A step of a flow is
   not a modal.

@@ -113,8 +113,8 @@ up. Read it before starting work.
   `@agentclientprotocol/claude-agent-acp` bridge spawned over stdio, JSON-RPC spoken directly so
   core still imports no ACP type, `session/set_mode("default")` forced on every session. A real
   `claude` answers, streams, runs tools and cancels — `BLOBOT_LIVE_CLAUDE=1` runs those tests,
-  and `--live-claude=<dir>` puts a real agent behind the real UI (one of three roster shortcuts
-  now, beside `--live-codex` and `--live-mixed`).
+  and `--live-claude=<dir>` puts a real agent behind the real UI (one of five roster shortcuts
+  now, beside `--live-codex`, `--live-fx`, `--live-mixed` and `--live-fx-mixed`).
 
 - **Ticket 15's loopback MCP server** in `packages/core/src/mcp`: one tool, `message_agent`,
   over `127.0.0.1` with a per-agent bearer token that *is* the caller's identity, stateless
@@ -460,10 +460,22 @@ up. Read it before starting work.
   0.0.7 on a real subscription, `BLOBOT_LIVE_FX=1`: the persona holds, an edit names its file, the
   palette offers four of eighteen, and two agents' loopback carries a per-agent bearer token.
 
-Next: two real fx agents on one team behind the UI and one beside a Claude agent (the
-`--live-mixed` shape), handing a real runtime a real attachment (no live suite has one yet, and fx
-is the interesting case because it is the one that says no to images), then surfacing whether an
-agent resumed or started fresh.
+  **Both of that ticket's leftovers are spent, 2026-08-31.** `--live-fx=<dir>` and
+  `--live-fx-mixed=<dir>` join the three roster shortcuts, and two real fx agents on one team
+  carried a message through the mailbox **in both directions** with two clean worktrees behind
+  them. And a real runtime was handed a real attachment for the first time on any of the four: a
+  text file from outside the workspace, never named, its bytes embedded, its codeword answered --
+  fx being the right one to spend it on because `accepts.images` is false, so the image half is a
+  refusal at pickup rather than a turn. Two findings, neither blobot's doing and both on ticket
+  05: **fx writes its own diagnostics into the agent message stream**, so a skill-discovery
+  warning about `~/.claude/skills` draws as the agent's first words with nothing in the frame to
+  tell it apart from what the model said -- not filtered, because guessing at a vendor's
+  diagnostic wording is how a real answer disappears at their next release -- and fx declines the
+  `attachment:` uri as *project instructions*, asking for an absolute local path, which is the
+  thing ADR-0004 refuses, while reading the content block regardless.
+
+Next: surfacing whether an agent resumed or started fresh, and a ticket for fx's diagnostics in
+the message voice.
 `build.md`'s *Next session* has the order and the reasons.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that

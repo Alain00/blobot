@@ -127,10 +127,47 @@ four tests, **all passing**:
 - **The loopback**, with its own bearer token: `message_agent` arrived at the server with
   `from: agent_alice`, and no permission request reached the user.
 
-### Still not done
+### Both halves finished, 2026-08-31
 
-- **Two real fx agents on one team behind the UI**, and one fx agent beside a Claude agent, which
-  is the `--live-mixed` shape and the point of the whole architecture. The loopback half is proven
-  at the adapter; the roster shortcut is not written.
-- **An attachment to a real fx**, which would be the first live attachment case against any
-  runtime and is the more interesting half here because fx is the one that says no to images.
+**Two real fx agents on one team, behind the UI.** `--live-fx=<dir>` and `--live-fx-mixed=<dir>`
+are roster shortcuts beside the three that existed (`apps/desktop/src/main/index.ts`), and the
+profile name is suffixed by the runtime now rather than by the literal word `codex` -- an agent's
+runtime is fixed at hire, so Alice-on-Claude and Alice-on-fx cannot be one profile. Claude keeps
+the bare name, because renaming it would orphan the profiles already hired.
+
+Run: two fx agents on a scratch repository whose one risk is an unbounded `retry.ts`. Both
+reached `ready`, both handshaked the loopback holding their own token, and the mailbox carried a
+message **in both directions** -- `alice-fx -> Bob-fx` and `bob-fx -> Alice-fx` -- with Alice
+reporting back what Bob found and naming `retry.ts`. Two worktrees, `fxrepo/alice-fx` and
+`fxrepo/bob-fx`, both clean on the `WORKSPACE` block. That is the whole architecture on a runtime
+none of the protocol's authors wrote.
+
+**An attachment to a real fx**, the first live attachment case against any of the four
+(`live.test.ts`, five tests, all passing). A text file written *outside* the workspace, never
+named to the agent, its bytes embedded as an ACP `resource` block: the codeword came back. So the
+answer can only have come from what blobot embedded, which is ADR-0004's claim spent. The image
+half is asserted as the fact it is -- `accepts.images` is false, so the composer refuses at pickup
+and no image turn exists to run.
+
+### Two findings from those runs, neither of them blobot's doing
+
+**fx writes its own diagnostics into the agent message stream, and they draw in the agent's
+voice.** Research 6 saw the skill-discovery warning and read it as an incidental fact about which
+directories fx loads. On screen it is worse than incidental: it arrives as `agent_message_chunk`,
+so Alice's *first bubble in the transcript* is fx complaining about a malformed skill in
+`~/.claude/skills`, and Bob's is that warning glued to his real sentence with no separator
+(`...write a trace logI'll inspect the backend structure...`). Nothing in the frame distinguishes
+it from what the model said. **Not fixed here**, because the only fix is prefix-matching fx's
+diagnostic wording inside the adapter, and suppressing something that arrives in the message voice
+on a guess at its first few words is how a real answer disappears after a vendor's next release.
+Worth its own ticket rather than a quiet filter.
+
+**The attachment uri is refused by one of fx's own subsystems, and the turn works anyway.** The
+same turn printed `[context] project instructions action=omitted reason=unsafe target
+source="attachment:///shipping.txt"; repair=use an absolute local target`. fx tried to resolve the
+block's uri as *project instructions* and declined, telling us to hand it an absolute local path
+instead -- which is exactly the thing ADR-0004 refuses, and the reason `attachment:` is not
+`file:`. The content block itself was read regardless: the codeword came back. So the warning is
+about a second thing fx wanted to do with the uri and could not, not about the attachment failing.
+No change. The ADR's refusal costs one diagnostic line per attached file on this runtime, and that
+line is the previous finding again.
