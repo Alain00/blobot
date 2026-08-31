@@ -5,6 +5,7 @@ import {
   CODEX_CEILINGS,
   ClaudeAgentRuntime,
   CodexAgentRuntime,
+  CursorAgentRuntime,
   FxAgentRuntime,
   OPENCODE_CEILINGS,
   OpencodeAgentRuntime,
@@ -87,13 +88,21 @@ export function runtimeFor(request: RuntimeRequest): AgentRuntime {
           ? {}
           : { codexExecutable: request.executablePath }),
       });
-    // fx takes no `agentName`: OpenCode needs one because the persona is an agent definition
-    // with a key, and Codex because it names the agent in its own vocabulary. fx has neither —
-    // the persona rides the prompt — so passing one would be a field with nowhere to go.
+    // fx and Cursor take no `agentName`: OpenCode needs one because the persona is an agent
+    // definition with a key, and Codex because it names the agent in its own vocabulary. On
+    // these two the persona rides the prompt, so passing one would be a field with nowhere
+    // to go.
     case 'fx':
       return new FxAgentRuntime({
         ...shared,
         ...(request.executablePath === undefined ? {} : { fxExecutable: request.executablePath }),
+      });
+    case 'cursor':
+      return new CursorAgentRuntime({
+        ...shared,
+        ...(request.executablePath === undefined
+          ? {}
+          : { cursorExecutable: request.executablePath }),
       });
     default:
       throw new Error(`${request.agentName} is set up for ${request.runtimeId}, which blobot cannot run`);

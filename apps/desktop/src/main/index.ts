@@ -175,8 +175,10 @@ const LIVE_ROSTERS: Readonly<Record<string, readonly [string, string]>> = {
   '--live-claude=': ['claude-code', 'claude-code'],
   '--live-codex=': ['codex', 'codex'],
   '--live-fx=': ['fx', 'fx'],
+  '--live-cursor=': ['cursor', 'cursor'],
   '--live-mixed=': ['claude-code', 'codex'],
   '--live-fx-mixed=': ['claude-code', 'fx'],
+  '--live-cursor-mixed=': ['claude-code', 'cursor'],
 };
 
 const liveLaunch = Object.entries(LIVE_ROSTERS).flatMap(([flag, runtimes]) => {

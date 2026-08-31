@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   detectRuntimes,
+  parseCursorStatus,
   parseOpencodeAuthList,
   parseVersion,
   stripAnsi,
@@ -202,5 +203,79 @@ describe('the Codex probe', () => {
   it('is a runtime blobot can construct, now that the adapter exists', async () => {
     const codex = await codexOf(ok('Logged in using ChatGPT\n'));
     expect(codex?.supported).toBe(true);
+  });
+});
+
+/** The status line a signed-in cursor-agent 2026.08.25 printed on this machine, 2026-08-31. */
+const CURSOR_SIGNED_IN =
+  '{"status":"authenticated","isAuthenticated":true,"email":"someone@example.com"}\n';
+
+describe('parseCursorStatus', () => {
+  it('requires the vendor’s own isAuthenticated, and never repeats the word', () => {
+    expect(parseCursorStatus(CURSOR_SIGNED_IN).readiness).toBe('ready');
+    expect(parseCursorStatus(CURSOR_SIGNED_IN).detail).not.toMatch(/authenticated/i);
+  });
+
+  it('reads anything parsed without the flag as not signed in', () => {
+    // The signed-out shape was never observed — producing it would have signed the author
+    // out — so a positive needs the exact flag and everything else parsed is a negative.
+    expect(parseCursorStatus('{"status":"unauthenticated"}').readiness).toBe('needs_sign_in');
+    expect(parseCursorStatus('{"isAuthenticated":false}').readiness).toBe('needs_sign_in');
+  });
+
+  it('reads anything unparsed as unknown rather than guessing a direction', () => {
+    expect(parseCursorStatus('Usage: cursor-agent ...').readiness).toBe('unknown');
+    expect(parseCursorStatus('').readiness).toBe('unknown');
+  });
+});
+
+describe('the Cursor probe', () => {
+  it('probes only cursor-agent, and never the collision-prone bare name', async () => {
+    const run = fakeRunner({
+      'command -v cursor-agent': ok('/home/dev/.local/bin/cursor-agent\n'),
+      '/home/dev/.local/bin/cursor-agent --version': ok('2026.08.25-3e8eec8\n'),
+      '/home/dev/.local/bin/cursor-agent status --format json': ok(CURSOR_SIGNED_IN),
+    });
+    const cursor = (await detectRuntimes({ run, home: '/home/dev' })).find(
+      (entry) => entry.runtimeId === 'cursor',
+    );
+    expect(cursor).toMatchObject({
+      readiness: 'ready',
+      supported: true,
+      executablePath: '/home/dev/.local/bin/cursor-agent',
+      version: '2026.08.25-3e8eec8',
+    });
+    expect(cursor?.detail).not.toMatch(/authenticated/i);
+    expect(run.calls.some((call) => call === 'command -v agent')).toBe(false);
+  });
+
+  it('does not believe a machine that only has some binary called agent', async () => {
+    // The installer always drops `cursor-agent` beside `agent`, so a machine with only the
+    // bare name did not get it from Cursor's installer — and probing it would be guessing.
+    const run = fakeRunner({
+      'command -v agent': ok('/usr/bin/agent\n'),
+      '/usr/bin/agent --version': ok('GNU agent 2.0\n'),
+    });
+    const cursor = (await detectRuntimes({ run, home: '/home/nobody' })).find(
+      (entry) => entry.runtimeId === 'cursor',
+    );
+    expect(cursor?.readiness).toBe('not_installed');
+  });
+
+  it('reports the state it could not read as unknown', async () => {
+    const run = fakeRunner({
+      'command -v cursor-agent': ok('/home/dev/.local/bin/cursor-agent\n'),
+      '/home/dev/.local/bin/cursor-agent --version': ok('2026.08.25-3e8eec8\n'),
+      '/home/dev/.local/bin/cursor-agent status --format json': {
+        code: 2,
+        stdout: '',
+        stderr: 'boom',
+      },
+    });
+    expect(
+      (await detectRuntimes({ run, home: '/home/dev' })).find(
+        (entry) => entry.runtimeId === 'cursor',
+      )?.readiness,
+    ).toBe('unknown');
   });
 });

@@ -531,7 +531,7 @@ set, no inline SVG paths pasted into components, no emoji in the interface.
 to hold a vendor path. It is the team icon's rule applied a second time — a logo may be on
 screen **greyed, never coloured, and never in place of the name**. A runtime is a product whose
 face people already know, and `Claude Code` and `OpenCode` are two labels that begin the same
-way in a list that grows to four; the mark is what the eye lands on before it reads either. The
+way in a list that is five long now; the mark is what the eye lands on before it reads either. The
 label always stays beside it, so the mark is a second channel onto one fact and never the only
 one. An id with no mark draws nothing: there is no placeholder, exactly as a team without an
 icon is not a team missing one. Marks come from the vendor's own origin at one `currentColor`,

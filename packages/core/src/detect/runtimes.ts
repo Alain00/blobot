@@ -183,8 +183,53 @@ function fxAuthField(stdout: string): string | undefined {
   }
 }
 
+/**
+ * Cursor, measured 2026-08-31 against cursor-agent 2026.08.25-3e8eec8.
+ *
+ * The documented command is `agent`, which is about the most collision-prone name a binary can
+ * have on a developer's `PATH` — and the installer drops **both** names into `~/.local/bin`,
+ * so the distinctive one always exists after a real install. Ticket 05's answer: probe
+ * `cursor-agent` only, never the bare name, and no verification machinery is needed because
+ * nothing here can be fooled by somebody else's `agent`.
+ *
+ * `cursor-agent status --format json` is the sign-in signal. Measured signed in: exit 0 with
+ * `{"status": "authenticated", "isAuthenticated": true, ...}`. The signed-out shape was not
+ * observed — producing it would have signed the author out — so the probe requires
+ * `isAuthenticated: true` and reports anything else it could parse as not signed in: a
+ * negative is reliable, a positive is not, and *authenticated* stays the vendor's wire
+ * vocabulary, never blobot's copy.
+ */
+const CURSOR: RuntimeProbe = {
+  runtimeId: 'cursor',
+  label: 'Cursor',
+  binary: 'cursor-agent',
+  supported: true,
+  extraDirs: ['.local/bin'],
+  probeAuth: async (path, run) => {
+    const result = await run(path, ['status', '--format', 'json'], { timeoutMs: 5_000 });
+    return parseCursorStatus(result.stdout);
+  },
+};
+
+/** `isAuthenticated` out of `cursor-agent status --format json`. A machine that answered
+ *  something other than JSON is `unknown` rather than a guess in either direction. */
+export function parseCursorStatus(
+  stdout: string,
+): Pick<RuntimeDetection, 'readiness' | 'detail'> {
+  try {
+    const parsed: unknown = JSON.parse(stripAnsi(stdout));
+    if (typeof parsed !== 'object' || parsed === null) throw new Error('not an object');
+    const signedIn = (parsed as { isAuthenticated?: unknown }).isAuthenticated === true;
+    return signedIn
+      ? { readiness: 'ready', detail: 'Signed in on this machine' }
+      : { readiness: 'needs_sign_in', detail: 'Installed, not signed in' };
+  } catch {
+    return { readiness: 'unknown', detail: 'Installed; sign-in state could not be read' };
+  }
+}
+
 /** The runtimes the picker offers, in order. `supported` says which blobot can construct. */
-export const RUNTIME_PROBES: readonly RuntimeProbe[] = [CLAUDE_CODE, OPENCODE, CODEX, FX];
+export const RUNTIME_PROBES: readonly RuntimeProbe[] = [CLAUDE_CODE, OPENCODE, CODEX, FX, CURSOR];
 
 export async function detectRuntimes(options: DetectOptions = {}): Promise<RuntimeDetection[]> {
   const run = options.run ?? execRunner;

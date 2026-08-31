@@ -4,13 +4,14 @@
  * This is the **one exception to the Lucide-only rule**, and it is the team icon's rule applied
  * to a second place: a vendor's logo is allowed on screen greyed, never coloured, and never in
  * place of the name. A runtime is a product with a face people already know, and `Claude Code`
- * and `OpenCode` are two words that begin the same way in a list that is now four long. The
+ * and `OpenCode` are two words that begin the same way in a list that is now five long. The
  * mark is what the eye lands on before it reads either. The label always stays beside it —
  * the mark is a second channel onto the same fact, never the only one, because a logo nobody
  * recognises is a smudge and there is no reason to make a person learn ours.
  *
- * All four are taken from the vendor's own origin (`claude.ai/favicon.svg`, `sst/opencode`'s
- * brand folder, `developers.openai.com/favicon.svg`, `fx.sh/icon.svg`), stripped to one `currentColor` and
+ * All five are taken from the vendor's own origin (`claude.ai/favicon.svg`, `sst/opencode`'s
+ * brand folder, `developers.openai.com/favicon.svg`, `fx.sh/icon.svg`,
+ * `cursor.com/brand/icon.svg`), stripped to one `currentColor` and
  * normalised so they carry the same optical weight beside each other and beside a Lucide glyph.
  * Nothing here is blobot's to license: these are the vendors' marks, used to name the product we
  * speak to, which is why they are also never restyled beyond the greying and never stand in for
@@ -112,11 +113,33 @@ function FxMark(): React.JSX.Element {
   );
 }
 
+/**
+ * Cursor's mark, from the vendor's own origin (`cursor.com/brand/icon.svg`, 2026-08-31).
+ *
+ * The pointer the product is named for — the vendor's own alpha-mask path, verbatim, with the
+ * plate, the gradients and the blue dropped, which is the same reduction the four marks above
+ * went through. The `viewBox` is cropped to the glyph's own mask bounds so it carries the same
+ * optical weight beside them. PR #1 drew a pointer here too, from memory; this one is traced
+ * from the file the vendor serves.
+ */
+function CursorMark(): React.JSX.Element {
+  return (
+    <svg viewBox="235 242 459 553" width="100%" height="100%" fill="currentColor" aria-hidden>
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M682.055 244.201c5.112-3.382 11.891.52 11.536 6.639l-30.783 529.892c-.833 14.332-19.6 19.462-27.639 7.568-40.255-59.551-117.96-170.956-148.402-190.037-30.407-19.06-165.524-30.387-237.415-35.17-14.356-.955-19.409-19.842-7.408-27.78z"
+      />
+    </svg>
+  );
+}
+
 const MARKS: Readonly<Record<string, () => React.JSX.Element>> = {
   'claude-code': ClaudeMark,
   opencode: OpenCodeMark,
   codex: CodexMark,
   fx: FxMark,
+  cursor: CursorMark,
 };
 
 export function RuntimeMark({

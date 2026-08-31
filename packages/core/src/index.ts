@@ -265,7 +265,24 @@ export {
 export { fxPersonaBlocks } from './adapters/fx/persona.js';
 export { resolveFxExecutable, spawnFx, VERIFIED_FX_VERSION } from './adapters/fx/stdio.js';
 
-export { detectRuntimes, parseOpencodeAuthList, parseVersion, stripAnsi } from './detect/runtimes.js';
+// The Cursor adapter. First-party ACP again: `cursor-agent acp` is the user's own binary.
+export { CursorAgentRuntime } from './adapters/cursor/cursor-agent-runtime.js';
+export type { CursorAgentRuntimeOptions } from './adapters/cursor/cursor-agent-runtime.js';
+export {
+  CURSOR_APPROVAL_MODE,
+  CURSOR_SESSION_MODE,
+  CURSOR_TRUST_LEVELS,
+  cursorCliConfig,
+} from './adapters/cursor/permissions.js';
+export { cursorPersonaBlocks } from './adapters/cursor/persona.js';
+export { defaultCursorConfigDir, writeCursorConfig } from './adapters/cursor/config.js';
+export {
+  resolveCursorExecutable,
+  spawnCursor,
+  VERIFIED_CURSOR_VERSION,
+} from './adapters/cursor/stdio.js';
+
+export { detectRuntimes, parseCursorStatus, parseOpencodeAuthList, parseVersion, stripAnsi } from './detect/runtimes.js';
 export type {
   CommandResult,
   CommandRunner,

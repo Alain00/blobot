@@ -1,7 +1,7 @@
 # blobot
 
 A local-first desktop application that lets a user assemble **teams** out of the coding
-agents they already have installed — Claude Code, Codex, Gemini CLI, OpenCode — and watch
+agents they already have installed — Claude Code, Codex, Cursor, Gemini CLI, OpenCode — and watch
 them work together on a repository.
 
 This repository is a monorepo.
@@ -483,6 +483,34 @@ up. Read it before starting work.
   diagnostic wording is how a real answer disappears at their next release -- and fx declines the
   `attachment:` uri as *project instructions*, asking for an absolute local path, which is the
   thing ADR-0004 refuses, while reading the content block regardless.
+
+- **The Cursor adapter** (`.scratch/cursor-runtime/`, eight tickets, ticket 01 measured live) in
+  `packages/core/src/adapters/cursor`: `cursor-agent acp` first-party over stdio, the fifth
+  runtime and the second built entirely on `adapters/acp/`'s shared half. The published docs say
+  ACP takes MCP servers only from `.cursor/mcp.json`; **measured, `session/new` accepts
+  client-supplied `mcpServers`** with per-server headers and no approval step, so the loopback
+  rides the standard door — and because the door contradicts the docs, a live canary asserts it
+  stays open. `CURSOR_CONFIG_DIR` per agent carries exactly two things (`cli-config.json`, the
+  posture, enforced; `acp-sessions/`, resume state) and the login survives outside it. Ticket
+  14's posture is `approvalMode: allowlist` with the allow list widening across all three
+  attended trust words — the second runtime after Claude to express the gradation — and
+  **`permissions.deny` stays empty**: a deny is a silent hard block whose `tool_call` reports
+  `completed`, so the nine dangerous verbs are *unlisted*, which measured as a prompt. The
+  persona rides the prompt every turn (the config-dir rules channel measured unread; `AGENTS.md`
+  is the committable file ticket 14 refuses); `Mcp(blobot:*)` is vouched at every level so a
+  peer message never waits on a human; the sandbox is `enabled` with network as a constant, not
+  a dial. The two blocking extension methods are answered — `ask_question` refused in-channel,
+  `create_plan` rejected, an unknown method errors — and the user's own MCP servers, skills and
+  User Rules stay loaded, because the operator added them (ADR-0003; per-agent restriction is a
+  future cross-runtime effort). Detection probes **only `cursor-agent`**, never the
+  collision-prone bare `agent`; `status --format json` requires the vendor's own
+  `isAuthenticated: true`; `CURSOR_API_KEY` / `CURSOR_AUTH_TOKEN` are stripped and the
+  in-protocol `authenticate` is never used. `accepts` is `{images: true, textFiles: false}`,
+  the exact mirror of fx. `--live-cursor=<dir>` and `--live-cursor-mixed=<dir>` join the roster
+  shortcuts; `BLOBOT_LIVE_CURSOR=1` runs the live done-when suite (canary,
+  sandbox-versus-loopback, the git verb-split syntax, the live edit title). PR #1 was the
+  quarry, never the base: `extensions.ts` and `palette.ts` survive with credit, its
+  `config.ts` mechanism and `ALWAYS_DENY` are refuted by measurement.
 
 - **Handbooks are built, and nothing has been run live.** `.scratch/handbooks/`, ten tickets, all
   resolved, frontier empty. A **Handbook** is what an Agent knows about *this team's* work, held at

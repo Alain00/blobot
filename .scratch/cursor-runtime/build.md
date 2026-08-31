@@ -1,37 +1,69 @@
 # cursor-runtime — build status and session handoff
 
-## Where this stands, 2026-08-31
+## Where this stands, 2026-08-31 (evening)
 
-**Nothing is built. Everything is decided.** The map (`map.md`) is complete: tickets 01–05, 07
-and 08 are resolved, the frontier is empty, and **ticket 06 is the whole of what remains** — a
-pure-execution handoff whose body restates every resolution just enough to build from. Read it
-first; zoom into the other tickets only where its one-line restatement is not enough.
+**The adapter is built.** Ticket 06 was executed in one session on `feat/cursor-runtime`:
+`packages/core/src/adapters/cursor/` (runtime, stdio, config, permissions, persona, palette,
+extensions, fake, unit tests, live suite), the detection probe and remedies rows, the desktop
+wiring (`runtime-for`, labels, `RuntimeMark`, `--live-cursor=` / `--live-cursor-mixed=`), the
+core exports, and the `CLAUDE.md` bullet. Typecheck, tests (697 core + 449 desktop) and build
+all pass. The map (`map.md`) stays the decision index; every resolution held under build.
 
-Ticket 01 was **measured live** on this machine (`cursor-agent` 2026.08.25-3e8eec8, logged in,
-three real turns). The decisive facts and their evidence live in that ticket's Answer; the map's
-*Decisions so far* is the index.
+## What was decided while building
 
-## The PR is a quarry, not a base
+- **No `context.ts`.** The PR shipped an empty ceilings table; fx ships none and `ceilingFor`
+  answers `undefined` for an unknown id, which is the same honest fallback. The file lands the
+  day a model is measured through this adapter, not before.
+- **`writeCursorConfig` merges rather than clobbers.** The real `cursor-agent` caches display
+  settings, model history and an `authInfo` block (identity metadata, not a credential) into
+  its own `cli-config.json`; blobot asserts its four fields over the top and leaves the
+  vendor's alone. `permissions` is written whole each start — safe because an allow-always
+  lives in the session store, never in this file (measured, ticket 01).
+- **No mailbox carve-out in the adapter.** Ticket 03 solved peer messages in config
+  (`Mcp(blobot:*)` at every level), so `#onPermissionRequest` has no special case — unlike
+  Codex (code) and fx (precaution). If the live canary shows a prompt anyway, that is the
+  finding to bring back here.
+- **`session/close` is never sent**: Cursor's `sessionCapabilities` advertises `list` only.
+  `restart()` just opens a new session; the old row stays in the per-agent store.
+- **The gh reading verbs ride the same `cmd:args*` split as git** (`Shell(gh:pr view*)`),
+  because ticket 03's bar was mirroring Claude's verbs and the failure direction is a prompt.
+  The live git-split test stands for the mechanism.
+- **`RuntimeMark` uses the vendor's real glyph**: `cursor.com/brand/icon.svg`'s pointer path
+  verbatim, cropped to its own mask bounds — the PR drew a pointer from memory.
+- The `initialize` result carries **no `agentInfo`** (measured), so the adapter's version
+  report usually says nothing; detection reads `cursor-agent --version` instead.
 
-PR #1 on `Alain00/blobot` (`gh pr view 1`, head `cursor/cursor-acp-runtime-5197`) implemented all
-six original tickets without running ticket 01's measurement. Decided: audit-and-mine, never
-merge or rebase — it is based on a **pre-fx main** and does not rebase cleanly anyway. Ticket 06
-carries the per-file verdict table: `extensions.ts` and `palette.ts` survive, `config.ts` and
-`permissions.ts`'s deny approach are **refuted by measurement**, the runtime/stdio files are
-unaudited. Cherry-pick by file, against the resolved tickets, with credit where a piece survives.
+## What is NOT yet done
 
-## What the next session does
+1. **The live done-when suite has not run.** `BLOBOT_LIVE_CURSOR=1 pnpm --filter @blobot/core
+   exec vitest run src/adapters/cursor/live.test.ts` spends real turns on the user's Cursor
+   subscription (~5 turns) — ask before running. It covers: persona/streaming/mode, the edit
+   title (and whether Cursor populates `locations` or an fx-style repair is owed), the
+   **git-split allow syntax** (ticket 03 orders fallback to git-wholly-unlisted if it fails),
+   the **loopback canary** (ticket 02; the door contradicts the docs), sandbox-versus-loopback,
+   and the palette. Extension reply shapes verify opportunistically (a wrong shape hangs a turn
+   into its timeout).
+2. **Two Cursor agents on one team** (`--live-cursor=<dir>`) and **the mixed team**
+   (`--live-cursor-mixed=<dir>`) — the rest of ticket 06's done-when.
+3. Close ticket 06 (`Status: resolved`) once the live suite passes, then **open a fresh PR**
+   from `feat/cursor-runtime` to `main` — never a push to PR #1.
 
-1. Work on `feat/cursor-runtime` (branched from main at 432b2c7; first commit is this scratch).
-2. Build ticket 06 in `packages/core/src/adapters/cursor/`, reusing `adapters/acp/`.
-3. Live verification needs the user: `BLOBOT_LIVE_CURSOR=1` spends real turns on the user's
-   Cursor subscription — ask before running, same as the other four runtimes. The done-when
-   list (canary, sandbox-vs-loopback, git-split syntax, extension wire shapes, live edit title,
-   two Cursor agents messaging, a mixed team) is on ticket 06.
-4. Update `CLAUDE.md`'s current-work section (Cursor becomes the fifth runtime), and this file,
-   when the build lands.
-5. Open a PR from `feat/cursor-runtime` to `main` — a fresh PR, not a push to PR #1.
+## Reviewed, 2026-08-31
 
-## Decided while building
+A two-axis review (standards, spec) ran on the branch before the live phase. No hard
+violations on either axis. Acted on: the spawn contract is pinned now (`cursorArgv` extracted,
+`stdio.test.ts` pins the argv, the forbidden flags and the credential strip); the options
+lever got a token-free live test reading the session's own catalogue; the extension shapes got
+a dedicated live turn that invites `create_plan` and asserts the turn ends either way, printing
+whether it fired; `DESIGN.md`'s "grows to four" became five. Recorded as follow-ups rather than
+done here: **`permissionKind` is now five near-identical copies** across the adapters and maps
+ACP's own vocabulary — a candidate for `adapters/acp/`, left because extracting it edits four
+other adapters on a branch about a fifth; and the verb inventory (dangerous verbs, git/gh
+split) is restated per adapter, which a third allowlist runtime should turn into shared data.
 
-(nothing yet — this section is the next session's)
+## The PR verdict, settled
+
+PR #1 was mined as decided: `extensions.ts` and `palette.ts` taken with their tests (comments
+updated with the measured reasons), the remedies/probe rows rewritten per ticket 05 (no
+`alsoNamed`/`looksLike`; `isAuthenticated`, not the PR's guessed `loggedIn`), `config.ts` and
+`permissions.ts` rewritten from the measurements, the runtime rebuilt on fx's shape.

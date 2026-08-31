@@ -30,7 +30,7 @@ afterEach(() => {
 
 describe('a runtime’s own mark', () => {
   it('draws the runtimes that have one', () => {
-    for (const id of ['claude-code', 'opencode', 'codex', 'fx']) {
+    for (const id of ['claude-code', 'opencode', 'codex', 'fx', 'cursor']) {
       expect(draw(id).querySelector('svg')).not.toBeNull();
       host?.remove();
     }
@@ -44,7 +44,7 @@ describe('a runtime’s own mark', () => {
   });
 
   it('never carries a colour of its own, so it greys with the row it sits in', () => {
-    for (const id of ['claude-code', 'opencode', 'codex', 'fx']) {
+    for (const id of ['claude-code', 'opencode', 'codex', 'fx', 'cursor']) {
       const markup = draw(id).innerHTML;
       // The whole of the exception in DESIGN.md is that a vendor mark is *greyed*. A literal
       // fill or stroke here would be brand colour on screen, which the palette forbids.

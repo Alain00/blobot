@@ -1,0 +1,39 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { offerableNames } from './palette.js';
+
+describe('Cursor command allowlist', () => {
+  it('offers a command a person wrote under .cursor/commands', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'blobot-cursor-pal-'));
+    mkdirSync(join(cwd, '.cursor', 'commands'), { recursive: true });
+    writeFileSync(join(cwd, '.cursor', 'commands', 'ship.md'), '# ship\n');
+    expect(offerableNames(cwd).has('ship')).toBe(true);
+  });
+
+  it('offers a skill directory holding SKILL.md', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'blobot-cursor-pal-'));
+    mkdirSync(join(cwd, '.cursor', 'skills', 'review'), { recursive: true });
+    writeFileSync(join(cwd, '.cursor', 'skills', 'review', 'SKILL.md'), '# review\n');
+    expect(offerableNames(cwd).has('review')).toBe(true);
+  });
+
+  it('skips dot-directories, which is where a vendor stages its own surface', () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'blobot-cursor-pal-'));
+    mkdirSync(join(cwd, '.cursor', 'skills', '.system', 'vendor-thing'), { recursive: true });
+    writeFileSync(join(cwd, '.cursor', 'skills', '.system', 'vendor-thing', 'SKILL.md'), '# x\n');
+    expect(offerableNames(cwd).has('.system')).toBe(false);
+    expect(offerableNames(cwd).has('vendor-thing')).toBe(false);
+  });
+
+  it('vouches for no built-in at all on a machine with nothing authored', () => {
+    // A live session advertised 130 vendor commands, worktree and autopilot among them. The
+    // intersection with an empty authored surface is empty, and empty is honest.
+    const cwd = mkdtempSync(join(tmpdir(), 'blobot-cursor-pal-'));
+    const names = offerableNames(cwd);
+    for (const vendor of ['worktree', 'apply-worktree', 'autopilot', 'shell', 'compact']) {
+      expect(names.has(vendor)).toBe(false);
+    }
+  });
+});
