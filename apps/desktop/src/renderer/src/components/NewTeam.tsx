@@ -316,7 +316,6 @@ export function NewTeam({
           )}
           {inspection !== undefined && (
             <IconPick
-              agents={roster.filter((agent) => chosen.includes(agent.id))}
               {...(icon === undefined ? {} : { icon })}
               onChoose={() => void chooseIcon()}
               onClear={() => setIcon(undefined)}

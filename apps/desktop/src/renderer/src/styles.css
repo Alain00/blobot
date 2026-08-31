@@ -175,11 +175,6 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    TO TRY THE RAIL ALONE: drop `.vA .feed` from the two selectors below. Everything else here
    is scoped to `.rail`, so nothing else needs touching. */
 .vA .rail,.vA .feed{background:var(--recessed)}
-/* A face is cut out of the surface behind it, so the surface behind it has to be told. Both of
-   these were `--ground` and would have drawn a halo of the old black around every blobatar on
-   the rail — the one bug this change cannot get away with, since the faces are the point. */
-.vA .rail .mark{--cut:var(--recessed)}
-.vA .rail .mark .more{background:var(--recessed)}
 /* Nothing else moves, which is the other argument for going down. Every lifted surface inside a
    flank — Search at the head of the rail, a selected row, the highlighted feed row, the gauge's
    open row, the workspace row's hover — is still `--raised`, and its gap widened from nine
@@ -263,11 +258,6 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 @media (prefers-reduced-motion:no-preference){
   .teamrow .twisty{transition:rotate 180ms var(--ease-out)}
 }
-/* A team with nobody on it, which is the only team that has no face to draw. The ghost holds the
-   mark's whole box so the names stay on one left edge, and draws a single silhouette inside it
-   at the size a team of one would be. */
-.teamrow.off .ghost{position:relative;width:20px;height:20px;flex:0 0 auto}
-.teamrow.off .ghost::after{content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border:1px dashed var(--line);border-radius:40% 60% 55% 45%}
 /* A team you are not in reads one step back: lighter name, muted ink. Contrast is the app's
    attention channel, and the team on screen is what has it. */
 .teamrow.off .nm{font-weight:400;color:var(--muted)}
@@ -343,26 +333,19 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* The rail's own size for a chrome button: the 32px circle would be taller than the row's
    second line and would push the name off centre. */
 .iconbtn.sm{width:22px;height:22px;background:var(--ground)}
-/* The team's mark: its project icon when it has one, its members' faces when it does not.
-   `TeamMark` says why, and owns the arithmetic of where a face sits; these rules are only what
-   the two states look like.
+/* The team's mark: its project icon when it has one, a folder when it does not. `TeamMark`
+   says why; these rules are only what the two states look like.
 
-   It was a drawn folder — a back panel, a front panel, three faces cropped by the front, a `+N`
-   on the panel and the icon straddling its bottom edge. Six paths and two questions answered in
-   one 34px box, down a column whose job is to be quiet. The container was the noise. Both SVGs
-   and the `--cut` against them are gone with it; a face is now cut out of the face behind it and
-   nothing else. */
-.mark{position:relative;flex:0 0 auto;display:block;--cut:var(--ground)}
-/* Faces overlap, so each is cut out of the one behind it. The cut follows the silhouette rather
-   than a circle, because these are blobs and not headshots. */
-.mark > .blob{position:absolute;filter:drop-shadow(1.5px 0 0 var(--cut)) drop-shadow(-1.5px 0 0 var(--cut)) drop-shadow(0 1.5px 0 var(--cut)) drop-shadow(0 -1.5px 0 var(--cut))}
-.teamrow.sel .mark{--cut:var(--raised)}
-/* The rest of the team, in the last slot rather than beside the stack: it is one of the things
-   being counted, so it is drawn as one of them. Circular and outlined rather than filled — a
-   solid disc among the faces would be the darkest thing in the mark and would read as a member
-   with no face rather than as a count. */
-.mark .more{position:absolute;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--ground);border-radius:50%;font-size:9px;line-height:1;color:var(--muted)}
-.teamrow.sel .mark .more{background:var(--raised)}
+   It was a drawn folder with faces peeking over it, then the faces alone. Both answered *who
+   is on this team* in the rail's smallest slot, which the same agents being on several teams
+   makes useless: two teams sharing a roster drew the same stack. So the slot is the project's,
+   and the folder is what a team is when it has no icon of its own. */
+.mark{position:relative;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+/* One stroked glyph at the row's own weight, and never darker than the name beside it: this is
+   the same shape on every row without an icon, so anything it adds beyond "a team" is noise.
+   It follows the row's ink the way the twisty does, so the column lifts as a whole on hover. */
+.mark .teamfolder{color:var(--muted);stroke-width:1.5}
+.teamrow:hover .mark .teamfolder,.teamrow.sel .mark .teamfolder{color:var(--ink)}
 /* The team's own icon, inside the mark.
 
    Greyed, and that is the design decision rather than a taste: the blobatars are the only
@@ -386,11 +369,6 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    and the icon picker, and the relationship is what has to survive the size. Transparent
    artwork barely moves: `contain` was already letterboxing it well inside the box. */
 .mark .teamicon{position:absolute;inset:10%;width:80%;height:80%;object-fit:contain;border-radius:30%;opacity:.92;filter:grayscale(1)}
-/* The faces in a mark do not move. The mark used to wear the folded team status as a body
-   animation, which is how a hop on one team's `working` became the loudest thing in a column
-   whose job is quiet. The folded status is still on the row, said by the same word and the same
-   dots the agent rows use, so nothing was lost but the motion. */
-.mark > .blob{animation:none}
 /* The navigator's door. A field's box — the raised ground and the 12px radius every lifted
    surface in this app uses — because that is the shape a person looks for when they want to
    type a name, even though this one opens a layer rather than taking the keystrokes itself.

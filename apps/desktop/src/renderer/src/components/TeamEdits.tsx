@@ -387,7 +387,6 @@ export function EditTeam({
               </div>
 
               <IconPick
-                agents={roster.filter((agent) => chosen.includes(agent.id))}
                 {...(icon === undefined ? {} : { icon })}
                 onChoose={() => void chooseIcon()}
                 onClear={() => setIcon(undefined)}

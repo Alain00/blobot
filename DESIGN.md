@@ -753,7 +753,22 @@ One flat file, one flat namespace, no build step between it and the DOM.
   because a heading needs room under it more than a row needs room above it. Shut team rows carry
   the same gap between one another, or a column of one-line rows runs together into the block of
   text the short row was made to avoid.
-- **A team's mark is its project icon, and its members' faces only where there is no icon.**
+- **A team's mark is its project icon, and a plain folder where there is no icon.**
+  *Amended 2026-08-31: the faces are gone from the fallback too.* The paragraph below removed
+  the drawn folder and kept the faces inside it, and the argument it made against them — the
+  same agents are on several teams, so two teams sharing a roster draw an identical stack —
+  applies to the fallback exactly as it applied to the icon case. It was left standing only
+  because faces were what the slot had always held. So the mark now answers *which project is
+  this* on every row: the project's own icon where there is one, and otherwise the folder,
+  which is what a team is when it has nothing else to say about itself. One stroked lucide
+  glyph at `--muted`, following the row's ink on hover the way the twisty does, identical down
+  the column, so **a row with an icon is the only row that says anything** and that is the
+  point: the icons stop competing with a stack of faces for the eye. `+N` goes with the stack,
+  and the dashed silhouette for a team with nobody on it goes too — a team with no members is
+  still a folder, and it was the last thing in the column drawn to say *there is nobody here*
+  in a slot that is no longer about who. Who is on a team stays one click away, on the rows the
+  team opens into and in the navigator. The paragraph below is kept as written because its
+  reasoning is what carried this, not because its conclusion still stands.
   *Amended 2026-08-30, reversing the rule below it.* It was a drawn folder — a back panel, a
   front panel, three faces cropped by the front, a `+N` on the panel, and the icon straddling
   the panel's bottom edge. Six paths and two questions answered in one 34px box, repeated down a

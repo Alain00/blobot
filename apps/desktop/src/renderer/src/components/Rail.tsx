@@ -177,18 +177,9 @@ export function Rail({
               title={`Switch to ${row.name}`}
             >
               <Twisty open={false} members={row.members.length} />
-              {/* The silhouette is for a team with nobody on it, which is the only team that
-                  genuinely has no face to draw. Everywhere else it was standing in for a row
-                  that had been handed a count instead of its members. */}
-              {row.members.length === 0 ? (
-                <span className="ghost" aria-hidden="true" />
-              ) : (
-                <TeamMark
-                  agents={row.members}
-                  {...(row.icon === undefined ? {} : { icon: row.icon })}
-                  size={MARK}
-                />
-              )}
+              {/* No silhouette for a team with nobody on it any more: the mark is about the
+                  project rather than the roster, and a team with no members is still a folder. */}
+              <TeamMark {...(row.icon === undefined ? {} : { icon: row.icon })} size={MARK} />
               <b className="nm">{row.name}</b>
               <span style={{ flex: 1 }} />
               {/* The right of the line says one thing at a time, and status outranks recency:
@@ -233,11 +224,7 @@ export function Rail({
               onClick={() => onSelect({ kind: 'team' })}
             >
               <Twisty open members={agents.length} />
-              <TeamMark
-                agents={agents}
-                {...(row.icon === undefined ? {} : { icon: row.icon })}
-                size={MARK}
-              />
+              <TeamMark {...(row.icon === undefined ? {} : { icon: row.icon })} size={MARK} />
               <b className="nm">{row.name}</b>
               <span style={{ flex: 1 }} />
               {/* Who leads used to be said here, as `led by Alice` on a second line. The line is

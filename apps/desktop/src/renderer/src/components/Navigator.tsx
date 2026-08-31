@@ -154,13 +154,9 @@ export function Navigator({
                   onSelect={() => onSelectTeam?.(row.id)}
                   disabled={onSelectTeam === undefined}
                 >
-                  {/* The folder, unposed: this list is about where things are, not about what
-                      they are doing, and a team with nobody on it is still a folder. */}
-                  <TeamMark
-                    agents={row.members}
-                    {...(row.icon === undefined ? {} : { icon: row.icon })}
-                    size={20}
-                  />
+                  {/* The folder: this list is about where things are, not about who is in
+                      them, and a team with nobody on it is still a folder. */}
+                  <TeamMark {...(row.icon === undefined ? {} : { icon: row.icon })} size={20} />
                   <span>{row.name}</span>
                   <span className="r">{row.workspacePath}</span>
                 </Command.Item>
