@@ -18,10 +18,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentStatus } from '@blobot/core/domain';
 import type { UiAgent } from '../../../shared/api.js';
 import type { Item, Pane } from '../model.js';
+import { stubGazeHost } from '../test-dom.js';
 
 // React's own flag for "these updates are being driven by a test", which is what lets `act`
 // flush effects synchronously instead of warning that nothing is listening.
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+// This surface draws animated blobatars, so a gaze driver mounts with them. See `test-dom.ts`.
+stubGazeHost();
 
 // jsdom has no ResizeObserver, and the pane's stick-to-bottom is built on one. Nothing here
 // measures layout, so it may be inert: what matters is that the effect mounts.

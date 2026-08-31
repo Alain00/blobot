@@ -6,9 +6,15 @@ import type { TrustLevel } from '../../../shared/api.js';
 /**
  * What this agent may do in its own copy before its runtime starts asking.
  *
- * Three positions and no more. The step above `trusting` is Claude's `bypassPermissions` or
- * OpenCode's unqualified allow, and ticket 14 refuses both, so the control has no fourth row
- * for the same reason the runtime options menu has no `mode` group.
+ * Four positions where the runtime has a decider of its own and three everywhere else, which is
+ * why the rows are handed in rather than hardcoded: `trustLevelsFor` in main is the one place
+ * allowed to know what a `runtime_id` means, and a picker that spelled the fourth row itself
+ * would be offering `unattended` beside a Codex agent, where it means nothing.
+ *
+ * The step this control still refuses is `bypassPermissions` and OpenCode's unqualified allow:
+ * nothing asks and nothing decides. `unattended` is not that. Something still answers every
+ * request; it is the provider's classifier rather than the person, and the sentence on the row
+ * says so in those words.
  *
  * The one control in this app whose words are blobot's own rather than a provider's. Everything
  * else in the agent form either prints a label the runtime gave it or sends back an opaque id;
@@ -20,7 +26,7 @@ import type { TrustLevel } from '../../../shared/api.js';
  * opening anything. The sentence under the trigger is the whole of the friendliness budget.
  */
 
-interface Level {
+export interface Level {
   readonly id: TrustLevel;
   readonly word: string;
   readonly says: string;
@@ -34,7 +40,8 @@ interface Level {
  * which says it better than a badge would, and a badge here would imply the other two are
  * mistakes.
  */
-const LEVELS: readonly Level[] = [
+/** Exported so the words can be tested as words. They are the control's whole content. */
+export const LEVELS: readonly Level[] = [
   {
     id: 'careful',
     word: 'careful',
@@ -52,47 +59,68 @@ const LEVELS: readonly Level[] = [
       'Also installs packages and fetches from the network. Still asks before deleting, ' +
       'publishing, or changing who can do what.',
   },
+  {
+    id: 'unattended',
+    word: 'unattended',
+    says:
+      'The rest is answered by the runtime, not by you, so it works while you are away. ' +
+      'Deleting and publishing are refused: nobody can be asked.',
+  },
 ];
 
+/**
+ * The rows to draw, given what the runtime can express.
+ *
+ * A level the runtime does not have is not greyed out, it is absent: a disabled row invites the
+ * question *why not*, and the honest answer is about a provider the form is not allowed to name.
+ */
+export function levelsFor(available: readonly TrustLevel[]): readonly Level[] {
+  return LEVELS.filter((level) => available.includes(level.id));
+}
+
+/**
+ * The sentence is on the menu row and not under the closed control. *2026-08-31.* Three of these
+ * stand in a row in the agent form and each carried its explanation permanently on screen, which
+ * is three paragraphs of blobot explaining itself around two words the user came to set. The
+ * text is unchanged and one keystroke away, on the row it belongs to, where it is read while the
+ * choice is being made rather than after it has been.
+ */
 export function TrustPick({
   value,
+  available,
   onChange,
 }: {
   value: TrustLevel;
+  /** What this agent's runtime can express. Weakest first, and never empty. */
+  available: readonly TrustLevel[];
   onChange: (value: TrustLevel) => void;
 }): React.JSX.Element {
-  const current = LEVELS.find((level) => level.id === value) ?? LEVELS[1];
+  const levels = levelsFor(available);
   return (
-    <>
-      <Select.Root value={value} onValueChange={(next) => onChange(next as TrustLevel)}>
-        <Select.Trigger className="field selecttrigger" aria-label="What it can do without asking">
-          <Select.Value className="selectvalue" />
-          <Select.Icon>
-            <ChevronDown size={14} aria-hidden />
-          </Select.Icon>
-        </Select.Trigger>
-        <Select.Portal>
-          <Select.Content className="selectmenu" position="popper" sideOffset={6}>
-            <Select.Viewport>
-              {LEVELS.map((level) => (
-                <Select.Item key={level.id} value={level.id} className="selectitem trustitem">
-                  <Select.ItemText>{level.word}</Select.ItemText>
-                  <Select.ItemIndicator className="selecttick">
-                    <Check size={13} aria-hidden />
-                  </Select.ItemIndicator>
-                  {/* Outside `ItemText`, so the trigger shows the word alone: the sentence is
-                      what you read while choosing, and the line under the trigger is what you
-                      read afterwards. */}
-                  <span className="trustsays">{level.says}</span>
-                </Select.Item>
-              ))}
-            </Select.Viewport>
-          </Select.Content>
-        </Select.Portal>
-      </Select.Root>
-      {/* The same sentence, under the closed control, for the same reason the runtime picker
-          keeps its readiness line: a form should say what it is set to without being opened. */}
-      <span className="note muted">{(current as Level).says}</span>
-    </>
+    <Select.Root value={value} onValueChange={(next) => onChange(next as TrustLevel)}>
+      <Select.Trigger className="field selecttrigger" aria-label="What it can do without asking">
+        <Select.Value className="selectvalue" />
+        <Select.Icon>
+          <ChevronDown size={14} aria-hidden />
+        </Select.Icon>
+      </Select.Trigger>
+      <Select.Portal>
+        <Select.Content className="selectmenu trustmenu" position="popper" sideOffset={6}>
+          <Select.Viewport>
+            {levels.map((level) => (
+              <Select.Item key={level.id} value={level.id} className="selectitem trustitem">
+                <Select.ItemText>{level.word}</Select.ItemText>
+                <Select.ItemIndicator className="selecttick">
+                  <Check size={13} aria-hidden />
+                </Select.ItemIndicator>
+                {/* Outside `ItemText`, so the trigger shows the word alone: the sentence is
+                    what you read while choosing, and the trigger is what you read afterwards. */}
+                <span className="trustsays">{level.says}</span>
+              </Select.Item>
+            ))}
+          </Select.Viewport>
+        </Select.Content>
+      </Select.Portal>
+    </Select.Root>
   );
 }

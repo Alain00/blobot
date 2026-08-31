@@ -17,7 +17,8 @@ import {
 import type { RunningTeam } from './running-team.js';
 import { FileHandoffArchive } from './handoff-archive.js';
 import { runtimeLabel } from './runtime-labels.js';
-import { ceilingFor, runtimeFor } from './runtime-for.js';
+import { runtimeFor } from './runtime-for.js';
+import { resolveCeiling } from './context-ceilings.js';
 import { knownRuntimes } from './known-runtimes.js';
 
 export interface StartTeamOptions {
@@ -92,6 +93,13 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       // colour while every other surface drew the one the user picked. The hue is the only
       // part of a face that is stored rather than derived; losing it is one agent, two faces.
       ...(record.hue === undefined ? {} : { hue: record.hue }),
+      // Dropped here the same way the hue was, and with teeth: the orchestrator reads
+      // `agent.compaction ?? DEFAULT_COMPACTION`, so an agent the user had switched *off*
+      // arrived as undefined and was compacted anyway. The setting was on screen, stored, and
+      // read by nothing.
+      ...(record.compaction === undefined ? {} : { compaction: record.compaction }),
+      // And the same path for the same reason: `composePersona` reads it off the Agent.
+      ...(record.verbosity === undefined ? {} : { verbosity: record.verbosity }),
       workspacePath: workspace.path,
     });
     // A copied AgentWorkspace has no branch to show, and the UI already treats it as optional.
@@ -116,12 +124,14 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
    * contributes no key, and the renderer falls back for it. See ticket 09.
    */
   const contextCeilings: Record<string, number> = {};
+  // Read once for the whole roster: what the user set outranks what the adapter ships.
+  const overrides = store.contextCeilings();
   const runtimes = new Map<string, AgentRuntime>();
   for (const record of records) {
     const agent = agents.find((candidate) => candidate.id === record.id);
     if (agent === undefined) continue;
     runtimeLabels[record.id] = runtimeLabel(record.runtimeId);
-    const measured = ceilingFor(record.runtimeId, record.runtimeOptions?.['model']);
+    const measured = resolveCeiling(overrides, record.runtimeId, record.runtimeOptions?.['model']);
     if (measured !== undefined) contextCeilings[record.id] = measured;
     const endpoint = mcp.endpointFor(agent.id);
     // The whole difference between a relaunch and a resume. Undefined on a first launch, and

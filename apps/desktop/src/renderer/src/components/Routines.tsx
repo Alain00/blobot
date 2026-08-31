@@ -150,9 +150,10 @@ export function Routines({
               </span>
             </div>
             <Whose row={row} />
-            {/* In full rather than clamped: a person is being asked to read it, and that is the
-                entire mechanism. Nothing an agent can call arms one. */}
-            <div className="proposedprompt">{row.prompt}</div>
+            {/* A peek, with the rest one press away. It was shown in full on the argument that
+                a person is being asked to read it; a real prompt is thirty lines, and the block
+                that asks the question then holds its two answers below the fold. */}
+            <ProposedPrompt prompt={row.prompt} />
             <div className="proposalacts">
               {/* `keep` answers without changing anything, which is why it is not the loud one:
                   the loud control is the one that grants authority, and the authority was
@@ -225,6 +226,34 @@ export function Routines({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * The prompt an agent wrote for itself: five lines, then the rest on a press.
+ *
+ * Clamped rather than full, which is a reversal. The words still have to be readable — that is
+ * the whole of what the ink edge used to promise and the whole of what a person is answering —
+ * but `keep` and `disarm` have to be on screen with them, and an unbounded paragraph puts them
+ * anywhere. The control says how much is being withheld by saying nothing about it: it is
+ * `more` and then `less`, never a line count nobody can act on.
+ */
+function ProposedPrompt({ prompt }: { prompt: string }): React.JSX.Element {
+  const [all, setAll] = useState(false);
+  // Five lines of this width is roughly where a paragraph stops being a peek. Measuring the
+  // clamp to decide whether to offer the control would be a layout read on every render; the
+  // length of the text answers the same question and cannot be wrong in the direction that
+  // matters, since a short prompt with a `more` on it opens to itself.
+  const long = prompt.length > 320 || prompt.split('\n').length > 5;
+  return (
+    <>
+      <div className={all ? 'proposedprompt all' : 'proposedprompt'}>{prompt}</div>
+      {long && (
+        <button className="morepr mono muted" onClick={() => setAll(!all)}>
+          {all ? 'less' : 'more'}
+        </button>
+      )}
+    </>
   );
 }
 

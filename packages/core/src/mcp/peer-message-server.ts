@@ -369,6 +369,13 @@ export class PeerMessageServer {
       return { jsonrpc: '2.0', id, result: await this.#callTool(agentId, message) };
     }
     if (id === undefined) return null;
+    // **An unknown method must answer with an error, never with an empty result**, and on one
+    // runtime that is load-bearing rather than tidy. fx opens an MCP connection with
+    // `server/discover`, a newer draft's method this server does not implement, and it falls
+    // back to the classic `initialize` handshake **only because this line is an error**:
+    // measured 2026-08-31, a `{}` result instead fails the whole session with
+    // `-32602 Required MCP server 'blobot' failed to start: McpMissingResultType`, so every fx
+    // agent would launch without a mailbox. See `.scratch/fx-runtime/research/01-acp-surface.md`.
     return { jsonrpc: '2.0', id, error: { code: -32601, message: `method not found: ${method}` } };
   }
 

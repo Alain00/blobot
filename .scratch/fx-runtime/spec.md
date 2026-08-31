@@ -13,8 +13,27 @@ and `packages/core/src/adapters/acp` already holds the whole shared half: JSON-R
 transport, the wire shapes, the `session/update` translation and the config-option reader. Most
 of what the Claude and OpenCode adapters had to invent, fx hands over on the protocol.
 
-Not observed: fx is not installed on this machine (`which fx` finds nothing). Everything below
-is read out of the published documentation and the Zig source, and none of it has been run.
+~~Not observed: fx is not installed on this machine (`which fx` finds nothing). Everything below
+is read out of the published documentation and the Zig source, and none of it has been run.~~
+
+**Superseded 2026-08-31.** fx 0.0.7 was installed with the vendor's own installer and the whole
+surface was measured: `research/01-acp-surface.md` has the frames, every ticket is resolved, and
+the adapter is built and passing four live tests. **Three things in this spec are wrong**, and
+they are corrected here rather than quietly edited away, because being wrong from documentation is
+the reason the research ticket existed:
+
+1. **The modes are `code` and `ask`, not `ask` / `auto` / `yolo`.** Over ACP fx offers two, and a
+   fresh `session/new` defaults to `ask`, the safe one. `auto` and `yolo` are the *CLI's*
+   permission mode, a different setting, and neither has an ACP door -- so ticket 14's usual
+   refusal costs nothing here.
+2. **`FX_PERMISSION_MODE` is the lever that decides, and the ACP mode is only its visible half.**
+   The spec treated the mode as the posture. Measured: a session in ACP mode `ask` **wrote a file
+   without asking once**, because the process's permission mode was `auto`. See ticket 03.
+3. **The persona candidate this spec favoured does not work.** An `AGENTS.md` in the worktree's
+   parent directory is not read, git or not. The persona rides the prompt instead. See ticket 01.
+
+One thing the spec got right and understated: the loopback works, and it works because
+`peer-message-server.ts` answers unknown methods with an *error*. See ticket 05.
 
 ## What lines up, with no new machinery
 
@@ -68,11 +87,20 @@ reviewer model that is fixed by the provider and not configurable. Tickets 02 an
 
 ## Tickets
 
-- `01` The persona has no channel.
-- `02` Three words of trust, three modes of fx.
-- `03` May blobot write to `~/.fx/settings.json`?
-- `04` Provider is a config option, and it is account-wide.
-- `05` The adapter itself. Blocked by all four.
+All five resolved, 2026-08-31.
+
+- `01` The persona has no channel. **It has none, and it rides the prompt.**
+- `02` Three words of trust, three modes of fx. **Two modes, and all three words answer `ask`.**
+- `03` May blobot write to `~/.fx/settings.json`? **No, and it turned out not to be needed.**
+- `04` Provider is a config option, and it is account-wide. **The choice is per session, the login
+  is account-wide, and *signed in* is not the same as *able to run*.**
+- `05` The adapter itself. **Built, and the shared ACP layer took a fourth-party runtime with one
+  edit.** Finished 2026-08-31: two real fx agents on one team behind the UI messaging each other
+  both ways (`--live-fx=`, and `--live-fx-mixed=` beside a Claude agent), and the first live
+  attachment against any runtime, which fx is the right one to spend because it is the only one
+  that says no to images. Two findings on the ticket, neither blobot's doing: fx writes its own
+  diagnostics into the agent message stream, where they draw in the agent's voice, and it declines
+  the `attachment:` uri as *project instructions* while reading the block anyway.
 
 ## Out of scope
 

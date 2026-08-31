@@ -76,12 +76,36 @@ describe('the trust levels', () => {
     const bash = permissionPosture('trusting').bash;
     expect(bash['curl *']).toBe('allow');
     expect(bash['npm install*']).toBe('allow');
-    expect(bash['gh *']).toBe('allow');
     // And still asks about the ones no level reaches.
     expect(bash['rm *']).toBe('ask');
     expect(bash['sudo *']).toBe('ask');
     expect(bash['git push*']).toBe('ask');
     expect(bash['docker *']).toBe('ask');
+    // `gh` is one of those now: writing to a forge is the user's action at every level.
+    expect(bash['gh *']).toBe('ask');
+  });
+
+  it('vouches for reading GitHub at every level above careful, and never for writing to it', () => {
+    for (const trust of ['normal', 'trusting'] as const) {
+      const bash = permissionPosture(trust).bash;
+      expect(bash['gh pr view*']).toBe('allow');
+      expect(bash['gh issue list*']).toBe('allow');
+      expect(bash['gh run view*']).toBe('allow');
+      // The blanket rule still covers every verb the reads did not name, `gh api` included,
+      // because `gh api -X POST` writes and a glob on the command cannot see the flag.
+      expect(bash['gh *']).toBe('ask');
+      expect(bash['gh pr create*']).toBeUndefined();
+      expect(bash['gh api*']).toBeUndefined();
+
+      // Later rules win, so the reads have to be emitted after the blanket ask or they are
+      // dead. This is the whole mechanism and it is invisible in the values.
+      const order = Object.keys(bash);
+      expect(order.indexOf('gh pr view*')).toBeGreaterThan(order.indexOf('gh *'));
+    }
+  });
+
+  it('asks about reading GitHub when the agent is careful', () => {
+    expect(permissionPosture('careful').bash).toEqual({ '*': 'ask' });
   });
 
   it('carries the level into the config the process is handed', () => {

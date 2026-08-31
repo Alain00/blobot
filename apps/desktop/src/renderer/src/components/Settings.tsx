@@ -4,6 +4,7 @@ import type { UiRuntimeChoice } from '../../../shared/api.js';
 import { READINESS_WORD } from './readiness.js';
 import { RuntimeMark } from './RuntimeMark.js';
 import { RuntimeSetup } from './RuntimeSetup.js';
+import { ContextCeilings } from './ContextCeilings.js';
 
 /**
  * Settings: the third door at the foot of the rail, and a screen with a column of its own.
@@ -19,14 +20,15 @@ import { RuntimeSetup } from './RuntimeSetup.js';
  * was behind a decision about an agent the user had not decided to hire.
  *
  * A **working** surface with a list of sections down its left edge, the same shape *your agents*
- * and *routines* take on the right of it. One section today. That is not a placeholder for a
- * screen we owe the user: it is what there is to configure, and a sidebar with one true item is
- * more honest than four invented ones.
+ * and *routines* take on the right of it. Two sections, and both are about the machine rather
+ * than about a screen: which runtimes it has, and how much room each model is worth. A section
+ * gets added here when there is something true to configure, never to fill the column out.
  */
-type Section = 'runtimes';
+type Section = 'runtimes' | 'context';
 
 const SECTIONS: readonly { readonly id: Section; readonly label: string }[] = [
   { id: 'runtimes', label: 'Runtimes' },
+  { id: 'context', label: 'Context' },
 ];
 
 export function Settings({
@@ -97,9 +99,12 @@ export function Settings({
             {/* Detection, asked again, by hand. The same four words come back either way: this
                 does not conclude anything the automatic scan would not, it just answers the
                 user who has signed in somewhere else since the screen opened. */}
-            <button className="btn" onClick={rescan}>
-              check again
-            </button>
+            {/* Detection's own control, so it belongs to detection's own section. */}
+            {section === 'runtimes' && (
+              <button className="btn" onClick={rescan}>
+                check again
+              </button>
+            )}
             <button className="iconbtn" onClick={onClose} title="Close" aria-label="Close">
               <X size={17} aria-hidden />
             </button>
@@ -147,6 +152,8 @@ export function Settings({
               </div>
             </>
           )}
+
+          {section === 'context' && <ContextCeilings />}
         </div>
       </div>
 

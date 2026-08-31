@@ -8,14 +8,17 @@ import type {
   CompactionSetting,
   TrustLevel,
   UiAgentProfile,
+  VerbosityLevel,
   UiRuntimeChoice,
 } from '../../../shared/api.js';
-import { Blob } from './Blob.js';
+import { ATTENDED_TRUST_LEVELS } from '@blobot/core/domain';
+import { Blob, SEEN } from './Blob.js';
 import { READINESS_WORD } from './readiness.js';
 import { RuntimeMark } from './RuntimeMark.js';
 import { RuntimeOptions } from './RuntimeOptions.js';
 import { TrustPick } from './TrustPick.js';
 import { CompactionPick } from './CompactionPick.js';
+import { VerbosityPick } from './VerbosityPick.js';
 import { RuntimeSetup } from './RuntimeSetup.js';
 
 /**
@@ -63,6 +66,8 @@ function AgentFields({
   setTrust,
   compaction,
   setCompaction,
+  verbosity,
+  setVerbosity,
   /** The name's face until there is a name. An edit always has one; hiring does not yet. */
   seedFallback,
   onRuntimesChanged,
@@ -84,6 +89,8 @@ function AgentFields({
   setTrust: (value: TrustLevel) => void;
   compaction: CompactionSetting;
   setCompaction: (value: CompactionSetting) => void;
+  verbosity: VerbosityLevel;
+  setVerbosity: (value: VerbosityLevel) => void;
   seedFallback: string;
   /** The machine changed under the picker: a runtime was signed in to, or installed. */
   onRuntimesChanged?: () => void;
@@ -110,7 +117,16 @@ function AgentFields({
           page rather than in a card, and carries no name under it: the name is in the field two
           rows down, being typed, and printing it twice makes the preview look like a record. */}
       <div className="hirepreview">
-        <Blob name={seed} size={112} hue={hue} />
+        {/* The one blobatar in the app that follows the pointer unconditionally, and the one
+            that is drawn live without carrying a status. Both are the same reason: here the
+            face is the subject rather than a status carrier, so there is nothing for the motion
+            to compete with and no state for it to contradict. It is also the only moment the
+            user meets this agent, and a face that looks back is the difference between a
+            picture the name produced and a creature that was just hired.
+
+            `animate` costs about a dozen inline SVG nodes and one gaze driver. For one face in
+            a modal that is nothing; it is the transcript this was ever a question for. */}
+        <Blob name={seed} size={112} hue={hue} animated lookAt="pointer" travel={SEEN} />
         {/* A radiogroup, because that is what it is: one colour out of a fixed set, and the
             first cell is the default rather than a reset button parked to one side. */}
         <div className="swatches" role="radiogroup" aria-label="Colour">
@@ -138,7 +154,7 @@ function AgentFields({
         </div>
       </div>
 
-      <div className="fields">
+      <div className="agentfields">
         <label className="labelled">
           <span className="fieldlabel mono">NAME</span>
           <input
@@ -232,15 +248,28 @@ function AgentFields({
             onChange={setRuntimeOptions}
           />
         </div>
-        {/* Under *how it answers* because it is the other half of the same question about the
-            same agent: that one is what it says, this one is what it does. Not in the creation
+        {/* Directly under *how it answers* because it is the rest of that same question: the
+            groups above choose the machine that writes, this chooses how much it writes. It is
+            blobot's own three words rather than a runtime's, which is why it is here and not
+            inside the picker above, where it would look like something a provider advertised.
+            See `verbosity.ts` for why it has to be said at all. */}
+        <div className="labelled">
+          <span className="fieldlabel mono">HOW MUCH IT SAYS</span>
+          <VerbosityPick value={verbosity} onChange={setVerbosity} />
+        </div>
+        {/* Under the two above because it is the other half of the same question about the
+            same agent: those are what it says, this one is what it does. Not in the creation
             flow, and not on the team: an AgentWorkspace is per agent, so trusting Alice has
             never said anything about Bob and the control should not imply it does. */}
         <div className="labelled">
           <span className="fieldlabel mono">WHAT IT CAN DO WITHOUT ASKING</span>
-          <TrustPick value={trust} onChange={setTrust} />
+          <TrustPick
+            value={trust}
+            available={runtime?.trustLevels ?? ATTENDED_TRUST_LEVELS}
+            onChange={setTrust}
+          />
         </div>
-        {/* Beside the other two for the same reason they are beside each other: three
+        {/* Beside the others for the same reason they are beside each other: a run of
             questions about one agent, in blobot's own words, that no runtime advertises. It is
             last because it is the one a person is least likely to have an opinion about, and
             the default answer is the one almost everybody will keep. */}
@@ -294,6 +323,9 @@ export function HireAgent({
   /** On, which is the documented default and what an agent nobody has thought about this for
    *  runs under. See `DEFAULT_COMPACTION`. */
   const [compaction, setCompaction] = useState<CompactionSetting>('auto');
+  /** The middle position, which is where an agent nobody has an opinion about belongs.
+   *  See `DEFAULT_VERBOSITY`. */
+  const [verbosity, setVerbosity] = useState<VerbosityLevel>('normal');
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
 
@@ -303,7 +335,7 @@ export function HireAgent({
   const hire = async (): Promise<void> => {
     setBusy(true);
     const result = await window.blobot.hireAgent(
-      specOf({ name, role, instructions, hue, runtimeOptions, trust, compaction }, selected),
+      specOf({ name, role, instructions, hue, runtimeOptions, trust, compaction, verbosity }, selected),
     );
     setBusy(false);
     if (!result.ok || result.profileId === undefined) {
@@ -317,7 +349,7 @@ export function HireAgent({
     <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="scrim" />
-        <Dialog.Content className="modal" aria-describedby={undefined}>
+        <Dialog.Content className="modal roomy" aria-describedby={undefined}>
           <header className="modalhead">
             <div>
               <div className="eyebrow mono">HIRE AN AGENT</div>
@@ -346,6 +378,8 @@ export function HireAgent({
             setTrust={setTrust}
             compaction={compaction}
             setCompaction={setCompaction}
+            verbosity={verbosity}
+            setVerbosity={setVerbosity}
             seedFallback="new agent"
             {...(onRuntimesChanged === undefined ? {} : { onRuntimesChanged })}
           />
@@ -405,6 +439,7 @@ export function EditAgent({
   );
   const [trust, setTrust] = useState<TrustLevel>(agent.trust ?? 'normal');
   const [compaction, setCompaction] = useState<CompactionSetting>(agent.compaction ?? 'auto');
+  const [verbosity, setVerbosity] = useState<VerbosityLevel>(agent.verbosity ?? 'normal');
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   /** What the save actually did, once it has done it. Kept open to be read. */
@@ -420,13 +455,14 @@ export function EditAgent({
     hue !== agent.hue ||
     !sameOptions(runtimeOptions, agent.runtimeOptions ?? {}) ||
     trust !== (agent.trust ?? 'normal') ||
-    compaction !== (agent.compaction ?? 'auto');
+    compaction !== (agent.compaction ?? 'auto') ||
+    verbosity !== (agent.verbosity ?? 'normal');
 
   const save = async (): Promise<void> => {
     setBusy(true);
     const edit = await window.blobot.editAgent(
       agent.id,
-      specOf({ name, role, instructions, hue, runtimeOptions, trust, compaction }, runtimeId),
+      specOf({ name, role, instructions, hue, runtimeOptions, trust, compaction, verbosity }, runtimeId),
     );
     setBusy(false);
     if (!edit.ok) {
@@ -447,7 +483,7 @@ export function EditAgent({
     <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className="scrim" />
-        <Dialog.Content className="modal" aria-describedby={undefined}>
+        <Dialog.Content className="modal roomy" aria-describedby={undefined}>
           <header className="modalhead">
             <div>
               <div className="eyebrow mono">EDIT AN AGENT</div>
@@ -485,6 +521,8 @@ export function EditAgent({
                 setTrust={setTrust}
                 compaction={compaction}
                 setCompaction={setCompaction}
+                verbosity={verbosity}
+                setVerbosity={setVerbosity}
                 seedFallback={agent.name}
                 {...(onRuntimesChanged === undefined ? {} : { onRuntimesChanged })}
               />
@@ -656,6 +694,7 @@ function specOf(
     runtimeOptions: Readonly<Record<string, string>>;
     trust: TrustLevel;
     compaction: CompactionSetting;
+    verbosity: VerbosityLevel;
   },
   runtimeId: string,
 ): NewAgentSpec {
@@ -674,6 +713,10 @@ function specOf(
     // Sent whichever way it is set, again for the same reason: an agent switched back on has
     // to be able to say `auto` rather than merely stop saying `off`.
     compaction: form.compaction,
+    // And once more. Every one of blobot's own words is sent rather than omitted, because an
+    // edit restates the definition: coming back down from `full` has to be sayable as
+    // `normal`, not as silence about `full`.
+    verbosity: form.verbosity,
   };
 }
 

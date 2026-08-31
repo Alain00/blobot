@@ -1,5 +1,5 @@
 Type: research
-Status: open
+Status: resolved
 
 # The persona has no channel
 
@@ -46,3 +46,50 @@ Research first, because the ranking depends on a fact nobody has checked.
 
 Then decide, and say in the answer what an fx agent's persona *is*, in one sentence, the way
 ADR-0001 says what an AgentProfile is.
+
+
+## Answer
+
+**Measured against a real `fx` 0.0.7 on 2026-08-31, and the leading candidate is dead.**
+
+| candidate | result |
+| --- | --- |
+| `AGENTS.md` in the worktree's **parent** | **not read.** The agent answered `NO-MARKER`, with and without a git repository at the workspace root |
+| `AGENTS.md` **inside** the workspace | read, and refused. See below |
+| `--add-dir <path>` | fx's own string: *"These directories do not contribute AGENTS.md or other project instructions."* |
+| an environment variable | none exists. Every `FX_*` string in the binary was enumerated; there is no system-prompt or instructions-file override |
+| the loopback MCP server's `instructions` | connected, delivered, and **the model did not see it**, though fx has a `mcp_server_instructions_bytes` context limit implying it injects them somewhere |
+| `~/.fx/AGENTS.md` | global, so not per agent. Rejected on sight, unchanged |
+
+The parent-directory candidate was the ticket's own preferred answer and the reason it looked
+tractable, so its failure is the finding. *Launch-ancestor* in fx's documentation does not mean an
+ancestor of the workspace root.
+
+**The one channel that works is refused twice over.** Ticket 14's reason first: an AgentWorkspace
+is a checkout of the user's repository and a file left there can be committed home. And a second
+reason specific to this runtime, which is worse and which the ticket did not anticipate -- **the
+repository may already have an `AGENTS.md`**, the user's own file with the user's own content,
+which fx reads because it is meant to. Writing a persona there destroys it.
+
+### What an fx agent's persona is, in one sentence
+
+**An fx agent's persona is a block of standing instructions sent above the user's words on every
+turn, because fx will not take one any other way.**
+
+Three properties make that a tolerable degradation rather than a shrug, and they are in
+`adapters/fx/persona.ts` with the reasoning:
+
+1. **Every turn, not only the first.** That is `composeLeadBrief`'s shape -- composed fresh on
+   every turn the lead holds -- and it buys immunity to the one thing a first-turn-only persona
+   cannot survive: fx compacting its own history, which blobot neither controls nor observes.
+2. **It never enters the `messages` row.** The adapter adds the block at the wire, below
+   everything core composed, so the transcript still shows what the user said and nothing they
+   did not.
+3. **A separate content block**, not glued to the user's sentence, with a header saying these are
+   standing instructions and the request follows.
+
+The price is stated rather than hidden: the persona's tokens are spent once per turn for the life
+of the session.
+
+**Verified live.** `live.test.ts` asks *"Who are you, and what is your role?"* against a real fx on
+a real subscription, and it answers **"I'm Alice, the team's backend engineer."**

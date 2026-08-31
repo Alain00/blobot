@@ -5,9 +5,10 @@ import type { UiAgent, UiTeam, UiTeamSummary } from '../../../shared/api.js';
 import { foldTeamStatus, lastLineOf, type Item, type Pane } from '../model.js';
 import { lastActive } from '../time.js';
 import { useTeamOpening } from '../useTeamOpening.js';
-import { Blob } from './Blob.js';
+import { Blob, SEEN } from './Blob.js';
 import { TeamMark } from './TeamMark.js';
 import { StatusWord } from './StatusWord.js';
+
 
 /**
  * Every team the user has is a row here, not just the running one. The rail used to show the
@@ -275,12 +276,19 @@ export function Rail({
                       the team mark above it stays unposed, because the mark folds its members'
                       statuses and a pose is per face, so posing it would draw four faces each
                       asserting what the fold only ever claimed of somebody. */}
+                  {/* `SEEN` rather than the floor, because the rail is the column a person
+                      looks at all day and the whole point of the layer is that the faces look
+                      back. What actually moves here is `waiting` alone — `aimOf` gives that one
+                      status the pointer and every other one nothing — so this is the excursion
+                      of a blocked agent following you until you answer, not of a roster
+                      swivelling in unison. */}
                   <Blob
                     name={agent.name}
 										size={44}
                     status={status}
                     hue={agent.hue}
                     animated
+                    travel={SEEN}
                   />
                   <span className="who">
                     <span className="nm">

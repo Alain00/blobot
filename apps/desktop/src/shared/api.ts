@@ -9,6 +9,7 @@ import type {
   Schedule,
   StopReason,
   TrustLevel,
+  VerbosityLevel,
 } from '@blobot/core/domain';
 
 /**
@@ -16,7 +17,7 @@ import type {
  * The three words are blobot's own, so this is not the provider vocabulary the UI is barred
  * from: no component learns which runtime is behind them or what either one does with them.
  */
-export type { CompactionSetting, TrustLevel };
+export type { CompactionSetting, TrustLevel, VerbosityLevel };
 
 /**
  * The schedule's three shapes, re-exported for the same reason the trust words are: it is a
@@ -671,6 +672,40 @@ export interface UiRuntimeChoice {
    * works reads as blobot doubting the answer it just gave.
    */
   readonly remedies: readonly UiRuntimeRemedy[];
+  /**
+   * Which trust positions this runtime can actually express, weakest first.
+   *
+   * Three on most of them and four on the one with a classifier of its own. It rides this row
+   * rather than being hardcoded in the picker for the reason everything else here does: the
+   * renderer draws the rows it is handed and never learns which provider produced them, so a
+   * form that offered `unattended` beside a runtime that has no such thing is impossible to
+   * write rather than merely discouraged.
+   */
+  readonly trustLevels: readonly TrustLevel[];
+}
+
+/**
+ * One model's working ceiling, as the settings screen lists it.
+ *
+ * The ceiling is *where a model stops being worth more context* — the denominator the gauge
+ * marks and the number compaction fires at a fraction of. It is knowledge somebody has to have
+ * established, so this row carries where it came from as plainly as it carries the figure:
+ * blobot ships a small table, the user can overrule any line of it, and everything else takes a
+ * conservative fallback and says so.
+ *
+ * `tokens` is absent exactly when `source` is `unmeasured`, because the fallback is a fraction
+ * of a window nobody is reporting for a model nobody is running. The renderer says that in
+ * words rather than drawing an invented number.
+ */
+export interface UiContextCeiling {
+  readonly runtimeId: string;
+  readonly runtimeLabel: string;
+  /** Absent means *whatever model the runtime picks for itself*, which is every Codex agent. */
+  readonly model?: string;
+  readonly tokens?: number;
+  readonly source: 'yours' | 'measured' | 'unmeasured';
+  /** The hired agents set to this model, by name. Empty for a row blobot ships and nobody uses. */
+  readonly used: readonly string[];
 }
 
 /**
@@ -792,6 +827,13 @@ export interface UiAgentProfile {
    * runtime is behind them.
    */
   readonly compaction?: CompactionSetting;
+  /**
+   * How much it says when it answers. Absent is `normal`.
+   *
+   * The third of the same three, and the one that reaches no runtime at all: it is composed
+   * into the persona, so the renderer naming it says nothing about who is behind it.
+   */
+  readonly verbosity?: VerbosityLevel;
   /** The teams it is currently on, by name. Empty for an agent nobody has put to work yet. */
   readonly teams: readonly string[];
 }
@@ -815,6 +857,8 @@ export interface NewAgentSpec {
   readonly trust?: TrustLevel;
   /** `auto` or `off`. Absent is `auto`, which is on: a form nobody touched leaves it on. */
   readonly compaction?: CompactionSetting;
+  /** `brief`, `normal` or `full`. Absent is `normal`, which is what an untouched form sends. */
+  readonly verbosity?: VerbosityLevel;
 }
 
 export interface NewTeamSpec {
@@ -953,6 +997,20 @@ export interface BlobotApi {
   /** Give a team an icon or take it off. Changes nothing else and restarts nothing. */
   setTeamIcon(teamId: string, icon: string | undefined): Promise<void>;
   detectRuntimes(): Promise<readonly UiRuntimeChoice[]>;
+  /** Every model blobot can be asked about, with its working ceiling and where that came from. */
+  contextCeilings(): Promise<readonly UiContextCeiling[]>;
+  /**
+   * Set one model's working ceiling, or hand it back to blobot with `undefined`.
+   *
+   * Takes effect on the running teams as well as the next one: a ceiling is a threshold blobot
+   * checks after every turn, not a parameter a session was opened with, so unlike the model or
+   * the trust level there is no restart to wait for.
+   */
+  setContextCeiling(
+    runtimeId: string,
+    model: string | undefined,
+    tokens: number | undefined,
+  ): Promise<readonly UiContextCeiling[]>;
   /** Every agent the user has hired, with the teams each is currently on. */
   listAgents(): Promise<readonly UiAgentProfile[]>;
   /**

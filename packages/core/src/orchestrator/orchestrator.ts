@@ -316,7 +316,12 @@ export class Orchestrator {
    * would make a full agent look empty and quietly switch compaction off for it.
    */
   readonly #usage = new Map<string, { used: number; size: number }>();
-  readonly #contextCeilings: ReadonlyMap<string, number>;
+  /**
+   * Mutable, because the user can change one while the team is running. It is a threshold and
+   * not a session parameter — nothing is handed to a runtime when it moves, so unlike the model
+   * or the trust level it does not have to wait for the next start.
+   */
+  readonly #contextCeilings: Map<string, number>;
   readonly #handoffs: HandoffArchive | undefined;
   /** Agents inside a compaction right now. The turns it runs must not start another one. */
   readonly #compacting = new Set<string>();
@@ -330,7 +335,7 @@ export class Orchestrator {
     this.#clock = options.clock ?? new SystemClock();
     this.#createId = options.createId ?? uuidv7;
     this.#recorder = options.recorder;
-    this.#contextCeilings = options.contextCeilings ?? new Map();
+    this.#contextCeilings = new Map(options.contextCeilings ?? []);
     this.#handoffs = options.handoffs;
     this.#budgetCeiling = options.team.turnBudget;
     this.#routines = options.routines;
@@ -1060,6 +1065,18 @@ export class Orchestrator {
    */
   acceptsOf(agentId: string): AttachmentSupport {
     return this.#runtimes.get(agentId)?.accepts ?? { images: false, textFiles: false };
+  }
+
+  /**
+   * Move one agent's working ceiling while the team is up.
+   *
+   * The threshold is checked after every turn against whatever is in this map, so the next turn
+   * uses the new number and no restart is owed. `undefined` puts the agent back on the
+   * conservative fallback, which is what an unmeasured model has always had.
+   */
+  setContextCeiling(agentId: string, tokens: number | undefined): void {
+    if (tokens === undefined) this.#contextCeilings.delete(agentId);
+    else this.#contextCeilings.set(agentId, tokens);
   }
 
   injectionOf(agentId: string): {

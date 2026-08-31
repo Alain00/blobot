@@ -13,6 +13,7 @@ import type {
 import type { AttachmentStore, MessageStore } from '../orchestrator/message-store.js';
 import type { Routine, RoutineOutcome, RoutineRun, Schedule } from '../routines/domain.js';
 import { trustLevelOf, type TrustLevel } from '../trust.js';
+import { verbosityLevelOf, type VerbosityLevel } from '../verbosity.js';
 import { DEFAULT_COMPACTION, type CompactionSetting } from '../orchestrator/domain.js';
 import type { BlobotDatabase } from './database.js';
 import {
@@ -20,6 +21,7 @@ import {
   agentProfiles,
   agents,
   attachments,
+  contextCeilings,
   events,
   messageAttachments,
   messages,
@@ -59,10 +61,25 @@ export interface AgentRecord extends Agent {
   readonly runtimeOptions?: Readonly<Record<string, string>>;
   /** How much of its own work blobot vouches for. Absent is `normal`. See `trust.ts`. */
   readonly trust?: TrustLevel;
+  /** How much it says when it answers. Absent is `normal`. See `verbosity.ts`. */
+  readonly verbosity?: VerbosityLevel;
   /** NULL when the Workspace is not a git repository. */
   readonly branch?: string;
   readonly createdAt: number;
   readonly deletedAt?: number;
+}
+
+/**
+ * A ceiling the user established themselves, which outranks the adapter's own table.
+ *
+ * `model` is absent when it is for the runtime's own default model — the only key a Codex agent
+ * can have, since that adapter advertises no model to choose.
+ */
+export interface ContextCeilingRecord {
+  readonly runtimeId: string;
+  readonly model?: string;
+  readonly tokens: number;
+  readonly at: number;
 }
 
 export interface SessionRecord {
@@ -216,6 +233,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       runtimeOptions: encodeOptions(profile.runtimeOptions),
       trust: profile.trust ?? null,
       compaction: profile.compaction ?? null,
+      verbosity: profile.verbosity ?? null,
       instructions: profile.instructions ?? null,
       hue: profile.hue ?? null,
       createdAt: profile.createdAt,
@@ -276,6 +294,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
         runtimeOptions: encodeOptions(definition.runtimeOptions),
         trust: definition.trust ?? null,
         compaction: definition.compaction ?? null,
+        verbosity: definition.verbosity ?? null,
         instructions: definition.instructions ?? null,
         hue: definition.hue ?? null,
       })
@@ -301,6 +320,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       readonly runtimeOptions?: Readonly<Record<string, string>>;
       readonly trust?: TrustLevel;
       readonly compaction?: CompactionSetting;
+      readonly verbosity?: VerbosityLevel;
     },
   ): void {
     this.#db
@@ -319,6 +339,9 @@ export class SqliteStore implements MessageStore, AttachmentStore {
         // And the same rule once more. Whether blobot may replace a session is a fact about
         // the next launch, because the session it would replace is the one already running.
         compaction: stated.compaction ?? null,
+        // And once more, for a different reason: this one is read only by `composePersona`,
+        // and a persona is a `session/new` parameter on every adapter blobot has.
+        verbosity: stated.verbosity ?? null,
       })
       .where(eq(agents.id, agentId))
       .run();
@@ -348,6 +371,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       runtimeOptions: encodeOptions(agent.runtimeOptions),
       trust: agent.trust ?? null,
       compaction: agent.compaction ?? null,
+      verbosity: agent.verbosity ?? null,
       workspacePath: agent.workspacePath,
       branch: agent.branch ?? null,
       createdAt: agent.createdAt,
@@ -1200,6 +1224,50 @@ export class SqliteStore implements MessageStore, AttachmentStore {
     this.#db.update(routineRuns).set({ seenAt: at }).where(inArray(routineRuns.id, ids)).run();
   }
 
+  /**
+   * Every ceiling the user has set, whatever runtime it is for.
+   *
+   * Read whole rather than queried per model: there are as many rows here as there are models
+   * somebody sat and watched, which is a handful, and the resolver wants them all anyway.
+   */
+  contextCeilings(): ContextCeilingRecord[] {
+    return this.#db
+      .select()
+      .from(contextCeilings)
+      .all()
+      .map((row) => ({
+        runtimeId: row.runtimeId,
+        ...(row.model === '' ? {} : { model: row.model }),
+        tokens: row.tokens,
+        at: row.at,
+      }));
+  }
+
+  /** The user's number for one model. Absent `model` is the runtime's own default. */
+  setContextCeiling(runtimeId: string, model: string | undefined, tokens: number, at: number): void {
+    this.#db
+      .insert(contextCeilings)
+      .values({ runtimeId, model: model ?? '', tokens, at })
+      .onConflictDoUpdate({
+        target: [contextCeilings.runtimeId, contextCeilings.model],
+        set: { tokens, at },
+      })
+      .run();
+  }
+
+  /**
+   * Take it back, and fall to whatever blobot knew before it.
+   *
+   * A real delete rather than a tombstone, which is the one place in this file that happens: a
+   * tombstone exists here so a transcript keeps pointing at what it said at the time, and
+   * nothing points at this row. It is a preference with no history worth keeping.
+   */
+  clearContextCeiling(runtimeId: string, model: string | undefined): void {
+    this.#db
+      .delete(contextCeilings)
+      .where(and(eq(contextCeilings.runtimeId, runtimeId), eq(contextCeilings.model, model ?? '')))
+      .run();
+  }
 }
 
 type MessageRow = typeof messages.$inferSelect;
@@ -1217,6 +1285,7 @@ function toProfileRecord(row: AgentProfileRow): AgentProfileRecord {
     ...optionsOf(row.runtimeOptions),
     ...(row.trust === null ? {} : { trust: trustLevelOf(row.trust) }),
     ...(row.compaction === null ? {} : { compaction: compactionSettingOf(row.compaction) }),
+    ...(row.verbosity === null ? {} : { verbosity: verbosityLevelOf(row.verbosity) }),
     ...(row.instructions === null ? {} : { instructions: row.instructions }),
     ...(row.hue === null ? {} : { hue: row.hue }),
     ...(row.deletedAt === null ? {} : { deletedAt: row.deletedAt }),
@@ -1274,6 +1343,7 @@ function toAgentRecord(row: AgentRow): AgentRecord {
     ...optionsOf(row.runtimeOptions),
     ...(row.trust === null ? {} : { trust: trustLevelOf(row.trust) }),
     ...(row.compaction === null ? {} : { compaction: compactionSettingOf(row.compaction) }),
+    ...(row.verbosity === null ? {} : { verbosity: verbosityLevelOf(row.verbosity) }),
     ...(row.branch === null ? {} : { branch: row.branch }),
     ...(row.deletedAt === null ? {} : { deletedAt: row.deletedAt }),
   };

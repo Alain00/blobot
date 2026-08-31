@@ -15,8 +15,12 @@ import { createRoot } from 'react-dom/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UiAgent, UiTeam, UiTeamSummary } from '../../shared/api.js';
 import { Rail } from './components/Rail.js';
+import { stubGazeHost } from './test-dom.js';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+// This surface draws animated blobatars, so a gaze driver mounts with them. See `test-dom.ts`.
+stubGazeHost();
 
 // The rail scrolls the open team's group into view, and jsdom implements no scrolling.
 Element.prototype.scrollIntoView ??= function scrollIntoView(): void {};

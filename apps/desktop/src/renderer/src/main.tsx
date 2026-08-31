@@ -23,6 +23,11 @@ import '@fontsource/caveat/latin-500.css';
 // at zero carry the same specificity as the ones they override, so order is the only thing
 // deciding them, exactly as with the `prefers-reduced-motion` block at the end of our sheet.
 import 'blobatar/motion.css';
+// The gaze layer, and it is a second file for the same reason `motion.css` is a file at all:
+// a page that never aims a blobatar should not carry it. `--mo-track-travel` is registered here
+// at `0px`, so this on its own moves nothing — `Blob` is what opts a face in, by setting the
+// excursion and aiming the driver. Both together, or a face renders perfectly and never moves.
+import 'blobatar/gaze.css';
 import './styles.css';
 
 const root = document.getElementById('root');

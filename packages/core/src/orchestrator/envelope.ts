@@ -1,4 +1,5 @@
 import type { AgentStatus } from '../status.js';
+import { DEFAULT_VERBOSITY, verbosityInstruction } from '../verbosity.js';
 import type { Agent, Message, Team } from './domain.js';
 
 /**
@@ -15,11 +16,6 @@ export function composePersona(agent: Agent, team: Team, roster: readonly Agent[
     `You are ${agent.name}, ${agent.role}, on the team "${team.name}".`,
     `The team works on ${team.workspacePath}.`,
     `You work in your own copy of it at ${agent.workspacePath}.`,
-    // An agent exists across teams, so its standing instructions are static about *it* rather
-    // than about this team — which is exactly what belongs in the cached prefix.
-    ...(agent.instructions === undefined || agent.instructions.trim() === ''
-      ? []
-      : ['', 'Standing instructions, which apply on every team you are on:', agent.instructions.trim()]),
     '',
     teammates.length === 0
       ? 'You have no teammates on this team yet.'
@@ -41,10 +37,25 @@ export function composePersona(agent: Agent, team: Team, roster: readonly Agent[
     '  been asked to repeat and pick the least frequent schedule that does the job. Say that you',
     '  have scheduled it, and say when it will run. The person can switch it off.',
     '',
-    // The house style, asked for by the author. It is one line because it is a preference
-    // about prose, not a rule about work, and it should never outweigh either of the two
-    // things above it.
+    // The house style, asked for by the author, and the verbosity level the user chose for
+    // this agent. Both are preferences about prose rather than rules about work, which is why
+    // they sit below the paragraph above and never outweigh it.
     'Write plainly. Do not use em dashes.',
+    ...verbosityInstruction(agent.verbosity ?? DEFAULT_VERBOSITY),
+    // Last, and deliberately. An agent exists across teams, so its standing instructions are
+    // static about *it* rather than about this team, which is what belongs in the cached
+    // prefix — and putting them here rather than at the top is what makes them the user's
+    // last word. blobot's prose rules are a default; somebody who writes "explain your
+    // reasoning in full" has to be able to say so and win, and above the line they silently
+    // lost to a sentence they never wrote.
+    ...(agent.instructions === undefined || agent.instructions.trim() === ''
+      ? []
+      : [
+          '',
+          'Standing instructions, which apply on every team you are on, and which outrank',
+          'anything above about how to write:',
+          agent.instructions.trim(),
+        ]),
   ];
   return lines.join('\n');
 }

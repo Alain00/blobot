@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: resolved
 
 # May blobot write to `~/.fx/settings.json`?
 
@@ -56,3 +56,33 @@ Grill it, and answer with one of three, in writing:
 
 If the answer is 1, it wants an ADR, not just a ticket answer: it is the sort of decision
 ADR-0003 is, about what blobot may touch outside its own storage.
+
+
+## Answer
+
+**No, and it turned out not to be needed.** The ticket assumed the only way to express a posture
+on fx was `~/.fx/settings.json`, which is the user's own file. Measured 2026-08-31, there is a
+per-process lever and it is the one that decides:
+
+- **`FX_PERMISSION_MODE`**, an environment variable on the child, is what gates tool calls.
+- The ACP session's `mode` (`code` / `ask`) is the visible half and on its own decides nothing.
+
+The measurement that settles it, and it is the Codex lesson word for word: a session whose ACP
+mode was `ask` -- the default a fresh `session/new` reports -- **wrote a file without asking
+once**, because the process's own permission mode was `auto`. With `FX_PERMISSION_MODE=ask` on the
+child, the identical prompt raised a proper `session/request_permission` carrying `allow_once`,
+`allow_always` and `reject_once`. So the variable is not optional, exactly as `INITIAL_AGENT_MODE`
+was not on Codex, and `spawnFx` sets it at every trust level.
+
+Nothing is written to `~/.fx/settings.json`, and one further consequence follows from that which
+the ticket did not raise: **`/allowlist` is refused in the palette.** It is one of the eighteen
+commands fx advertises, its own hint is `add command "git *"`, and it writes a persistent allow
+rule into that file. That is ticket 14's posture being edited from inside the composer, by prose,
+permanently, in the user's own file -- and it would be the only path in the app by which an
+agent's turn could widen what the next agent may do. `adapters/fx/palette.ts` drops it by name.
+
+**What is lost by not writing that file** is real and is recorded on ticket 02: fx's two modes are
+`ask` and `code`, `code` is "full tool access" with no carve-out for `rm`, `sudo` or `git push`,
+and blobot has no per-process way to narrow it. So `trusting` cannot buy what it buys on Claude,
+and all three trust words answer `ask`. `FX_EXPRESSES_TRUST = false` says so in code rather than
+letting three words in a dialog imply a difference the adapter cannot deliver.

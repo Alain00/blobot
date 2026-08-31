@@ -27,7 +27,13 @@ import {
   type SpawnBridge,
 } from './stdio-bridge.js';
 import { offerableNames, paletteOf } from './palette.js';
-import { vouchedTools } from './permissions.js';
+import {
+  CLAUDE_POSTURE_MODE,
+  claudeModeFor,
+  claudeModeNeedsProbe,
+  refusedTools,
+  vouchedTools,
+} from './permissions.js';
 import { commandsFrom, stopReasonOf, translateSessionUpdate } from '../acp/session-updates.js';
 import { withTarget } from '../acp/target.js';
 import { withoutToolVerb } from './tool-title.js';
@@ -37,19 +43,19 @@ import type {
   NewSessionResult,
   PermissionRequestParams,
   PromptResult,
+  SessionModeWire,
   SessionNotification,
 } from '../acp/wire.js';
 
 const PROTOCOL_VERSION = 1;
 
 /**
- * Forced, not chosen: the bridge discards `permissionMode`, `canUseTool` and
- * `allowDangerouslySkipPermissions`, so `session/set_mode` is the only lever we have. We take
- * `default` — never `auto`, which would hand safety decisions for an unattended teammate to a
- * model classifier we do not control, and never `acceptEdits` or `bypassPermissions`.
- * See ticket 14.
+ * The mode is now the trust level's, not a constant. The bridge discards `permissionMode`,
+ * `canUseTool` and `allowDangerouslySkipPermissions`, so `session/set_mode` is still the only
+ * lever we have; what changed on 2026-08-31 is that `unattended` reaches for `auto` and the other
+ * three levels keep `default`. `acceptEdits`, `dontAsk`, `plan` and `bypassPermissions` remain
+ * unoffered. See `permissions.ts` and ticket 14's reopened section.
  */
-const PERMISSION_MODE = 'default';
 
 /**
  * Which advertised option groups blobot hands to the user.
@@ -303,7 +309,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
     }
     this.#sessionId = session.sessionId;
     this.#modeId = session.modes?.currentModeId;
-    await this.#applyPermissionMode();
+    await this.#applyPermissionMode(session.modes?.availableModes);
     this.#optionGroups = optionGroupsFrom(session.configOptions, SURFACED_OPTIONS);
     this.#optionGroups = await applyOptionChoices(
       connection,
@@ -366,7 +372,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
         ...(this.#options.persona === undefined ? {} : { systemPrompt: this.#options.persona }),
         claudeCode: {
           options: {
-            disallowedTools: SHADOWING_TOOLS,
+            disallowedTools: [...SHADOWING_TOOLS, ...refusedTools(this.trust)],
             settingSources: SETTING_SCOPES,
             allowedTools: preApprovedTools(this.#options.mcpServers ?? [], this.trust),
           },
@@ -378,15 +384,36 @@ export class ClaudeAgentRuntime implements AgentRuntime {
   /**
    * Ticket 14's trap, generalised: re-send this after every `session/load` or resume, because
    * a restored session comes back in whatever mode it was saved in.
+   *
+   * **Probed, not assumed, for anything but `default`.** Claude advertises `auto` *"only when the
+   * model supports it"*, so an `unattended` agent on a model without a classifier would otherwise
+   * have been put in a mode that does not exist and told nobody. `wire.ts` grew `availableModes`
+   * for exactly this. When the mode blobot wants is not on offer it falls back to `default` and
+   * says so on stderr, which reaches the user as the runtime's own voice.
+   *
+   * Deliberately **not** fatal, which is where this parts company with Codex's `#assertPosture`.
+   * That one throws because its fallback would be *looser* than intended and ticket 14 exists to
+   * prevent exactly that. Here the fallback is *stricter*: the agent asks the user instead of
+   * asking a classifier. Refusing to launch would punish somebody for their model choice, and the
+   * failure it is protecting against cannot happen in this direction.
    */
-  async #applyPermissionMode(): Promise<void> {
+  async #applyPermissionMode(available?: readonly SessionModeWire[]): Promise<void> {
     const connection = this.#connection;
     if (connection === undefined) return;
-    await connection.request('session/set_mode', {
-      sessionId: this.#sessionId,
-      modeId: PERMISSION_MODE,
-    });
-    this.#modeId = PERMISSION_MODE;
+    const wanted = claudeModeFor(this.trust);
+    const offered =
+      available === undefined || !claudeModeNeedsProbe(wanted)
+        ? true
+        : available.some((mode) => mode.id === wanted);
+    const modeId = offered ? wanted : CLAUDE_POSTURE_MODE;
+    if (!offered) {
+      this.#options.onStderr?.(
+        `blobot: this model does not offer the ${wanted} permission mode, so ${this.agentId} ` +
+          `runs as ${CLAUDE_POSTURE_MODE} and will ask you instead`,
+      );
+    }
+    await connection.request('session/set_mode', { sessionId: this.#sessionId, modeId });
+    this.#modeId = modeId;
   }
 
   sendPrompt(prompt: Prompt): AsyncIterable<AgentEvent> {
@@ -490,7 +517,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
       // A fresh session is not a resumed one, and the surface that says whether an agent came
       // back knowing yesterday must not keep saying yes about a session that knows nothing.
       this.#resumed = false;
-      await this.#applyPermissionMode();
+      await this.#applyPermissionMode(session.modes?.availableModes);
       this.#optionGroups = await applyOptionChoices(
         connection,
         this.#sessionId,

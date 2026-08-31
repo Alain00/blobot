@@ -1,5 +1,5 @@
 Type: task
-Status: open
+Status: resolved
 
 # Provider is a config option, and it is account-wide
 
@@ -41,3 +41,40 @@ Two things to check while there:
   `session/set_config_option`, given the adapter already spawns one process per agent. Compare
   the two and pick, since on Claude `_meta.claudeCode.options.model` turned out to be accepted
   and ignored, and that lesson is what ADR-0002's amendment is about.
+
+
+## Answer
+
+**Measured 2026-08-31.** The ticket's title is half wrong, and the half that is right is sharper
+than it was charted.
+
+**The choice is per session. The login is account-wide.** `provider` is a real
+`session/set_config_option` with three values (`gateway`, `codex`, `grok`), and setting it is
+accepted as a request and then refused on the credential:
+
+    {"code": -32600, "message": "fx needs a Codex subscription login for this model.
+     Run fx login codex."}
+
+So blobot can offer the provider per agent, exactly as ADR-0002 says the model and the effort are
+the user's to choose. What blobot cannot do is *acquire* the login per agent, and it must not: that
+is the no-credential-storage rule, and `fx login codex` is the user's own command, spawned in a PTY
+by `detect/remedies.ts` the way `claude auth login` already is.
+
+**`model` is per session and independent of `provider`.** Setting `anthropic/claude-sonnet-4.5`
+applied while `provider` stayed `gateway`. 234 models are advertised. blobot passes the list
+through as ADR-0002's option group and decides none of it.
+
+**The refusal is a good sentence and blobot should quote it.** It names the exact remedy. Composing
+our own would be worse and would go stale when fx adds a fourth provider.
+
+**A fifth state that ticket 11 cannot see.** `fx status --json` reported `auth: "fx login"` --
+signed in, credential refreshable -- and the turn still failed:
+
+    HTTP 502: {"error":{"message":"A positive credit balance is required for all requests,
+     including BYOK, so fallback providers remain available.","type":"insufficient_funds"}}
+
+**Signed in is not the same as able to run**, and no probe blobot can afford will tell them apart,
+because the only thing that distinguishes them is a billed request. This is not an fx quirk to work
+around; it is the reason ticket 11's states were always described as honest rather than complete,
+and it is a second argument for the rule that detection gates nothing. The place it surfaces is the
+transcript, on the turn that failed, in fx's own words.

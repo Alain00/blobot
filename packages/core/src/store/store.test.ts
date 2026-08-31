@@ -66,7 +66,8 @@ describe('the schema', () => {
     // written, so the set of things it can hold is the provider's menu, not the user's
     // keyboard. Adding a column here is a decision to be made on purpose, which is what this
     // test is for. `trust` is the second decision it caught: three words of blobot's own
-    // vocabulary, NULL meaning `normal`, and no runtime has ever advertised it.
+    // vocabulary, NULL meaning `normal`, and no runtime has ever advertised it. `verbosity`
+    // is the third, and is the same shape for the same reason.
     expect(columnsOf('agents').sort()).toEqual(
       [
         'branch',
@@ -85,6 +86,7 @@ describe('the schema', () => {
         'runtime_options',
         'team_id',
         'trust',
+        'verbosity',
         'workspace_path',
       ].sort(),
     );
@@ -104,6 +106,7 @@ describe('the schema', () => {
         'runtime_id',
         'runtime_options',
         'trust',
+        'verbosity',
       ].sort(),
     );
     for (const table of ['agents', 'agent_profiles']) {

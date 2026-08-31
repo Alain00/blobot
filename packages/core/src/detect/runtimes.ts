@@ -128,8 +128,63 @@ const CODEX: RuntimeProbe = {
   },
 };
 
+/**
+ * fx, measured 2026-08-31 against fx 0.0.7.
+ *
+ * **The best-behaved probe of the four, and the only one that is free and honest at once.**
+ * `fx status --json` prints a single JSON object and exits 0 whether or not anybody is signed
+ * in, carrying an `auth` field that names the credential in the vendor's own words: `missing`
+ * with none, `fx login` for the Vercel AI Gateway OAuth, `Codex subscription` for a ChatGPT
+ * login. No billed request, no TUI, no exit-code archaeology. `fx doctor --json` is a fuller
+ * version of the same thing and is what `RuntimeSetup` can show a user who wants detail.
+ *
+ * The asymmetry ticket 11 recorded still holds and is worse here in one specific way, so it is
+ * written down rather than papered over: **signed in is not the same as able to run.** A machine
+ * reporting `auth: "fx login"` was measured failing a real turn with
+ * `{"type":"insufficient_funds"}` from the gateway, because the account had no credit balance.
+ * No probe blobot can afford will tell those apart -- the only thing that distinguishes them is
+ * a billed request -- which is the fifth state ticket 11's four cannot see, and a second reason
+ * detection gates nothing. Where it surfaces is the transcript, on the turn that failed, in fx's
+ * own sentence.
+ *
+ * `extraDirs` is `~/.local/bin`, where `https://fx.sh/setup.sh` puts the binary, and which the
+ * cascade already searched for the other two.
+ */
+const FX: RuntimeProbe = {
+  runtimeId: 'fx',
+  label: 'fx',
+  binary: 'fx',
+  supported: true,
+  extraDirs: ['.local/bin'],
+  probeAuth: async (path, run) => {
+    const result = await run(path, ['status', '--json'], { timeoutMs: 5_000 });
+    const auth = fxAuthField(result.stdout);
+    if (auth === undefined) {
+      return { readiness: 'unknown', detail: 'Installed; sign-in state could not be read' };
+    }
+    // The vendor's own word for "nothing configured". Anything else names a real credential,
+    // and is reported as the credential rather than as a tick: `Signed in with Codex
+    // subscription` says more than `ready` and is still only what fx claimed.
+    if (auth === 'missing') return { readiness: 'needs_sign_in', detail: 'Installed, not signed in' };
+    return { readiness: 'ready', detail: `Signed in on this machine (${auth})` };
+  },
+};
+
+/** `auth` out of `fx status --json`, or nothing. A machine that answered something other than
+ *  JSON is `unknown` rather than a guess in either direction. */
+function fxAuthField(stdout: string): string | undefined {
+  try {
+    const parsed: unknown = JSON.parse(stdout);
+    if (typeof parsed !== 'object' || parsed === null) return undefined;
+    const auth = (parsed as { auth?: unknown }).auth;
+    return typeof auth === 'string' && auth !== '' ? auth : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /** The runtimes the picker offers, in order. `supported` says which blobot can construct. */
-export const RUNTIME_PROBES: readonly RuntimeProbe[] = [CLAUDE_CODE, OPENCODE, CODEX];
+export const RUNTIME_PROBES: readonly RuntimeProbe[] = [CLAUDE_CODE, OPENCODE, CODEX, FX];
 
 export async function detectRuntimes(options: DetectOptions = {}): Promise<RuntimeDetection[]> {
   const run = options.run ?? execRunner;

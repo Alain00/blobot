@@ -3454,3 +3454,357 @@ Typecheck and the desktop suite pass (358). Reviewed by screenshot on the real s
 demo mode, since demo mode has none of these doors — `--screen=settings` and `--screen=agents`
 need `--screenshot-at` around 70s there, because the window paints nothing until the launch team's
 snapshot arrives.
+
+## Built, 2026-08-31: the compaction cap is the user's to set, per model
+
+`.scratch/transcript-scale/issues/09` says the remedy for a model that deserves better than the
+conservative fallback is to measure it and give it an entry. Until now the only place an entry
+could land was `CLAUDE_CEILINGS` in blobot's own source, which is the ageing-table hazard from the
+other side: the table moves on somebody else's release cadence, and the person who can actually
+watch a model go vague is the one sitting in front of it, with nowhere to write down what they
+saw. The one entry blobot ships says as much on its face — `opus: 300_000`, sourced as *reported
+by the author, not measured against a transcript*.
+
+**Settings holds a second section, `Context`.** One row per model, built from three sources
+unioned: the models the user's own AgentProfiles are set to, every entry an adapter's table
+already carries, and every ceiling the user has written. A row carries the figure, the moment it
+produces (`handoff at 240,000`, which is `COMPACTION_TRIGGER` applied where the reader can see
+it), where the figure came from, and which agents are on that model. A model nobody has
+established anything for draws **the rule and not a number** — `60% of the window, up to 200,000
+· blobot's fallback` — because the fallback is a fraction of a window nobody is reporting for a
+session that does not exist, and a figure there would be a claim about a session nobody opened.
+
+**The empty string is a real key, and it is the load-bearing part.** Codex advertises no `model`
+option blobot passes through, so every Codex agent's lookup is handed `undefined`; without a key
+for *the runtime's own default* a whole runtime could never be given a number. The row says
+`Codex, whichever model it picks`, which is what it is: a ceiling for an agent that let the
+runtime choose, and not a guess about which model that turned out to be.
+
+**It reaches teams that are already running**, and that is a real difference rather than a
+convenience. The model, the trust level and the persona are `session/new` parameters, so an edit
+to them waits for the next start; a ceiling is a number compared against after every turn, so
+`Orchestrator.setContextCeiling` moves it live and `applyCeilings` in main pushes it at every team
+the pool holds. The gauge and the trigger read the same number either way, which is why they
+could not disagree before and must not start now.
+
+**Where the pieces are.** `context_ceilings` in the schema (migration 0017), two identifiers and
+a token count, deliberately not a `settings` key-value bag — that is where a credential ends up
+six weeks from now. `SqliteStore.contextCeilings` / `setContextCeiling` / `clearContextCeiling`,
+with a real delete rather than a tombstone, since nothing points at the row. `resolveCeiling` in
+`apps/desktop/src/main/context-ceilings.ts` is the whole precedence rule (the user's, then the
+adapter's, then nothing) and both callers go through it. `CEILING_TABLES` sits beside `ceilingFor`
+in `runtime-for.ts`, because that file is already the one place allowed to know what a
+`runtime_id` means. The floor and the roof (10,000 and 5,000,000) are not a judgement about any
+model: they are the range in which a token count is a token count, and the renderer refuses
+outside it before the round trip so the button is honest.
+
+Typecheck, both suites (563 core, 376 desktop) and the build pass. **Not reviewed on screen**:
+`--screenshot` returned a flat `--ground` frame on every attempt, including on surfaces this
+change does not touch, so the capture was not to be trusted that session. `ContextCeilings.tsx`
+is covered by a jsdom test instead — the provenance line, the fallback that names no figure, the
+`unset` that appears only on a row the user set, and the refusal of a figure that is not a token
+count. Somebody with the window in front of them should still look at it.
+
+## Built, 2026-08-31: `gh` was sorted by how it talks, not by what it says
+
+Raised on the working surface: read-only `gh` calls were prompting. They were, on both runtimes,
+at the level almost every agent runs at, and the fix is a reclassification rather than a
+loosening. Ticket 14 carries the amendment; this is what changed.
+
+**The defect.** Both adapters treated `gh` as one atom, filed under ticket 14's heading *the
+commands that reach the network, change permissions, or publish*. But `git fetch` and `git pull`
+have been vouched at `normal` since the Claude allowlist was written, and they are reads over the
+same network against the same host. So the axis was never the transport — had it been, those two
+would have been out too and an agent could not fetch its own remote. The list contradicted itself
+two lines apart, and `gh pr view` lost.
+
+It failed in the other direction as well, which is the half that was not being complained about:
+at `trusting`, `Bash(gh:*)` and OpenCode's lifted `'gh *'` vouched for **`gh pr create` and
+`gh pr merge`**, against `workspace/publish.ts`'s rule that a pull request is the user's action
+and never an agent's. One atom, a prompt nobody wanted at `normal` and an allowance nobody chose
+at `trusting`.
+
+**The split, on the verb, exactly as `git` has always been split.** Nineteen reading prefixes
+vouched from `normal` — `gh pr view|list|diff|checks|status`, `gh issue view|list|status`,
+`gh repo view|list`, `gh run view|list`, `gh workflow view|list`, `gh release view|list`,
+`gh label list`, `gh search`, `gh auth status`. Every writing verb vouched at no level, and bare
+`gh` absent from both adapters for the reason bare `git` always was: it swallows the verbs behind
+it. **`gh api` is with the writes**, because `gh api -X POST` writes and neither a Claude prefix
+rule nor an OpenCode command glob can see a flag — a rule that cannot tell has to fail closed.
+
+**The two adapters translate from opposite ends, and this is the first rule where the subtracting
+one adds something back.** Claude's list gains the prefixes and loses `gh` from `TRUSTING_BASH`
+entirely, since its reads are now a level below and its writes at no level. OpenCode keeps
+`'gh *': 'ask'` and appends the reads as `allow` **after** it — rules are a flat ordered list and
+later rules win (research 16 §5.1), which is the shape OpenCode's own defaults already use
+(§5.2: `external_directory: ask`, then two narrower `allow` patterns). `'gh *'` leaves
+`TRUSTED_ANYWAY`, so `trusting` no longer lifts the blanket rule.
+
+That ordering **is** the mechanism and it is invisible in the values, so it is what the tests
+assert: the resolved index of `gh pr view*` has to be greater than that of `gh *`, in the unit
+test and again in the live one. A future edit that sorts these keys alphabetically silently
+disables every read, and nothing about the actions would look wrong.
+
+**Verified.** `opencode debug agent` against a real `opencode` 1.18.4: `gh *` resolves `ask`, the
+nineteen patterns resolve `allow`, they follow it in the resolved list, and nothing matches
+`gh pr create`. Claude's half is asserted on `vouchedTools` and again on what actually reaches
+`_meta.claudeCode.options.allowedTools`. Typecheck, both suites (567 core, 380 desktop) pass.
+
+**Not fixed, and now written down as open:** whether `trusting` should be the ceiling at all.
+The question that surfaced this was *"the cli has an auto mode, or allow everything, how we don't
+have that?"*, and the honest answer is that the `gh` bug is not what was being asked about.
+Ticket 14 has a **Reopened, 2026-08-31** section with the case for a fourth level, the case
+against — Claude's `bypassPermissions` is gated on `ALLOW_BYPASS` and can be silently
+unavailable, which would make the level real for one agent and refused for another — and the four
+things that would have to be true to ship it. Nothing in the code moved for it. The wide decision
+should not be taken under the pressure of a narrow bug, which is why the two are separate.
+
+## Built, 2026-08-31: how much an agent says is the user's to set, per agent
+
+**The question was "can we reduce the verbosity of Claude?"** The answer turned out to be a fact
+about the persona mechanism rather than about the model.
+
+`claude-agent-runtime.ts` hands the persona over as `_meta.systemPrompt`, as a **string**. The
+bridge reads a string as a **replacement** for its `{type:"preset",preset:"claude_code"}` default,
+not an append (`acp-agent.js` around the `systemPrompt` resolution; an object form spreads and
+locks `type`/`preset`, which is the append path). Research 02 §Personas already recorded this in
+one clause and nothing since treated it as a consequence: the preset is where the tone section
+lives, so replacing it took "answer concisely" with it, and `composePersona` put nothing back.
+Its only prose rule was the house style, which is about em dashes. An agent therefore fell back
+to plain assistant prose: headings, a restatement of the question, a summary at the end.
+
+**Appending to the preset instead was the obvious other way out, and is refused.** It re-asserts
+"You are Claude Code" over "You are Alice, a reviewer", it costs a large fixed slice of the very
+context window the gauge measures, and it is Claude-only, so three runtimes would be terse to
+different degrees for a reason no user could see. Saying it in the persona is the version that is
+true on all of them, and it is core's, so Codex and OpenCode get the same sentence.
+
+**`verbosity.ts` is the third of blobot's own three-word vocabularies**, beside `trust.ts` and the
+compaction setting, and it rides the identical path: `brief`, `normal`, `full`, its own column on
+`agent_profiles` and on `agents` (migration 0018), NULL meaning `normal`, copied onto the Agent at
+team creation, restated by an edit, taken at the team's next start. It differs from the other two
+in one way worth knowing: **it reaches no adapter at all.** `composePersona` is its only reader,
+which is why there is no `runtime-for.ts` line for it and no per-provider translation. On screen
+it is `HOW MUCH IT SAYS`, directly under `HOW IT ANSWERS` because it is the rest of that same
+question, in `VerbosityPick` built as `TrustPick`'s twin the way `CompactionPick` is.
+
+**`brief` governs prose and never what a teammate is allowed to know.** Its lines end by saying to
+report anything it had to refuse, however short the answer gets, and a test asserts that clause:
+a level that could suppress a refusal would be a setting that quietly turns off the persona's own
+trust framing.
+
+**The ordering in the persona changed, and that is the part that makes any of this the user's.**
+Standing instructions were composed *third*, above blobot's own prose rules, so a person who wrote
+"explain your reasoning in full" lost silently to a sentence they never wrote. They are last now,
+and say so in words: *which outrank anything above about how to write*. Asserted by index, not by
+presence.
+
+**Two bugs found on the way, both fixed here.**
+
+- `start-team.ts` builds the domain `Agent` out of an `AgentRecord` and was dropping
+  `compaction` — the same omission the `hue` comment two lines above already describes. The
+  orchestrator reads `agent.compaction ?? DEFAULT_COMPACTION`, so **an agent whose owner had
+  switched compaction off was compacted anyway**. The setting was on screen, in the dialog, in
+  the database, and read by nothing. `verbosity` goes through the same line, which is how it
+  surfaced.
+- `team-store.ts` had a duplicated `compaction` spread in the `restateAgent` call, at the wrong
+  indentation. Harmless, and gone.
+
+**Verified.** Typecheck clean on both packages. 571 core tests and 382 desktop tests pass, five of
+them new: the default level says something rather than nothing, the level is taken off the Agent,
+brevity never swallows a refusal, standing instructions outrank the prose rules by index, and the
+setting round-trips onto the Agent and back down again through an edit. `pnpm demo` prints Bob's
+persona with the `normal` lines in place, and `--screen=hire` shows the control between its two
+siblings with the same sentence under the closed select.
+
+**Not done:** no live run. Nothing here is measured against a real `claude` — the argument that
+the preset carried the tone section is read off the bridge source and the SDK's contract, not off
+a transcript. A live comparison of `brief` against `full` on the same prompt is the obvious next
+check, and it costs tokens.
+
+## Built, 2026-08-31: the agent form fits on the screen
+
+Adding `HOW MUCH IT SAYS` made a form that was already too tall the one that broke: eight fields,
+one per row, with three of them carrying a permanent paragraph of explanation. On a 1080-tall
+screen the standing instructions were below the fold on the dialog whose whole job is stating
+them, and the footer with `hire` on it was not visible at all.
+
+Three changes, none of them to the words.
+
+- **`.modal.roomy`, 760px, worn by the hire and edit dialogs only.** Every other modal here holds
+  a sentence and two buttons, and a paragraph set to 760px is a paragraph nobody finishes.
+- **`.agentfields`, a six-column grid.** Name and role, then the runtime beside what it
+  advertises, then blobot's three words side by side, then the instructions at full width. Its
+  own grid rather than a modifier on `.fields`, which `RoutineForm` also wears and which has to
+  keep its two-column rule. Positional like `.fields` is, because these eight are a fixed
+  sequence rather than a list. The three picks are bottom-aligned in their row: at a third of the
+  width two of those labels wrap, and without it the selects sat at three different heights.
+- **The sentence under each pick moved onto its menu row.** The text is unchanged and one
+  keystroke away, on the row it describes, read while choosing rather than after. `DESIGN.md`
+  carries the rule and the limit on it: this is for a pick whose options are blobot's own closed
+  vocabulary, and the runtime picker keeps its readiness line, which is a fact about the machine
+  and can change while the dialog is open.
+
+**The swatches are one row of fourteen** rather than a 7x2 block, which read as a palette to be
+studied rather than a strip to be picked from.
+
+**Two TrustPick tests were asserting the old position** and are re-pointed at the words, with
+`LEVELS` exported so the copy can be tested as copy. The one that matters kept its argument:
+somebody reading `trusting` is entitled to see the ceiling it still refuses, and they now see it
+on the row while choosing rather than under the trigger afterwards. A third was added, that the
+list is three levels and stays three. 396 desktop tests pass, typecheck clean, and the dialog
+screenshots with its footer on screen.
+
+## Measured, 2026-08-31: verbosity applies better to a new session, and that is accepted
+
+An agent set to `brief` answered a *"how are u doing?"* at 1,005 characters. Investigated rather
+than assumed, because three things could each have caused it and only one did.
+
+**Not blobot's plumbing.** The persisted `sessions` row for that turn carries the brief lines, and
+the turn started nine seconds after the session opened. `verbosity` is `brief` on the profile and
+on the agent row.
+
+**Not a lost system prompt.** The bridge passes `systemPrompt` in the SDK query options beside
+`resume`, so the persona reached the model on the resume.
+
+**Not a competing instruction.** No `~/.claude/CLAUDE.md`, and no `CLAUDE.md` or `.claude/` in the
+agent's worktree, so nothing from ADR-0003's three scopes was arguing the other way.
+
+**It was the conversation.** That provider session had been resumed **17 times** — always the same
+`provider_session_id`, never a fresh one — into a 763 KB transcript holding 50 of the agent's own
+prior answers, mean 413 characters, several past 1,500 and one at 2,543. One sentence of style
+guidance in a system prompt loses to fifty worked examples in the agent's own voice. The prompt
+did not help: an open social question, in a transcript where everything resembling one was
+answered with a status report.
+
+**The fix that would work, and why it was declined.** Restating the level in the **envelope**,
+per turn, which is the argument `envelope.ts` already makes for the trust framing: what has to
+survive contact with the conversation goes in the turn and not in the cached prefix. The author
+declined it on cost — a per-turn line is spend on every turn of every agent forever, against a
+setting that is correct the moment a session is fresh, which ticket 10's compaction makes
+routine. Recorded on `verbosity.ts` as a known limit rather than argued. **If it is revisited,
+the case for revisiting is a long-lived agent with compaction switched off**, which is the one
+configuration where a session never goes fresh and the setting therefore never fully lands.
+
+## Built, 2026-08-31: an answered step folds, and a picker row is a list row
+
+Two changes to the creation flow, from *"what do you think of making the new team form a quick
+step by step?"*.
+
+**The wizard was declined, and the reason is on the page.** Paging the four steps would put
+ticket 14's disclosure four clicks from the start, where it is read as a footer rather than as
+what you are taking on; and this form has real cross-step effects — choosing a folder fills the
+name in, ticking an agent changes the faces the icon falls back to, *make one for me* is dark
+until step 01 has a name — every one of which is legible on one page and spooky when paged.
+DESIGN.md's *read once, start to finish* stands.
+
+**What folds is the tail, never the question.** A step folds to its own answer once the step
+**below** it has been answered — `01 · checkout`, `02 · /home/me/code/checkout · git · clean` —
+and the numeral, the title and the order of all four stay on screen. The trigger is *the step
+below*, not validity: one keystroke makes the name valid, and a field that folds under the cursor
+is the worst version of this. A step the user opens by hand stays open for the life of the
+screen, including when the step below it is answered again. The whole point is the folder step,
+which carries a repository list, a git note, a `git init` offer and an icon control, and so dwarfed
+the three questions around it once it was settled. `NewTeam.test.tsx` is new and holds all of
+this, because no screenshot can reach a settled step.
+
+The chevron is after the title. In front of the numeral it pushed `01` and `02` out of line with
+`03` and `04` (a `<button>` keeps its user-agent padding through this stylesheet's reset, which
+is worth remembering); pinned right it was a marker a whole column from the thing it discloses.
+
+**`.rosterrow` is gone; a picker row is `.listrow.pick`.** The same agent, with the same face and
+the same two lines, was a visibly different object on *your agents* (12px radius, 10/12 padding,
+10px gap, a 3px gap between the two lines) than in the roster you pick it from on this screen and
+in *who is on this team* (14px, 9/12, 12px, no gap). The one difference that carries meaning is
+kept and written down: a row whose job is chosen-or-not needs its unchosen state to be the quiet
+one, so it is outlined at rest and takes the filled ground only when it is on. The line is an
+inset shadow rather than a border, so choosing a row does not reflow it and an unchosen picker
+row is exactly as tall as a row on any other screen. `button.listrow:hover`'s inset outline is now
+`:not(.pick)`, since a picker row already wears that line at rest. DESIGN.md's `.listrow` entry
+carries the amendment.
+
+
+## Built, 2026-08-31: fx, and what a fourth-party ACP server proved
+
+`.scratch/fx-runtime/`, five tickets, all resolved, with `research/01-acp-surface.md` carrying the
+measured frames. fx 0.0.7 was installed with the vendor's own installer during the session, so
+unlike the Cursor and Hermes efforts nothing here is read out of documentation.
+
+**The reason it was worth doing is not that blobot needed a fourth logo.** `adapters/acp/` was
+factored out on the theory that it holds the *protocol's* shape rather than three vendors' habits,
+and that theory had never been tested: Claude's and Codex's bridges are written by the ACP
+authors, and OpenCode implements it alongside them. fx is a 7 MiB Zig binary from Vercel Labs with
+its own opinion of what a mode is. **The shared layer took it, and the only change to existing
+code was a comment.**
+
+That comment is in `mcp/peer-message-server.ts` and it matters more than its size: fx opens an MCP
+connection with `server/discover`, a newer draft's method, and falls back to the classic
+`initialize` handshake **only when the server answers with a JSON-RPC error**. Measured: a `{}`
+result instead fails the whole session with
+`-32602 Required MCP server 'blobot' failed to start: McpMissingResultType`, so every fx agent
+would launch without a mailbox and nothing else in the app would notice. The line was already
+right; now it says why, and there is a regression test named after the method that depends on it.
+
+**Two things the shared layer could not give**, both provider quirks and both in the adapter:
+
+- fx names the edited file nowhere the shared layer can see. Its `tool_call` is
+  `{title: "Writing", kind: "edit"}` with no `locations` (ACP's own field, which Claude and
+  OpenCode populate) and no diff block (where Codex puts it). The path is on the *permission
+  request*, at `toolCall.rawInput.path`, so the adapter picks it up there and applies it to the
+  updates after. An fx edit reads `Editing` pending and `notes.txt` on completion, which is honest:
+  before the permission is asked, blobot has not been told which file. The repair only fills a gap,
+  so it stops doing anything the day fx populates `locations`.
+- The mailbox carve-out needed a different handle. Codex's keys on `rawInput.{server,tool}`; on fx
+  `rawInput` carries the tool's arguments and never the server. The handle is fx's own generated
+  identifier `mcp_<server>_<tool>`, matched exactly against a name blobot itself supplied. It is
+  needed: measured live, fx asks about `mcp_blobot_message_agent` under the posture, so without it
+  every peer message would stop and wait for a person.
+
+**What is fx's own, and what each cost.**
+
+- **No persona channel exists.** Six candidates were measured and all six failed, including the
+  one the spec favoured (an `AGENTS.md` above the worktree, which is blobot's own directory and
+  would have been perfect) and one nobody had proposed (the loopback MCP server's `instructions`,
+  which fx accepts and the model never sees). So the persona rides the prompt, on every turn,
+  above the user's words, never in the `messages` row -- `composeLeadBrief`'s shape, and the
+  reason it is every turn rather than the first is that fx compacts its own history and blobot
+  cannot see when. The token cost is stated rather than hidden. Verified live: asked who it is, a
+  real fx answers *"I'm Alice, the team's backend engineer."*
+- **The posture is an environment variable.** `FX_PERMISSION_MODE`, not the ACP mode. A session in
+  ACP mode `ask` -- the default a fresh `session/new` reports -- **wrote a file without asking
+  once**, because the process's own permission mode was `auto`. That is the Codex lesson word for
+  word, and it is the second time a runtime's default has turned out to be the dangerous one.
+- **All three trust words answer `ask`.** fx has two modes and the upper one is "full tool access"
+  with no carve-out for `rm`, `sudo`, `chmod`, `git push` or `git remote`, so it is above blobot's
+  ceiling however ordinary fx considers it. `FX_EXPRESSES_TRUST = false` records that in code
+  rather than letting three words in a dialog imply a difference the adapter cannot deliver, which
+  is the constant Codex introduced being reused for the reason it was introduced.
+- **`accepts` is `{images: false, textFiles: true}`.** The first *real* runtime to refuse a kind
+  of attachment blobot supports. ADR-0004's refuse-at-pickup path was written against
+  `MockAgentRuntime` and has now met a runtime that actually says no.
+- **Detection is load-bearing, not a courtesy.** An unauthenticated fx fails `initialize` itself
+  rather than advertising `authMethods`, so a launch dies at the handshake with `-32600`. The
+  adapter quotes fx's own sentence, which names three remedies.
+
+**A fifth state ticket 11 cannot see, and it is not fx's fault.** `fx status --json` reported
+`auth: "fx login"` -- signed in, credential refreshable -- and a real turn failed with
+`{"type":"insufficient_funds"}`, because the gateway account had no credit balance. **Signed in is
+not the same as able to run**, and nothing blobot can afford will tell them apart, since the only
+thing that distinguishes them is a billed request. It is a second argument for detection gating
+nothing, and the place it surfaces is the transcript, in the runtime's own words.
+
+**Live, `BLOBOT_LIVE_FX=1 FX_LIVE_PROVIDER=codex`, four tests, all passing** against a real fx on a
+real subscription: the persona holds, an edit names its file, the palette offers four of eighteen
+advertised commands (never `allowlist`, which writes a permanent allow rule into the user's own
+settings file), and the loopback carries a per-agent bearer token to `message_agent`.
+
+### Not done
+
+- **Two fx agents on one team behind the UI**, and one fx agent beside a Claude agent. The
+  loopback half is proven at the adapter; the `--live-fx` / `--live-mixed` roster shortcuts are
+  not written.
+- **An attachment to a real fx.** No live suite has an attachment case on any runtime yet, and fx
+  is now the most interesting one to write it against, because it is the one that says no.
+- **Whether fx's own compaction collides with `.scratch/transcript-scale/10`.** fx has a
+  `/compact` command and blobot owns the session boundary; nobody has measured whether fx compacts
+  on its own the way Hermes does. Worth knowing before an fx agent runs a long team.

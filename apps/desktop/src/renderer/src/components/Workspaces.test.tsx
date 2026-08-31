@@ -325,6 +325,38 @@ describe('the commit', () => {
     expect(tray.committed()).toBe(1);
   });
 
+  it('carries the count at its head, and never in the width of the button', async () => {
+    await commitTray();
+    // The panel says what it would take; the button says what it does. A label that grows by a
+    // word per file is a live number setting the width of a control.
+    expect(document.querySelector('.wshead')?.textContent).toContain('2 files');
+    expect(document.querySelector('.wshead .wsadd')?.textContent).toBe('+4');
+    expect(armed()?.textContent?.trim()).toBe('commit');
+  });
+
+  it('commits on enter, because nothing else in the popover takes a keystroke', async () => {
+    const tray = await commitTray();
+    await act(async () => {
+      typeInto('.wstitle', 'fix the retry loop');
+    });
+    await act(async () => {
+      document
+        .querySelector('.wstitle')
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+    expect(tray.sent[0]).toEqual(['t1', 'alice', 'fix the retry loop']);
+  });
+
+  it('takes no enter while it is unarmed, so an empty message cannot commit', async () => {
+    const tray = await commitTray();
+    await act(async () => {
+      document
+        .querySelector('.wstitle')
+        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    });
+    expect(tray.sent).toEqual([]);
+  });
+
   it('says git’s own refusal and stays open', async () => {
     const tray = await commitTray({ ok: false, error: 'unable to auto-detect email address' });
     await act(async () => {

@@ -50,6 +50,13 @@ const CHOICES: readonly Choice[] = [
   },
 ];
 
+/**
+ * The sentence is on the menu row and not under the closed control. *2026-08-31.* Three of these
+ * stand in a row in the agent form and each carried its explanation permanently on screen, which
+ * is three paragraphs of blobot explaining itself around two words the user came to set. The
+ * text is unchanged and one keystroke away, on the row it belongs to, where it is read while the
+ * choice is being made rather than after it has been.
+ */
 export function CompactionPick({
   value,
   onChange,
@@ -57,36 +64,32 @@ export function CompactionPick({
   value: CompactionSetting;
   onChange: (value: CompactionSetting) => void;
 }): React.JSX.Element {
-  const current = CHOICES.find((choice) => choice.id === value) ?? CHOICES[0];
   return (
-    <>
-      <Select.Root value={value} onValueChange={(next) => onChange(next as CompactionSetting)}>
-        <Select.Trigger
-          className="field selecttrigger"
-          aria-label="Starting over when it runs out of room"
-        >
-          <Select.Value className="selectvalue" />
-          <Select.Icon>
-            <ChevronDown size={14} aria-hidden />
-          </Select.Icon>
-        </Select.Trigger>
-        <Select.Portal>
-          <Select.Content className="selectmenu" position="popper" sideOffset={6}>
-            <Select.Viewport>
-              {CHOICES.map((choice) => (
-                <Select.Item key={choice.id} value={choice.id} className="selectitem trustitem">
-                  <Select.ItemText>{choice.word}</Select.ItemText>
-                  <Select.ItemIndicator className="selecttick">
-                    <Check size={13} aria-hidden />
-                  </Select.ItemIndicator>
-                  <span className="trustsays">{choice.says}</span>
-                </Select.Item>
-              ))}
-            </Select.Viewport>
-          </Select.Content>
-        </Select.Portal>
-      </Select.Root>
-      <span className="note muted">{(current as Choice).says}</span>
-    </>
+    <Select.Root value={value} onValueChange={(next) => onChange(next as CompactionSetting)}>
+      <Select.Trigger
+        className="field selecttrigger"
+        aria-label="Starting over when it runs out of room"
+      >
+        <Select.Value className="selectvalue" />
+        <Select.Icon>
+          <ChevronDown size={14} aria-hidden />
+        </Select.Icon>
+      </Select.Trigger>
+      <Select.Portal>
+        <Select.Content className="selectmenu" position="popper" sideOffset={6}>
+          <Select.Viewport>
+            {CHOICES.map((choice) => (
+              <Select.Item key={choice.id} value={choice.id} className="selectitem trustitem">
+                <Select.ItemText>{choice.word}</Select.ItemText>
+                <Select.ItemIndicator className="selecttick">
+                  <Check size={13} aria-hidden />
+                </Select.ItemIndicator>
+                <span className="trustsays">{choice.says}</span>
+              </Select.Item>
+            ))}
+          </Select.Viewport>
+        </Select.Content>
+      </Select.Portal>
+    </Select.Root>
   );
 }

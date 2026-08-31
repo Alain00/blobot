@@ -22,6 +22,7 @@ import type {
   UiPermissionOutcome,
   UiPermissionRequest,
   UiCommand,
+  UiContextCeiling,
   UiRuntimeChoice,
   RuntimeStepOutcome,
   UiEarlier,
@@ -94,6 +95,12 @@ const api: BlobotApi = {
     ipcRenderer.invoke('blobot:setTeamIcon', teamId, icon) as Promise<void>,
   detectRuntimes: () =>
     ipcRenderer.invoke('blobot:detectRuntimes') as Promise<readonly UiRuntimeChoice[]>,
+  contextCeilings: () =>
+    ipcRenderer.invoke('blobot:contextCeilings') as Promise<readonly UiContextCeiling[]>,
+  setContextCeiling: (runtimeId, model, tokens) =>
+    ipcRenderer.invoke('blobot:setContextCeiling', runtimeId, model, tokens) as Promise<
+      readonly UiContextCeiling[]
+    >,
   listAgents: () => ipcRenderer.invoke('blobot:listAgents') as Promise<readonly UiAgentProfile[]>,
   describeRuntimeOptions: (runtimeId: string) =>
     ipcRenderer.invoke('blobot:describeRuntimeOptions', runtimeId) as Promise<UiRuntimeOptions>,
