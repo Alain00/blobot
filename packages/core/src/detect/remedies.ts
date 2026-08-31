@@ -1,3 +1,4 @@
+import { basename } from 'node:path';
 import { RUNTIME_PROBES, type RuntimeDetection } from './runtimes.js';
 
 /**
@@ -51,6 +52,7 @@ const INSTALL_SCRIPTS: Readonly<Record<string, string>> = {
   'claude-code': 'curl -fsSL https://claude.ai/install.sh | bash',
   opencode: 'curl -fsSL https://opencode.ai/install | bash',
   codex: 'npm install -g @openai/codex',
+  cursor: 'curl https://cursor.com/install -fsS | bash',
 };
 
 /**
@@ -67,6 +69,9 @@ const SIGN_IN_ARGS: Readonly<Record<string, readonly string[]>> = {
   // carries the credential, which `CLAUDE.md` forbids outright. They are absent by construction
   // and this table is the only place argv is built.
   codex: ['login'],
+  // Bare `agent login` is Cursor's own browser flow. `--api-key` / `CURSOR_API_KEY` would
+  // make blobot carry the credential, which is refused the same way as Codex's.
+  cursor: ['login'],
 };
 
 /**
@@ -115,7 +120,7 @@ export function remediesFor(
       kind: 'sign_in',
       runtimeId: detection.runtimeId,
       argv: [executable, ...args],
-      shown: `${probe.binary} ${args.join(' ')}`,
+      shown: `${basename(executable)} ${args.join(' ')}`,
       note: `${probe.label} signs you in itself and may open a browser. Nothing you type here reaches blobot.`,
     },
   ];

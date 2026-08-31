@@ -62,4 +62,22 @@ describe('remediesFor', () => {
     expect(remedyFor(detected(), 'install', 'linux')).toBeUndefined();
     expect(remedyFor(detected(), 'sign_in', 'linux')?.runtimeId).toBe('claude-code');
   });
+
+  it('offers Cursor’s own install and login, named for the binary detection found', () => {
+    const missing = remediesFor(
+      detected({ runtimeId: 'cursor', label: 'Cursor', readiness: 'not_installed' }),
+      'linux',
+    );
+    expect(missing[0]?.shown).toBe('curl https://cursor.com/install -fsS | bash');
+    const signIn = remediesFor(
+      detected({
+        runtimeId: 'cursor',
+        label: 'Cursor',
+        executablePath: '/home/dev/.local/bin/agent',
+      }),
+      'linux',
+    );
+    expect(signIn[0]?.argv).toEqual(['/home/dev/.local/bin/agent', 'login']);
+    expect(signIn[0]?.shown).toBe('agent login');
+  });
 });

@@ -162,13 +162,15 @@ const autoplayDelayMs = Number(
  * creates a real team for `<dir>` in the real database, with a two-agent roster it still
  * hardcodes, and starts it exactly as the creation flow would.
  *
- * Three of them now, and the third is the point of the whole architecture: `--live-mixed` puts
- * a Claude agent and a Codex agent on one team, where the orchestrator cannot tell them apart
- * and the mailbox has to carry a message from one vendor's process to another's.
+ * Four of them now, and `--live-mixed` is the point of the whole architecture: a Claude
+ * agent and a Codex agent on one team, where the orchestrator cannot tell them apart and
+ * the mailbox has to carry a message from one vendor's process to another's. `--live-cursor`
+ * is two Cursor agents on that same path.
  */
 const LIVE_ROSTERS: Readonly<Record<string, readonly [string, string]>> = {
   '--live-claude=': ['claude-code', 'claude-code'],
   '--live-codex=': ['codex', 'codex'],
+  '--live-cursor=': ['cursor', 'cursor'],
   '--live-mixed=': ['claude-code', 'codex'],
 };
 

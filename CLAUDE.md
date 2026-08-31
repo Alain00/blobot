@@ -1,7 +1,7 @@
 # blobot
 
 A local-first desktop application that lets a user assemble **teams** out of the coding
-agents they already have installed — Claude Code, Codex, Gemini CLI, OpenCode — and watch
+agents they already have installed — Claude Code, Codex, Cursor, Gemini CLI, OpenCode — and watch
 them work together on a repository.
 
 This repository is a monorepo.

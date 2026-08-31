@@ -1,9 +1,11 @@
 import {
   ClaudeAgentRuntime,
   CodexAgentRuntime,
+  CursorAgentRuntime,
   OpencodeAgentRuntime,
   claudeCeiling,
   codexCeiling,
+  cursorCeiling,
   opencodeCeiling,
   type AgentRuntime,
   type TrustLevel,
@@ -81,6 +83,14 @@ export function runtimeFor(request: RuntimeRequest): AgentRuntime {
           ? {}
           : { codexExecutable: request.executablePath }),
       });
+    case 'cursor':
+      return new CursorAgentRuntime({
+        ...shared,
+        agentName: request.agentName,
+        ...(request.executablePath === undefined
+          ? {}
+          : { cursorExecutable: request.executablePath }),
+      });
     default:
       throw new Error(`${request.agentName} is set up for ${request.runtimeId}, which blobot cannot run`);
   }
@@ -110,6 +120,8 @@ export function ceilingFor(runtimeId: string, model: string | undefined): number
       return opencodeCeiling(model);
     case 'codex':
       return codexCeiling(model);
+    case 'cursor':
+      return cursorCeiling(model);
     default:
       return undefined;
   }

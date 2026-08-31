@@ -49,6 +49,7 @@ export {
 export { CLAUDE_CEILINGS, claudeCeiling } from './adapters/claude/context.js';
 export { OPENCODE_CEILINGS, opencodeCeiling } from './adapters/opencode/context.js';
 export { CODEX_CEILINGS, codexCeiling } from './adapters/codex/context.js';
+export { CURSOR_CEILINGS, cursorCeiling } from './adapters/cursor/context.js';
 export { workingCeiling } from './context-ceiling.js';
 
 export type { Clock } from './clock.js';
@@ -235,7 +236,24 @@ export {
   spawnCodexBridge,
 } from './adapters/codex/stdio-bridge.js';
 
-export { detectRuntimes, parseOpencodeAuthList, parseVersion, stripAnsi } from './detect/runtimes.js';
+// The Cursor adapter. First-party ACP (`agent acp`), no npm bridge. Same reason it is not
+// in `/domain`: it spawns a child.
+export { CursorAgentRuntime } from './adapters/cursor/cursor-agent-runtime.js';
+export type { CursorAgentRuntimeOptions } from './adapters/cursor/cursor-agent-runtime.js';
+export {
+  ALWAYS_DENY,
+  CURSOR_APPROVAL_MODE,
+  CURSOR_SESSION_MODE,
+  cursorCliConfig,
+} from './adapters/cursor/permissions.js';
+export {
+  FORBIDDEN_CURSOR_ARGS,
+  resolveCursorExecutable,
+  spawnCursor,
+} from './adapters/cursor/stdio.js';
+export { defaultCursorConfigDir, writeCursorConfig } from './adapters/cursor/config.js';
+
+export { detectRuntimes, looksLikeCursor, parseCursorStatus, parseOpencodeAuthList, parseVersion, stripAnsi } from './detect/runtimes.js';
 export type {
   CommandResult,
   CommandRunner,

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   detectRuntimes,
+  looksLikeCursor,
+  parseCursorStatus,
   parseOpencodeAuthList,
   parseVersion,
   stripAnsi,
@@ -88,6 +90,22 @@ describe('parseVersion', () => {
 describe('stripAnsi', () => {
   it('removes CSI sequences and leaves the text', () => {
     expect(stripAnsi(`${ESC}[1mbold${ESC}[0m`)).toBe('bold');
+  });
+});
+
+describe('looksLikeCursor', () => {
+  it('trusts the distinctive name and demands the word from a bare agent', () => {
+    expect(looksLikeCursor('', '/home/dev/.local/bin/cursor-agent')).toBe(true);
+    expect(looksLikeCursor('GNU agent 2.0', '/usr/bin/agent')).toBe(false);
+    expect(looksLikeCursor('Cursor CLI 2026.8.30', '/usr/bin/agent')).toBe(true);
+  });
+});
+
+describe('parseCursorStatus', () => {
+  it('reads the json flag and never says authenticated', () => {
+    expect(parseCursorStatus('{"loggedIn":true}', 0).readiness).toBe('ready');
+    expect(parseCursorStatus('{"loggedIn":false}', 0).readiness).toBe('needs_sign_in');
+    expect(parseCursorStatus('{"loggedIn":true}', 0).detail).not.toMatch(/authenticated/i);
   });
 });
 
@@ -202,5 +220,80 @@ describe('the Codex probe', () => {
   it('is a runtime blobot can construct, now that the adapter exists', async () => {
     const codex = await codexOf(ok('Logged in using ChatGPT\n'));
     expect(codex?.supported).toBe(true);
+  });
+});
+
+describe('the Cursor probe', () => {
+  it('prefers cursor-agent over a bare agent, and never says authenticated', async () => {
+    const run = fakeRunner({
+      'command -v cursor-agent': ok('/home/someone/.local/bin/cursor-agent\n'),
+      '/home/someone/.local/bin/cursor-agent --version': ok('cursor-agent 2026.8.30\n'),
+      '/home/someone/.local/bin/cursor-agent status --format json': ok('{"loggedIn":true}\n'),
+    });
+    const cursor = (await detectRuntimes({ run, home: '/home/someone' })).find(
+      (entry) => entry.runtimeId === 'cursor',
+    );
+    expect(cursor).toMatchObject({
+      readiness: 'ready',
+      supported: true,
+      executablePath: '/home/someone/.local/bin/cursor-agent',
+      version: '2026.8.30',
+    });
+    expect(cursor?.detail).not.toMatch(/authenticated/i);
+    expect(run.calls.some((call) => call.includes('command -v agent'))).toBe(false);
+  });
+
+  it('reads loggedIn false as signed out, and anything unread as unknown', async () => {
+    const signedOut = fakeRunner({
+      'command -v cursor-agent': ok('/home/dev/.local/bin/cursor-agent\n'),
+      '/home/dev/.local/bin/cursor-agent --version': ok('1.2.3\n'),
+      '/home/dev/.local/bin/cursor-agent status --format json': ok('{"loggedIn":false}\n'),
+    });
+    expect(
+      (await detectRuntimes({ run: signedOut, home: '/home/dev' })).find(
+        (entry) => entry.runtimeId === 'cursor',
+      )?.readiness,
+    ).toBe('needs_sign_in');
+
+    const unread = fakeRunner({
+      'command -v cursor-agent': ok('/home/dev/.local/bin/cursor-agent\n'),
+      '/home/dev/.local/bin/cursor-agent --version': ok('1.2.3\n'),
+      '/home/dev/.local/bin/cursor-agent status --format json': {
+        code: 2,
+        stdout: '',
+        stderr: 'boom',
+      },
+    });
+    expect(
+      (await detectRuntimes({ run: unread, home: '/home/dev' })).find(
+        (entry) => entry.runtimeId === 'cursor',
+      )?.readiness,
+    ).toBe('unknown');
+  });
+
+  it('does not believe a random binary named agent', async () => {
+    const run = fakeRunner({
+      'command -v agent': ok('/usr/bin/agent\n'),
+      '/usr/bin/agent --version': ok('GNU agent 2.0\n'),
+      '/usr/bin/agent about': ok('not the editor\n'),
+    });
+    const cursor = (await detectRuntimes({ run, home: '/home/nobody' })).find(
+      (entry) => entry.runtimeId === 'cursor',
+    );
+    expect(cursor?.readiness).toBe('not_installed');
+  });
+
+  it('accepts a verified agent binary when cursor-agent is missing', async () => {
+    const run = fakeRunner({
+      'command -v agent': ok('/home/dev/.local/bin/agent\n'),
+      '/home/dev/.local/bin/agent --version': ok('2026.8.30\n'),
+      '/home/dev/.local/bin/agent about': ok('Cursor CLI 2026.8.30\n'),
+      '/home/dev/.local/bin/agent status --format json': ok('{"loggedIn":true,"email":"a@b.c"}\n'),
+    });
+    const cursor = (await detectRuntimes({ run, home: '/home/dev' })).find(
+      (entry) => entry.runtimeId === 'cursor',
+    );
+    expect(cursor?.readiness).toBe('ready');
+    expect(cursor?.executablePath).toBe('/home/dev/.local/bin/agent');
   });
 });

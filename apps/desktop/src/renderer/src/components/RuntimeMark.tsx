@@ -4,20 +4,21 @@
  * This is the **one exception to the Lucide-only rule**, and it is the team icon's rule applied
  * to a second place: a vendor's logo is allowed on screen greyed, never coloured, and never in
  * place of the name. A runtime is a product with a face people already know, and `Claude Code`
- * and `OpenCode` are two words that begin the same way in a list that will grow to four. The
+ * and `OpenCode` are two words that begin the same way in a list that will grow. The
  * mark is what the eye lands on before it reads either. The label always stays beside it —
  * the mark is a second channel onto the same fact, never the only one, because a logo nobody
  * recognises is a smudge and there is no reason to make a person learn ours.
  *
- * All three are taken from the vendor's own origin (`claude.ai/favicon.svg`, `sst/opencode`'s
- * brand folder, `developers.openai.com/favicon.svg`), stripped to one `currentColor` and
- * normalised so they carry the same optical weight beside each other and beside a Lucide glyph.
+ * All four are taken from the vendor's own origin (`claude.ai/favicon.svg`, `sst/opencode`'s
+ * brand folder, `developers.openai.com/favicon.svg`, Cursor's pointer), stripped to one
+ * `currentColor` and normalised so they carry the same optical weight beside each other and
+ * beside a Lucide glyph.
  * Nothing here is blobot's to license: these are the vendors' marks, used to name the product we
  * speak to, which is why they are also never restyled beyond the greying and never stand in for
  * a brand of our own.
  *
- * An unknown `runtimeId` draws nothing rather than a placeholder. The fourth runtime lands
- * before its mark does, and a row that is only a label is the honest version of that.
+ * An unknown `runtimeId` draws nothing rather than a placeholder. A runtime that lands
+ * before its mark does is a row that is only a label, which is the honest version of that.
  */
 
 /** Anthropic's mark, from `claude.ai/favicon.svg`. One path, so the fill is the whole of it. */
@@ -85,10 +86,26 @@ function CodexMark(): React.JSX.Element {
   );
 }
 
+/**
+ * Cursor's mark: the pointer the product is named for.
+ *
+ * The vendor's wordmark is a filled arrow, and greying a coloured plate would put a blob in
+ * a select row. So the arrow itself takes `currentColor`, cropped to the glyph. It sits
+ * greyed, beside the word `Cursor`, and never in place of it.
+ */
+function CursorMark(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 24 24" width="100%" height="100%" fill="currentColor" aria-hidden>
+      <path d="M5.2 2.8v17.2l4.4-4.1 3.4 7.5 2.5-1.1-3.4-7.4 7.1-.5z" />
+    </svg>
+  );
+}
+
 const MARKS: Readonly<Record<string, () => React.JSX.Element>> = {
   'claude-code': ClaudeMark,
   opencode: OpenCodeMark,
   codex: CodexMark,
+  cursor: CursorMark,
 };
 
 export function RuntimeMark({

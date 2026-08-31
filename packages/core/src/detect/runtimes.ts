@@ -55,6 +55,16 @@ interface RuntimeProbe {
   readonly runtimeId: string;
   readonly label: string;
   readonly binary: string;
+  /**
+   * Other names to search after the primary misses. Cursor's installer also drops `agent`,
+   * which is too collision-prone to believe without `looksLike`.
+   */
+  readonly alsoNamed?: readonly string[];
+  /**
+   * When set, a located binary is only accepted if this is true of `--version` / `about`
+   * (or of the path itself). The collision-prone `agent` name is why this exists.
+   */
+  readonly looksLike?: (stdout: string, path: string) => boolean;
   readonly supported: boolean;
   /** Extra directories to look in when neither `PATH` nor the login shell finds the binary. */
   readonly extraDirs: readonly string[];
@@ -128,8 +138,31 @@ const CODEX: RuntimeProbe = {
   },
 };
 
+/**
+ * Cursor CLI. The documented command is `agent`; the installer also drops `cursor-agent`.
+ * We probe the distinctive name first and only believe a bare `agent` when `--version` or
+ * `about` looks like Cursor — a cascade that finds *an* `agent` and reports Cursor ready
+ * would be lying about the user's machine, which is the one thing ticket 11 exists not to do.
+ *
+ * `agent status --format json` is the sign-in signal. A negative is reliable, a positive is
+ * not, and the word *authenticated* does not appear.
+ */
+const CURSOR: RuntimeProbe = {
+  runtimeId: 'cursor',
+  label: 'Cursor',
+  binary: 'cursor-agent',
+  alsoNamed: ['agent'],
+  looksLike: looksLikeCursor,
+  supported: true,
+  extraDirs: ['.local/bin'],
+  probeAuth: async (path, run) => {
+    const result = await run(path, ['status', '--format', 'json'], { timeoutMs: 5_000 });
+    return parseCursorStatus(result.stdout, result.code, result.stderr);
+  },
+};
+
 /** The runtimes the picker offers, in order. `supported` says which blobot can construct. */
-export const RUNTIME_PROBES: readonly RuntimeProbe[] = [CLAUDE_CODE, OPENCODE, CODEX];
+export const RUNTIME_PROBES: readonly RuntimeProbe[] = [CLAUDE_CODE, OPENCODE, CODEX, CURSOR];
 
 export async function detectRuntimes(options: DetectOptions = {}): Promise<RuntimeDetection[]> {
   const run = options.run ?? execRunner;
@@ -175,21 +208,49 @@ async function locate(
   run: CommandRunner,
   where: { home: string; shell?: string },
 ): Promise<string | undefined> {
-  const onPath = await run('command', ['-v', probe.binary], { timeoutMs: 3_000 }).catch(() => undefined);
+  const names = [probe.binary, ...(probe.alsoNamed ?? [])];
+  for (const binary of names) {
+    const found = await locateBinary(binary, probe.extraDirs, run, where);
+    if (found === undefined) continue;
+    if (probe.looksLike === undefined) return found;
+    if (await confirmsIdentity(found, probe.looksLike, run)) return found;
+  }
+  return undefined;
+}
+
+async function locateBinary(
+  binary: string,
+  extraDirs: readonly string[],
+  run: CommandRunner,
+  where: { home: string; shell?: string },
+): Promise<string | undefined> {
+  const onPath = await run('command', ['-v', binary], { timeoutMs: 3_000 }).catch(() => undefined);
   const fromPath = firstLine(onPath?.code === 0 ? onPath.stdout : '');
   if (fromPath !== undefined) return fromPath;
 
-  for (const dir of probe.extraDirs) {
-    const candidate = join(where.home, dir, probe.binary);
+  for (const dir of extraDirs) {
+    const candidate = join(where.home, dir, binary);
     const runs = await run(candidate, ['--version'], { timeoutMs: 5_000 }).catch(() => undefined);
     if (runs?.code === 0) return candidate;
   }
 
   if (where.shell === undefined) return undefined;
-  const viaShell = await run(where.shell, ['-ilc', `command -v ${probe.binary}`], {
+  const viaShell = await run(where.shell, ['-ilc', `command -v ${binary}`], {
     timeoutMs: 10_000,
   }).catch(() => undefined);
   return viaShell?.code === 0 ? firstLine(viaShell.stdout) : undefined;
+}
+
+async function confirmsIdentity(
+  path: string,
+  looksLike: (stdout: string, path: string) => boolean,
+  run: CommandRunner,
+): Promise<boolean> {
+  for (const args of [['--version'], ['about']] as const) {
+    const result = await run(path, [...args], { timeoutMs: 5_000 }).catch(() => undefined);
+    if (result !== undefined && looksLike(`${result.stdout}\n${result.stderr}`, path)) return true;
+  }
+  return looksLike('', path);
 }
 
 async function readVersion(path: string, run: CommandRunner): Promise<string | undefined> {
@@ -200,6 +261,62 @@ async function readVersion(path: string, run: CommandRunner): Promise<string | u
 /** `claude --version` prints `2.1.251 (Claude Code)`; we keep the number and drop the rest. */
 export function parseVersion(stdout: string): string | undefined {
   return /\d+\.\d+\.\d+[^\s]*/.exec(stripAnsi(stdout))?.[0];
+}
+
+/**
+ * Whether a binary is Cursor's CLI rather than some other `agent`.
+ *
+ * The path is enough when it is the distinctive `cursor-agent` name. A bare `agent` has to
+ * say Cursor in `--version` or `about` — otherwise this machine's `agent` is somebody else's.
+ */
+export function looksLikeCursor(stdout: string, path = ''): boolean {
+  if (/(^|\/)cursor-agent$/.test(path)) return true;
+  return /cursor/i.test(stripAnsi(stdout));
+}
+
+/**
+ * `agent status --format json`, as documented. A negative is reliable; a positive is not.
+ * The word *authenticated* does not appear, for the same reason it does not on the others.
+ */
+export function parseCursorStatus(
+  stdout: string,
+  code: number,
+  stderr = '',
+): Pick<RuntimeDetection, 'readiness' | 'detail'> {
+  const text = stripAnsi(`${stdout}\n${stderr}`).trim();
+  const fromJson = readCursorStatusJson(text);
+  if (fromJson !== undefined) return fromJson;
+  if (/not logged in|logged out|no account/i.test(text) || code === 1) {
+    return { readiness: 'needs_sign_in', detail: 'Installed, not signed in' };
+  }
+  if (code === 0 && /logged in/i.test(text)) {
+    return { readiness: 'ready', detail: 'Signed in on this machine' };
+  }
+  if (code === 0 && text.length > 0) {
+    return { readiness: 'ready', detail: 'Signed in on this machine' };
+  }
+  return { readiness: 'unknown', detail: 'Installed; sign-in state could not be read' };
+}
+
+function readCursorStatusJson(
+  text: string,
+): Pick<RuntimeDetection, 'readiness' | 'detail'> | undefined {
+  const start = text.indexOf('{');
+  if (start < 0) return undefined;
+  try {
+    const json = JSON.parse(text.slice(start)) as Record<string, unknown>;
+    const loggedIn = json['loggedIn'] ?? json['logged_in'];
+    if (loggedIn === false) {
+      return { readiness: 'needs_sign_in', detail: 'Installed, not signed in' };
+    }
+    if (loggedIn === true) return { readiness: 'ready', detail: 'Signed in on this machine' };
+    if (typeof json['email'] === 'string' && json['email'].length > 0) {
+      return { readiness: 'ready', detail: 'Signed in on this machine' };
+    }
+  } catch {
+    return undefined;
+  }
+  return undefined;
 }
 
 /**
