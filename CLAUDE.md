@@ -174,10 +174,20 @@ up. Read it before starting work.
 
 - **Ticket 14's posture is on screen** (14): a permission request is a channel on the
   orchestrator, so `waiting` is the status fold's own answer; the block is inline in the
-  transcript with exactly **Allow once** and **Reject**, and `allow_always` has no path to the
-  UI. With nobody listening a request is **cancelled, never allowed**. The disclosure closes the
-  creation flow, stated rather than consented to — and it says blobot sets the runtime to
-  prompt rather than naming commands, which is ticket 14's 2026-08-29 amendment.
+  transcript with **Allow once**, **Allow always** and **Reject**. With nobody listening a request
+  is **cancelled, never allowed**. The disclosure closes the creation flow, stated rather than
+  consented to — and it says blobot sets the runtime to prompt rather than naming commands, which
+  is ticket 14's 2026-08-29 amendment. **The third button was withheld and is now offered**, on
+  that ticket's second amendment the same day: the reason for withholding it was that
+  `allow_always` is a rule the user authors with nowhere to see or revoke, and that was an
+  assumption about where the rule goes rather than a measurement. Measured against a real
+  `claude`, it writes `permissions.allow` into `<workspace>/.claude/settings.local.json` — a file
+  in this one agent's own copy of the folder, which the user can read and delete and which says
+  nothing about any other agent, because an AgentWorkspace is per agent. So the block names where
+  an *always* goes in the same sentence that offers it, and `PermissionOutcome` gains
+  `allowed_always`, because *you allowed this once* and *you allowed this, and it stops asking*
+  are not the same record of what happened. `reject_always` stays unoffered: refusing forever is
+  the same standing rule pointed the other way, and nobody has asked for it.
 
 - **Agents exist independently of teams** — `docs/adr/0001-agents-exist-independently-of-teams.md`,
   the repo's first ADR, and the reason `CONTEXT.md` now has an **AgentProfile**. An agent is
