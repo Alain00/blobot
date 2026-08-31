@@ -23,7 +23,7 @@
  * anything, on a machine that has just been set up, which is exactly the machine it is for.
  *
  * A postinstall rather than a patched dependency: `pnpm patch` diffs file contents and would
- * have to carry a 50 KB binary to change nine bits of mode. Idempotent, quiet when there is
+ * have to carry a 50 KB binary to change three bits of mode. Idempotent, quiet when there is
  * nothing to do, and never fatal — an install must not fail over a helper this may not need.
  */
 
@@ -47,13 +47,26 @@ try {
 }
 
 try {
-  const mode = statSync(helper).mode;
+  const { mode } = statSync(helper);
   // Already executable by somebody. Leave the exact bits alone rather than restating them.
   if ((mode & 0o111) !== 0) process.exit(0);
-  chmodSync(helper, 0o755);
+  // The three execute bits added to what is already there, rather than a literal `0o755`. The
+  // one thing wrong with this file is that it cannot be executed, and a mode we assert instead
+  // of amend would hand read access to group and other on a helper somebody had deliberately
+  // closed. We are putting back what the tarball dropped, not deciding what the mode should be.
+  chmodSync(helper, mode | 0o111);
   console.log(`> Restored the executable bit on ${helper}`);
 } catch (error) {
-  // A missing helper is not ours to fix and not ours to fail on: `node-pty` built from source
-  // puts one in `build/Release` instead, and that one comes out of `node-gyp` executable.
-  if (error.code !== 'ENOENT') throw error;
+  // A missing helper is not ours to fix: `node-pty` built from source puts one in
+  // `build/Release` instead, and that one comes out of `node-gyp` already executable.
+  const code = typeof error === 'object' && error !== null ? error.code : undefined;
+  if (code === 'ENOENT') process.exit(0);
+  // Anything else — a read-only `node_modules`, a store this user does not own — is loud and
+  // still not fatal. Failing the install would stop every other kind of work over a helper only
+  // one screen needs, and the warning has to name the remedy, because the failure it prevents
+  // arrives much later as `posix_spawnp failed` with nothing in it pointing back here.
+  console.warn(
+    `> Could not restore the executable bit on ${helper}: ${code ?? error}\n` +
+      `>   node-pty's pseudo-terminal will fail until it is put back: chmod +x "${helper}"`,
+  );
 }
