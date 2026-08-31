@@ -4,9 +4,11 @@ import { CURSOR_TRUST_LEVELS, cursorCliConfig } from './permissions.js';
 
 const LEVELS: readonly TrustLevel[] = ['careful', 'normal', 'trusting'];
 
-/** The nine dangerous verbs, which must be UNLISTED — never allowed, never denied — so they
- *  prompt. On Cursor a deny is a silent hard block whose tool_call reports `completed`
- *  (measured, ticket 01), which would take the decision away from the user. */
+/** Seven of the nine dangerous verbs — the whole-command ones; `git push` and `git remote`
+ *  are asserted separately below because their rules are verb splits, not command names. All
+ *  nine must be UNLISTED — never allowed, never denied — so they prompt. On Cursor a deny is
+ *  a silent hard block whose tool_call reports `completed` (measured, ticket 01), which would
+ *  take the decision away from the user. */
 const DANGEROUS = ['rm', 'sudo', 'chmod', 'chown', 'ssh', 'scp', 'docker'];
 
 describe('what blobot vouches for on a Cursor session', () => {

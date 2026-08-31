@@ -253,7 +253,11 @@ export class CursorAgentRuntime implements AgentRuntime {
       wanted === undefined || wanted === '' || !canLoad
         ? await this.#newSession(connection)
         : await this.#loadSession(connection, wanted);
-    const sessionId = session.sessionId ?? (wanted !== undefined && wanted !== '' ? wanted : '');
+    // No fallback to `wanted` here: `#loadSession` already stamps the id it resumed, so a
+    // missing `sessionId` can only mean `session/new` answered without one — and adopting the
+    // old id instead of failing would aim every later request at a session that was never
+    // opened.
+    const sessionId = session.sessionId ?? '';
     if (sessionId === '') throw new Error(`${this.agentId}: cursor-agent returned no sessionId`);
     this.#sessionId = sessionId;
 

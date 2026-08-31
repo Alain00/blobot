@@ -346,11 +346,12 @@ export class FakeCursor implements LineTransport {
   }
 }
 
-/** A slice of the 130 a real session advertised: vendor surface a palette must not offer. */
+/** A slice of the 130 a real session advertised, names verbatim from the measured
+ *  `available_commands_update` frame: vendor surface a palette must not offer. */
 export const FAKE_ADVERTISED_COMMANDS: readonly string[] = [
   'worktree',
   'apply-worktree',
   'autopilot',
   'shell',
-  'compress',
+  'update-cli-config',
 ];

@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { FAKE_ADVERTISED_COMMANDS } from './fake-cursor.js';
 import { offerableNames } from './palette.js';
 
 describe('Cursor command allowlist', () => {
@@ -28,11 +29,12 @@ describe('Cursor command allowlist', () => {
   });
 
   it('vouches for no built-in at all on a machine with nothing authored', () => {
-    // A live session advertised 130 vendor commands, worktree and autopilot among them. The
-    // intersection with an empty authored surface is empty, and empty is honest.
+    // A live session advertised 130 vendor commands; these names are verbatim from the
+    // measured frame (and shared with `FAKE_ADVERTISED_COMMANDS`), so the assertion covers
+    // the surface Cursor actually advertises rather than a guessed spelling.
     const cwd = mkdtempSync(join(tmpdir(), 'blobot-cursor-pal-'));
     const names = offerableNames(cwd);
-    for (const vendor of ['worktree', 'apply-worktree', 'autopilot', 'shell', 'compact']) {
+    for (const vendor of FAKE_ADVERTISED_COMMANDS) {
       expect(names.has(vendor)).toBe(false);
     }
   });
