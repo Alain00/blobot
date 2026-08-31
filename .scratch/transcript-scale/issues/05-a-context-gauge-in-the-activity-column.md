@@ -130,3 +130,68 @@ Deciding it is a product question about billing, which this ticket is not.
   came back a blank 7.7 KB frame until `--disable-gpu` was added to the electron command line,
   and every capture since has been a real frame on the first try. That flag belongs in the
   review recipe.
+
+## Amendment, 2026-08-30: the gauge still does not advise, but something else may act
+
+Raised by the author, proposing that blobot compact automatically rather than waiting for a user
+who has to know to type `/compact` at a moment nothing tells them about. That is a direct
+contradiction of this ticket's *Not to do*, which reads "no threshold, no warning, no nag, and no
+remedy offered from this block", and of the answer's "nothing here moves and nothing here
+advises". Recorded here rather than worked around.
+
+**What is reversed.** Only this: *"`/compact` is already in the palette and that is the whole of
+the remedy blobot offers."* It is not, from now on. `10-compaction-by-handoff.md` gives blobot a
+threshold of its own and lets it act on one, and the argument that carried this ticket — that a
+gauge which tells the user what to do is blobot managing a context it says it does not manage —
+does not survive the case where the agent is degrading and the only person who could act is not
+looking at the screen.
+
+**What is not reversed, and is now load-bearing rather than merely still true.** The block itself
+advises nothing. No warning, no nag, no colour, no remedy offered from the activity column. The
+separation is the point: a *fact* is drawn in the log, and an *action* is taken on a surface that
+was consented to. Collapsing the two would give the user a gauge that nags and an app that acts,
+which is twice the intervention for one decision.
+
+Ticket 09's mark lands in this block and is inside the line: a ceiling is a fact about the model,
+drawn next to a fact about the agent, not a suggestion.
+
+**And the compaction is still not blobot's.** The agent writes its own handoff in its own session,
+or the runtime's own command runs. blobot chooses the moment and nothing else, which is a
+narrower claim than the one this ticket refused and the reason the second permanent rule holds.
+
+## Amendment, 2026-08-30: the head of the column is pinned
+
+Raised by the author, from the layout rather than from a measurement: the activity column *"is
+also very big"*. It is, and the reason is this block plus `WORKSPACE` — both one row per agent,
+both inside the column's single `overflow:auto` container, and both above the log. Three
+consequences, none of which are performance (the log is capped at 200 entries in both directions,
+`model.ts:1026` and `:1031`, and always was):
+
+- On a four-agent team the log begins below the fold, before a single tool call has landed.
+- Expanding a row's `sent` panel adds five to nine more rows and pushes it further.
+- Scrolling the log scrolled **the gauge** away — the one figure on this column that a person
+  watches *while* reading what the agents are doing, which is the whole reason this ticket drew
+  it at the head rather than at the foot.
+
+`.feedtop` wraps the `ACTIVITY` label, `CONTEXT` and `WORKSPACE`, `position:sticky` at `top:0`,
+and the log scrolls under it. It carries `max-height:min(60%,420px)` and scrolls inside itself
+past that, because a large roster with a panel open would otherwise pin the whole column.
+
+**The rule it appears to break, and why it does not.** DESIGN.md rejects a pinned group in the
+rail on the grounds that *nothing in this column covers anything else in it*. That rejection is
+about **peers in one list**: a team stuck to the scrollport's edge floats over the teams above and
+below it, and the overlap reads as rank. This head is not a peer of the log — it is two labelled
+blocks that were already above it with a rule between — and it draws as chrome rather than as a
+card: opaque on `--recessed`, no radius, no shadow, no translucency. The note is in DESIGN.md
+beside the `CONTEXT` paragraph, stating the distinction rather than leaving the two to be read as
+a contradiction.
+
+**Nothing here advises**, which is what the amendment above makes load-bearing. Pinning changes
+where the block is, not what it says: no warning, no colour, no threshold, no remedy.
+
+**Not verified on screen.** `--screenshot` renders a blank frame on this machine right now, for
+the baseline as much as for the change — checked by stashing both files, rebuilding and capturing
+again, which came back equally black. So the structure is pinned by a test instead
+(`Feed.test.tsx`, *the head of the column*): both blocks inside the wrapper, every log line
+outside it. jsdom performs no layout, so `position:sticky` itself is not testable there and the
+sticky behaviour is the one claim still resting on reading the stylesheet.

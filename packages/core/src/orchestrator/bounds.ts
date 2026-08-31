@@ -123,3 +123,100 @@ export function formatSize(bytes: number): string {
   if (bytes < 1_000_000) return `${Math.round(bytes / 1_000)} KB`;
   return `${(bytes / 1_000_000).toFixed(1)} MB`;
 }
+
+/**
+ * How many turns one Routine run may spend.
+ *
+ * The team's `turnBudget` is per *user prompt*, and its release valve is a person answering
+ * *continue?*. A Routine has no person, so the valve is shut and the budget stops being a
+ * precaution: it is the only thing between an hourly firing and a bill.
+ *
+ * Three, and a **constant rather than a column**. A per-Routine turn number is a knob nobody can
+ * set correctly in advance, and the unit a person actually reasons about is firings — which the
+ * schedule's closed set of three shapes already bounds by refusing to offer anything finer than
+ * hourly. A Routine that genuinely needs ten turns of agents waking each other at 03:00 is a
+ * workflow, and `.scratch/routines/spec.md` refused to build one in its second paragraph.
+ *
+ * `message_agent` stays available inside a run and this is what bounds it. Refusing peer messages
+ * to a Routine was considered and rejected: agents already ping-pong unattended whenever the user
+ * walks off mid-turn, so it is not new authority, and a second class of turn with different rules
+ * is the kind of split an adapter forgets about six months later.
+ */
+export const ROUTINE_TURN_BUDGET = 3;
+
+/**
+ * How many firings in a row may end in anything other than `ran` before the Routine disarms
+ * itself.
+ *
+ * Issue 08's shared rule, written once here and referenced by the cases rather than restated in
+ * each: the permission that expired, the budget that was spent, the folder that is gone and the
+ * runtime that is no longer installed all end the same way. An instruction whose every firing
+ * dies the same death is not automation, it is a process leak with a schedule attached.
+ *
+ * Firings **nobody was there for** are not counted. They write no run and they are not failures:
+ * a laptop that was shut is the ordinary condition of a laptop, and counting it here would
+ * disarm every Routine on a machine that spent a long weekend in a bag.
+ */
+export const ROUTINE_DISARM_AFTER = 3;
+
+/**
+ * The longest a Routine run may sit on an unanswered permission request before the request is
+ * cancelled and the run is stopped.
+ *
+ * Issue 03: a parked run holds a session, a bridge process and a pool slot, and `team-pool.ts`
+ * never evicts a working team, so four nights of parking is a pool that can no longer start the
+ * team the user is trying to open. The expiry is the earlier of this and the Routine's own next
+ * due moment, because a Routine that has come round again has answered the question itself.
+ *
+ * **A user's own turn never expires.** The timer belongs to the run's origin and not to the
+ * request: the person who started that turn is the person who can answer it.
+ */
+export const ROUTINE_PERMISSION_CEILING_MS = 30 * 60_000;
+
+/**
+ * The longest a firing waits for an agent that is mid-turn before it gives up.
+ *
+ * A firing that lands on a busy agent is not skipped: a session runs one turn at a time, so the
+ * run waits and starts when the agent is free. What it may not do is wait forever, because the
+ * firing it is holding back is its own next one.
+ */
+export const ROUTINE_BUSY_CEILING_MS = 15 * 60_000;
+
+/**
+ * How many Routines an agent may propose in one turn, and how many of its proposals may stand
+ * unreviewed at once.
+ *
+ * Issue 05, and the same reasoning as {@link WAKE_BATCH_LIMIT}: the number nobody estimates
+ * correctly is the number of times a model will do a thing it can do. Both are **refused at the
+ * tool boundary rather than trimmed**, in this file's posture, so a fourth proposal comes back to
+ * the model as an answer it has to account for instead of vanishing.
+ *
+ * **Standing means armed and proposed by this agent** — issue 05's 2026-08-30 amendment, and the
+ * third of the four compensating controls it names. It counted *unreviewed* proposals, which was
+ * right while nothing an agent proposed could fire; under the amendment nothing is ever unreviewed
+ * in that sense, so the cap would have gone dead at the exact moment it started to matter.
+ *
+ * It now bounds the thing that costs: how much recurring, unattended work an agent can give
+ * itself. Disarming one frees a slot, because a disarmed Routine spends nothing, and so does
+ * removing it. Waiting frees nothing, and the refusal says so rather than implying a queue.
+ */
+export const ROUTINE_PROPOSALS_PER_TURN = 1;
+export const ROUTINE_PROPOSALS_STANDING = 3;
+
+/** A Routine's name is a label on a row, not a place to put the instruction. */
+export const ROUTINE_NAME_LIMIT = 60;
+
+export function tooManyProposalsThisTurn(): string {
+  return (
+    'You have already proposed a Routine this turn. Propose one at a time, and only after the ' +
+    'person you are working with has seen the last one.'
+  );
+}
+
+export function tooManyProposalsStanding(standing: number): string {
+  return (
+    `You already have ${standing} Routines of your own running, which is the limit. Disarm or ` +
+    'have one removed before you add another. This is a limit on how much recurring work you ' +
+    'can give yourself, not a queue: waiting will not clear it.'
+  );
+}

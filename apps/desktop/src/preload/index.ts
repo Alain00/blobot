@@ -7,7 +7,13 @@ import type {
   UiAttachmentRefusal,
   HireResult,
   NewAgentSpec,
+  NewRoutineSpec,
   NewTeamSpec,
+  UiRoutine,
+  UiRoutineRun,
+  UiRoutineTarget,
+  UiScheduledRoutine,
+  RoutineSaveResult,
   UiAgentProfile,
   TeamCreationResult,
   TeamOpenResult,
@@ -18,12 +24,16 @@ import type {
   UiCommand,
   UiRuntimeChoice,
   RuntimeStepOutcome,
+  UiEarlier,
   UiSnapshot,
   UiTeamIcon,
   UiTeamDiskUsage,
   UiWorkspaceInspection,
   UiWorkspaceStatus,
+  UiBranches,
+  UiCommitResult,
   UiPublishResult,
+  UiSwitchResult,
   UiRuntimeOptions,
 } from '../shared/api.js';
 
@@ -34,6 +44,8 @@ import type {
  */
 const api: BlobotApi = {
   snapshot: () => ipcRenderer.invoke('blobot:snapshot') as Promise<UiSnapshot>,
+  earlier: (teamId: string, before: number) =>
+    ipcRenderer.invoke('blobot:earlier', teamId, before) as Promise<UiEarlier | undefined>,
   prompt: (agentIds, text, attachmentIds) =>
     ipcRenderer.invoke('blobot:prompt', agentIds, text, attachmentIds) as Promise<void>,
   chooseAttachment: () =>
@@ -91,6 +103,24 @@ const api: BlobotApi = {
     ipcRenderer.invoke('blobot:editAgent', profileId, spec) as Promise<EditAgentResult>,
   retireAgent: (profileId: string) =>
     ipcRenderer.invoke('blobot:retireAgent', profileId) as Promise<void>,
+  listRoutines: () => ipcRenderer.invoke('blobot:listRoutines') as Promise<readonly UiRoutine[]>,
+  routineTargets: () =>
+    ipcRenderer.invoke('blobot:routineTargets') as Promise<readonly UiRoutineTarget[]>,
+  saveRoutine: (spec: NewRoutineSpec, routineId?: string) =>
+    ipcRenderer.invoke('blobot:saveRoutine', spec, routineId) as Promise<RoutineSaveResult>,
+  setRoutineArmed: (routineId: string, armed: boolean) =>
+    ipcRenderer.invoke('blobot:setRoutineArmed', routineId, armed) as Promise<void>,
+  deleteRoutine: (routineId: string) =>
+    ipcRenderer.invoke('blobot:deleteRoutine', routineId) as Promise<void>,
+  runRoutineNow: (routineId: string) =>
+    ipcRenderer.invoke('blobot:runRoutineNow', routineId) as Promise<{
+      ok: boolean;
+      error?: string;
+    }>,
+  routineRuns: (routineId: string) =>
+    ipcRenderer.invoke('blobot:routineRuns', routineId) as Promise<readonly UiRoutineRun[]>,
+  seenRoutineRuns: (agentId: string) =>
+    ipcRenderer.invoke('blobot:seenRoutineRuns', agentId) as Promise<void>,
   createTeam: (spec: NewTeamSpec) =>
     ipcRenderer.invoke('blobot:createTeam', spec) as Promise<TeamCreationResult>,
   selectTeam: (teamId: string) =>
@@ -110,6 +140,14 @@ const api: BlobotApi = {
     ipcRenderer.invoke('blobot:workspaceStatus', teamId, forge) as Promise<
       readonly UiWorkspaceStatus[]
     >,
+  listBranches: (teamId, agentId) =>
+    ipcRenderer.invoke('blobot:listBranches', teamId, agentId) as Promise<UiBranches>,
+  switchBranch: (teamId, agentId, branch, options) =>
+    ipcRenderer.invoke('blobot:switchBranch', teamId, agentId, branch, options) as Promise<UiSwitchResult>,
+  commitPlan: (teamId, agentId, message) =>
+    ipcRenderer.invoke('blobot:commitPlan', teamId, agentId, message) as Promise<readonly string[]>,
+  commitWork: (teamId, agentId, message) =>
+    ipcRenderer.invoke('blobot:commitWork', teamId, agentId, message) as Promise<UiCommitResult>,
   publishPlan: (teamId, agentId, options) =>
     ipcRenderer.invoke('blobot:publishPlan', teamId, agentId, options) as Promise<readonly string[]>,
   publishBranch: (teamId, agentId, options) =>
@@ -149,12 +187,18 @@ const api: BlobotApi = {
       listener(teamId, agentId, commands),
     ),
   onMessage: (listener) =>
-    subscribe('blobot:message', (_e, teamId: string, message: Message) =>
-      listener(teamId, message),
+    subscribe(
+      'blobot:message',
+      (_e, teamId: string, message: Message, routineName: string | undefined) =>
+        listener(teamId, message, routineName),
     ),
   onBudget: (listener) =>
     subscribe('blobot:budget', (_e, teamId: string, used: number, budget: number) =>
       listener(teamId, used, budget),
+    ),
+  onRoutineScheduled: (listener) =>
+    subscribe('blobot:routine-scheduled', (_e, teamId: string, scheduled: UiScheduledRoutine) =>
+      listener(teamId, scheduled),
     ),
   onSilentHandoff: (listener) =>
     subscribe(

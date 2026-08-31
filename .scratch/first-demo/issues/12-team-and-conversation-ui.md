@@ -528,3 +528,75 @@ It also turned up a call being dropped by both the transcript and the activity c
 before any of this: the renderer filters streamed events by the team it is showing, and does not
 know which team that is until its first snapshot resolves. `logOfTeam().running` covers it. The
 underlying drop is recorded in `build.md` and is a change to how a team is opened.
+
+## Amendment, 2026-08-30: the rail is a list of agents under headings
+
+Reopened by the operator, on the rail alone. Three decisions on this ticket are reversed, and
+`DESIGN.md`'s *Screens* section carries each with its reason.
+
+**The folder is gone.** A team's mark was a drawn folder with up to three members peeking over
+the front, a `+N` on the panel and the project icon straddling the panel's bottom edge. At the
+size a row draws, that is six paths and two questions in one box, repeated down a column whose
+whole job is to be quiet, and the operator's objection was density: *"it adds too much noise to
+the whole rail."* The container was the noise, and the two answers stacked in one slot were what
+made the container necessary.
+
+**So the mark answers one question, and the project icon wins it.** Faces are the fallback, on
+teams with no icon. This reverses this ticket's *"an icon that replaced the mark would answer
+which project by deleting who is on it"*, and the reversal is deliberate rather than a
+softening: **faces cannot tell similar teams apart**, because the same agents are on several
+teams — ADR-0001 — so two teams sharing a roster drew an identical stack. An icon is unique to
+the project by construction. The cost is real and is not hidden: on a team with an icon the rail
+no longer says who is on it. It is one click away, on the rows the team opens into.
+
+**A team row is one small line, with a chevron.** The row was already a disclosure and nothing
+said so. The chevron is an indicator and not a control — exactly one team is open, and a twisty
+that could collapse the team you are reading would have to invent an *open but collapsed* state.
+The second line went with it, which took `led by Alice`: who leads is now `LEAD` on the lead's
+own row, which this ticket refused on the grounds that leading is a fact about the team. That
+reason survives the move, because the roster is visibly nested under its team now, so a row
+inside the section is already scoped to it.
+
+**What was given up that is worth naming.** The face flight — the roster opening by throwing its
+members out of the folder into their rows — is deleted. It was the only thing in the interface
+that *said* the rows are the folder's contents rather than merely laying them out that way. With
+a project icon in the mark it could only ever have run on half the teams, and half a gesture that
+fires on some rows and not others is worse than none. The roster's growth and the rows' fade
+remain, and the whole row fades now rather than its text alone.
+
+## Amendment, 2026-08-30: the rail's doors move to its foot, and there is a settings screen
+
+Reopened by the operator on the rail again, and this time on the two rows above `TEAMS`.
+
+**`YOUR AGENTS` and `ROUTINES` are gone from the top of the column.** They stood there because
+that is the order the model reads in — an agent exists before a team, and a Routine belongs to
+an agent — and that reason is about the model rather than about the column. On screen the two
+headed rows pushed the teams down and read as a second list stacked on the first, which is the
+exact failure the team row was shortened to avoid in the amendment above. The column is about
+teams, so the teams start at the top of it.
+
+**They are three doors at the foot now**, over a hairline: *Agents*, *Routines*, *Settings*.
+Named for what is behind them and not set in mono, because a heading names what is under it and
+there is nothing under these. They are drawn like `Search` at the other end of the column, which
+is the only other thing in the rail that is a door rather than a list item.
+
+**The operator's own proposal was one door.** *Settings*, with *Agents* and *Routines* as
+sections inside it. That was refused on the merits and the refusal was accepted: an AgentProfile
+is the roster — ADR-0001's whole point is that an agent exists before any team, and hiring one
+is the first thing anybody does here — and a Routine is standing work that produces turns in a
+transcript and can put an unread mark on a rail row in this very column. Neither is a preference
+set once. The tell is the unread mark: nothing behind a *Settings* door should ever be able to
+put one there.
+
+**So `Settings` is a third door and it has content of its own.** The machine: which runtimes are
+installed and whether a credential is present, ticket 11's four states with ticket 11's remedies
+beside them. That screen had no place before — detection was reachable only from inside the hire
+dialog, so *is Codex signed in?* was answered behind a decision about an agent the user had not
+decided to hire. It is a working surface with a column of its own, and one section in it. A
+sidebar with one true item is more honest than four invented ones.
+
+**Two things went while the rail was open.** The hairline under the open team's roster, which
+was doing nothing the gap was not already doing and made the roster read as a panel dropped into
+the list. And the outlined list row: a list of things — a runtime, an agent, a Routine — is a
+**filled** row on `--raised` now, with the hairline spent on hover instead of on every row at
+rest. `DESIGN.md` carries both.

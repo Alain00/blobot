@@ -28,7 +28,6 @@ export function IconPick({
       <div className="row">
         <TeamMark
           agents={agents}
-          status="idle"
           {...(icon === undefined ? {} : { icon: icon.dataUrl })}
           size={46}
         />

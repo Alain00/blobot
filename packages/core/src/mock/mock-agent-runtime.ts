@@ -10,6 +10,7 @@ import type {
   AvailableCommand,
   PeerMessageAck,
   PeerMessageHandler,
+  RoutineProposalHandler,
   PermissionHandler,
   Prompt,
   RuntimeLifecycle,
@@ -44,9 +45,19 @@ export interface MockAgentRuntimeOptions {
    * that a message was sent would test nothing; the mailbox and wake logic are the point.
    */
   readonly peerMessageHandler?: PeerMessageHandler;
+  /** Issue 05's `propose_routine`, called directly, exactly as the peer handler is. */
+  readonly proposeRoutine?: RoutineProposalHandler;
   readonly startupMs?: number;
   /** When set, `start()` rejects with this message: the spawn-failure path. */
   readonly spawnFailure?: string;
+  /**
+   * When set, `restart()` rejects with this message.
+   *
+   * The one outcome of a compaction that cannot be recovered from by keeping the old session,
+   * because the old session is already closed by the time a real adapter finds out. A caller
+   * has to say so rather than leave a dead agent looking idle.
+   */
+  readonly restartFailure?: string;
   /** How late a cancellation lands. Non-zero reproduces a cancel that arrives after the fact. */
   readonly cancelLatencyMs?: number;
   readonly contextSize?: number;
@@ -81,19 +92,22 @@ const CANCELLED_TOOL_OUTPUT =
  */
 export class MockAgentRuntime implements AgentRuntime {
   readonly agentId: string;
-  readonly sessionId: string;
 
   readonly #clock: Clock;
   readonly #script: ScenarioScript;
   readonly #peerMessageHandler: PeerMessageHandler | undefined;
+  readonly #proposeRoutine: RoutineProposalHandler | undefined;
   readonly #startupMs: number;
   readonly #spawnFailure: string | undefined;
+  readonly #restartFailure: string | undefined;
   readonly #cancelLatencyMs: number;
   readonly #accepts: AttachmentSupport;
   readonly #contextSize: number;
   readonly #usedPerTurn: number;
 
+  #sessionId: string;
   #lifecycle: RuntimeLifecycle = 'created';
+  #sessionIndex = 0;
   #turnIndex = 0;
   #messageCounter = 0;
   #toolCounter = 0;
@@ -107,12 +121,14 @@ export class MockAgentRuntime implements AgentRuntime {
 
   constructor(options: MockAgentRuntimeOptions) {
     this.agentId = options.agentId;
-    this.sessionId = options.sessionId ?? `session_${options.agentId}`;
+    this.#sessionId = options.sessionId ?? `session_${options.agentId}`;
     this.#clock = options.clock ?? new SystemClock();
     this.#script = options.script;
     this.#peerMessageHandler = options.peerMessageHandler;
+    this.#proposeRoutine = options.proposeRoutine;
     this.#startupMs = options.startupMs ?? 250;
     this.#spawnFailure = options.spawnFailure;
+    this.#restartFailure = options.restartFailure;
     this.#cancelLatencyMs = options.cancelLatencyMs ?? 0;
     this.#accepts = options.accepts ?? { images: true, textFiles: true };
     this.#contextSize = options.contextSize ?? 200_000;
@@ -122,6 +138,11 @@ export class MockAgentRuntime implements AgentRuntime {
 
   get lifecycle(): RuntimeLifecycle {
     return this.#lifecycle;
+  }
+
+  /** A field on the real adapters and a getter here, because {@link restart} replaces it. */
+  get sessionId(): string {
+    return this.#sessionId;
   }
 
   /** True while a turn is in flight. Prompts on a session are serialized. */
@@ -188,6 +209,34 @@ export class MockAgentRuntime implements AgentRuntime {
   async stop(): Promise<void> {
     this.#turn?.abort.abort();
     this.#setLifecycle('stopped');
+  }
+
+  /** False: a scenario is the persona here, and it does not change under a running mock. */
+  get personaIsSessionBound(): boolean {
+    return false;
+  }
+
+  /**
+   * A fresh session: a new id, an empty context, and nothing remembered.
+   *
+   * The occupancy reset is the part worth having. A real restart's whole justification is that
+   * the next `usage_updated` comes back small, and a mock that kept counting would let a
+   * compaction loop fire again immediately and look correct in a test.
+   */
+  async restart(): Promise<void> {
+    if (this.#lifecycle !== 'ready') {
+      throw new Error(`${this.agentId}: cannot restart a runtime that is ${this.#lifecycle}`);
+    }
+    if (this.#turn !== undefined) throw new Error(`${this.agentId}: cannot restart mid-turn`);
+    if (this.#restartFailure !== undefined) {
+      this.#setLifecycle('dead');
+      throw new Error(this.#restartFailure);
+    }
+    this.#sessionIndex += 1;
+    this.#sessionId = `${this.#sessionId}_${this.#sessionIndex}`;
+    this.#used = 0;
+    // A new session advertises nothing until it is told, exactly as a real one does not.
+    this.#setCommands([]);
   }
 
   /**
@@ -262,7 +311,7 @@ export class MockAgentRuntime implements AgentRuntime {
     if (handler === undefined) return false;
     const chosen = await handler({
       agentId: this.agentId,
-      sessionId: this.sessionId,
+      sessionId: this.#sessionId,
       toolCallId,
       title,
       options: [
@@ -315,6 +364,10 @@ export class MockAgentRuntime implements AgentRuntime {
         }
         case 'message_agent': {
           await this.#runPeerMessage(queue, step, turnId);
+          break;
+        }
+        case 'propose_routine': {
+          await this.#runProposeRoutine(queue, step);
           break;
         }
         case 'commands': {
@@ -493,6 +546,59 @@ export class MockAgentRuntime implements AgentRuntime {
     }
   }
 
+  /**
+   * A proposal, and its refusal.
+   *
+   * A refused proposal is a **failed tool call and never a failed turn**: the model reads why and
+   * gets to say something honest to the user about it, which is the whole point of refusing at
+   * the boundary rather than trimming.
+   */
+  async #runProposeRoutine(
+    queue: AsyncQueue<AgentEvent>,
+    step: Extract<ScenarioStep, { kind: 'propose_routine' }>,
+  ): Promise<void> {
+    const toolCallId = this.#nextToolCallId();
+    this.#emitTo(queue, {
+      type: 'tool_call_started',
+      toolCallId,
+      title: 'blobot_propose_routine',
+      kind: 'other',
+      rawInput: { name: step.name, prompt: step.prompt, schedule: step.schedule },
+    });
+    this.#emitTo(queue, { type: 'tool_call_updated', toolCallId, status: 'in_progress' });
+    if (this.#proposeRoutine === undefined) {
+      this.#emitTo(queue, {
+        type: 'tool_call_updated',
+        toolCallId,
+        status: 'failed',
+        error: 'no propose_routine handler is attached to this runtime',
+      });
+      return;
+    }
+    try {
+      const ack = await this.#proposeRoutine({
+        from: this.agentId,
+        name: step.name,
+        prompt: step.prompt,
+        schedule: step.schedule,
+      });
+      this.#emitTo(queue, {
+        type: 'tool_call_updated',
+        toolCallId,
+        status: 'completed',
+        output: JSON.stringify(ack),
+        exit: 0,
+      });
+    } catch (error) {
+      this.#emitTo(queue, {
+        type: 'tool_call_updated',
+        toolCallId,
+        status: 'failed',
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   #endTurn(queue: AsyncQueue<AgentEvent>, turnId: string, stopReason: StopReason): void {
     if (stopReason === 'cancelled') return this.#endCancelled(queue, turnId);
     this.#used += this.#usedPerTurn;
@@ -543,7 +649,7 @@ export class MockAgentRuntime implements AgentRuntime {
     return {
       ...event,
       agentId: this.agentId,
-      sessionId: this.sessionId,
+      sessionId: this.#sessionId,
       at: this.#clock.now(),
     } as AgentEvent;
   }

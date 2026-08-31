@@ -124,6 +124,7 @@ function open(...ids: readonly string[]): void {
           statuses: {},
           items: [],
           pane: { kind: 'team' },
+          unread: [],
           onSelect: () => {},
           onSelectTeam: () => {},
         }),
@@ -135,27 +136,14 @@ function open(...ids: readonly string[]): void {
 }
 
 describe('opening a team', () => {
-  it('starts each face in the slot it occupied inside the folder', () => {
+  it('never travels a face, because there is no longer anywhere for one to come from', () => {
+    // The flight was the best thing here: it *said* the rows are the folder's contents rather
+    // than merely laying them out that way. It went with the folder. A team's mark is now its
+    // project icon where it has one, so the flight could only ever run on half the teams, and a
+    // face travelling out of a favicon is not a sentence. Half a gesture that fires on some rows
+    // and not others is worse than none.
     open('one', 'two');
-
-    const faces = calls('transform');
-    expect(faces).toHaveLength(2);
-
-    // Two agents, so `peekLayout(2, 46)` places them at x=8 and x=15, y=6, 24px across. The
-    // first face is at (24, 160) and 34px across, so it starts 4px right and 54px above where
-    // it lands, at 24/34 of its size.
-    const [first] = faces[0] as [{ transform: string }[], KeyframeAnimationOptions];
-    expect(first[0]?.transform).toContain('translate(4px, -54px)');
-    expect(first[0]?.transform).toContain('scale(0.70');
-    expect(first[1]?.transform).toBe('none');
-
-    // The second lands a row lower and a slot to the right: 20 + 15 - 24 = 11px, and one row
-    // pitch further up.
-    const [second, options] = faces[1] as [{ transform: string }[], KeyframeAnimationOptions];
-    expect(second[0]?.transform).toContain('translate(11px, -106px)');
-    // Staggered, and inside the budget: the last face lands well under 250ms.
-    expect(options.delay ?? 0).toBeGreaterThan(0);
-    expect((options.duration as number) + (options.delay as number)).toBeLessThanOrEqual(250);
+    expect(calls('transform')).toHaveLength(0);
   });
 
   it('grows the room the roster takes, so the teams below slide rather than jump', () => {
@@ -167,27 +155,30 @@ describe('opening a team', () => {
 
   it('fades each row in, which is what covers the overlap while that happens', () => {
     open('one', 'two');
-    const text = calls('opacity');
-    expect(text).toHaveLength(2);
-    expect(text[0]?.[0][0]?.opacity).toBe(0);
-    expect(text[0]?.[0][1]?.opacity).toBe(1);
+    const rows = calls('opacity');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.[0][0]?.opacity).toBe(0);
+    expect(rows[0]?.[0][1]?.opacity).toBe(1);
+    // Staggered, and inside the budget: the last row lands well under 250ms.
+    const options = rows[1]?.[1] as KeyframeAnimationOptions;
+    expect(options.delay ?? 0).toBeGreaterThan(0);
+    expect((options.duration as number) + (options.delay as number)).toBeLessThanOrEqual(250);
   });
 
-  it('fades in a face the folder only counted, and never one it was showing', () => {
-    // Four members: `peekLayout` gives three slots and says `+1` about the fourth. The three
-    // that were on screen are continuous with themselves and must not fade — the travel only
-    // reads as travel if the face is the same face. The fourth was never there.
-    open('one', 'four');
-    const faces = calls('transform');
-    expect(faces).toHaveLength(4);
-    for (const index of [0, 1, 2]) {
-      expect(faces[index]?.[0][0]).not.toHaveProperty('opacity');
+  it('fades the whole row, face included', () => {
+    // It used to be the text alone, because the face beside it was busy travelling. Nothing
+    // travels now, so a face that appeared while its own name faded in would be the one thing
+    // in the gesture that pops.
+    open('one', 'two');
+    expect(calls('opacity')).toHaveLength(2);
+    for (const [, options] of calls('opacity')) {
+      expect((options as KeyframeAnimationOptions).fill).toBe('backwards');
     }
-    expect(faces[3]?.[0][0]?.opacity).toBe(0);
   });
 
-  it('does not fly on the first paint of a session', () => {
-    // Nothing was shut a moment ago, so there is nothing for the faces to have come out of.
+  it('does not animate on the first paint of a session', () => {
+    // Nothing was shut a moment ago, and a launch that begins by animating the rail is
+    // answering a question nobody asked.
     open('one');
     expect(keyframes).not.toHaveBeenCalled();
   });

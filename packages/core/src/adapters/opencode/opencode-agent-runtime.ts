@@ -403,6 +403,57 @@ export class OpencodeAgentRuntime implements AgentRuntime {
     this.#connection?.notify('session/cancel', { sessionId: this.#sessionId });
   }
 
+  /** False: the persona is an OpenCode **agent** in the child's configuration, and
+   *  `#applyPersonaMode` re-asserts it after every resume. The live session already runs the
+   *  current one, so a restart cannot change who the agent is. */
+  get personaIsSessionBound(): boolean {
+    return false;
+  }
+
+  /**
+   * Close this session and open a fresh one, without respawning `opencode acp`.
+   *
+   * The persona is the child's environment here rather than a `session/new` parameter, so it
+   * needs nothing re-supplied — but the **mode** does, and for the reason ticket 16 already
+   * found: OpenCode restores the last used mode rather than the configured default, so a
+   * session that has not been told is a session answering as `build` instead of as the
+   * teammate the user hired. `#applyPersonaMode` is unconditional after a new session for
+   * exactly that reason, and this is a new session.
+   */
+  async restart(): Promise<void> {
+    const connection = this.#connection;
+    if (connection === undefined || this.#lifecycle !== 'ready') {
+      throw new Error(`${this.agentId}: cannot restart a runtime that is ${this.#lifecycle}`);
+    }
+    if (this.#turn !== undefined) {
+      throw new Error(`${this.agentId}: cannot restart mid-turn`);
+    }
+    const previous = this.#sessionId;
+    this.#sessionId = '';
+    if (previous !== '') {
+      await connection.request('session/close', { sessionId: previous }).catch(() => undefined);
+    }
+    try {
+      const session = await this.#newSession(connection);
+      if (session.sessionId === undefined) {
+        throw new Error(`${this.agentId}: opencode returned no sessionId`);
+      }
+      this.#sessionId = session.sessionId;
+      this.#resumed = false;
+      await this.#applyPersonaMode(currentModeOf(session));
+      this.#optionGroups = await applyOptionChoices(
+        connection,
+        this.#sessionId,
+        this.#options.options ?? {},
+        optionGroupsFrom(session.configOptions, SURFACED_OPTIONS),
+        (line) => this.#options.onStderr?.(line),
+      );
+    } catch (error) {
+      this.#setLifecycle('dead');
+      throw error;
+    }
+  }
+
   async stop(): Promise<void> {
     if (this.#lifecycle === 'stopped') return;
     this.#setLifecycle('stopped');

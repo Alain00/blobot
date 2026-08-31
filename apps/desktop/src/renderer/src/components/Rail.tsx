@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { ChevronRight, Pencil, Search, Trash2 } from 'lucide-react';
+import { ChevronRight, Clock, Pencil, Search, Settings, Trash2, Users } from 'lucide-react';
 import type { AgentStatus } from '@blobot/core/domain';
 import type { UiAgent, UiTeam, UiTeamSummary } from '../../../shared/api.js';
 import { foldTeamStatus, lastLineOf, type Item, type Pane } from '../model.js';
@@ -22,6 +22,15 @@ import { StatusWord } from './StatusWord.js';
  * was a claim about a team that was often still working. A row says what its members are doing
  * and stays silent when they are doing nothing, which is the same rule the agent rows follow.
  */
+/**
+ * The mark on a team row. Smaller than the 34px an agent's face gets, because a team row is one
+ * small line and an agent row is two: the rail is a list of agents under headings now, and the
+ * heading is not the substance. It was the same box as an agent row down to the padding, and the
+ * reason given was that a team row standing *taller* made the column read as two lists stacked.
+ * Shorter does not do that — it does the opposite, which is the point.
+ */
+const MARK = 20;
+
 export function Rail({
   team,
   teams,
@@ -29,12 +38,15 @@ export function Rail({
   statuses,
   items,
   pane,
+  unread,
   onSelect,
   onSelectTeam,
   onNewTeam,
   onEditTeam,
   onDeleteTeam,
   onOpenAgents,
+  onOpenRoutines,
+  onOpenSettings,
   onFind,
 }: {
   team: UiTeam;
@@ -43,6 +55,13 @@ export function Rail({
   statuses: Record<string, AgentStatus>;
   items: readonly Item[];
   pane: Pane;
+  /**
+   * Agents carrying a Routine run nobody has looked at. Issue 11's unread mark, and the reason
+   * it is here rather than on the Routines screen alone: a Routine whose value is the *message*
+   * lands in a pane the user has no reason to open, and a daily briefing nobody is told about
+   * is a daily briefing that does not exist.
+   */
+  unread: readonly string[];
   onSelect: (pane: Pane) => void;
   /** Absent in demo mode, where there is exactly one team and it is scripted. */
   onSelectTeam?: (teamId: string) => void;
@@ -51,6 +70,10 @@ export function Rail({
   onDeleteTeam?: (teamId: string) => void;
   /** Opens *your agents*. Absent in demo mode, whose agents are a TypeScript file. */
   onOpenAgents?: () => void;
+  /** Opens *routines*. Absent in demo mode, whose team is a schedule nobody could keep. */
+  onOpenRoutines?: () => void;
+  /** Opens *settings*. Absent in demo mode, which configures nothing that outlives it. */
+  onOpenSettings?: () => void;
   /** Opens the navigator. The same thing ctrl+k does, for the user who has not been told. */
   onFind?: () => void;
 }): React.JSX.Element {
@@ -105,6 +128,11 @@ export function Rail({
 
   return (
     <div className="rail" ref={opening}>
+      {/* Everything that scrolls, which is the list and the one control that stands in for it.
+          The doors at the foot are outside this box so that they stay put: a user with a dozen
+          teams would otherwise have to scroll to the end of them to reach a place that is not
+          about any team. */}
+      <div className="railscroll">
       {/* The navigator has a key and, until this, nothing else — which makes it a feature for
           whoever was told about it. A row at the top of the column it stands in for, wearing the
           shortcut it is teaching. It is a **button drawn as a field**, not a field: there is one
@@ -116,16 +144,6 @@ export function Rail({
           <span>Search</span>
           <span style={{ flex: 1 }} />
           <span className="mono muted">{shortcut()}</span>
-        </button>
-      )}
-      {/* Above the teams, because that is the order the model reads in: agents exist, and
-          teams are formed out of them. One quiet row rather than a second list, since this
-          column's job is the teams and the agents have a screen of their own. */}
-      {onOpenAgents !== undefined && (
-        <button className="railsection" onClick={onOpenAgents}>
-          <span className="mono">YOUR AGENTS</span>
-          <span style={{ flex: 1 }} />
-          <ChevronRight size={13} aria-hidden />
         </button>
       )}
       <div className="railhead">
@@ -157,6 +175,7 @@ export function Rail({
               onClick={() => onSelectTeam?.(row.id)}
               title={`Switch to ${row.name}`}
             >
+              <Twisty open={false} members={row.members.length} />
               {/* The silhouette is for a team with nobody on it, which is the only team that
                   genuinely has no face to draw. Everywhere else it was standing in for a row
                   that had been handed a count instead of its members. */}
@@ -165,30 +184,41 @@ export function Rail({
               ) : (
                 <TeamMark
                   agents={row.members}
-                  status={rowStatus.status}
                   {...(row.icon === undefined ? {} : { icon: row.icon })}
-                  size={34}
+                  size={MARK}
                 />
               )}
-              <span className="who">
-                <span className="nm">
-                  <b>{row.name}</b>
-                </span>
-                <span className="sub">
-                  <span className="n">
-                    {row.members.length} agents
-                    {row.lastActiveAt === undefined ? '' : ` · ${lastActive(row.lastActiveAt)}`}
+              <b className="nm">{row.name}</b>
+              <span style={{ flex: 1 }} />
+              {/* The right of the line says one thing at a time, and status outranks recency:
+                  a team that is working is not also usefully described by when it last did.
+
+                  Silent while it is quiet, exactly as the team on screen is. `idle` is the
+                  resting state of a column of teams, and printing it on every row would be the
+                  same word repeated as many times as the user has teams. It speaks the moment
+                  one member is working, and `waiting` still inverts, which is the point of
+                  keeping a word: a backgrounded team blocked on a permission has no other way
+                  to reach the user.
+
+                  The member count that used to sit here went with the second line and is not
+                  missed: it is the number of rows the team opens into, which is a worse way of
+                  saying what those rows say. */}
+              {busy ? (
+                <StatusWord status={rowStatus.status} label={rowStatus.label} />
+              ) : (
+                row.lastActiveAt !== undefined && (
+                  // Issue 11's mark, folded onto the team row the way `StatusWord` folds, so a
+                  // team the user is not on can carry it: a signal only visible once you are
+                  // already on the team answers nothing. **Weight, never an inversion** —
+                  // `waiting` owns the app's one inversion and this must lose to it, which
+                  // weight against quiet does, legibly, with both in the column at once.
+                  <span
+                    className={`when${row.members.some((member) => unread.includes(member.id)) ? ' unread' : ''}`}
+                  >
+                    {lastActive(row.lastActiveAt)}
                   </span>
-                  <span style={{ flex: 1 }} />
-                  {/* Silent while it is quiet, exactly as the team on screen is. `idle` is the
-                      resting state of a column of teams, and printing it on every row would be
-                      the same word repeated as many times as the user has teams. It speaks the
-                      moment one member is working, and `waiting` still inverts, which is the
-                      point of keeping a word: a backgrounded team blocked on a permission has
-                      no other way to reach the user. */}
-                  {busy && <StatusWord status={rowStatus.status} label={rowStatus.label} />}
-                </span>
-              </span>
+                )
+              )}
             </button>
             </TeamRow>
           );
@@ -201,47 +231,34 @@ export function Rail({
               className={`teamrow${pane.kind === 'team' ? ' sel' : ''}`}
               onClick={() => onSelect({ kind: 'team' })}
             >
+              <Twisty open members={agents.length} />
               <TeamMark
                 agents={agents}
-                status={teamStatus.status}
                 {...(row.icon === undefined ? {} : { icon: row.icon })}
-                size={34}
-                open
+                size={MARK}
               />
-              <span className="who">
-                <span className="nm">
-                  <b>{row.name}</b>
-                </span>
-                {/* No count on the running team: its members are enumerated directly beneath
-                    it, and the line is spent on the two things the rows below cannot say.
+              <b className="nm">{row.name}</b>
+              <span style={{ flex: 1 }} />
+              {/* Who leads used to be said here, as `led by Alice` on a second line. The line is
+                  gone and the fact moved onto the lead's own row, which it can do now: a roster
+                  visibly nested under its team is scoped by the section it sits in, so `LEAD`
+                  there is not the claim about the *agent* that `DESIGN.md` refused. The same
+                  agent still leads one team and not another, and still says so on one row and
+                  not the other.
 
-                    Who leads, which is a fact about the *team* and not about the agent — the
-                    same agent leads one team and not another — and which is what the composer
-                    resolves to when the user names nobody. It is named rather than drawn: a
-                    face appears where you are identifying among agents or choosing one, and
-                    this is a single agent being mentioned.
-
-                    And the folded status, silent while every member is idle, for the same
-                    reason the rows below are: a team that says ALL IDLE over four rows saying
-                    IDLE is four words of nothing. */}
-                {(lead !== undefined || teamStatus.status !== 'idle') && (
-                  <span className="sub">
-                    {lead !== undefined && <span className="n">led by {lead.name}</span>}
-                    <span style={{ flex: 1 }} />
-                    {teamStatus.status !== 'idle' && (
-                      <StatusWord status={teamStatus.status} label={teamStatus.label} />
-                    )}
-                  </span>
-                )}
-              </span>
+                  The folded status stays, silent while every member is idle, for the same
+                  reason the rows below are: a team that says ALL IDLE over four rows saying
+                  IDLE is four words of nothing. */}
+              {teamStatus.status !== 'idle' && (
+                <StatusWord status={teamStatus.status} label={teamStatus.label} />
+              )}
             </button>
             </TeamRow>
 
             {/* The roster, in a box of its own because opening a team has to *make room* for it
                 rather than shove the column down between two frames. The box's height is what
-                animates; its rows are painted where they will end up from the first frame, so
-                a face flying up to the folder is not clipped on its way out. What covers the
-                overlap while the teams below slide away is the rows' own fade. */}
+                animates, and the rows fade in, which is what covers the overlap while the teams
+                below slide away. */}
             <div className="roster">
             {agents.map((agent) => {
               const status = statuses[agent.id] ?? 'idle';
@@ -260,15 +277,26 @@ export function Rail({
                       asserting what the fold only ever claimed of somebody. */}
                   <Blob
                     name={agent.name}
-                    size={34}
+										size={44}
                     status={status}
                     hue={agent.hue}
                     animated
-                    face={agent.id}
                   />
-                  <span className="who" data-arriving>
+                  <span className="who">
                     <span className="nm">
                       <b>{agent.name}</b>
+                      {/* Who leads, on the row it leads. It was `led by Alice` under the team's
+                          name until the team's row became one line, and `DESIGN.md`'s reason for
+                          putting it there was that leading is a fact about the *team* and not
+                          about the agent — the same agent leads one team and not another, so it
+                          cannot live on an agent's definition either.
+
+                          That reason survives the move, because the roster is visibly nested
+                          under its team now: a row inside this section is already scoped to this
+                          team, so the word is read as "leads *here*" rather than as a rank the
+                          agent carries around. It is still named rather than drawn, and it is a
+                          mono label like every other one on these rows. */}
+                      {agent.id === team.leadAgentId && <span className="mono lead">LEAD</span>}
                       <span className="grow" />
                       {/* When it last spoke, where a chat app puts it. Absent, rather than
                           zero, for an agent that has not said anything yet. */}
@@ -284,7 +312,14 @@ export function Rail({
                       {last === undefined ? (
                         <span className="role">{agent.role}</span>
                       ) : (
-                        <span className="preview">{last.text}</span>
+                        // Full ink when the last thing this agent said came from a Routine run
+                        // the user has not looked at. The row already holds the content; what
+                        // was missing is only that nobody had seen it. Not a dot and not a
+                        // count: a dot is a new element in a column whose job is quiet, and two
+                        // unread reports and five are the same decision.
+                        <span className={`preview${unread.includes(agent.id) ? ' unread' : ''}`}>
+                          {last.text}
+                        </span>
                       )}
                       <span style={{ flex: 1 }} />
                       {/* Idle is the resting state of every row on a quiet team, so spelling it
@@ -301,7 +336,72 @@ export function Rail({
           </div>
         );
       })}
+      </div>
+
+      {/* The doors that are not the list, at the foot of the column, where a sidebar puts the
+          places it is not about.
+
+          They stood above TEAMS until this, on the grounds that it is the order the model reads
+          in: agents exist, and teams are formed out of them. That is true of the model and was
+          wrong on screen. Two headed rows over the list pushed the teams down and read as a
+          second list stacked on the first — the exact failure the team row was shortened to
+          avoid — and the order an app is built out of is not the order its column is read in.
+          This column is about teams, so the teams start at the top of it.
+
+          **Not headings, so not mono.** A heading names what is under it and there is nothing
+          under these. They are rows you press, drawn like `Search` at the other end of the
+          column, which is the only other thing here that is a door rather than a list item.
+
+          Each is named for what is behind it. *Settings* is a third door and not a lid over the
+          other two: an agent is the roster and a Routine is standing work that can put an
+          unread mark on a row in this very column, and neither is a preference. What is behind
+          *Settings* is the machine — which runtimes are on it and whether they are ready — and
+          that had no place of its own before, reachable only from inside the hire dialog. */}
+      {(onOpenAgents !== undefined ||
+        onOpenRoutines !== undefined ||
+        onOpenSettings !== undefined) && (
+        <div className="railfoot">
+          {onOpenAgents !== undefined && (
+            <Door icon={<Users size={13} aria-hidden />} label="Agents" onClick={onOpenAgents} />
+          )}
+          {onOpenRoutines !== undefined && (
+            <Door icon={<Clock size={13} aria-hidden />} label="Routines" onClick={onOpenRoutines} />
+          )}
+          {onOpenSettings !== undefined && (
+            <Door
+              icon={<Settings size={13} aria-hidden />}
+              label="Settings"
+              onClick={onOpenSettings}
+            />
+          )}
+        </div>
+      )}
     </div>
+  );
+}
+
+/**
+ * One row at the foot of the rail. A chevron on the right because it leads somewhere, which is
+ * the one thing these have in common with the team rows above and the reason they can sit in
+ * the same column without being mistaken for them: the team rows carry a mark and a status, and
+ * these carry a glyph and a word.
+ */
+function Door({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}): React.JSX.Element {
+  return (
+    <button className="raildoor" onClick={onClick}>
+      {icon}
+      <span>{label}</span>
+      <span style={{ flex: 1 }} />
+      <ChevronRight size={13} aria-hidden />
+    </button>
   );
 }
 
@@ -359,5 +459,30 @@ function TeamRow({
         )}
       </span>
     </div>
+  );
+}
+
+/**
+ * The chevron in the gutter of a team row.
+ *
+ * A team row already *was* a disclosure — its roster slides out underneath when the team is
+ * opened — and nothing on screen said so. The rail's other section, YOUR AGENTS, has worn a
+ * chevron since it was written, so the column already had the glyph and used it on the one row
+ * that is not a team.
+ *
+ * **It is an indicator and not a control**, which is why it is not a button and why the row
+ * around it stays one click target. Exactly one team is open, because the open team is the one
+ * whose sessions are on screen; there is no "open but collapsed", and a twisty the user could
+ * press to collapse the team they are reading would have to invent that state.
+ *
+ * A team with nobody on it keeps the gutter and loses the glyph. The slot is what puts every
+ * team mark on one left edge; the glyph is a promise of rows underneath, and an empty team has
+ * none to show.
+ */
+function Twisty({ open, members }: { open: boolean; members: number }): React.JSX.Element {
+  return (
+    <span className={`twisty${open ? ' on' : ''}`} aria-hidden="true">
+      {members > 0 && <ChevronRight size={12} />}
+    </span>
   );
 }

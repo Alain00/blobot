@@ -2,6 +2,9 @@ import {
   ClaudeAgentRuntime,
   CodexAgentRuntime,
   OpencodeAgentRuntime,
+  claudeCeiling,
+  codexCeiling,
+  opencodeCeiling,
   type AgentRuntime,
   type TrustLevel,
 } from '@blobot/core';
@@ -80,5 +83,34 @@ export function runtimeFor(request: RuntimeRequest): AgentRuntime {
       });
     default:
       throw new Error(`${request.agentName} is set up for ${request.runtimeId}, which blobot cannot run`);
+  }
+}
+
+/**
+ * The other thing a `runtime_id` becomes: what its adapter knows about this model's usable
+ * context, as a plain token count or nothing at all.
+ *
+ * Here rather than in a file of its own, because this is already the one place allowed to know
+ * what an id means, and a second dispatch elsewhere would be a second place to keep in step.
+ * Only the *lookup* is here. The arithmetic — the clamp to the reported window, and the
+ * conservative fallback for a model nobody measured — is `core/context-ceiling.ts`, and it runs
+ * in the renderer against whatever window the runtime actually went on to report. So the number
+ * that crosses this boundary carries no provider in it, and `undefined` is the ordinary case
+ * rather than a failure: it means nobody has measured this model, which is true of nearly all
+ * of them.
+ *
+ * An unknown id returns `undefined` rather than throwing, unlike `runtimeFor`. Refusing to
+ * launch an agent whose runtime blobot cannot run is right; refusing to draw its gauge is not.
+ */
+export function ceilingFor(runtimeId: string, model: string | undefined): number | undefined {
+  switch (runtimeId) {
+    case 'claude-code':
+      return claudeCeiling(model);
+    case 'opencode':
+      return opencodeCeiling(model);
+    case 'codex':
+      return codexCeiling(model);
+    default:
+      return undefined;
   }
 }

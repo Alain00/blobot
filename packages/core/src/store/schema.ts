@@ -95,6 +95,15 @@ export const agentProfiles = sqliteTable('agent_profiles', {
    * keeps the posture it was already running under. See `trust.ts`.
    */
   trust: text('trust'),
+  /**
+   * Whether blobot may choose the moment to compact this agent: `auto` or `off`.
+   *
+   * Beside `trust` and not inside `runtime_options` for the same reason that one is: this is
+   * blobot's own vocabulary, and no runtime has ever advertised it. NULL is `auto`, which is
+   * on — so an agent hired before this column gets the behaviour, which is the decision rather
+   * than an accident of defaulting. See `.scratch/transcript-scale/issues/10`.
+   */
+  compaction: text('compaction'),
   /** Dead since 2026-08-30, kept because dropping a column is a table rebuild for no gain. */
   model: text('model'),
   /** Standing instructions, folded into the persona. Never a credential. */
@@ -153,6 +162,8 @@ export const agents = sqliteTable(
     runtimeOptions: text('runtime_options'),
     /** Copied the same way, and restated by an edit the same way. NULL is `normal`. */
     trust: text('trust'),
+    /** Copied and restated the same way again. NULL is `auto`. */
+    compaction: text('compaction'),
     /** Dead since 2026-08-30, superseded by `runtime_options`. Never written. */
     model: text('model'),
     workspacePath: text('workspace_path').notNull(),
@@ -200,6 +211,17 @@ export const messages = sqliteTable(
     idempotencyKey: text('idempotency_key').unique(),
     at: integer('at').notNull(),
     deliveredAt: integer('delivered_at'),
+    /**
+     * The firing that put these words here, when a clock delivered them rather than a person.
+     * NULL is the ordinary case: the user typed it.
+     *
+     * A link and not a boolean, and that is the decision: *this came from a Routine* and *this
+     * came from **that** firing* are both wanted, by different screens, and the link answers
+     * both. The transcript draws the `system` line above the bubble from it (issue 07), and the
+     * rail decides whether the report has been seen from the run it points at (issue 11). One
+     * fact, recorded once.
+     */
+    routineRunId: text('routine_run_id'),
   },
   (table) => [
     index('messages_mailbox').on(table.toAgentId, table.deliveredAt),
@@ -363,4 +385,114 @@ export const events = sqliteTable(
     at: integer('at').notNull(),
   },
   (table) => [index('events_team').on(table.teamId, table.at)],
+);
+
+/**
+ * Ticket 09's Routines. See `.scratch/routines/`.
+ *
+ * A **Routine** is a prompt with a clock behind it, and the two decisions worth reading off this
+ * shape are both refusals:
+ *
+ * - **`agent_id`, never `team_id`.** A Routine belongs to one agent on one team — the identity
+ *   `blobot/<team>/<agent>` is named for — because a turn needs an AgentWorkspace, a session and
+ *   a mailbox, and none of those are a Team's to lend. The same person hired onto two teams has
+ *   two sets of Routines and they do not travel. ADR-0001's reason, applied again.
+ * - **No cron string, because none can be entered.** The schedule is a closed set of three
+ *   shapes (issue 04), so it is a kind and two small numbers, and the UI renders it in words by
+ *   construction. That closed set *is* the cost ceiling: nothing finer than hourly is offered, so
+ *   the runaway case is not bounded, it is absent.
+ */
+export const routines = sqliteTable(
+  'routines',
+  {
+    id: text('id').primaryKey(),
+    agentId: text('agent_id')
+      .notNull()
+      .references(() => agents.id),
+    name: text('name').notNull(),
+    prompt: text('prompt').notNull(),
+    scheduleKind: text('schedule_kind', { enum: ['hourly', 'daily', 'weekly'] }).notNull(),
+    scheduleMinute: integer('schedule_minute').notNull(),
+    /** NULL on an hourly Routine, which has no hour to be at. */
+    scheduleHour: integer('schedule_hour'),
+    /** 0 is Sunday, matching `Date.prototype.getDay`. NULL except on a weekly Routine. */
+    scheduleWeekday: integer('schedule_weekday'),
+    /**
+     * Whether it fires. **Off by default, and that is the load-bearing part**: an Agent may
+     * propose a Routine and only a person may arm one, so the disarmed state is the one every
+     * proposal lands in and stays in until somebody reads it.
+     */
+    armed: integer('armed', { mode: 'boolean' }).notNull().default(false),
+    /**
+     * The Agent that asked for this, when an agent did. Not who owns it — who **asked**. An
+     * agent id and never free text, so a proposal cannot claim to come from somebody it did not.
+     */
+    proposedBy: text('proposed_by').references(() => agents.id),
+    /**
+     * When a person answered a proposal, whatever they answered.
+     *
+     * **Issue 06 owed this column and the build without it was wrong.** *Answered* was read as
+     * *armed or gone*, so a proposal the user armed and later disarmed came back to the top of
+     * the screen as though nobody had ever looked at it — and, because a standing proposal
+     * counts against issue 05's cap of three, it also went on blocking the agent that asked.
+     *
+     * Arming, editing or discarding all set it. It is deliberately not *approved*: a decision
+     * the user later reversed is still a decision they made, which is the whole distinction
+     * issue 06 draws between a disarmed Routine and a proposal.
+     */
+    reviewedAt: integer('reviewed_at'),
+    /**
+     * The last moment this Routine was accounted for, ran or missed. Not *last fired*: a missed
+     * firing does not run, so a fired-mark would never advance and the same missed firing would
+     * be reported on every tick forever. See `routines/domain.ts`.
+     */
+    lastSettledAt: integer('last_settled_at'),
+    /**
+     * Firings nobody was there for, since the last one blobot was there for. No `routine_runs`
+     * row is written for a missed firing — nothing happened and nothing decided not to — so the
+     * count lives here, where it survives the settling and can be drawn as `missed 4 firings`.
+     */
+    missedFirings: integer('missed_firings').notNull().default(0),
+    createdAt: integer('created_at').notNull(),
+    /** Tombstone, like everything else here. A run history outlives the Routine that made it. */
+    deletedAt: integer('deleted_at'),
+  },
+  (table) => [index('routines_agent').on(table.agentId)],
+);
+
+/**
+ * One row per firing. Rows rather than a JSON blob on the Routine, because this is the one thing
+ * here anybody queries: issue 06 sorts the screen by it, issue 08 counts three consecutive
+ * failures off it to disarm, and issue 11 reads the newest one to decide whether a report is
+ * unread.
+ *
+ * `SqliteRecorder` records nothing new for a firing. The event stream is the durable subset of
+ * the *agent* event vocabulary, and a firing is a thing blobot did, not a thing an agent emitted.
+ * The turn a firing starts is recorded exactly as any other turn already is.
+ */
+export const routineRuns = sqliteTable(
+  'routine_runs',
+  {
+    id: text('id').primaryKey(),
+    routineId: text('routine_id')
+      .notNull()
+      .references(() => routines.id),
+    firedAt: integer('fired_at').notNull(),
+    /**
+     * `ran` — a turn started and ended. `skipped` — no turn started, and nothing reaches the
+     * transcript because nothing happened in the session. `stopped` — a turn started and did not
+     * finish, which *is* in the transcript as the `system` line the stop reason already produces.
+     */
+    outcome: text('outcome', { enum: ['ran', 'skipped', 'stopped'] }).notNull(),
+    /** In the user's words, not the protocol's: `blobot was not open`, `alice was mid-turn`. */
+    reason: text('reason'),
+    /**
+     * Cleared when the user opens that agent's pane. Issue 11: a Routine whose value is the
+     * *message* lands in a pane the user has no reason to open, so the rail draws its preview
+     * line at full ink until it has been seen. Earned by origin and never by an ordinary turn —
+     * an agent finishing work the user started is not unread, it is finished.
+     */
+    seenAt: integer('seen_at'),
+  },
+  (table) => [index('routine_runs_routine').on(table.routineId, table.firedAt)],
 );

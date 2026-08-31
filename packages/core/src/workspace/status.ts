@@ -1,6 +1,8 @@
 import { execFile } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { promisify } from 'node:util';
+import { currentBranch } from './branches.js';
+import { readChurn, type Churn } from './churn.js';
 import type { AgentWorkspace, WorkspaceInspection } from './workspace.js';
 
 const run = promisify(execFile);
@@ -50,12 +52,20 @@ export interface AgentWorkspaceStatus {
   readonly agentId: string;
   readonly agentName: string;
   readonly kind: WorkspaceInspection['kind'];
-  /** Absent on a copied workspace, which has no branch: the copy is the work. */
+  /**
+   * What the worktree is on now, which is the branch the provider named until somebody switches
+   * it. Absent on a copied workspace, which has no branch: the copy is the work.
+   */
   readonly branch?: string;
   /** The directory is where it was left. False is ticket 10's reconcile territory, not this. */
   readonly present: boolean;
   /** Paths with uncommitted changes. Undefined where there is no repository to ask. */
   readonly changed?: number;
+  /**
+   * The same uncommitted work measured in lines, which is the figure a person decides on. A
+   * count of touched files says nothing about whether there is an afternoon in there.
+   */
+  readonly churn?: Churn;
   /** Commits on this branch that the base does not have. */
   readonly ahead?: number;
   /** `refs/remotes/origin/<branch>` resolves. Local, so it is what git last heard, not a fetch. */
@@ -140,23 +150,31 @@ export async function readAgentWorkspaceStatus(
     return { ...base, present: true, forge: { asked: false, detail: 'a copy has no branch' } };
   }
 
-  const [changed, ahead, pushed] = await Promise.all([
+  // What is checked out **now**, which is not always the branch the provider named. A person
+  // can switch this worktree from the composer's tray, and after that the deterministic name is
+  // a claim about history rather than about the folder in front of them.
+  const branch = (await currentBranch(workspace.path, exec)) ?? workspace.branch;
+
+  const [changed, churn, ahead, pushed] = await Promise.all([
     countChanged(workspace.path, exec),
-    options.base === undefined || workspace.branch === undefined
+    readChurn(workspace.path, exec),
+    options.base === undefined || branch === undefined
       ? Promise.resolve(undefined)
       : countAhead(workspace.path, options.base, exec),
-    hasRemoteBranch(workspace.path, workspace.branch, exec),
+    hasRemoteBranch(workspace.path, branch, exec),
   ]);
 
   const forge =
-    options.forge !== true || workspace.branch === undefined
+    options.forge !== true || branch === undefined
       ? ({ asked: false, detail: 'not looked up' } as const)
-      : await readPullRequest(workspace.path, workspace.branch, exec);
+      : await readPullRequest(workspace.path, branch, exec);
 
   return {
     ...base,
+    ...(branch === undefined ? {} : { branch }),
     present: true,
     ...(changed === undefined ? {} : { changed }),
+    ...(churn === undefined ? {} : { churn }),
     ...(ahead === undefined ? {} : { ahead }),
     ...(pushed === undefined ? {} : { pushed }),
     forge,

@@ -15,8 +15,9 @@ import {
   type WorkspaceProvider,
 } from '@blobot/core';
 import type { RunningTeam } from './running-team.js';
+import { FileHandoffArchive } from './handoff-archive.js';
 import { runtimeLabel } from './runtime-labels.js';
-import { runtimeFor } from './runtime-for.js';
+import { ceilingFor, runtimeFor } from './runtime-for.js';
 import { knownRuntimes } from './known-runtimes.js';
 
 export interface StartTeamOptions {
@@ -100,17 +101,28 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
   let orchestrator: Orchestrator;
   const mcp = new PeerMessageServer({
     handler: (call) => orchestrator.handleMessageAgent(call),
+    // Issue 05. Offered because this team's Routines are rows in the same file everything else
+    // is in; an agent may propose one and no agent may arm one.
+    proposeRoutine: (call) => orchestrator.handleProposeRoutine(call),
     onLog: (line) => log(line),
   });
   await mcp.start();
 
   const personas = new Map(agents.map((agent) => [agent.id, composePersona(agent, team, agents)]));
   const runtimeLabels: Record<string, string> = {};
+  /**
+   * What blobot knows about each model's usable context, resolved here because this is where
+   * the record and the runtime id are both in hand. An agent whose model nobody measured
+   * contributes no key, and the renderer falls back for it. See ticket 09.
+   */
+  const contextCeilings: Record<string, number> = {};
   const runtimes = new Map<string, AgentRuntime>();
   for (const record of records) {
     const agent = agents.find((candidate) => candidate.id === record.id);
     if (agent === undefined) continue;
     runtimeLabels[record.id] = runtimeLabel(record.runtimeId);
+    const measured = ceilingFor(record.runtimeId, record.runtimeOptions?.['model']);
+    if (measured !== undefined) contextCeilings[record.id] = measured;
     const endpoint = mcp.endpointFor(agent.id);
     // The whole difference between a relaunch and a resume. Undefined on a first launch, and
     // a session the provider has forgotten is not fatal: the adapter falls back to a new one.
@@ -157,8 +169,40 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     store,
     clock,
     recorder: new SqliteRecorder(db, team.id),
+    // The same numbers the gauge divides by, so the threshold and the mark on screen cannot
+    // disagree about what a full agent is. Ticket 09 resolved the lookup here; ticket 10 is
+    // the first thing to act on it.
+    contextCeilings: new Map(Object.entries(contextCeilings)),
+    handoffs: new FileHandoffArchive(),
+    routines: store,
   });
   await orchestrator.start();
+
+  /**
+   * A session blobot replaced needs a row, or the next launch resumes the one it closed.
+   *
+   * `lastProviderSessionOf` is what turns a relaunch into a resume, and it reads the newest
+   * session row. Without this the agent would come back pointed at a session the provider has
+   * thrown away — which is survivable, since the adapter falls back to a new one, but it would
+   * silently cost the agent the handoff it had just been given.
+   *
+   * A `command` compaction writes one too. The session id is unchanged, but the persona row is
+   * the record of what an agent was carrying at a moment, and a compacted session is a
+   * different moment.
+   */
+  orchestrator.onCompaction((compacted) => {
+    if (compacted.how === 'refused') return;
+    const agent = agents.find((candidate) => candidate.id === compacted.agentId);
+    if (agent === undefined) return;
+    store.startSession({
+      id: uuidv7(compacted.at),
+      agentId: agent.id,
+      ...(compacted.sessionId === '' ? {} : { providerSessionId: compacted.sessionId }),
+      personaText: personas.get(agent.id) ?? '',
+      startedAt: compacted.at,
+    });
+    log(`[${agent.id}] ${compacted.how} · session ${compacted.sessionId}`);
+  });
 
   for (const agent of agents) {
     const runtime = runtimes.get(agent.id);
@@ -191,6 +235,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     orchestrator,
     store,
     runtimeLabels,
+    contextCeilings,
     branches,
     demoMode: false,
     autoplayPrompt:

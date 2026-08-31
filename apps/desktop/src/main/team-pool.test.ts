@@ -155,3 +155,47 @@ describe('the live teams', () => {
     expect(teams.active?.team.id).toBe('beta');
   });
 });
+
+/**
+ * A Routine firing needs a team live and has no business changing what is on screen. Holding is
+ * how it gets one: behind the active team, pinned for the length of the run.
+ */
+describe('a team held for a Routine', () => {
+  it('starts it without putting it on screen', async () => {
+    const { pool: teams, started } = pool(3);
+    const alpha = await teams.select(team('alpha'));
+
+    const beta = await teams.hold(team('beta'));
+
+    expect(started).toEqual(['alpha', 'beta']);
+    expect(teams.active).toBe(alpha);
+    expect(teams.find('beta')).toBe(beta);
+  });
+
+  it('is not evicted while the run is still holding it', async () => {
+    const { pool: teams, evicted } = pool(1);
+    await teams.select(team('alpha'));
+    // Held while idle, which is exactly the state the eviction rule collects. The run has not
+    // started a turn yet, so `isWorking` cannot protect it and the pin has to.
+    await teams.hold(team('beta'));
+    await teams.select(team('gamma'));
+
+    // The limit was enforced against the team nothing is holding, not against the run.
+    expect(evicted).toEqual(['alpha']);
+    expect(teams.find('beta')).toBeDefined();
+
+    // Let go when the run ends, and it is an ordinary background team again.
+    teams.letGo('beta');
+    await teams.evictIdle();
+    expect(evicted).toEqual(['alpha', 'beta']);
+  });
+
+  it('holds a team that is already live rather than starting a second one', async () => {
+    const { pool: teams, started } = pool(3);
+    const alpha = await teams.select(team('alpha'));
+
+    expect(await teams.hold(team('alpha'))).toBe(alpha);
+    expect(started).toEqual(['alpha']);
+    expect(teams.active).toBe(alpha);
+  });
+});

@@ -1,6 +1,24 @@
 import { useEffect, useState } from 'react';
-import { GitBranch, GitPullRequest, RefreshCw } from 'lucide-react';
-import type { UiAgent, UiPublishResult, UiWorkspaceStatus } from '../../../shared/api.js';
+import * as Popover from '@radix-ui/react-popover';
+import { Command } from 'cmdk';
+import {
+  Check,
+  ChevronDown,
+  Folder,
+  GitBranch,
+  GitCommitHorizontal,
+  GitPullRequest,
+  Plus,
+  RefreshCw,
+} from 'lucide-react';
+import type {
+  UiAgent,
+  UiBranch,
+  UiBranches,
+  UiChurn,
+  UiPublishResult,
+  UiWorkspaceStatus,
+} from '../../../shared/api.js';
 import { Blob } from './Blob.js';
 
 /**
@@ -21,32 +39,482 @@ import { Blob } from './Blob.js';
  * saturated thing on screen, and the blobatars are the only saturated thing on screen.
  */
 
-/** The one status under an agent's composer. */
+/**
+ * The tray tucked under an agent's composer: what is uncommitted here, and where it goes.
+ *
+ * Inset and half-hidden behind the pill rather than floating below it as a line of type, which
+ * is what it was: a sentence under the composer read as another thing on the page, and this is
+ * not another thing — it is the field's own footing. It is a child of the composer for the same
+ * reason, since the overlap needs one stacking context.
+ *
+ * **Everything on it is a live number or a door, and nothing on it is a description.** That is
+ * the rule that decided what came off. `checkout` was constant under an agent's own composer,
+ * and `3 changed` was a count of touched files, which says nothing about whether there is an
+ * afternoon in there. What replaced them is `+412 −7`, which is the figure a person actually
+ * decides on, standing next to the control that acts on it.
+ *
+ * **Two slots, and each is a stage of the same work.** Left is what is in the folder and the
+ * commit that would take it. Right is where it goes: the pull request, or the offer to open one,
+ * and the branch. Left to right is the order the work moves in, which is why they are pushed
+ * apart rather than centred.
+ *
+ * **Nothing here is boxed.** Every control on this row is type with a chevron or a word, and a
+ * hover ground under it. A tray of bordered pills sitting a few pixels under the composer's own
+ * border read as controls inside a control; the row is a line of facts, some of which are also
+ * doors, and it should look like the facts until you go near one.
+ */
 export function WorkspaceLine({
   status,
-  looking,
-  onRefresh,
+  teamId,
+  busy,
+  onSwitched,
+  onCommitted,
   onPublish,
   onPlan,
 }: {
   status: UiWorkspaceStatus | undefined;
-  looking: boolean;
-  onRefresh: () => void;
+  teamId: string | undefined;
+  /** This agent is mid-turn. A commit taken now would capture a file half-written. */
+  busy: boolean;
+  /** The switch changed what is in the folder, so everything read from it is now stale. */
+  onSwitched: () => void;
+  onCommitted: () => void;
   onPublish: (options: { title?: string; draft?: boolean }) => Promise<UiPublishResult>;
   onPlan: (options: { title?: string; draft?: boolean }) => Promise<readonly string[]>;
 }): React.JSX.Element | null {
-  if (status === undefined) return null;
+  if (status === undefined || status.branch === undefined || teamId === undefined) return null;
   return (
     <div className="wsline">
-      <Row
-        status={status}
-        looking={looking}
-        onRefresh={onRefresh}
-        onPublish={onPublish}
-        onPlan={onPlan}
-      />
+      <div className="wstray">
+        <span className="wsplace">
+          <Churn churn={status.churn} />
+          <CommitButton
+            teamId={teamId}
+            agentId={status.agentId}
+            churn={status.churn}
+            busy={busy}
+            onCommitted={onCommitted}
+          />
+        </span>
+        <span className="wsdest">
+          {/* One slot, two things that can never both be true: a pull request that exists, or
+              the offer to open one. A row carrying both would be saying the work is already
+              somewhere and also that it is nowhere. */}
+          {status.pr !== undefined ? (
+            <button
+              type="button"
+              className="wsflat"
+              onClick={() => void window.blobot.openLink(status.pr?.url ?? '')}
+              title={status.pr.title}
+            >
+              <GitPullRequest size={11} aria-hidden />#{status.pr.number}
+              {status.pr.state === 'open' ? '' : ` ${status.pr.state}`}
+            </button>
+          ) : (
+            canPublish(status) && <PublishButton onPublish={onPublish} onPlan={onPlan} />
+          )}
+          <BranchPicker
+            teamId={teamId}
+            agentId={status.agentId}
+            branch={status.branch}
+            onSwitched={onSwitched}
+          />
+        </span>
+      </div>
     </div>
   );
+}
+
+/**
+ * What is uncommitted here, in lines.
+ *
+ * Two numbers and no word, because the two signs are the word: nobody needs to be told that the
+ * one after the plus was added. Silent when there is nothing, which is the ordinary state of a
+ * workspace between turns and not worth a row saying `+0 −0`.
+ *
+ * The one place DESIGN.md's monochrome rule might have been asked to bend, and it is not asked:
+ * green additions and red deletions would be two saturated things on screen that are not
+ * blobatars, and the signs carry the direction without them.
+ */
+function Churn({ churn }: { churn: UiChurn | undefined }): React.JSX.Element | null {
+  // Nothing to say only where blobot could not look. A workspace with nothing in it says so:
+  // `clean` is the zero of a live number, not a description of the folder, and an empty slot
+  // where the count belongs reads as a count that failed rather than as a count of nothing.
+  if (churn === undefined) return null;
+  if (churn.added === 0 && churn.removed === 0) return <span className="wsclean">clean</span>;
+  return (
+    <span
+      className="wschurn"
+      title={
+        churn.partial === true
+          ? `${churn.files} files, and more untracked than blobot will count`
+          : `${churn.files} file${churn.files === 1 ? '' : 's'} since the last commit`
+      }
+    >
+      <span className="wsadd">+{churn.added}</span>
+      <span className="wsdel">−{churn.removed}</span>
+    </span>
+  );
+}
+
+/**
+ * Committing what is in the workspace, in a popover over the tray.
+ *
+ * **The message is typed, never generated.** blobot provides no inference, and the agent that
+ * wrote the code is the wrong thing to ask to name it: it would be a second opinion about work
+ * the user has not read yet, arriving in the permanent record. So the field is the point of the
+ * popover, exactly as the title is the point of the publish one, and it is what the button is
+ * armed by.
+ *
+ * **It refuses while the agent is working.** A commit taken mid-turn captures a file the agent
+ * is halfway through writing, and the resulting commit is not a state anything was ever in. The
+ * control says so rather than disappearing, because a control that vanishes while an agent
+ * happens to be thinking reads as a bug.
+ */
+function CommitButton({
+  teamId,
+  agentId,
+  churn,
+  busy,
+  onCommitted,
+}: {
+  teamId: string;
+  agentId: string;
+  churn: UiChurn | undefined;
+  busy: boolean;
+  onCommitted: () => void;
+}): React.JSX.Element | null {
+  const [open, setOpen] = useState(false);
+  const [message, setMessage] = useState('');
+  const [running, setRunning] = useState(false);
+  const [failed, setFailed] = useState<string | undefined>(undefined);
+  const [plan, setPlan] = useState<readonly string[]>([]);
+
+  // Rebuilt as the message is typed, so what is shown is what will run rather than what would
+  // have run before the user changed their mind. The commands are built in main, because argv is
+  // never the renderer's: the words travel, the command line does not.
+  useEffect(() => {
+    if (!open) return;
+    void window.blobot
+      .commitPlan(teamId, agentId, message)
+      .then(setPlan)
+      .catch(() => setPlan([]));
+  }, [open, teamId, agentId, message]);
+
+  if (churn === undefined || (churn.added === 0 && churn.removed === 0)) return null;
+
+  const go = (): void => {
+    setRunning(true);
+    setFailed(undefined);
+    void window.blobot
+      .commitWork(teamId, agentId, message)
+      .then((result) => {
+        if (!result.ok) return setFailed(result.error);
+        setOpen(false);
+        setMessage('');
+        onCommitted();
+      })
+      .finally(() => setRunning(false));
+  };
+
+  return (
+    <Popover.Root
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setFailed(undefined);
+      }}
+    >
+      <Popover.Trigger className="wsflat" disabled={busy} title={busy ? 'this agent is working' : 'commit what is here'}>
+        <GitCommitHorizontal size={11} aria-hidden />
+        commit
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content className="wspop" side="top" align="start" sideOffset={8} collisionPadding={12}>
+          <input
+            className="wstitle"
+            placeholder="what this commit does"
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            autoFocus
+          />
+          {plan.length > 0 && (
+            <div className="wsplan">
+              {plan.map((command) => (
+                <div key={command}>{command}</div>
+              ))}
+            </div>
+          )}
+          {failed !== undefined && <div className="wsfailed">{failed}</div>}
+          <div className="wsactions">
+            <button type="button" className="btn" onClick={() => setOpen(false)} disabled={running}>
+              cancel
+            </button>
+            <button
+              type="button"
+              className="btn primary"
+              onClick={go}
+              disabled={running || message.trim() === ''}
+            >
+              {running ? 'committing' : `commit ${churn.files} file${churn.files === 1 ? '' : 's'}`}
+            </button>
+          </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+/**
+ * The branch, and every branch this worktree could be on instead.
+ *
+ * **The field is not the filter rule's twelve-row threshold arriving early.** It is the way a
+ * new branch is named: there is nowhere else to type one, and a menu that filters with the same
+ * words it creates with is one control rather than a list plus a form. So it is always there,
+ * and the count beside it behaves exactly as the runtime menu's does once something is typed.
+ *
+ * **A branch another worktree holds is drawn and refused, never hidden.** git will not check one
+ * branch out twice, and the reason is the useful half: *Bob is on it* answers the question the
+ * refusal raises, and a menu that dropped those rows would send the user hunting for a branch
+ * they can see in their own terminal.
+ *
+ * Radix holds the popover and cmdk holds the list, which is DESIGN.md's own division: a menu you
+ * type into is a combobox, and every Radix menu moves real focus onto the row under the pointer,
+ * which takes the field away mid-word.
+ */
+function BranchPicker({
+  teamId,
+  agentId,
+  branch,
+  onSwitched,
+}: {
+  teamId: string;
+  agentId: string;
+  branch: string;
+  onSwitched: () => void;
+}): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [listing, setListing] = useState<UiBranches | undefined>(undefined);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState<string | undefined>(undefined);
+
+  // Asked when the menu opens rather than kept current: a list of branches nobody is looking at
+  // is not worth a subprocess, and it cannot change while the menu is shut except by this menu.
+  useEffect(() => {
+    if (!open) return;
+    let current = true;
+    setListing(undefined);
+    void window.blobot.listBranches(teamId, agentId).then((answer) => {
+      if (current) setListing(answer);
+    });
+    return () => {
+      current = false;
+    };
+  }, [open, teamId, agentId]);
+
+  const go = (name: string, create: boolean): void => {
+    setBusy(true);
+    setFailed(undefined);
+    void window.blobot
+      .switchBranch(teamId, agentId, name, { create })
+      .then((result) => {
+        if (!result.ok) return setFailed(result.error);
+        setOpen(false);
+        onSwitched();
+      })
+      .finally(() => setBusy(false));
+  };
+
+  const branches = listing?.branches ?? [];
+  const shown = narrowBranches(branches, query);
+  const typed = query.trim();
+  // Offered only for a name that is not already a branch, because the row above it would then
+  // be the same branch twice, once as a switch and once as a create that git would refuse.
+  const canCreate = typed !== '' && !branches.some((row) => row.name === typed);
+
+  return (
+    <Popover.Root
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) {
+          // Both die with the menu. A query held between openings would hide branches nobody
+          // asked it to hide, and a refusal held over would be about a switch already forgotten.
+          setQuery('');
+          setFailed(undefined);
+        }
+      }}
+    >
+      {/* A chevron, because the border came off: something has to say the branch is a door, and
+          on a row of mono facts the chevron is the one mark that means "there is more here". */}
+      <Popover.Trigger className="wsbranchpick" title={branch}>
+        <GitBranch size={11} aria-hidden />
+        <span className="wsbranchname">{short(branch)}</span>
+        <ChevronDown size={11} aria-hidden />
+      </Popover.Trigger>
+      <Popover.Portal>
+        {/* Above and right-aligned: the tray lives at the foot of the window, so a popover below
+            it would open off-screen, and the trigger sits on the row's right. */}
+        <Popover.Content
+          className="selectmenu optionsmenu branchmenu"
+          side="top"
+          align="end"
+          sideOffset={8}
+          collisionPadding={12}
+          onOpenAutoFocus={intoTheField}
+        >
+          <Command label="Branches" loop shouldFilter={false} className="optionscommand">
+            <div className="optionsfilter">
+              <Command.Input
+                value={query}
+                onValueChange={setQuery}
+                placeholder="Find a branch, or name a new one"
+              />
+              <span className="optionscount mono">
+                {query === '' ? `${branches.length}` : `${shown.length} of ${branches.length}`}
+              </span>
+            </div>
+            <Command.List tabIndex={-1}>
+              {listing === undefined ? (
+                <div className="branchnote muted">reading the branches…</div>
+              ) : listing.unavailable !== undefined ? (
+                <div className="branchnote muted">{listing.unavailable}</div>
+              ) : (
+                <Command.Empty>{canCreate ? '' : 'Nothing matches'}</Command.Empty>
+              )}
+              {shown.map((row) => (
+                <Command.Item
+                  key={row.name}
+                  value={row.name}
+                  className="selectitem branchitem"
+                  disabled={busy || row.heldBy !== undefined || row.current}
+                  onSelect={() => go(row.name, false)}
+                  title={heldWord(row)}
+                >
+                  <span className="branchname">{row.name}</span>
+                  <Holder held={row.heldBy} />
+                  {row.current && (
+                    <span className="selecttick">
+                      <Check size={13} aria-hidden />
+                    </span>
+                  )}
+                </Command.Item>
+              ))}
+              {canCreate && (
+                <>
+                  <div className="optionsrule" aria-hidden />
+                  <Command.Item
+                    value={`new ${typed}`}
+                    className="selectitem branchitem"
+                    disabled={busy}
+                    onSelect={() => go(typed, true)}
+                  >
+                    <Plus size={13} aria-hidden />
+                    <span className="branchname">
+                      new branch <span className="branchnew">{typed}</span>
+                    </span>
+                  </Command.Item>
+                </>
+              )}
+            </Command.List>
+            {failed !== undefined && <div className="branchfailed">{failed}</div>}
+          </Command>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+/**
+ * Focus lands in the field, not on the popover.
+ *
+ * Radix focuses the content element and cmdk listens for the arrow keys on its own root below
+ * that, so a key pressed on the content reaches nothing. `RuntimeOptions` does the same thing
+ * for the same reason; the difference is only that this menu always has a field.
+ */
+const intoTheField = (event: Event): void => {
+  event.preventDefault();
+  const content = event.currentTarget as HTMLElement | null;
+  const field = content?.querySelector('[cmdk-input]') as HTMLElement | null;
+  field?.focus();
+};
+
+/**
+ * Who is standing on a branch git will not hand over, **drawn rather than described**.
+ *
+ * A teammate gets their face. This is one of the two places DESIGN.md keeps blobatars for —
+ * identifying among agents — and the row is a list of names where the reader is looking for a
+ * person, so `Bob has it` was a sentence doing a face's job at three times the width. It carries
+ * that agent's own hue, because a face derived from the name would be a *second* Bob.
+ *
+ * The other two holders are not agents and get their own marks: the folder the user opened, and
+ * a worktree nobody here made, which keeps its last path segment because that is the only thing
+ * blobot knows about it. The sentence survives on the row's `title` for the pointer and the
+ * screen reader, since a face is an identity and not an explanation of why the row is refused —
+ * the row being visibly disabled is what says that.
+ */
+function Holder({ held }: { held: UiBranch['heldBy'] }): React.JSX.Element | null {
+  if (held === undefined) return null;
+  if (held.agentName !== undefined) {
+    return (
+      <span className="branchheld">
+        <Blob
+          name={held.agentName}
+          size={16}
+          {...(held.agentHue === undefined ? {} : { hue: held.agentHue })}
+        />
+      </span>
+    );
+  }
+  if (held.isWorkspace === true) {
+    return (
+      <span className="branchheld">
+        <Folder size={13} aria-hidden />
+      </span>
+    );
+  }
+  return <span className="branchheld">{tailOf(held.path)}</span>;
+}
+
+/** The sentence, kept for the pointer and the screen reader where the face is the visible half. */
+function heldWord(row: UiBranch): string {
+  if (row.heldBy === undefined) return '';
+  if (row.heldBy.isWorkspace === true) return 'the project folder has this branch checked out';
+  if (row.heldBy.agentName !== undefined) return `${row.heldBy.agentName} has this branch checked out`;
+  return `${tailOf(row.heldBy.path)} has this branch checked out`;
+}
+
+function tailOf(path: string): string {
+  return path.split('/').filter((part) => part !== '').pop() ?? 'another worktree';
+}
+
+/**
+ * The typed words against the branch names.
+ *
+ * Substring and every token, the same rule the runtime menu's filter uses: `blobot alice` should
+ * narrow to one row rather than widening to everything with either word in it. A branch name is
+ * a path of words, so this is the one that matches how people say them.
+ */
+export function narrowBranches(branches: readonly UiBranch[], query: string): UiBranch[] {
+  const tokens = query.toLowerCase().split(/\s+/).filter((token) => token !== '');
+  if (tokens.length === 0) return [...branches];
+  return branches.filter((row) => tokens.every((token) => row.name.toLowerCase().includes(token)));
+}
+
+/**
+ * What kind of place this is, in blobot's own three words rather than git's.
+ *
+ * `checkout` for a worktree, because that is what it is and the word survives the user not
+ * knowing what a worktree is. A copy says the thing that matters about a copy, which is not its
+ * kind but what it costs you, and it says it here rather than in a segment because for a copy
+ * there is nothing else on the row.
+ */
+function placeWord(status: UiWorkspaceStatus): string {
+  if (!status.present) return 'workspace not found';
+  if (status.kind === 'plain') return 'a copy';
+  if (status.kind === 'nested') return 'repositories';
+  return 'checkout';
 }
 
 /** Every member's status, in the activity column, under its own header. */
@@ -122,8 +590,6 @@ function Row({
   onPublish: (options: { title?: string; draft?: boolean }) => Promise<UiPublishResult>;
   onPlan: (options: { title?: string; draft?: boolean }) => Promise<readonly string[]>;
 }): React.JSX.Element {
-  const [opening, setOpening] = useState(false);
-
   return (
     <div className="wsrow">
       <div className="wsfacts">
@@ -133,12 +599,17 @@ function Row({
             <span className="who">{status.agentName}</span>
           </>
         )}
-        <span className="wsbranch" title={status.branch ?? ''}>
-          {status.branch === undefined ? (
-            <>copy</>
+        <span
+          className={`wsbranch${status.branch === undefined || !status.present ? '' : ' named'}`}
+          title={status.branch ?? ''}
+        >
+          {status.branch === undefined || !status.present ? (
+            // No branch to name, so the row says what kind of place it is instead of leaving
+            // the slot empty and letting the counts read as if they were about a checkout.
+            placeWord(status)
           ) : (
             <>
-              <GitBranch size={11} />
+              <GitBranch size={11} aria-hidden />
               {short(status.branch)}
             </>
           )}
@@ -159,24 +630,55 @@ function Row({
             {status.pr.state === 'open' ? '' : ` ${status.pr.state}`}
           </button>
         )}
-        {canPublish(status) && (
-          <button type="button" className="wsopen" onClick={() => setOpening(!opening)}>
-            open a pull request
-          </button>
-        )}
+        {canPublish(status) && <PublishButton onPublish={onPublish} onPlan={onPlan} />}
         {onRefresh !== undefined && (
           <button type="button" className="wsrefresh" onClick={onRefresh} disabled={looking} title="ask GitHub again">
             <RefreshCw size={11} />
           </button>
         )}
       </div>
-      {opening && <Publish onPublish={onPublish} onPlan={onPlan} onClose={() => setOpening(false)} />}
     </div>
   );
 }
 
 /**
- * The confirm, and it shows the two commands rather than describing them.
+ * Opening a pull request, in a popover over the tray.
+ *
+ * It was an expander, and an expander was wrong twice over. It pushed the composer's own footing
+ * around to make room for a form, so asking a question moved the thing the question was about;
+ * and a title field, a checkbox, two commands and two buttons stacked at the tray's full width
+ * read as a section of the page rather than as one control's own business. A popover is what
+ * this is: a small decision, anchored to the word that raised it, gone when it is over.
+ *
+ * Radix for behaviour and never for looks, which is DESIGN.md's rule and the reason the
+ * dependency is worth taking here: outside-click, Escape, and focus returned to the trigger are
+ * the half nobody screenshots, and this is a form that is going to push a branch. Every pixel is
+ * from the tokens.
+ */
+function PublishButton({
+  onPublish,
+  onPlan,
+}: {
+  onPublish: (options: { title?: string; draft?: boolean }) => Promise<UiPublishResult>;
+  onPlan: (options: { title?: string; draft?: boolean }) => Promise<readonly string[]>;
+}): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger className="wsflat">open a pull request</Popover.Trigger>
+      <Popover.Portal>
+        {/* Above and right-aligned: the tray lives at the foot of the window, so a popover
+            below it would open off-screen, and the trigger sits on the row's right. */}
+        <Popover.Content className="wspop" side="top" align="end" sideOffset={8} collisionPadding={12}>
+          <Publish onPublish={onPublish} onPlan={onPlan} onClose={() => setOpen(false)} />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+/**
+ * The form, and it shows the two commands rather than describing them.
  *
  * `detect/remedies.ts` established the rule for the one other place blobot runs a vendor's CLI
  * on the user's behalf: the user is agreeing to the command they would have pasted themselves,
@@ -230,6 +732,9 @@ function Publish({
         placeholder="title, or leave it empty to take it from the commits"
         value={title}
         onChange={(event) => setTitle(event.target.value)}
+        // The field the popover exists for. Nothing else in here is worth arriving on, and a
+        // popover that opens with focus on its cancel button is one you have to click into.
+        autoFocus
       />
       <label className="wsdraft">
         <input type="checkbox" checked={draft} onChange={(event) => setDraft(event.target.checked)} />
@@ -256,15 +761,16 @@ function Publish({
 }
 
 /**
- * What is true about this workspace, in order of how often it changes.
+ * What is loose in this workspace, in order of how often it changes.
  *
- * The pull request is not here: it has a control of its own, because it is the one thing on the
- * line that leads somewhere. And *we could not look* is not a segment either, on purpose. It is
- * a tooltip on `no pr`'s absence rather than a phrase, because a line reading "could not check"
- * beside every agent on a machine with no `gh` would be noise about a thing nobody asked for.
+ * Counts only. The place is `placeWord`'s job and the pull request has a control of its own,
+ * because it is the one thing here that leads somewhere. And *we could not look* is not a
+ * segment either, on purpose: it is the absence of `no pr` rather than a phrase, because a row
+ * reading "could not check" beside every agent on a machine with no `gh` would be noise about a
+ * thing nobody asked for.
  */
 function segments(status: UiWorkspaceStatus): readonly string[] {
-  if (!status.present) return ['workspace not found'];
+  if (!status.present) return [];
   if (status.kind === 'plain') return ['no branch, no recovery'];
   const said: string[] = [];
   if (status.changed !== undefined) said.push(status.changed === 0 ? 'clean' : `${status.changed} changed`);

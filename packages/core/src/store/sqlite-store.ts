@@ -1,4 +1,5 @@
-import { and, asc, desc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
 import type { StopReason } from '../events.js';
 import type {
   Agent,
@@ -10,7 +11,9 @@ import type {
   Team,
 } from '../orchestrator/domain.js';
 import type { AttachmentStore, MessageStore } from '../orchestrator/message-store.js';
+import type { Routine, RoutineOutcome, RoutineRun, Schedule } from '../routines/domain.js';
 import { trustLevelOf, type TrustLevel } from '../trust.js';
+import { DEFAULT_COMPACTION, type CompactionSetting } from '../orchestrator/domain.js';
 import type { BlobotDatabase } from './database.js';
 import {
   agentMessages,
@@ -20,11 +23,24 @@ import {
   events,
   messageAttachments,
   messages,
+  routineRuns,
+  routines,
   sessions,
   teams,
   toolCalls,
   turns,
 } from './schema.js';
+
+/**
+ * How much transcript a snapshot carries.
+ *
+ * Chosen by what a reader plausibly scrolls back through in one sitting, not by what the DOM
+ * can survive — ticket 03 is what makes the DOM survivable, and sizing this against the
+ * renderer's current limits would bake today's weakness into the store. It is deliberately the
+ * same figure the activity column keeps, so the two halves of a restored pane reach back about
+ * as far as each other.
+ */
+export const TRANSCRIPT_WINDOW = 200;
 
 /**
  * Runtime config, as ticket 13 stores it: typed columns and nothing else. There is no JSON
@@ -199,6 +215,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       executablePath: profile.executablePath ?? null,
       runtimeOptions: encodeOptions(profile.runtimeOptions),
       trust: profile.trust ?? null,
+      compaction: profile.compaction ?? null,
       instructions: profile.instructions ?? null,
       hue: profile.hue ?? null,
       createdAt: profile.createdAt,
@@ -258,6 +275,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
         executablePath: definition.executablePath ?? null,
         runtimeOptions: encodeOptions(definition.runtimeOptions),
         trust: definition.trust ?? null,
+        compaction: definition.compaction ?? null,
         instructions: definition.instructions ?? null,
         hue: definition.hue ?? null,
       })
@@ -282,6 +300,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       readonly hue?: number;
       readonly runtimeOptions?: Readonly<Record<string, string>>;
       readonly trust?: TrustLevel;
+      readonly compaction?: CompactionSetting;
     },
   ): void {
     this.#db
@@ -297,6 +316,9 @@ export class SqliteStore implements MessageStore, AttachmentStore {
         // OpenCode's posture is an env var on the child, so neither can change under a live
         // process. A raised or lowered level is a fact about the next launch.
         trust: stated.trust ?? null,
+        // And the same rule once more. Whether blobot may replace a session is a fact about
+        // the next launch, because the session it would replace is the one already running.
+        compaction: stated.compaction ?? null,
       })
       .where(eq(agents.id, agentId))
       .run();
@@ -325,6 +347,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       executablePath: agent.executablePath ?? null,
       runtimeOptions: encodeOptions(agent.runtimeOptions),
       trust: agent.trust ?? null,
+      compaction: agent.compaction ?? null,
       workspacePath: agent.workspacePath,
       branch: agent.branch ?? null,
       createdAt: agent.createdAt,
@@ -340,6 +363,19 @@ export class SqliteStore implements MessageStore, AttachmentStore {
    */
   tombstoneAgent(agentId: string, at: number): void {
     this.#db.update(agents).set({ deletedAt: at }).where(eq(agents.id, agentId)).run();
+  }
+
+  /**
+   * One agent, live only. A tombstoned agent answers `undefined`, which is the answer a Routine
+   * needs: its recipient is off the roster and it has nobody to fire at.
+   */
+  agentById(agentId: string): AgentRecord | undefined {
+    const row = this.#db
+      .select()
+      .from(agents)
+      .where(and(eq(agents.id, agentId), isNull(agents.deletedAt)))
+      .get();
+    return row === undefined ? undefined : toAgentRecord(row);
   }
 
   agentsOfTeam(teamId: string, options: { includeDeleted?: boolean } = {}): AgentRecord[] {
@@ -415,6 +451,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       idempotencyKey: message.idempotencyKey ?? null,
       at: message.at,
       deliveredAt: message.deliveredAt ?? null,
+      routineRunId: message.routineRunId ?? null,
     }).run();
     // The blob was written once, by `putAttachment`. This is the row that says which messages
     // it is on, which is how one paste serves a fan-out of three.
@@ -534,6 +571,10 @@ export class SqliteStore implements MessageStore, AttachmentStore {
   /**
    * The team stream. A peer message is one row rendered in two panes and once here — a query,
    * not a storage fact.
+   *
+   * **Unbounded, and the snapshot must not use it.** `transcriptOfTeam` is the windowed entry
+   * point and the only one `snapshot()` is allowed to call: this returns every row a team has
+   * ever written, which is the right answer for a test and the wrong one for a pane.
    */
   forTeam(teamId: string): Message[] {
     return this.#withAttachments(
@@ -564,6 +605,100 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       .orderBy(asc(agentMessages.at))
       .all()
       .map((row) => ({ id: row.id, agentId: row.agentId, text: row.text, at: row.at }));
+  }
+
+  /**
+   * The transcript, windowed: the most recent `limit` or so of what this team said, and a
+   * cursor for reaching what is above it.
+   *
+   * The snapshot used to be the whole team transcript, every time. `forTeam` and
+   * `answersOfTeam` both `.all()` with no bound, `snapshot()` calls them at launch and on every
+   * team switch, and `TeamPool` keeps three teams live but rebuilds the snapshot on selection
+   * regardless — so switching between two long-lived teams re-serialized both transcripts
+   * across the IPC boundary on every click. Ticket 01 stopped the renderer paying for history
+   * on every delta and ticket 03 will stop it paying in the DOM; neither stops the main process
+   * reading and serializing an unbounded row set, which is this.
+   *
+   * **Bounded by time across both halves, never by count on each**, which is the same rule
+   * `logOfTeam` follows and for a sharper reason. The two halves are merge-sorted by the pane
+   * (`model.ts`), so taking the last N messages and the last N answers independently gives a
+   * window with a ragged edge: a reply whose question fell off the top, or a question whose
+   * answer did. A conversation missing half its speakers is the one shape the snapshot reducer
+   * already says it must not have. So: over-fetch both halves, find the cutoff across the
+   * merged times, and cut both at it. An uneven count either side of the cutoff is fine.
+   *
+   * `before` pages upward — the oldest `at` the pane is currently holding. `more` says whether
+   * anything exists above the window, and is free: the over-fetch is `limit + 1` per half, so a
+   * row surviving the merge below the cutoff *is* the evidence, with no second query.
+   *
+   * One honest limitation, shared with `logOfTeam`. The cutoff is a time, so a window whose
+   * oldest rows all share a millisecond keeps every one it fetched and loses any beyond the
+   * over-fetch at that same instant, because the next page asks for `at <` it. That needs more
+   * than `limit` rows written inside one millisecond, which a team of agents taking turns does
+   * not do. It is written down rather than defended against, because the alternative is a
+   * composite cursor and this does not earn one.
+   */
+  transcriptOfTeam(
+    teamId: string,
+    { limit = TRANSCRIPT_WINDOW, before }: { limit?: number; before?: number } = {},
+  ): {
+    messages: Message[];
+    answers: { id: string; agentId: string; text: string; at: number }[];
+    /** Whether the team said anything above this window. The `load earlier` control's reason. */
+    more: boolean;
+  } {
+    const ids = this.agentsOfTeam(teamId, { includeDeleted: true }).map((agent) => agent.id);
+    // One more than asked for, per half. The extra row is what `more` is read from.
+    const reach = limit + 1;
+    const olderThan = (column: SQLiteColumn): SQL | undefined =>
+      before === undefined ? undefined : lt(column, before);
+
+    const recentMessages = this.#db
+      .select()
+      .from(messages)
+      .where(and(eq(messages.teamId, teamId), olderThan(messages.at)))
+      // `messages_team_stream` is on (team_id, at), so this is the index's own order.
+      .orderBy(desc(messages.at))
+      .limit(reach)
+      .all()
+      .map(toMessage);
+
+    const recentAnswers =
+      ids.length === 0
+        ? []
+        : this.#db
+            .select()
+            .from(agentMessages)
+            .where(
+              and(
+                inArray(agentMessages.agentId, ids),
+                eq(agentMessages.kind, 'answer'),
+                olderThan(agentMessages.at),
+              ),
+            )
+            .orderBy(desc(agentMessages.at))
+            .limit(reach)
+            .all()
+            .map((row) => ({ id: row.id, agentId: row.agentId, text: row.text, at: row.at }));
+
+    const times = [...recentMessages, ...recentAnswers]
+      .map((row) => row.at)
+      .sort((left, right) => right - left);
+    // Fewer rows than asked for means both halves are exhausted and this is the whole of it.
+    const cutoff = times.length > limit ? (times[limit - 1] as number) : times.at(-1);
+    if (cutoff === undefined) return { messages: [], answers: [], more: false };
+
+    return {
+      // Back to ascending. The pane sorts by `at` anyway, but a store method that returns the
+      // stream backwards is one every future caller has to remember about.
+      messages: this.#withAttachments(
+        recentMessages.filter((row) => row.at >= cutoff).reverse(),
+      ),
+      answers: recentAnswers.filter((row) => row.at >= cutoff).reverse(),
+      // A row we fetched and are not returning is proof there is history above. If the merged
+      // over-fetch fits inside the window, there was nothing left to fetch.
+      more: times.length > limit,
+    };
   }
 
   /**
@@ -617,9 +752,30 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       changed?: { added: number; removed: number };
     }[];
     turns: { turnId: string; agentId: string; at: number; stopReason: StopReason }[];
+    /**
+     * Sessions blobot replaced, or decided to keep. Ticket 10.
+     *
+     * Not windowed with the other two, and deliberately. A compaction happens at most twice per
+     * agent per fill-up, so there are a handful of them over a week — but they are also the only
+     * rows here that explain why an agent stopped remembering, and a busy hour of tool calls
+     * would push every one of them out of a shared 200-row window. They are cheap and they are
+     * the ones a reader goes looking for.
+     */
+    compactions: {
+      agentId: string;
+      at: number;
+      how: 'command' | 'handoff' | 'refused';
+      used: number;
+      ceiling: number;
+      measured: boolean;
+      personaRefreshed?: boolean;
+      handoff?: string;
+      handoffPath?: string;
+      reason?: string;
+    }[];
   } {
     const ids = this.agentsOfTeam(teamId, { includeDeleted: true }).map((agent) => agent.id);
-    if (ids.length === 0) return { running: [], tools: [], turns: [] };
+    if (ids.length === 0) return { running: [], tools: [], turns: [], compactions: [] };
     const tools = this.#db
       .select()
       .from(toolCalls)
@@ -683,14 +839,59 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       .sort((left, right) => right - left)
       .slice(0, limit)
       .at(-1);
+    const compactions = this.#db
+      .select({ payload: events.payload, agentId: events.agentId, at: events.at })
+      .from(events)
+      .where(and(eq(events.teamId, teamId), eq(events.kind, 'context_compacted')))
+      .orderBy(desc(events.at))
+      .limit(limit)
+      .all()
+      .flatMap((row) => {
+        const payload = JSON.parse(row.payload) as {
+          how?: string;
+          used?: number;
+          ceiling?: number;
+          measured?: boolean;
+          personaRefreshed?: boolean;
+          handoff?: string;
+          handoffPath?: string;
+          reason?: string;
+        };
+        // A row this cannot read is skipped rather than defaulted. Every field here is part of
+        // a claim about what happened to somebody's session, and half of one is worse than none.
+        if (
+          row.agentId === null ||
+          typeof payload.used !== 'number' ||
+          typeof payload.ceiling !== 'number' ||
+          !isCompactionKind(payload.how)
+        ) {
+          return [];
+        }
+        const how = payload.how as 'command' | 'handoff' | 'refused';
+        return [
+          {
+            agentId: row.agentId,
+            at: row.at,
+            how,
+            used: payload.used,
+            ceiling: payload.ceiling,
+            measured: payload.measured === true,
+            ...(payload.personaRefreshed === true ? { personaRefreshed: true } : {}),
+            ...(payload.handoff === undefined ? {} : { handoff: payload.handoff }),
+            ...(payload.handoffPath === undefined ? {} : { handoffPath: payload.handoffPath }),
+            ...(payload.reason === undefined ? {} : { reason: payload.reason }),
+          },
+        ];
+      });
     // A call still in flight is never windowed out. There are at most a handful, they are by
     // definition the newest thing the team has, and the transcript needs every one of them: a
     // fold that is missing one says the wrong number.
-    if (cutoff === undefined) return { running, tools: [], turns: [] };
+    if (cutoff === undefined) return { running, tools: [], turns: [], compactions };
     return {
       running,
       tools: tools.filter((entry) => entry.at >= cutoff),
       turns: ended.filter((entry) => entry.at >= cutoff),
+      compactions,
     };
   }
 
@@ -773,6 +974,232 @@ export class SqliteStore implements MessageStore, AttachmentStore {
     }
     return counts;
   }
+
+  // ------------------------------------------------------------------ Routines
+
+  createRoutine(routine: Routine): Routine {
+    this.#db
+      .insert(routines)
+      .values({
+        id: routine.id,
+        agentId: routine.agentId,
+        name: routine.name,
+        prompt: routine.prompt,
+        ...scheduleColumns(routine.schedule),
+        armed: routine.armed,
+        proposedBy: routine.proposedBy ?? null,
+        reviewedAt: routine.reviewedAt ?? null,
+        lastSettledAt: routine.lastSettledAt ?? null,
+        createdAt: routine.createdAt,
+      })
+      .run();
+    return routine;
+  }
+
+  /**
+   * Every live Routine in the file, armed or not.
+   *
+   * Not scoped to a team, and deliberately: the scheduler asks *what is due* across everything
+   * the user has, and a Routine on a team that is not in the pool still fires — the pool's own
+   * rule protects what matters, since it never evicts a working team.
+   */
+  allRoutines(): Routine[] {
+    return this.#db
+      .select()
+      .from(routines)
+      .where(isNull(routines.deletedAt))
+      .orderBy(asc(routines.createdAt))
+      .all()
+      .map(toRoutine);
+  }
+
+  routinesOfAgent(agentId: string): Routine[] {
+    return this.#db
+      .select()
+      .from(routines)
+      .where(and(eq(routines.agentId, agentId), isNull(routines.deletedAt)))
+      .orderBy(asc(routines.createdAt))
+      .all()
+      .map(toRoutine);
+  }
+
+  routineById(routineId: string): Routine | undefined {
+    const row = this.#db.select().from(routines).where(eq(routines.id, routineId)).get();
+    return row === undefined ? undefined : toRoutine(row);
+  }
+
+  /**
+   * Arm or disarm. The only place authority enters a Routine, and the reason an agent may reach
+   * this with `false` and never with `true`: a proposal lands disarmed and a person arms it.
+   */
+  setRoutineArmed(routineId: string, armed: boolean): void {
+    this.#db.update(routines).set({ armed }).where(eq(routines.id, routineId)).run();
+  }
+
+  /**
+   * A person answered this proposal, whatever they answered.
+   *
+   * Separate from {@link setRoutineArmed} on purpose: the tick disarms a Routine that has failed
+   * three nights running, and that is blobot noticing rather than a person deciding. Only a call
+   * that came from somebody at the screen may write this.
+   */
+  reviewRoutine(routineId: string, at: number): void {
+    this.#db.update(routines).set({ reviewedAt: at }).where(eq(routines.id, routineId)).run();
+  }
+
+  /** Restate a Routine: the name, the words and the shape. Never the agent it belongs to. */
+  updateRoutine(
+    routineId: string,
+    fields: { name: string; prompt: string; schedule: Schedule },
+  ): void {
+    this.#db
+      .update(routines)
+      .set({ name: fields.name, prompt: fields.prompt, ...scheduleColumns(fields.schedule) })
+      .where(eq(routines.id, routineId))
+      .run();
+  }
+
+  /**
+   * Everything up to and including `at` is accounted for, ran or missed.
+   *
+   * Not *fired*: a missed firing does not run, so a fired-mark would never advance and the
+   * scheduler would report the same missed firing on every tick for the rest of the Routine's
+   * life, writing another run row each time.
+   */
+  settleRoutine(routineId: string, at: number): void {
+    this.#db.update(routines).set({ lastSettledAt: at }).where(eq(routines.id, routineId)).run();
+  }
+
+  /**
+   * How many firings have come and gone with nobody there, since the last one blobot was there
+   * for. Written by the tick beside the settling, and set back to zero the next time a firing is
+   * actually decided on.
+   *
+   * Not a `routine_runs` row: a missed firing is not a run. Recording one would put a laptop
+   * that was shut for three nights into issue 08's disarm rule, which counts failures, and a
+   * shut laptop is the ordinary condition rather than a failure.
+   */
+  setMissedFirings(routineId: string, count: number): void {
+    this.#db.update(routines).set({ missedFirings: count }).where(eq(routines.id, routineId)).run();
+  }
+
+  tombstoneRoutine(routineId: string, at: number): void {
+    this.#db.update(routines).set({ deletedAt: at }).where(eq(routines.id, routineId)).run();
+  }
+
+  recordRoutineRun(run: RoutineRun): RoutineRun {
+    this.#db
+      .insert(routineRuns)
+      .values({
+        id: run.id,
+        routineId: run.routineId,
+        firedAt: run.firedAt,
+        outcome: run.outcome,
+        reason: run.reason ?? null,
+        seenAt: run.seenAt ?? null,
+      })
+      .run();
+    return run;
+  }
+
+  /**
+   * How a run that was already written ended.
+   *
+   * A firing writes its row when it starts, carrying the outcome it would have if blobot stopped
+   * existing that second: `stopped`, because a turn started and did not finish. That is not a
+   * placeholder, it is the crash-consistent answer — a run interrupted by a quit is a run that
+   * did not finish, and writing the row only at the end would leave it looking as though the
+   * Routine never fired at all. This replaces it once the turn is over.
+   */
+  settleRoutineRun(runId: string, outcome: RoutineOutcome, reason?: string): void {
+    this.#db
+      .update(routineRuns)
+      .set({ outcome, reason: reason ?? null })
+      .where(eq(routineRuns.id, runId))
+      .run();
+  }
+
+  /** Newest first. Issue 06 sorts its screen on the first of these. */
+  routineRunsOf(routineId: string, limit = 50): RoutineRun[] {
+    return this.#db
+      .select()
+      .from(routineRuns)
+      .where(eq(routineRuns.routineId, routineId))
+      .orderBy(desc(routineRuns.firedAt))
+      .limit(limit)
+      .all()
+      .map(toRoutineRun);
+  }
+
+  /**
+   * How many runs in a row have ended in anything but `ran`.
+   *
+   * Issue 08's shared rule counts on this: three consecutive failures disarm the Routine,
+   * whatever the reason was. An instruction that has failed the same way three nights running is
+   * not automation, it is a process leak with a schedule attached.
+   */
+  consecutiveRoutineFailures(routineId: string): number {
+    let count = 0;
+    for (const run of this.routineRunsOf(routineId, 10)) {
+      if (run.outcome === 'ran') break;
+      count += 1;
+    }
+    return count;
+  }
+
+  /**
+   * Runs the user has not looked at, for the agents named. Issue 11's unread mark: a Routine
+   * whose value is the *message* lands in a pane nobody has a reason to open, so the rail draws
+   * its preview line at full ink until it has been seen.
+   */
+  unseenRoutineRuns(agentIds: readonly string[]): { agentId: string; firedAt: number }[] {
+    if (agentIds.length === 0) return [];
+    return this.#db
+      .select({ agentId: routines.agentId, firedAt: routineRuns.firedAt })
+      .from(routineRuns)
+      .innerJoin(routines, eq(routineRuns.routineId, routines.id))
+      .where(
+        and(
+          inArray(routines.agentId, [...agentIds]),
+          isNull(routineRuns.seenAt),
+          eq(routineRuns.outcome, 'ran'),
+        ),
+      )
+      .orderBy(desc(routineRuns.firedAt))
+      .all();
+  }
+
+  /**
+   * Which Routine a firing belongs to, by name. Issue 07's `system` line above a prompt nobody
+   * typed at that hour: `routine · nightly typecheck`.
+   *
+   * Answers for a tombstoned Routine too — deliberately. The transcript is a record of what
+   * happened, and a turn that ran because of a Routine the user has since deleted still ran
+   * because of it. An unattributed line there would be blobot forgetting its own reason.
+   */
+  routineNameOfRun(runId: string): string | undefined {
+    const row = this.#db
+      .select({ name: routines.name })
+      .from(routineRuns)
+      .innerJoin(routines, eq(routineRuns.routineId, routines.id))
+      .where(eq(routineRuns.id, runId))
+      .get();
+    return row?.name;
+  }
+
+  /** Opening that agent's pane is the only thing that clears the mark. */
+  markRoutineRunsSeen(agentId: string, at: number): void {
+    const ids = this.#db
+      .select({ id: routineRuns.id })
+      .from(routineRuns)
+      .innerJoin(routines, eq(routineRuns.routineId, routines.id))
+      .where(and(eq(routines.agentId, agentId), isNull(routineRuns.seenAt)))
+      .all()
+      .map((row) => row.id);
+    if (ids.length === 0) return;
+    this.#db.update(routineRuns).set({ seenAt: at }).where(inArray(routineRuns.id, ids)).run();
+  }
+
 }
 
 type MessageRow = typeof messages.$inferSelect;
@@ -789,6 +1216,7 @@ function toProfileRecord(row: AgentProfileRow): AgentProfileRecord {
     ...(row.executablePath === null ? {} : { executablePath: row.executablePath }),
     ...optionsOf(row.runtimeOptions),
     ...(row.trust === null ? {} : { trust: trustLevelOf(row.trust) }),
+    ...(row.compaction === null ? {} : { compaction: compactionSettingOf(row.compaction) }),
     ...(row.instructions === null ? {} : { instructions: row.instructions }),
     ...(row.hue === null ? {} : { hue: row.hue }),
     ...(row.deletedAt === null ? {} : { deletedAt: row.deletedAt }),
@@ -825,6 +1253,7 @@ function toMessage(row: MessageRow): Message {
     at: row.at,
     ...(row.context === null ? {} : { context: row.context }),
     ...(row.idempotencyKey === null ? {} : { idempotencyKey: row.idempotencyKey }),
+    ...(row.routineRunId === null ? {} : { routineRunId: row.routineRunId }),
     ...(row.deliveredAt === null ? {} : { deliveredAt: row.deliveredAt }),
   };
 }
@@ -844,6 +1273,7 @@ function toAgentRecord(row: AgentRow): AgentRecord {
     ...(row.executablePath === null ? {} : { executablePath: row.executablePath }),
     ...optionsOf(row.runtimeOptions),
     ...(row.trust === null ? {} : { trust: trustLevelOf(row.trust) }),
+    ...(row.compaction === null ? {} : { compaction: compactionSettingOf(row.compaction) }),
     ...(row.branch === null ? {} : { branch: row.branch }),
     ...(row.deletedAt === null ? {} : { deletedAt: row.deletedAt }),
   };
@@ -875,4 +1305,92 @@ function optionsOf(raw: string | null): { runtimeOptions?: Record<string, string
   } catch {
     return {};
   }
+}
+
+function scheduleColumns(schedule: Schedule): {
+  scheduleKind: Schedule['kind'];
+  scheduleMinute: number;
+  scheduleHour: number | null;
+  scheduleWeekday: number | null;
+} {
+  return {
+    scheduleKind: schedule.kind,
+    scheduleMinute: schedule.minute,
+    scheduleHour: schedule.kind === 'hourly' ? null : schedule.hour,
+    scheduleWeekday: schedule.kind === 'weekly' ? schedule.weekday : null,
+  };
+}
+
+/**
+ * Four columns back into one of three shapes. The nulls are not defensive: an hourly Routine has
+ * no hour to be at, and a shape that cannot be rebuilt is a row that should never have been
+ * written.
+ */
+function toSchedule(row: {
+  scheduleKind: 'hourly' | 'daily' | 'weekly';
+  scheduleMinute: number;
+  scheduleHour: number | null;
+  scheduleWeekday: number | null;
+}): Schedule {
+  switch (row.scheduleKind) {
+    case 'hourly':
+      return { kind: 'hourly', minute: row.scheduleMinute };
+    case 'daily':
+      return { kind: 'daily', hour: row.scheduleHour ?? 0, minute: row.scheduleMinute };
+    case 'weekly':
+      return {
+        kind: 'weekly',
+        weekday: row.scheduleWeekday ?? 0,
+        hour: row.scheduleHour ?? 0,
+        minute: row.scheduleMinute,
+      };
+  }
+}
+
+function toRoutine(row: typeof routines.$inferSelect): Routine {
+  return {
+    id: row.id,
+    agentId: row.agentId,
+    name: row.name,
+    prompt: row.prompt,
+    schedule: toSchedule(row),
+    armed: row.armed,
+    ...(row.proposedBy === null ? {} : { proposedBy: row.proposedBy }),
+    ...(row.reviewedAt === null ? {} : { reviewedAt: row.reviewedAt }),
+    ...(row.lastSettledAt === null ? {} : { lastSettledAt: row.lastSettledAt }),
+    ...(row.missedFirings === 0 ? {} : { missedFirings: row.missedFirings }),
+    createdAt: row.createdAt,
+  };
+}
+
+function toRoutineRun(row: typeof routineRuns.$inferSelect): RoutineRun {
+  return {
+    id: row.id,
+    routineId: row.routineId,
+    firedAt: row.firedAt,
+    outcome: row.outcome as RoutineOutcome,
+    ...(row.reason === null ? {} : { reason: row.reason }),
+    ...(row.seenAt === null ? {} : { seenAt: row.seenAt }),
+  };
+}
+
+/**
+ * Whether a stored `how` is one blobot still understands.
+ *
+ * A guard rather than a cast at the read, because this column holds whatever an older or newer
+ * blobot wrote and the transcript should draw nothing rather than a word it cannot explain.
+ */
+function isCompactionKind(how: string | undefined): boolean {
+  return how === 'command' || how === 'handoff' || how === 'refused';
+}
+
+/**
+ * A stored compaction word, or the default for anything this version does not recognise.
+ *
+ * The same shape as `trustLevelOf` and for the same reason: the column holds whatever some
+ * version of blobot wrote, and a row from the future must degrade to the documented default
+ * rather than reaching the orchestrator as a string nothing branches on.
+ */
+function compactionSettingOf(stored: string): CompactionSetting {
+  return stored === 'off' ? 'off' : DEFAULT_COMPACTION;
 }

@@ -53,6 +53,12 @@ export type ScenarioStep =
       readonly context?: string;
     }
   | {
+      readonly kind: 'propose_routine';
+      readonly name: string;
+      readonly prompt: string;
+      readonly schedule: unknown;
+    }
+  | {
       readonly kind: 'usage';
       readonly used: number;
       readonly size: number;
@@ -141,6 +147,17 @@ export class Scenario {
         ? { kind: 'message_agent', to, message }
         : { kind: 'message_agent', to, message, context },
     );
+  }
+
+  /**
+   * A Routine proposed from inside a turn, through the same handler the loopback tool calls.
+   *
+   * The refusals are the reason this exists as a step: issue 05's caps are only real if the
+   * fourth proposal comes back to the model as a tool error it has to account for, and that is
+   * not observable from outside the turn.
+   */
+  proposeRoutine(name: string, prompt: string, schedule: unknown): Scenario {
+    return this.#with({ kind: 'propose_routine', name, prompt, schedule });
   }
 
   /**

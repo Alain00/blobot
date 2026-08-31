@@ -15,6 +15,9 @@ export class FakeBridge implements LineTransport {
   /** The session it is currently serving. A `session/load` adopts the id it was asked for,
    *  because that is the id the real bridge then stamps on every notification. */
   sessionId: string;
+  /** Every session this bridge was asked to close, in order. A restart closes before it opens. */
+  readonly closed: string[] = [];
+  #sessionsOpened = 0;
   readonly received: JsonRpcMessage[] = [];
 
   readonly #out = new AsyncQueue<string>();
@@ -188,11 +191,20 @@ export class FakeBridge implements LineTransport {
         });
         return;
       case 'session/new':
+        // A fresh id on every call after the first, because a session id that never changed
+        // would let a restart look correct while having replaced nothing. The real bridge
+        // never repeats one.
+        this.#sessionsOpened += 1;
+        if (this.#sessionsOpened > 1) this.sessionId = `session_fake_${this.#sessionsOpened}`;
         this.#reply(message, {
           sessionId: this.sessionId,
           modes: { currentModeId: 'auto', availableModes: [] },
           configOptions: this.#configOptions(),
         });
+        return;
+      case 'session/close':
+        this.closed.push((message.params as { sessionId?: string } | undefined)?.sessionId ?? '');
+        this.#reply(message, {});
         return;
       case 'session/load': {
         if (this.#failLoad !== undefined) {

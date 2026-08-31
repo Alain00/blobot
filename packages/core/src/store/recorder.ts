@@ -20,7 +20,7 @@ interface OpenTurn {
 }
 
 /**
- * Persists the **durable subset** of the nine-member vocabulary: completed messages, tool calls
+ * Persists the **durable subset** of the ten-member vocabulary: completed messages, tool calls
  * with terminal state, turn outcomes, errors and usage snapshots. Deltas are the wire format —
  * a row per delta would mean three rows in one observed millisecond.
  */
@@ -152,6 +152,13 @@ export class SqliteRecorder implements TurnRecorder {
         return;
       }
       case 'usage_updated': {
+        this.#appendEvent(event);
+        return;
+      }
+      // Durable for ticket 06's reason: it is drawn in the *transcript*, and a live-only line
+      // means a team switched away from and back to loses the record that its agent is on a
+      // different session than the one it was answering with an hour ago.
+      case 'context_compacted': {
         this.#appendEvent(event);
         return;
       }

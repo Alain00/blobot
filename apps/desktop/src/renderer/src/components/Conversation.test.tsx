@@ -76,6 +76,8 @@ function costPerDelta(depth: number, deltas: number): number {
           statuses: { a: 'responding', b: 'idle' },
           items,
           onAnswerPermission: () => {},
+        routineArmed: {},
+        onDisarmRoutine: () => {},
         }),
       );
     });
@@ -137,6 +139,8 @@ function draw(
         statuses,
         items,
         onAnswerPermission: () => {},
+        routineArmed: {},
+        onDisarmRoutine: () => {},
       }),
     );
   });
@@ -159,6 +163,56 @@ describe('the voices, after the roster stopped being passed down', () => {
     const items: Item[] = [{ kind: 'user', id: 'u', at, agentIds: ['b'], text: 'have a look' }];
     expect(draw(items, { kind: 'team' })).toContain('to Bob');
     expect(draw(items, { kind: 'agent', agentId: 'b' })).not.toContain('to Bob');
+  });
+
+  // An agent that put itself on a schedule. The block is the price of issue 05's amendment, so
+  // it has to draw: who, what, the shape, what the shape costs, and one control.
+  it('draws the block an agent scheduling itself opens', () => {
+    const drawn = draw(
+      [
+        {
+          kind: 'routine',
+          id: 'r:scheduled',
+          at,
+          agentId: 'a',
+          routineId: 'r',
+          name: 'morning typecheck',
+          schedule: 'every day at 09:00',
+          frequency: '1 firing a day',
+        },
+      ],
+      { kind: 'team' },
+      { a: 'idle', b: 'idle' },
+    );
+    expect(drawn).toContain('Alice scheduled a routine');
+    expect(drawn).toContain('morning typecheck');
+    expect(drawn).toContain('every day at 09:00');
+    expect(drawn).toContain('1 firing a day');
+  });
+
+  // The tag answers "where did this go", and on a team of one that question was never open.
+  it('says nothing about the recipient on a team of one', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    act(() => {
+      root.render(
+        React.createElement(Conversation, {
+          pane: { kind: 'team' } as Pane,
+          agents: [AGENTS[0]!],
+          statuses: { a: 'idle' },
+          items: [{ kind: 'user', id: 'u', at, agentIds: ['a'], text: 'have a look' }],
+          onAnswerPermission: () => {},
+          routineArmed: {},
+          onDisarmRoutine: () => {},
+        }),
+      );
+    });
+    const text = host.querySelector('.col')?.textContent ?? '';
+    act(() => root.unmount());
+    host.remove();
+    expect(text).toContain('have a look');
+    expect(text).not.toContain('to Alice');
   });
 
   it('labels a turn once and drops the name from what continues it', () => {
@@ -210,7 +264,9 @@ describe('the voices, after the roster stopped being passed down', () => {
       canAllow: true,
       canAllowAlways: true,
     };
-    expect(draw([asking], { kind: 'team' })).toContain('Alice wants to run git push');
+    // The command is its own line under the sentence, so the two are not one run of text.
+    expect(draw([asking], { kind: 'team' })).toContain('Alice wants to run');
+    expect(draw([asking], { kind: 'team' })).toContain('git push');
     expect(draw([asking], { kind: 'team' })).toContain('allow always');
     expect(draw([{ ...asking, outcome: 'allowed' }], { kind: 'team' })).toContain(
       'allowed once',
@@ -382,5 +438,76 @@ describe('the voices, after the roster stopped being passed down', () => {
     const drawn = draw([], { kind: 'team' });
     expect(drawn).toContain('Alice');
     expect(drawn).not.toContain('Bob');
+  });
+});
+
+describe('a session blobot replaced', () => {
+  const at = 1_000;
+  const compaction: Item = {
+    kind: 'compaction',
+    id: 'c1',
+    at,
+    agentId: 'a',
+    how: 'handoff',
+    used: 110_000,
+    ceiling: 120_000,
+    measured: false,
+    handoff: 'I am migrating the old call sites. Four left, all in checkout.',
+    handoffPath: '/handoffs/alice-1000.md',
+  };
+
+  it('is shut by default, so a transcript is not full of blobot explaining itself', () => {
+    const drawn = draw([compaction], { kind: 'team' });
+    expect(drawn).toContain('fresh session');
+    expect(drawn).not.toContain('Four left');
+  });
+
+  it('opens onto the note the agent wrote, which is the reason to prefer this to /compact', () => {
+    const drawn = draw([compaction], { kind: 'team' }, { a: 'idle', b: 'idle' }, (host) => {
+      host.querySelector<HTMLButtonElement>('.handoff .route')?.click();
+    });
+    expect(drawn).toContain('Four left, all in checkout');
+    // Under the note rather than in the line: it is where the file went, not part of the
+    // sentence about what happened.
+    expect(drawn).toContain('/handoffs/alice-1000.md');
+  });
+
+  it('says whose session it was in the team pane, and does not in the agent’s own', () => {
+    expect(draw([compaction], { kind: 'team' })).toContain('Alice · fresh session');
+    expect(draw([compaction], { kind: 'agent', agentId: 'a' })).not.toContain('Alice ·');
+  });
+
+  it('draws a refusal as a plain line, because there is no note to open', () => {
+    const kept: Item = {
+      kind: 'compaction',
+      id: 'c2',
+      at,
+      agentId: 'a',
+      how: 'refused',
+      used: 110_000,
+      ceiling: 120_000,
+      measured: true,
+      reason: 'the agent wrote no handoff, so the session was kept',
+    };
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    act(() => {
+      root.render(
+        React.createElement(Conversation, {
+          pane: { kind: 'team' } as Pane,
+          agents: AGENTS,
+          statuses: { a: 'idle', b: 'idle' },
+          items: [kept],
+          onAnswerPermission: () => {},
+        routineArmed: {},
+        onDisarmRoutine: () => {},
+        }),
+      );
+    });
+    expect(host.querySelector('.handoff')).toBeNull();
+    expect(host.textContent).toContain('session kept');
+    act(() => root.unmount());
+    host.remove();
   });
 });

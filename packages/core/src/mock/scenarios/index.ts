@@ -269,6 +269,55 @@ export const runsOutOfRoom: Scenario = scenario('runs-out-of-room')
   .say('There are four call sites that pass the old shape. The first is in the checkout')
   .end('max_tokens');
 
+/**
+ * The agent fills up, and blobot chooses the moment.
+ *
+ * The turn before a compaction rather than the compaction itself: it ends **ordinarily** and
+ * leaves the gauge over ticket 10's trigger, which is exactly the case a kind mock would never
+ * produce. Every other full-context scenario here ends on `max_tokens`, and a threshold that
+ * only ever fires on a turn that already failed is a threshold that fires too late.
+ *
+ * `usage` is the whole of the trap: 110,000 against the mock's 200,000 window is 55%, which is a
+ * gauge with room to spare on it, and it is 92% of a working ceiling of 120,000 — which is what
+ * `unmeasuredCeiling` gives a 200k window, and what nearly every real agent takes. The two
+ * denominators disagreeing is ticket 09's whole point, and this is the scenario where it bites:
+ * a trigger built on the advertised window would not fire here at all.
+ *
+ * What follows it is a handoff and a fresh session, which since 2026-08-30 is the only thing
+ * blobot does here: the author watched a real agent compact itself and come back having lost too
+ * much, and the runtime's own command stopped being something blobot reaches for.
+ */
+export const fillsUpAndKeepsGoing: Scenario = scenario('fills-up-and-keeps-going')
+  .think('That is most of the call sites read. I should say what I have before I go further.')
+  .callTool('read src/', 'read', {
+    rawInput: { path: 'src/' },
+    durationMs: 400,
+    outcome: { status: 'completed', output: '… 84 files\n', exit: 0 },
+  })
+  .usage(110_000)
+  .say('Four call sites pass the old shape. I have the list and I am ready to change them.')
+  .end();
+
+/**
+ * An agent puts itself on a schedule, and it is armed the moment it says so.
+ *
+ * Issue 05's 2026-08-30 amendment is paid for by one thing: the block that opens in the turn
+ * that did it. That block was unreachable in demo mode — no scripted run proposed a Routine — so
+ * the only place it could be looked at was a real agent deciding to schedule itself, which is
+ * both rare and somebody's real repository. Same argument as `asks-before-deleting`.
+ */
+export const schedulesItself: Scenario = scenario('schedules-itself')
+  .say('The type check is the thing that keeps breaking overnight. I will run it every morning.')
+  // The **tool's** wire shape, not the internal `Schedule`: what an agent hands the loopback
+  // tool is `{every, hour, minute}` and `parseProposedSchedule` is what turns it into one.
+  .proposeRoutine('morning typecheck', 'run the typecheck and report what broke', {
+    every: 'day',
+    hour: 9,
+    minute: 0,
+  })
+  .say('That is on now. Disarm it above if you would rather I did not.')
+  .end();
+
 export const scenarios = {
   'alice-asks-bob': aliceAsksBob,
   'bob-reviews': bobReviews,
@@ -280,9 +329,11 @@ export const scenarios = {
   'long-running-tool': longRunningTool,
   'works-through-a-list': worksThroughAList,
   'asks-before-deleting': asksBeforeDeleting,
+  'schedules-itself': schedulesItself,
   'advertises-commands': advertisesCommands,
   'loses-commands': losesCommands,
   'runs-out-of-room': runsOutOfRoom,
+  'fills-up-and-keeps-going': fillsUpAndKeepsGoing,
   refuses,
 } as const satisfies Record<string, Scenario>;
 

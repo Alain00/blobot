@@ -13,8 +13,10 @@ import {
   type OpenedDatabase,
   type ScenarioScript,
   type Team,
+  uuidv7,
 } from '@blobot/core';
 import type { RunningTeam } from './running-team.js';
+import { FileHandoffArchive } from './handoff-archive.js';
 
 /**
  * Demo mode: a real team, a real orchestrator, a real database — and mock runtimes.
@@ -116,6 +118,35 @@ export const demoScripts = {
     bob: scenarios['bob-reviews'],
   },
   /**
+   * The other half of running out of room: blobot chooses the moment before it happens.
+   *
+   * Alice fills up on an ordinary turn that ends the ordinary way, and blobot asks her for a
+   * handoff and starts her again. There is no compaction command in this run and there is no
+   * longer one anywhere: the author watched a real agent compact itself at 223k and come back
+   * having lost too much, so a handoff and a fresh session is the whole of what blobot does.
+   *
+   * The gauge is the part to watch beside the transcript. 110,000 of the mock's 200,000 window
+   * is a bar with room to spare on it, and it is past the working ceiling a 200,000 window
+   * actually gets. Ticket 09's two denominators, on screen at the same time.
+   */
+  'fills-up': {
+    summary: 'Alice fills up, writes herself a handoff, and starts again on a fresh session',
+    prompt: 'Rename the cart item shape everywhere it is used, and tell me the call sites.',
+    alice: [
+      scenarios['fills-up-and-keeps-going'],
+      scenario('writes-a-handoff')
+        .say(
+          'I am renaming CartItem to LineItem across the app. Done: the cart and the mini ' +
+            'cart, committed on blobot/checkout/alice. Left: four call sites in checkout that ' +
+            'still pass the old shape, and the fixtures under test/. The API side is Bob’s and ' +
+            'he has not started. Do not touch src/legacy: it has its own shape on purpose.',
+        )
+        .end(),
+      scenario('picks-it-up').say('Read it. Picking up at the checkout call sites.').end(),
+    ],
+    bob: scenarios['bob-reviews'],
+  },
+  /**
    * One turn, twelve steps, one answer. The shape a long piece of real work has, and the run
    * the transcript's fold is reviewed against: shut, this is a caption, one mono line and a
    * paragraph; flat, it was a bulleted list of intentions with the answer buried under it.
@@ -124,6 +155,17 @@ export const demoScripts = {
     summary: 'Alice works through a list of edits and answers at the end',
     prompt: 'Build the top-down desk scene and wire it into the page.',
     alice: scenarios['works-through-a-list'],
+    bob: scenarios['bob-reviews'],
+  },
+  /**
+   * An agent schedules itself, and the block that pays for it opens in the turn that did it.
+   * The only run in which that block is on screen at all: no other script proposes a Routine,
+   * so before this the only place to look at it was a real agent deciding to schedule itself.
+   */
+  'schedules-itself': {
+    summary: 'Alice puts herself on a schedule, and the transcript says so where it happened',
+    prompt: 'The overnight builds keep breaking. Can you keep an eye on the type check?',
+    alice: scenarios['schedules-itself'],
     bob: scenarios['bob-reviews'],
   },
 } as const satisfies Record<string, DemoScript>;
@@ -173,6 +215,10 @@ export async function createDemoTeam(
         clock,
         commands: aliceCommands,
         peerMessageHandler: (call) => orchestrator.handleMessageAgent(call),
+        // Issue 05's tool, wired the way the peer handler is. Without it a scripted proposal
+        // came back `blobot_propose_routine failed`, which is the mock reporting an unattached
+        // handler and not a refusal blobot ever makes.
+        proposeRoutine: (call) => orchestrator.handleProposeRoutine(call),
         script: script.alice,
       }),
     ],
@@ -183,6 +229,10 @@ export async function createDemoTeam(
         clock,
         commands: bobCommands,
         peerMessageHandler: (call) => orchestrator.handleMessageAgent(call),
+        // Issue 05's tool, wired the way the peer handler is. Without it a scripted proposal
+        // came back `blobot_propose_routine failed`, which is the mock reporting an unattached
+        // handler and not a refusal blobot ever makes.
+        proposeRoutine: (call) => orchestrator.handleProposeRoutine(call),
         script: script.bob,
       }),
     ],
@@ -211,8 +261,32 @@ export async function createDemoTeam(
     store,
     clock,
     recorder: new SqliteRecorder(opened.db, team.id),
+    // No `contextCeilings`: the mock names no model, so it takes the conservative fallback
+    // like nearly every real agent, which is the case worth demonstrating. The archive is the
+    // real one, because a demo that writes its handoff nowhere is a demo of half the feature.
+    handoffs: new FileHandoffArchive(),
+    // The demo's Routines are rows in its own throwaway database, the way the handoff archive is
+    // the real one: without this an agent that schedules itself got `blobot_propose_routine
+    // failed` back, and the transcript block that is the *price* of letting it schedule itself
+    // was the one block in the app no demo could show.
+    routines: store,
   });
   await orchestrator.start();
+
+  // Demo mode plays the whole path, including the session row a restart needs. Without it a
+  // relaunched demo would resume a session the mock has already replaced.
+  orchestrator.onCompaction((compacted) => {
+    if (compacted.how === 'refused') return;
+    const agent = agents.find((candidate) => candidate.id === compacted.agentId);
+    if (agent === undefined) return;
+    store.startSession({
+      id: uuidv7(compacted.at),
+      agentId: agent.id,
+      ...(compacted.sessionId === '' ? {} : { providerSessionId: compacted.sessionId }),
+      personaText: composePersona(agent, team, agents),
+      startedAt: compacted.at,
+    });
+  });
 
   return {
     team,
@@ -220,6 +294,9 @@ export async function createDemoTeam(
     orchestrator,
     store,
     runtimeLabels: Object.fromEntries(agents.map((agent) => [agent.id, 'Mock (demo)'])),
+    // A mock runtime names no model, so every demo agent takes the conservative fallback and
+    // the gauge says so. That is the right demo: it is what nearly every real agent gets too.
+    contextCeilings: {},
     branches: Object.fromEntries(
       agents.map((agent) => [agent.id, `blobot/${team.name}/${agent.name.toLowerCase()}`]),
     ),

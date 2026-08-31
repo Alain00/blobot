@@ -6,6 +6,17 @@
 import type { AttachmentKind } from '../runtime.js';
 import type { TrustLevel } from '../trust.js';
 
+/**
+ * The two answers to "may blobot start this agent a fresh session when its window fills up".
+ *
+ * Two words rather than a boolean because it is stored, and a column of nulls and ones ages
+ * worse than a column of words the day a third answer is wanted.
+ */
+export type CompactionSetting = 'auto' | 'off';
+
+/** What an agent that has never been asked runs under. On, and stated rather than implied. */
+export const DEFAULT_COMPACTION: CompactionSetting = 'auto';
+
 export interface Team {
   readonly id: string;
   /** Load-bearing: the branch is `blobot/<team>/<agent>`. */
@@ -85,6 +96,19 @@ export interface AgentDefinition {
    * neither runtime has ever advertised them. Absent is `normal`. See `trust.ts`.
    */
   readonly trust?: TrustLevel;
+  /**
+   * Whether blobot may choose the moment to compact this agent, or leave it entirely alone.
+   *
+   * blobot's own vocabulary again, beside `trust` and for the same reason: neither runtime has
+   * ever advertised it, and `auto` means *blobot picks the moment*, never *blobot writes the
+   * summary*. Absent is `auto`, which is on — a setting a user has to go and find helps exactly
+   * the people who were already going to type `/compact`.
+   *
+   * Per agent and never per team, because a session, a window and a worktree are per agent, and
+   * two agents on one team fill up at wildly different rates. See
+   * `.scratch/transcript-scale/issues/10-compaction-by-handoff.md`.
+   */
+  readonly compaction?: CompactionSetting;
   /** Standing instructions, folded into every persona composed for it. */
   readonly instructions?: string;
   /**
@@ -108,6 +132,8 @@ export interface Agent {
   readonly instructions?: string;
   /** Copied for the same reason: a transcript shows the face this agent wore at the time. */
   readonly hue?: number;
+  /** Copied from the profile, and restated by an edit. Absent is `auto`. */
+  readonly compaction?: CompactionSetting;
   /** The Agent's own isolated copy of the Workspace. A git worktree today. */
   readonly workspacePath: string;
 }
@@ -136,6 +162,16 @@ export interface Message {
    * snapshot.
    */
   readonly attachments?: readonly Attachment[];
+  /**
+   * The firing that delivered these words, when a Routine did. Absent when the user typed them,
+   * which is every message blobot had until Routines existed.
+   *
+   * The words are still the user's — they authored the Routine — so the transcript still draws
+   * this in the user's voice. What this field buys is the one thing the bubble gets wrong, which
+   * is *when*: a `system` line above it says which Routine, and the rail knows the report
+   * arrived while nobody was looking.
+   */
+  readonly routineRunId?: string;
 }
 
 /**

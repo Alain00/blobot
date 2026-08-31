@@ -96,7 +96,7 @@ export function Agents({
           <div className="roster">
             {roster.map((agent) => (
               <div key={agent.id} className="agentcardwrap">
-                <button className="rosterrow tall" onClick={() => setEditing(agent.id)}>
+                <button className="listrow tall" onClick={() => setEditing(agent.id)}>
                   {/* The face it wears in the rail and the transcript, so this list is
                       recognisably the same set of agents rather than a list of names. */}
                   <Blob name={agent.name} size={34} hue={agent.hue} />

@@ -5,6 +5,7 @@ import { MockAgentRuntime } from '../mock/mock-agent-runtime.js';
 import { scenario } from '../mock/scenario.js';
 import { scenarios } from '../mock/scenarios/index.js';
 import type { Agent, Team } from '../orchestrator/domain.js';
+import type { Routine, RoutineOutcome, Schedule } from '../routines/domain.js';
 import { Orchestrator } from '../orchestrator/orchestrator.js';
 import type { AgentRuntime } from '../runtime.js';
 import { openDatabase, type OpenedDatabase } from './database.js';
@@ -69,6 +70,7 @@ describe('the schema', () => {
     expect(columnsOf('agents').sort()).toEqual(
       [
         'branch',
+        'compaction',
         'created_at',
         'deleted_at',
         'executable_path',
@@ -89,6 +91,7 @@ describe('the schema', () => {
     // The same rule holds for an agent that exists before any team does.
     expect(columnsOf('agent_profiles').sort()).toEqual(
       [
+        'compaction',
         'created_at',
         'deleted_at',
         'executable_path',
@@ -541,7 +544,96 @@ describe('what a turn leaves behind', () => {
       turnBudget: 10,
       createdAt: 0,
     });
-    expect(store.logOfTeam('team_2')).toEqual({ running: [], tools: [], turns: [] });
+    expect(store.logOfTeam('team_2')).toEqual({ running: [], tools: [], turns: [], compactions: [] });
+  });
+});
+
+describe('a session blobot replaced', () => {
+  it('survives a team switch, because the line is drawn in the transcript', () => {
+    store.startSession({ id: 's1', agentId: alice.id, personaText: 'x', startedAt: 0 });
+    const recorder = new SqliteRecorder(opened.db, team.id);
+    recorder.record({
+      type: 'context_compacted',
+      agentId: alice.id,
+      sessionId: 's1',
+      at: 40,
+      how: 'handoff',
+      used: 110_000,
+      ceiling: 120_000,
+      measured: false,
+      personaRefreshed: true,
+      handoff: 'Migrating the old call sites; four left, all in checkout.',
+      handoffPath: '/handoffs/alice-40.md',
+    });
+
+    // Ticket 06's lesson, applied to a line that would otherwise be live-only: an agent that
+    // stopped remembering last week, with nothing in the transcript to say why, is the exact
+    // shape of a bug report nobody can act on.
+    const [compaction] = store.logOfTeam(team.id).compactions;
+    expect(compaction?.how).toBe('handoff');
+    expect(compaction?.used).toBe(110_000);
+    expect(compaction?.ceiling).toBe(120_000);
+    expect(compaction?.measured).toBe(false);
+    expect(compaction?.personaRefreshed).toBe(true);
+    expect(compaction?.handoff).toContain('four left');
+    expect(compaction?.handoffPath).toBe('/handoffs/alice-40.md');
+  });
+
+  it('is not windowed out by a busy hour of tool calls', () => {
+    store.startSession({ id: 's1', agentId: alice.id, personaText: 'x', startedAt: 0 });
+    const recorder = new SqliteRecorder(opened.db, team.id);
+    recorder.record({
+      type: 'context_compacted',
+      agentId: alice.id,
+      sessionId: 's1',
+      at: 1,
+      how: 'command',
+      used: 110_000,
+      ceiling: 120_000,
+      measured: true,
+    });
+    // Everything after it is newer, and a shared window would push the one row a reader goes
+    // looking for out behind a run of ordinary work.
+    recorder.turnStarted(alice.id, 10);
+    const identity = { agentId: alice.id, sessionId: 's1' } as const;
+    for (const at of [10, 20, 30, 40]) {
+      recorder.record({
+        type: 'tool_call_started',
+        toolCallId: `call_${at}`,
+        title: 'ls',
+        kind: 'execute',
+        at,
+        ...identity,
+      });
+      recorder.record({
+        type: 'tool_call_updated',
+        toolCallId: `call_${at}`,
+        status: 'completed',
+        at: at + 1,
+        ...identity,
+      });
+    }
+
+    expect(store.logOfTeam(team.id, 2).compactions).toHaveLength(1);
+  });
+
+  it('draws nothing for a row written under a word this version does not know', () => {
+    store.startSession({ id: 's1', agentId: alice.id, personaText: 'x', startedAt: 0 });
+    const recorder = new SqliteRecorder(opened.db, team.id);
+    // A future blobot's third mechanism, or a hand-edited row. Half a claim about somebody's
+    // session is worse than none, so it is skipped rather than defaulted to `command`.
+    recorder.record({
+      type: 'context_compacted',
+      agentId: alice.id,
+      sessionId: 's1',
+      at: 40,
+      how: 'rewritten' as never,
+      used: 1,
+      ceiling: 2,
+      measured: false,
+    });
+
+    expect(store.logOfTeam(team.id).compactions).toEqual([]);
   });
 });
 
@@ -702,5 +794,208 @@ describe('attachments', () => {
     // Stated rather than discovered: see `.scratch/composer-attachments/04`.
     expect(store.attachment('att_1')).toBeDefined();
     expect(store.forTeam(team.id)[0]?.attachments).toHaveLength(1);
+  });
+});
+
+describe('the transcript window', () => {
+  /**
+   * An interleaved conversation: the user asks at every even tick and an agent answers at every
+   * odd one. That shape is the point of the test — the two halves live in different tables and
+   * are merge-sorted by the pane, so a window that bounds them independently comes back with a
+   * reply whose question fell off the top.
+   */
+  const seed = (turnCount: number): void => {
+    opened.db.run(
+      sql.raw(
+        `INSERT INTO sessions (id, agent_id, persona_text, started_at) VALUES ('s1', '${alice.id}', 'p', 0)`,
+      ),
+    );
+    opened.db.run(
+      sql.raw(`INSERT INTO turns (id, agent_id, session_id, started_at) VALUES ('t1', '${alice.id}', 's1', 0)`),
+    );
+    for (let index = 0; index < turnCount; index += 1) {
+      store.commit({
+        id: `m${index}`,
+        teamId: team.id,
+        fromAgentId: null,
+        toAgentId: alice.id,
+        body: `question ${index}`,
+        at: index * 2,
+      });
+      opened.db.run(
+        sql.raw(
+          `INSERT INTO agent_messages (id, turn_id, agent_id, kind, text, at)
+           VALUES ('a${index}', 't1', '${alice.id}', 'answer', 'answer ${index}', ${index * 2 + 1})`,
+        ),
+      );
+    }
+  };
+
+  it('cuts both halves at one time, so no answer arrives without its question', () => {
+    seed(60);
+    const window = store.transcriptOfTeam(team.id, { limit: 20 });
+
+    // Every answer in the window has the question it answers, and every question its answer:
+    // the two are one tick apart, so a ragged edge shows up as an unpaired index.
+    const questions = new Set(window.messages.map((message) => message.at + 1));
+    const answers = new Set(window.answers.map((answer) => answer.at));
+    expect([...answers].filter((at) => !questions.has(at))).toEqual([]);
+    expect([...questions].filter((at) => !answers.has(at))).toEqual([]);
+    expect(window.more).toBe(true);
+  });
+
+  it('returns the recent end, ascending, and says there is more above it', () => {
+    seed(60);
+    const window = store.transcriptOfTeam(team.id, { limit: 20 });
+
+    // Each half ascending, which is what the store promises. The two are *not* interleaved
+    // here and must not be: they live in different tables and the pane merge-sorts them.
+    const ascending = (times: number[]): boolean =>
+      times.every((at, index) => index === 0 || at > (times[index - 1] as number));
+    expect(ascending(window.messages.map((row) => row.at))).toBe(true);
+    expect(ascending(window.answers.map((row) => row.at))).toBe(true);
+    // The newest thing the team said is in it. A window that reached back from the *start*
+    // would be a pane that opens on the beginning of a week-old conversation.
+    const times = [...window.messages.map((row) => row.at), ...window.answers.map((row) => row.at)];
+    expect(Math.max(...times)).toBe(59 * 2 + 1);
+    expect(window.more).toBe(true);
+  });
+
+  it('pages upward without repeating or skipping a turn', () => {
+    seed(60);
+    const first = store.transcriptOfTeam(team.id, { limit: 20 });
+    const before = Math.min(
+      ...first.messages.map((row) => row.at),
+      ...first.answers.map((row) => row.at),
+    );
+    const second = store.transcriptOfTeam(team.id, { limit: 20, before });
+
+    const bodies = [...second.messages, ...first.messages].map((row) => row.body);
+    expect(new Set(bodies).size).toBe(bodies.length);
+    // Contiguous: the two pages together are an unbroken run of questions, so nothing between
+    // them was dropped by the cutoff.
+    const indexes = bodies.map((body) => Number(body.replace('question ', ''))).sort((l, r) => l - r);
+    expect(indexes.at(-1)! - indexes[0]!).toBe(indexes.length - 1);
+  });
+
+  it('says there is nothing above a conversation it can hold whole', () => {
+    seed(5);
+    const window = store.transcriptOfTeam(team.id, { limit: 20 });
+    expect(window.messages).toHaveLength(5);
+    expect(window.answers).toHaveLength(5);
+    expect(window.more).toBe(false);
+  });
+
+  it('is empty and settled for a team that has said nothing', () => {
+    expect(store.transcriptOfTeam(team.id)).toEqual({ messages: [], answers: [], more: false });
+  });
+});
+
+describe('Routines', () => {
+  const daily: Schedule = { kind: 'daily', hour: 9, minute: 0 };
+  const make = (over: Partial<Routine> = {}): Routine =>
+    store.createRoutine({
+      id: 'rt_1',
+      agentId: alice.id,
+      name: 'hacker news',
+      prompt: 'summarise hacker news and send it back to me',
+      schedule: daily,
+      armed: false,
+      createdAt: 1_000,
+      ...over,
+    });
+
+  it('round-trips each of the three schedule shapes, and stores no expression', () => {
+    make({ id: 'rt_h', schedule: { kind: 'hourly', minute: 5 } });
+    make({ id: 'rt_d', schedule: daily });
+    make({ id: 'rt_w', schedule: { kind: 'weekly', weekday: 1, hour: 18, minute: 30 } });
+
+    expect(store.routineById('rt_h')?.schedule).toEqual({ kind: 'hourly', minute: 5 });
+    expect(store.routineById('rt_d')?.schedule).toEqual(daily);
+    expect(store.routineById('rt_w')?.schedule).toEqual({
+      kind: 'weekly',
+      weekday: 1,
+      hour: 18,
+      minute: 30,
+    });
+  });
+
+  it('lands disarmed, because a person is the only thing that arms one', () => {
+    make();
+    expect(store.routineById('rt_1')?.armed).toBe(false);
+    store.setRoutineArmed('rt_1', true);
+    expect(store.routineById('rt_1')?.armed).toBe(true);
+  });
+
+  it('belongs to one agent on one team, and is found by that agent', () => {
+    make();
+    make({ id: 'rt_2', agentId: bob.id, name: 'standup' });
+    expect(store.routinesOfAgent(alice.id).map((one) => one.id)).toEqual(['rt_1']);
+    expect(store.allRoutines()).toHaveLength(2);
+  });
+
+  it('settles a moment so the same missed firing is never counted twice', () => {
+    make();
+    store.settleRoutine('rt_1', 9_000);
+    expect(store.routineById('rt_1')?.lastSettledAt).toBe(9_000);
+  });
+
+  it('keeps a tombstoned Routine out of the scheduler’s reach', () => {
+    make();
+    store.tombstoneRoutine('rt_1', 5_000);
+    expect(store.allRoutines()).toEqual([]);
+    // The run history outlives it: the rows still point at a row that exists.
+    expect(store.routineById('rt_1')).toBeDefined();
+  });
+
+  it('counts consecutive failures, and stops at the last run that worked', () => {
+    make();
+    const run = (id: string, firedAt: number, outcome: RoutineOutcome, reason?: string): void => {
+      store.recordRoutineRun({ id, routineId: 'rt_1', firedAt, outcome, ...(reason === undefined ? {} : { reason }) });
+    };
+    run('a', 1, 'ran');
+    run('b', 2, 'skipped', 'blobot was not open');
+    run('c', 3, 'stopped', 'needed permission for git push');
+    expect(store.consecutiveRoutineFailures('rt_1')).toBe(2);
+
+    run('d', 4, 'ran');
+    expect(store.consecutiveRoutineFailures('rt_1')).toBe(0);
+  });
+
+  it('reports a report nobody has read, and forgets it once the pane is opened', () => {
+    make();
+    store.recordRoutineRun({ id: 'a', routineId: 'rt_1', firedAt: 10, outcome: 'ran' });
+    store.recordRoutineRun({ id: 'b', routineId: 'rt_1', firedAt: 20, outcome: 'skipped' });
+
+    // A skipped firing started no turn, so there is nothing to have read.
+    expect(store.unseenRoutineRuns([alice.id, bob.id])).toEqual([{ agentId: alice.id, firedAt: 10 }]);
+
+    store.markRoutineRunsSeen(alice.id, 30);
+    expect(store.unseenRoutineRuns([alice.id, bob.id])).toEqual([]);
+  });
+
+  it('records which firing delivered a message, and nothing on an ordinary one', () => {
+    make();
+    store.recordRoutineRun({ id: 'run_1', routineId: 'rt_1', firedAt: 10, outcome: 'ran' });
+    store.commit({
+      id: 'm1',
+      teamId: team.id,
+      fromAgentId: null,
+      toAgentId: alice.id,
+      body: 'summarise hacker news',
+      at: 10,
+      routineRunId: 'run_1',
+    });
+    store.commit({
+      id: 'm2',
+      teamId: team.id,
+      fromAgentId: null,
+      toAgentId: alice.id,
+      body: 'hello',
+      at: 20,
+    });
+
+    expect(store.byId('m1')?.routineRunId).toBe('run_1');
+    expect(store.byId('m2')?.routineRunId).toBeUndefined();
   });
 });

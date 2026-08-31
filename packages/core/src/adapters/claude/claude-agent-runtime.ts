@@ -447,6 +447,65 @@ export class ClaudeAgentRuntime implements AgentRuntime {
     this.#connection?.notify('session/cancel', { sessionId: this.#sessionId });
   }
 
+  /** True: the persona is a `session/new` parameter, so a session carries the text it was
+   *  opened with and a fresh one takes whatever the definition says today. */
+  get personaIsSessionBound(): boolean {
+    return true;
+  }
+
+  /**
+   * Close this session and open a fresh one, without respawning the bridge.
+   *
+   * The process is not the problem and killing it would cost a second and a half for nothing:
+   * what has to go is the conversation, which lives on the session id. Everything the session
+   * was launched with is re-supplied here rather than inherited, because `session/new` is the
+   * only place any of it can be said — the persona, ticket 14's mode, and the user's option
+   * choices are all `session/new` parameters or `set_config_option` calls against a session id
+   * that is about to change.
+   *
+   * The old session is closed **first**. A bridge holding two live sessions for one agent is
+   * two sets of tools pointed at one worktree, and the second one would still be there after a
+   * failure that leaves us reporting the session was kept.
+   */
+  async restart(): Promise<void> {
+    const connection = this.#connection;
+    if (connection === undefined || this.#lifecycle !== 'ready') {
+      throw new Error(`${this.agentId}: cannot restart a runtime that is ${this.#lifecycle}`);
+    }
+    if (this.#turn !== undefined) {
+      throw new Error(`${this.agentId}: cannot restart mid-turn`);
+    }
+    const previous = this.#sessionId;
+    this.#sessionId = '';
+    if (previous !== '') {
+      await connection.request('session/close', { sessionId: previous }).catch(() => undefined);
+    }
+    try {
+      const session = await this.#newSession(connection);
+      if (session.sessionId === undefined) {
+        throw new Error(`${this.agentId}: the bridge returned no sessionId`);
+      }
+      this.#sessionId = session.sessionId;
+      this.#modeId = session.modes?.currentModeId;
+      // A fresh session is not a resumed one, and the surface that says whether an agent came
+      // back knowing yesterday must not keep saying yes about a session that knows nothing.
+      this.#resumed = false;
+      await this.#applyPermissionMode();
+      this.#optionGroups = await applyOptionChoices(
+        connection,
+        this.#sessionId,
+        this.#options.options ?? {},
+        optionGroupsFrom(session.configOptions, SURFACED_OPTIONS),
+        (line) => this.#options.onStderr?.(line),
+      );
+    } catch (error) {
+      // Dead rather than ready: the old session is closed and the new one never opened, so
+      // there is nothing here to prompt and saying otherwise would strand the next turn.
+      this.#setLifecycle('dead');
+      throw error;
+    }
+  }
+
   async stop(): Promise<void> {
     if (this.#lifecycle === 'stopped') return;
     this.#setLifecycle('stopped');

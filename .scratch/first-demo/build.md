@@ -860,6 +860,16 @@ divergence, which already exists and is already recorded here (Mara, starting fr
 transcript she could not remember). The context gauge is on screen; withholding the remedy while
 showing the problem is the worse trade.
 
+> **Corrected 2026-08-30, by `.scratch/transcript-scale/10`.** Two things above were false when
+> written and one of them is still worth reading. *"The context gauge is on screen"* was an
+> argument made against a gauge that did not exist yet; it shipped with ticket 05 and the
+> sentence is true now. And *"withholding the remedy"* framed `/compact` as the whole remedy,
+> which it no longer is: blobot chooses the moment itself, per agent and on by default, firing
+> the runtime's own compaction and falling back to a handoff and a fresh session. The palette
+> entry stays, because a person may still want to choose the moment themselves. The half that
+> stands unchanged is the one about *transcript divergence*: an agent coming back under a
+> conversation it cannot remember is a real cost, and it is exactly what the handoff is for.
+
 **Three hazards a menu filter cannot fix got their own effort**, `.scratch/runtime-posture/`,
 because a hidden command still runs when typed:
 
@@ -2980,7 +2990,467 @@ silent and blobot offers no remedy for it, unlike a runtime, because it gates no
 `RuntimeSetup`-style way out is available if that turns out to be wrong. And the publish path
 has never been *clicked*: `publishBranch` is covered, and no test pushes.
 
-Unrelated and worth knowing: **`--pane=<agentId>` does not survive the first snapshot.** The
-reset in `App.tsx` consumes `wanted` before the roster arrives, so a screenshot of an agent's
-pane comes back on the team pane. Seeding `wanted` from the flag was tried and does not fix it.
-The line under the composer is covered by `Workspaces.test.tsx` instead.
+### The tray, 2026-08-30
+
+Second pass, against the same screenshot with the whole composer in it. The line was a sentence
+under the field, and a sentence under the field reads as *another thing on the page*. It is not
+another thing: it is the field's own footing, saying where what you are about to send will land.
+
+So it is a **tray tucked under the pill** — inset 22px on both sides, clearing the pill's own
+corner radius, with its top edge hidden behind it. That overlap needs one stacking context, so
+the tray is a **child of the composer** (`footer?: React.ReactNode`) rather than a sibling of it,
+and `.pill` takes `position:relative;z-index:1` to be the thing in front. A node and not a
+status, so the composer still knows nothing about branches or pull requests.
+
+Two slots, pushed apart rather than centred, because they are read at different moments and a
+centred row makes them one sentence. **Left is the place**: `checkout`, `a copy` or
+`repositories` in blobot's own words, then what is loose in it. **Right is the destination**: the
+pull request, or the offer to open one, and the branch. Those last two share one slot and can
+never both appear, since one says the work is already somewhere and the other that it is
+nowhere.
+
+Not copied from the screenshot: the accent on `#142` (the blobatars are the only saturated thing
+on screen) and the two-row card the input sits in, which would mean rebuilding the composer's own
+shape — `.pill` keeps its 22px and every control still descends from it, which is what DESIGN.md
+actually pins. Only the radius was ever open, and it did not need to move.
+
+### The publish form is a popover, 2026-08-30
+
+It was an expander under the tray, and an expander was wrong twice over. It pushed the composer's
+own footing around to make room for a form, so asking a question moved the thing the question was
+about; and a title field, a checkbox, two command lines and two buttons stacked at the tray's
+full width read as a section of the page rather than as one control's own business.
+
+`@radix-ui/react-popover` is the fourth Radix primitive in the app, taken under DESIGN.md's
+standing rule — behaviour, never looks. Outside-click, Escape and focus returned to the trigger
+are the half nobody screenshots, and this is a form whose button pushes a branch. Anchored
+`side="top" align="end"`, because the tray sits at the foot of the window and the trigger is on
+the row's right. Styled from the tokens at `.field`'s ground, border and radius, 420px so a
+command line is read without wrapping mid-flag.
+
+### Not fixed: `--screen=` and `--pane=` do not work at all
+
+Found while trying to review the popover, which only exists on a surface a screenshot cannot
+click into — the exact thing those flags are for. First diagnosed as the pane reset in `App.tsx`
+consuming `wanted` before the roster arrives, and a fix for that was written and then **reverted**,
+because `--screen=agents` fails the same way and it opens no pane at all: the hash `main`
+puts on `loadFile` is not reaching `window.location.hash` in the renderer, so `opened` is empty
+and every flag that rides on it is dead. That is one bug under several documented affordances
+(`--pane`, `--screen=agents|hire|new-team|find|delete-team`), and it is worth its own look rather
+than a guess. Until then the tray and the popover are covered by `Workspaces.test.tsx`, which
+clicks the trigger and asserts the popover is portalled out of the tray.
+
+### A warning about this working tree, 2026-08-30
+
+`packages/core/src` was deleted from the working tree in the middle of this session — all 107
+files, by something outside it, alongside a `chore: wip` commit nobody in this session made. It
+was restored with `git checkout -- packages/core/src`, losing nothing, because the commit had
+already captured every file. It is recorded because of how it presented: `electron-vite build`
+failed with *"Failed to resolve entry for package @blobot/core"* and, with its output silenced,
+several screenshots were taken against a stale bundle and read as real. **If a screenshot
+disagrees with the code, build with the output visible before believing either.**
+
+### The composer's tray is one control, and it is the branch, 2026-08-30
+
+The tray under an agent's composer carried a paragraph: the kind of workspace and its counts on
+the left (`checkout · clean · 3 ahead · no pr`), the pull request or the offer to open one, the
+branch, and a refresh on the right. Under an *agent's own* composer most of that was a constant
+description of a folder standing where the one fact a person acts on should be. It is now the
+branch alone, and the branch is a control.
+
+All of it still exists in the team pane's `WORKSPACE` block, which is where it varies from member
+to member and is worth comparing. Publishing is reachable from there and only from there now. The
+four claims that used to be tested through the tray (clean versus nothing, `no pr` versus *we
+could not look*, a copy, a missing workspace) moved into the panel's tests rather than being
+deleted.
+
+**`workspace/branches.ts`** is the new module: `listBranches`, `switchBranch`, `currentBranch`.
+Local branches only, so nothing here touches the network. Three decisions worth keeping:
+
+- **A branch another worktree holds is drawn and refused, never hidden.** git will not check one
+  branch out twice; the refusal is the interesting fact, and `heldBy` carries the path so main can
+  turn it into `Bob has it` or `the project folder has it`. Dropping the row would send the user
+  hunting for a branch they can see in their own terminal.
+- **`currentBranch` is now what status and publish read.** `blobot/<team>/<agent>` is what the
+  provider *created*; once a person can switch, the two come apart, and an app that reports or
+  pushes the branch it named rather than the branch that is checked out is lying about the folder
+  in front of the user. `readAgentWorkspaceStatus` and `publishTarget` both fall back to the
+  provider's name only when git will not answer.
+- **The switch is the user's, and nothing else's.** No runtime is told, nothing enters a session,
+  and `git switch` is on no trust level's allowlist, so an agent cannot do this for itself. It is
+  not a restart either: the session's cwd is the same directory, and what changed is what is in it,
+  exactly as if a person had switched branch in a terminal an agent was working in.
+
+The menu is Radix's popover with cmdk's list, the same division `RuntimeOptions` uses, and it
+borrows `.selectmenu` / `.selectitem` / `.optionsfilter` outright. **Its field is not the
+twelve-row filter threshold arriving early**: it is where a new branch is named, and a menu that
+filters with the same words it creates with is one control instead of a list plus a form.
+
+Verified against real git in a scratch repository with three worktrees: the held branches come
+back with their holders, `git switch` onto a teammate's branch is refused in git's own words,
+onto a free branch it works, `-c` cuts a new one and a duplicate name is refused. **Not
+screenshotted**: `--demo` leaves `store` undefined, so `blobot:workspaceStatus` returns nothing
+and the tray does not draw in demo mode at all. `Workspaces.test.tsx` covers the menu instead.
+
+### The tray commits, and says what there is to commit, 2026-08-30
+
+The pull request came back to the tray, in the borderless style the branch had taken, and the
+left slot came back with two things that are not descriptions: **`+412 −7`** and a **commit**.
+
+`workspace/churn.ts` reads the lines. Against `HEAD`, because that is what a commit from here
+would take, and it is deliberately not the same number as `ahead`, which counts commits against
+the base. **Untracked files count as the additions committing them would make** — git will not
+diff a file it has not been told about, and telling it means writing to the index, so each one is
+diffed against `/dev/null` instead. That is a subprocess per file, so there is a ceiling of 100
+and a `partial` flag past it: the alternative is a tray that quietly under-reports, or one that
+spends a thousand processes on a number nobody asked for that precisely.
+
+`workspace/commit.ts` is `git add -A` then `git commit -m`, with both commands shown in the
+popover before they run, which is the rule `detect/remedies.ts` set and `publish.ts` follows.
+**The message is typed and is never generated**: blobot provides no inference, and asking the
+agent that wrote the code to name what it did puts a second opinion about unread work into the
+permanent record. `git commit` and `git add` are on no trust level's allowlist and stay off it.
+
+**The commit is disabled while that agent's status is not `idle`.** A commit taken mid-turn
+captures a file the agent is halfway through writing, which is a state nothing was ever in. It is
+disabled rather than absent, because a control that disappears while an agent happens to be
+thinking reads as a bug.
+
+Found live, and worth keeping: `git commit` with nothing staged exits 1 and prints a paragraph
+that *begins* `On branch try-it`, so reporting the first line of stdout told the user the branch
+name where it meant *nothing to commit*. `whyNothing` looks for the sentence rather than taking
+the first line, and `commit.test.ts` pins the real paragraph.
+
+Verified against a real repository: a staged edit and two untracked files read as `+6 −0` over
+two files, the commit lands and returns its short sha, the churn falls to zero and `ahead` rises
+to 1, and a second commit is refused in git's own words.
+
+### The typefaces were being fetched from Google, 2026-08-30
+
+Asked whether the font was really Geist, because it looked wrong. It was and it was not:
+`--sans` and `--mono` named Geist and Geist Mono, and the only source of either was a `<link>` to
+`fonts.googleapis.com` in `index.html`. Geist is not installed on this machine (`fc-list` finds
+nothing), there were no font files in the repository, and nothing in `node_modules` carried them,
+so every render was either a network fetch or a silent fall through to `ui-sans-serif` /
+`ui-monospace` with nothing on screen saying which.
+
+That is a cloud dependency in an app whose first architectural rule is that it has none, and the
+visible symptom is an interface that looks different on a train.
+
+Now `@fontsource/geist-sans`, `@fontsource/geist-mono` and `@fontsource/caveat`, imported in
+`main.tsx`, latin subset only and only at the weights DESIGN.md names: 300/400/500/600 sans,
+400/500 mono, 500 hand. About 190 KB of woff2 in the bundle. `index.html` requests nothing.
+
+One trap worth naming: **the bundled family is called `Geist Sans`, not `Geist`.** The token
+would have kept falling through to the system stack while the faces sat in the bundle unused, so
+`--sans` names both, the bundled name first.
+
+### A second session is editing this working tree, 2026-08-30
+
+`model.ts`, `Conversation.tsx`, `Rail.tsx`, `sqlite-store.ts` and `.scratch/transcript-scale/`
+changed under this session without it touching them. A build taken mid-edit produced a renderer
+that threw `oldestOf is not defined` and painted nothing, which reads exactly like a font change
+having broken the app. It was not. This is the second time this tree has done this to a session
+(see the warning above about `packages/core/src`): **if the app goes blank, run `typecheck`
+before believing the last thing you changed did it.**
+
+### The holder is a face, the counts take the pair, and the composer has a floor, 2026-08-30
+
+Three changes from one review pass.
+
+**`Bob has it` is Bob's face.** The branch menu draws the holder rather than describing them,
+which is what DESIGN.md keeps blobatars for: a list of names where the reader is looking for a
+person. It carries the agent's **stored hue** (`heldBy.agentHue`, added to `AgentBranch` and
+`UiBranch`) rather than letting `Blob` derive one from the name, because a derived colour would
+be a second Bob and a hue is an identity here. The two holders that are not agents keep their own
+marks and never get a face: the Workspace itself gets a folder glyph, a worktree nobody here made
+keeps its last path segment. The sentence survives on the row's `title`, since a face says *who*
+and not *why this row is refused* — the row's dimming says that, and the face keeps its colour
+inside the dimming.
+
+**The colour rule widened, by the author.** The 2026-08-30 exception was written as *one* place;
+it is now the two tests that place passed — the hue must reinforce something already legible
+without it, and the chroma must be low enough that a blobatar still wins the eye. So the tray's
+uncommitted `+412 −7` wears `--added` / `--removed` like the transcript's diff counts do. They
+are the same object at a different altitude and colouring one while greying the other read as an
+inconsistency rather than as a rule.
+
+**The tray has a tone.** `--tray`, between `--ground` and `--raised` and very slightly cool. It
+was drawn on the page's own black, which made a bar sitting *behind* a lifted pill read as a hole
+cut in the page rather than as a shelf under it. Written down because the first attempt at this
+was wrong in an instructive way: it put a band and a scrim under the whole composer area, which
+is a different change nobody asked for. The ask was the bar.
+
+## Built, 2026-08-30: the rail is a list of agents under headings
+
+Operator-driven, and a ticket 12 reopen — the amendment is on
+`.scratch/first-demo/issues/12-team-and-conversation-ui.md` and `DESIGN.md`'s *Screens* section
+carries each reversal with its reason. Three things changed, in the order they were asked for.
+
+**A chevron in a gutter on every team row.** The row was already a disclosure and nothing on
+screen said so. It is an indicator, not a control: not a button, `aria-hidden`, and the row stays
+one click target, because exactly one team is open and a twisty that could collapse the team you
+are reading would have to invent an *open but collapsed* state. A team with nobody on it keeps
+the gutter and loses the glyph. `.teamgroup > .roster` is indented by exactly that gutter — 18px
+— which keeps the rule that every blobatar in the column shares one left edge rather than trading
+it away, and the *"not indented under their team"* comment that contradicted it was rewritten.
+
+**The folder is gone; the mark is the project icon, and faces only where there is no icon.** The
+noise objection was correct and the container was the noise. The reversal of *"the icon never
+replaces the mark"* is on the reopened ticket. `TeamMark` lost both SVG paths, the `status` and
+`open` props, the `--cut` against the panels and the sticker arithmetic; `peekLayout` now fills
+the box rather than fitting inside a folder, centres vertically rather than sitting high to be
+cropped, and **gives the last slot to the `+N` rather than labelling a fourth member on a panel
+that no longer exists** — so a team of five is two faces and a `+2`.
+
+**A team row is one small line.** 20px mark, one line of 12px name, and at the right either the
+folded status or `lastActive`, one at a time, because status outranks recency. The rows were the
+same box as an agent row down to the padding; they are deliberately shorter now, which is the
+opposite of the failure that rule was written against. `led by Alice` went with the second line
+and is `LEAD` on the lead's own row.
+
+### The face flight is deleted, and that is the real loss
+
+`useTeamOpening` threw each member out of the folder into its row on open. It was the best thing
+in the interface — the only part that *said* the rows are the folder's contents rather than
+merely laying them out that way — and it is gone, along with `Blob`'s `face` prop and the
+`data-face` / `data-arriving` hooks that existed only to serve it. With a project icon in the
+mark it could only ever have run on half the teams, and a face travelling out of a favicon is not
+a sentence. Half a gesture that fires on some rows and not others is worse than none: the user
+would be learning which teams animate, which is not a fact about anything. The roster's height
+growth and the staggered fade remain, and the **whole row** fades now rather than its text alone,
+because the face beside it is no longer busy travelling.
+
+### The roster is set down off its heading, and flush left under it
+
+With only the agent row's own 9px of padding above it, the first face sat almost against the
+heading's box: about 10px, against the 18px between the rows themselves. A heading needs air
+under it more than a row needs air above it, or the group reads as one crushed block rather than
+a title and a list. `.teamgroup > .roster` adds 7px, on the box and not on the first row, so the
+agent rows keep one rule for all three of them.
+
+Worth recording that this was got backwards first: the same 10px was read as *too loose* and
+tightened to 5, which was the wrong direction entirely. The measurement was right and the
+judgement about what it meant was not.
+
+**The indent came out too.** It was the width of the twisty's gutter, on the argument that the
+mark had moved right so the faces under it should move with it and keep every blobatar on one
+left edge. That was arithmetic winning over the eye: an agent row is the substance of this column
+and a team row is a label on it, and stepping the substance in made the roster read as a nested
+sub-list rather than as the rail's own contents. Flush left, the faces sit under the chevrons and
+the names land within a couple of pixels of the team names anyway. It settled at 8px — half the gutter. Flush left
+was the correction to the arithmetic and overshot it: with no indent at all the two kinds of row
+read as one flat list and the group lost its shape. Half a gutter says *these belong to that*
+without claiming a second level, and the chevron column carries the rest.
+
+**The air between shut teams is padding, not margin.** A column of one-line rows with 4px of
+their own padding ran together into the block of text the short row was made to avoid, and buying
+the gap back with margin alone left thin rows floating in it — a list pulled apart rather than one
+with room in it. `.teamrow` padding went 4px → 7px, so the box the row *is* grows and the hover
+and selection grounds grow with it, and `.teamrow.off`'s margin is 2px: the minimum that keeps two
+grounds from touching.
+
+### Two traps in the stylesheet, both hit
+
+`.roster` is the rail's open team *and* the creation flow's agent list, in the one flat
+namespace — an unscoped `padding-left` indented the creation flow too. It is `.teamgroup >
+.roster`. And rewriting the `.teamrow` block silently swallowed the twisty rules that had been
+inserted just above the anchor, so the chevron stopped rotating and the screenshot was the only
+thing that caught it. Both are `DESIGN.md`'s *"a generic class name in a new screen is a live
+grenade"*, collected twice in one change.
+
+### Not fixed, and worth a look
+
+**A dark project icon at 20px, greyed, is nearly invisible on the near-black rail.** `grupo-titanio`
+and `mimrai` are almost gone in the screenshot. The greying is not negotiable — it is the
+governing rule — but nothing lifts a dark logo off a dark ground, and the mark carries the whole
+identity of the row now that the faces have stepped back. Worth a floor on luminance, or a plate
+behind the icon, before this is called done.
+
+**The screenshot harness collides with a running `electron-vite dev`.** A `--screenshot` run
+started while the app is up returns a single flat colour with no error at all, and its own logs
+look perfectly healthy while it happens. **Do not reach for `pkill -f electron`** — that is the
+operator's own dev server and their open window, and killing it was done twice here before the
+process table was actually read. Retry the capture instead; it succeeds once the other instance
+settles, and the dev server hot-reloads the change into the window that is already open anyway.
+
+## Built, 2026-08-30: blobot chooses the moment, and still does not compact
+
+`.scratch/transcript-scale/issues/10-compaction-by-handoff.md`. The last of that effort's
+buildable tickets, unblocked by ticket 09's working ceiling. It reverses one sentence of this
+repo's own rule, narrowly, and the narrowness is the whole of it.
+
+**What TanStack's shape would have needed, and why we could not have it.** The proposal came
+from reading their compaction middleware, whose good part is a split: `withCompaction` rewrites
+*provider context* before each model call and leaves the canonical transcript alone. All of it
+requires owning the array you send to the provider, and we do not. This is the whole of what
+goes out per turn on all three adapters:
+
+```
+session/prompt { sessionId, prompt: [ ...attachments, { type: 'text', text } ] }
+```
+
+A session id and this turn's blocks. The conversation lives inside the CLI, the API call is made
+with the CLI's credentials, and no ACP method hands us the history to rewrite. So the middleware
+is unavailable on the merits rather than declined, and the *"blobot does not compact"* rule is
+not softened at all: no inference of blobot's own, no summary written by blobot, no history
+rewritten by blobot.
+
+**What is ours is a session boundary**, and that is what changed. blobot calls `session/new`,
+composes the persona and holds the mailbox, so it can choose the *moment*: the runtime's own
+compaction first — one turn, same session id, written by people who can see the real message
+list — and where that is missing or did not bring the session under the ceiling, ask the agent
+for a handoff and open a fresh session with it. Two mechanisms, ordered, not one replacing the
+other.
+
+**The reason a restart is survivable here is architectural rather than clever.** An agent's real
+state is a git worktree, not a conversation. A chat app that drops a session loses everything; an
+agent that drops one keeps its branch, its commits, its working tree and the `WORKSPACE` line
+that says so. Checked rather than assumed: the loopback token is per agent and not per session
+(`peer-message-server.ts`, "the token is the identity"), the mailbox is the orchestrator's, and
+the workspace is untouched. What does not survive is the session id, which is why
+`onCompaction` writes a new `sessions` row — without it the next launch would resume a session
+the provider has thrown away and silently cost the agent the handoff it had just been given.
+
+**Occupancy triggered and never time triggered.** Compaction *is* cache invalidation, by
+construction: rewriting the prefix guarantees a full cache miss. It buys headroom and quality
+and never cache economy, so a plan that expects a saving from it is wrong about the bill. A timer
+would be worse than useless — it fires on idle teams, paying a full uncached read of a context
+nobody is using to pre-pay a cost the user may never incur, and `TeamPool` holds three teams live
+precisely so switching is cheap.
+
+**Against ticket 09's ceiling, at 80% of it, because the handoff turn is the risk.** Only the
+agent can write its own handoff, so it costs one turn at maximum occupancy — the most expensive
+turn available and the one most likely to stop on `max_tokens`. Firing at the ceiling would mean
+asking for a handoff with nowhere to write it. A handoff turn that stops for any reason, writes
+nothing, or runs past 6,000 characters is a **refusal to restart**: the old session is kept, and
+the transcript says which of those happened. That is `bounds.ts`'s posture again — a refusal at
+the boundary, never a silent trim.
+
+**Found on the screen, and the one thing that had to change after it worked.** The first run drew
+three of blobot's own turns as three paragraphs in Alice's own voice, in a conversation where
+nobody had asked her anything: a compaction summary, a handoff written *to blobot*, and an
+acknowledgement of a note the user had not seen. A reader cannot tell those from an answer. So a
+compaction turn is published and recorded for what it **did** and not for what it **said** — its
+tool calls, its occupancy and its ending all land as usual, and the words go where they were
+addressed. The handoff rides the `context_compacted` event, is durable in `events`, opens inline
+in the transcript, and is archived to a file. `SPOKEN` in `orchestrator.ts` is that one rule.
+
+**The three answers the ticket reserved for the author**, all taken 2026-08-30:
+
+- **Per agent, on by default.** `compaction` on the profile and the agent row, `auto` or `off`,
+  NULL is `auto`. Per agent because a session, a window and a worktree are, and because two
+  agents on one team fill up at wildly different rates. On by default because a setting somebody
+  has to go and find helps exactly the people who were already going to type `/compact`.
+- **Named in the transcript and openable.** The line is `fresh session · 119k of 120k estimated ·
+  the handoff is below`, and the chevron opens onto the note. That is the reason to prefer this
+  to an opaque `/compact`, and a line that only said a session had been replaced would be asking
+  the reader to take blobot's word for what survived.
+- **The persona change is said out loud.** A fresh session takes the definition as it stands
+  today, which on a runtime that binds the persona to a session means an edit the user made hours
+  ago lands at a moment nobody chose. `AgentRuntime.personaIsSessionBound` is blobot's word for
+  that provider fact — true on Claude and Codex, false on OpenCode, which re-asserts its persona
+  agent after every resume — and the line says `standing instructions re-read` only where it
+  could actually have moved.
+
+**What is on screen and what is not.** The gauge still advises nothing: ticket 05's rule survives
+this ticket intact, and no line here offers `/compact`. What 05's amendment freed is the trigger,
+which is a different surface with its own consent, and that consent is the picker in the hire and
+edit dialogs.
+
+**Verified.** Typecheck, tests and build pass; 17 orchestrator tests for the path, four adapter
+tests for `restart()` against the fake bridge, three store tests for the round trip through
+`events`, and five renderer tests for the line and the disclosure. `MockAgentRuntime` grew
+`restart()`, a `restartFailure` option and two scenarios — `fills-up-and-keeps-going` (which ends
+**ordinarily** over the trigger, the case a kind mock would never produce) and
+`fills-up-and-can-compact`. `--demo --demo-scenario=fills-up` plays both mechanisms in order and
+is what the screenshot above was taken from.
+
+**Reversed within the hour, from the same live run.** The ticket shipped with two mechanisms
+ordered, the runtime's own `/compact` first on a cost argument. The author watched it run on a
+real agent at 223k and came back with a one-line verdict: it loses too much. So the ordering is
+gone — a handoff and a fresh session is the whole of what blobot does, and `AgentRuntime.compacts`,
+`compact()` and `adapters/acp/compaction.ts` went with it. `how: 'command'` stays in the
+vocabulary because rows written before this exist and must still draw. The cost is honest and
+stated on the ticket: every compaction is now two turns and a discarded session rather than one
+turn that keeps it, and the refusal path matters more because there is nothing cheaper to fall
+back to.
+
+**Fixed within the hour, from the author's first live run.** The compaction worked — a real
+Claude agent, `context compacted · 223k of 200k estimated`, the runtime's own command — and a
+prompt typed *during* it was refused by the adapter (`a turn is already in flight`) and lost.
+`promptFromUser` had never checked `#busy`, and had never needed to: until this ticket every turn
+was one the user or a peer began, and the composer is downstream of the status those produce. A
+compaction turn is neither. The message was committed and marked delivered before the throw, so
+it sat in the transcript with nothing left to answer it. A prompt for a busy agent is now left
+**undelivered** in the mailbox, which `#runTurn`'s own tail already drains; `#maybeCompact`
+refuses to start while a turn is in flight; and `#runTurn` only clears the `#busy` flag it
+claimed, so a refused prompt can no longer leave a live turn looking idle. Three tests.
+
+**Run live, later the same day, which closes ticket 10.** The handoff path had never touched a
+real runtime — the run above exercised the runtime's own compaction, and the amendment then
+deleted that mechanism, so the surviving path was the untested one.
+`packages/core/src/orchestrator/live-compaction.test.ts` drives a real `claude` through a real
+compaction under `BLOBOT_LIVE_CLAUDE=1` and passes. **No source is edited to make it fire**:
+`contextCeilings` is already an `OrchestratorOptions` field, so the test hands the agent a
+1,000-token ceiling and the first real turn trips the threshold at 26,970 used, which is better
+than lowering `COMPACTION_TRIGGER` by hand and hoping somebody remembers to put it back. It
+asserts the three things only a real agent can answer: that a handoff comes back at all rather
+than stopping on `max_tokens`, that `restart()` really closes the conversation, and — the part a
+mock cannot approximate — that what was written is **enough to carry the work across**, by asking
+the successor what it is doing when the handoff is the only route to that answer.
+
+**The measurement, and the specimen.** 1,473 characters against a 6,000 limit: firing with margin
+is not the binding constraint it was feared to be, and the refusal path is real but is not the
+common case. The handoff is quoted in full on the ticket, because it is the first one anybody
+here has seen. What is worth keeping from it is unprompted: the agent separated *what it had
+established* from *what it had assumed*, and told its successor to go and read `git status`
+rather than trust the note on the branch state. That is the behaviour the whole mechanism bets
+on, and `HANDOFF_PROMPT` never asks for it by name — what it does ask for shows up too, first
+person throughout and no transcribed code.
+
+**Still open, and now more load-bearing.** *"Next session" item 2* — surfacing whether an agent
+resumed or started fresh: a compaction is a second way for `runtime.resumed` to be false, and the
+transcript says so for that one while a relaunch still says nothing.
+
+## Built, 2026-08-30: the rail's doors move to its foot, and settings holds the machine
+
+Ticket 12's fourth rail amendment, from the operator, and it began as a proposal that was refused
+in one half and taken in the other.
+
+**The proposal.** Drop `YOUR AGENTS` and `ROUTINES` from the top of the rail, put a *Settings*
+row at the bottom, and make those two the sections of a settings screen with its own column.
+
+**The half that was refused, and why the operator took the refusal.** Neither is a setting.
+An AgentProfile is the roster — ADR-0001 — and hiring one is the first thing anybody does here;
+a Routine is standing work that produces turns in a transcript and can put an unread mark on a
+rail row. The tell offered was the mark: nothing behind a settings door should be able to put one
+on the rail. So *Settings* is a **third door**, not a lid over the other two.
+
+**The half that was right.** Two mono rows above `TEAMS` pushed the list down and read as a
+second list stacked on the first — the exact failure the team row was shortened to avoid two
+amendments ago. They are three doors at the foot now, over the rail's one hairline, named for
+what is behind them and not set in mono, because a heading names what is under it and there is
+nothing under these. `.railscroll` is the new scroll container so the doors stay put: a place
+that is not about any team must not sit at the far end of every team.
+
+**What made the third door worth having.** Runtime detection had no place of its own. Ticket 11's
+four states and ticket 11's remedies were reachable only from inside the hire dialog, so *is
+Codex signed in?* was a question you answered behind a decision about an agent you had not
+decided to hire. `Settings.tsx` is a working surface with a column of its own and one section,
+`Runtimes`: a row per runtime, the state, the version, the detail, and at most one remedy button
+handing off to the existing `RuntimeSetup` terminal. `READINESS_WORD` moved to `readiness.ts` and
+is shared with the picker, because two spellings of `needs_sign_in` would be two claims about one
+machine. A sidebar with one true item is more honest than four invented ones.
+
+**Two things the operator changed while the rail was open.** The hairline under the open team's
+roster is gone: the gap was already saying what it said, and the line made the roster read as a
+panel dropped into the list. And the list row is **filled** now — `.listrow`, `--raised` ground,
+no border, the hairline spent on hover instead of on every row at rest — adopted by the runtimes
+list, *your agents* and *routines* in the same change. Picker rows keep `.rosterrow`: a row whose
+job is chosen-or-not needs its unchosen state to be the quiet one.
+
+Typecheck and the desktop suite pass (358). Reviewed by screenshot on the real store rather than
+demo mode, since demo mode has none of these doors — `--screen=settings` and `--screen=agents`
+need `--screenshot-at` around 70s there, because the window paints nothing until the launch team's
+snapshot arrives.

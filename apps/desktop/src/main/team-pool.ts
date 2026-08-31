@@ -47,6 +47,8 @@ export class TeamPool<T extends PoolableTeam> {
   #live: T[] = [];
   /** In-flight starts, so two clicks on the same team do not spawn two sets of agents. */
   readonly #starting = new Map<string, Promise<T>>();
+  /** Teams held live by something other than the user looking at them. See {@link hold}. */
+  readonly #pinned = new Set<string>();
 
   constructor(options: TeamPoolOptions<T>) {
     this.#options = options;
@@ -73,19 +75,46 @@ export class TeamPool<T extends PoolableTeam> {
    * switching back to a team you were just in costs nothing and loses nothing.
    */
   async select(team: Team): Promise<T> {
-    const already = this.find(team.id);
-    if (already !== undefined) {
-      this.#promote(already);
-      return already;
+    return this.#bring(team, 'select');
+  }
+
+  /**
+   * Bring a team live **without putting it on screen**, and hold it there until it is let go.
+   *
+   * This is what a Routine firing needs. A firing is a reason to run a team and never a reason to
+   * switch the one the user is looking at, so the team goes in behind the active one rather than
+   * in front of it. It is pinned for as long as the run lasts because the run has not started a
+   * turn yet, and an idle team past the limit is exactly what the eviction rule collects: without
+   * the pin, a Routine on a fourth team could be evicted between being started and being asked to
+   * do anything. Issue 03's parking expiry is what keeps the pin from being permanent.
+   */
+  async hold(team: Team): Promise<T> {
+    this.#pinned.add(team.id);
+    try {
+      return await this.#bring(team, 'hold');
+    } catch (error) {
+      this.#pinned.delete(team.id);
+      throw error;
     }
+  }
+
+  /** The run is over. The team stays live, and is evictable again like any other. */
+  letGo(teamId: string): void {
+    if (!this.#pinned.delete(teamId)) return;
+    void this.evictIdle();
+  }
+
+  async #bring(team: Team, how: 'select' | 'hold'): Promise<T> {
+    const settle = (live: T): T => {
+      if (how === 'select') this.#promote(live);
+      return live;
+    };
+    const already = this.find(team.id);
+    if (already !== undefined) return settle(already);
 
     // Two selections of the same team race only until the first one resolves.
     const inFlight = this.#starting.get(team.id);
-    if (inFlight !== undefined) {
-      const started = await inFlight;
-      this.#promote(started);
-      return started;
-    }
+    if (inFlight !== undefined) return settle(await inFlight);
 
     const starting = this.#options.start(team);
     this.#starting.set(team.id, starting);
@@ -99,16 +128,18 @@ export class TeamPool<T extends PoolableTeam> {
     const raced = this.find(team.id);
     if (raced !== undefined) {
       await this.#close(live, 'over_limit');
-      this.#promote(raced);
-      return raced;
+      return settle(raced);
     }
-    this.#live.unshift(live);
+    // On screen goes to the front; held goes in behind whatever the user is looking at.
+    if (how === 'select') this.#live.unshift(live);
+    else this.#live.splice(1, 0, live);
     await this.#evict();
     return live;
   }
 
   /** Drop a team on purpose — it was deleted, or its agents changed under it. */
   async release(teamId: string): Promise<void> {
+    this.#pinned.delete(teamId);
     const live = this.find(teamId);
     if (live === undefined) return;
     this.#live = this.#live.filter((candidate) => candidate !== live);
@@ -117,6 +148,7 @@ export class TeamPool<T extends PoolableTeam> {
 
   /** Quitting. Everything stops, working or not: the window is going away regardless. */
   async closeAll(): Promise<void> {
+    this.#pinned.clear();
     const closing = this.#live;
     this.#live = [];
     await Promise.all(closing.map((live) => this.#close(live, 'closed')));
@@ -143,6 +175,7 @@ export class TeamPool<T extends PoolableTeam> {
       if (this.#live.length - doomed.length <= this.#options.limit) break;
       const candidate = this.#live[index];
       if (candidate === undefined || this.#options.isWorking(candidate)) continue;
+      if (this.#pinned.has(candidate.team.id)) continue;
       doomed.push(candidate);
     }
     if (doomed.length === 0) return;

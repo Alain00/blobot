@@ -40,6 +40,7 @@ export function Navigator({
   onSelectAgent,
   onSelectTeam,
   onOpenAgents,
+  onOpenSettings,
   onNewTeam,
 }: {
   /** The team on screen. Its agents are the ones a pane can be opened on directly. */
@@ -53,6 +54,8 @@ export function Navigator({
   /** Absent in demo mode, which has one team and no way to leave it. */
   onSelectTeam?: (teamId: string) => void;
   onOpenAgents?: () => void;
+  /** Opens *settings*. Absent in demo mode, which configures nothing that outlives it. */
+  onOpenSettings?: () => void;
   onNewTeam?: () => void;
 }): React.JSX.Element {
   const [query, setQuery] = useState('');
@@ -155,7 +158,6 @@ export function Navigator({
                       they are doing, and a team with nobody on it is still a folder. */}
                   <TeamMark
                     agents={row.members}
-                    status="idle"
                     {...(row.icon === undefined ? {} : { icon: row.icon })}
                     size={20}
                   />
@@ -165,7 +167,9 @@ export function Navigator({
               ))}
             </Command.Group>
 
-            {(onOpenAgents !== undefined || onNewTeam !== undefined) && (
+            {(onOpenAgents !== undefined ||
+              onNewTeam !== undefined ||
+              onOpenSettings !== undefined) && (
               <Command.Group heading="GO TO">
                 {onOpenAgents !== undefined && (
                   <Command.Item
@@ -181,6 +185,16 @@ export function Navigator({
                   <Command.Item value="place:new-team" keywords={['new team']} onSelect={onNewTeam}>
                     <span className="cmd">new team</span>
                     <span className="r">pick a folder and form a team</span>
+                  </Command.Item>
+                )}
+                {onOpenSettings !== undefined && (
+                  <Command.Item
+                    value="place:settings"
+                    keywords={['settings', 'runtimes', 'sign in', 'install']}
+                    onSelect={onOpenSettings}
+                  >
+                    <span className="cmd">settings</span>
+                    <span className="r">which runtimes this machine has</span>
                   </Command.Item>
                 )}
               </Command.Group>

@@ -3,7 +3,10 @@ import type {
   AgentStatus,
   AttachmentKind,
   AttachmentSupport,
+  CompactionSetting,
   Message,
+  RoutineOutcome,
+  Schedule,
   StopReason,
   TrustLevel,
 } from '@blobot/core/domain';
@@ -13,7 +16,101 @@ import type {
  * The three words are blobot's own, so this is not the provider vocabulary the UI is barred
  * from: no component learns which runtime is behind them or what either one does with them.
  */
-export type { TrustLevel };
+export type { CompactionSetting, TrustLevel };
+
+/**
+ * The schedule's three shapes, re-exported for the same reason the trust words are: it is a
+ * closed vocabulary of blobot's own, so a form that offers exactly these three is offering what
+ * the domain has rather than parsing an expression the renderer invented.
+ */
+export type { RoutineOutcome, Schedule };
+
+/**
+ * A Routine as the screen draws it: the row, and everything on it.
+ *
+ * Composed in main rather than assembled in the renderer, because the row is one sentence made
+ * of four tables — the Routine, its Agent, that Agent's Team, and the last `routine_runs` row.
+ * The renderer holds no database handle and this is the shape that keeps it that way.
+ */
+export interface UiRoutine {
+  readonly id: string;
+  readonly name: string;
+  readonly prompt: string;
+  readonly schedule: Schedule;
+  /** The schedule in the words it was chosen with. Never an expression, because there is none. */
+  readonly scheduleLabel: string;
+  /** What the shape costs, as a count of firings. Issue 06's amendment: a count, never a price. */
+  readonly frequencyLabel: string;
+  readonly armed: boolean;
+  /**
+   * Who it belongs to: **one agent on one team**, which is the identity an AgentWorkspace's
+   * branch is named for. The name and the team are absent when that agent has been taken off a
+   * roster — the Routine is kept and disarmed rather than reassigned, because blobot does not
+   * decide who a message is for.
+   */
+  readonly agentId: string;
+  readonly agentName?: string;
+  readonly agentHue?: number;
+  readonly teamName?: string;
+  /** When it next comes due. Absent while it is disarmed, because a disarmed Routine has none. */
+  readonly nextRunAt?: number;
+  /** The last firing. What the screen sorts on, so the overnight runs are at the top by morning. */
+  readonly lastRun?: UiRoutineRun;
+  /** Firings nobody was there for, since the last one blobot was there for. Absent is none. */
+  readonly missedFirings?: number;
+  /**
+   * The agent that asked for this, when an agent did. **Not who owns it — who asked.**
+   *
+   * Its presence with `armed: false` and no run behind it is what makes this a *proposal*, which
+   * issue 05 made load-bearing: a Routine the user disarmed is a decision they made, and a
+   * proposal is a decision they have not made yet.
+   */
+  readonly proposedByName?: string;
+}
+
+/**
+ * An agent put itself on a schedule, as the transcript draws it.
+ *
+ * Issue 05's 2026-08-30 amendment made `propose_routine` arm what it writes, and this block is
+ * the second of the four controls that pay for that: **a person is told, where it happened.**
+ * blobot still never interrupts; what it refuses is to let this happen off screen.
+ */
+export interface UiScheduledRoutine {
+  readonly routineId: string;
+  readonly agentId: string;
+  readonly name: string;
+  readonly schedule: string;
+  readonly frequency: string;
+  readonly at: number;
+  /** Whether it is still running. The block draws `disarm` only while this is true. */
+  readonly armed: boolean;
+}
+
+/** One firing, as the run history draws it. */
+export interface UiRoutineRun {
+  readonly id: string;
+  readonly firedAt: number;
+  readonly outcome: RoutineOutcome;
+  readonly reason?: string;
+}
+
+/** An agent a Routine can be given to: everyone on every team, since a Routine is per agent. */
+export interface UiRoutineTarget {
+  readonly agentId: string;
+  readonly agentName: string;
+  readonly agentHue?: number;
+  readonly teamName: string;
+}
+
+/** What a person filled in. The whole of a Routine, because saving one restates it. */
+export interface NewRoutineSpec {
+  readonly agentId: string;
+  readonly name: string;
+  readonly prompt: string;
+  readonly schedule: Schedule;
+}
+
+export type RoutineSaveResult = { readonly ok: true; readonly id: string } | { readonly ok: false; readonly error: string };
 
 /**
  * What the renderer is allowed to know about an agent.
@@ -39,6 +136,16 @@ export interface UiAgent {
    * agent whose team has not started: nothing has advertised anything yet.
    */
   readonly accepts: AttachmentSupport;
+  /**
+   * What blobot knows about where this agent's model stops being worth more context, in tokens.
+   *
+   * A number somebody established for this model, or **absent**, which is the ordinary case and
+   * means nobody has. The renderer turns it into a ceiling against whatever window the runtime
+   * reports (`workingCeiling`), falling back conservatively when it is absent — so the pane can
+   * draw the mark without ever learning which provider the number came from, and an unmeasured
+   * model is drawn honestly rather than not at all. See ticket 09.
+   */
+  readonly contextCeiling?: number;
 }
 
 /**
@@ -141,6 +248,21 @@ export interface UiTeamSummary {
   readonly lastActiveAt?: number;
 }
 
+/**
+ * A window of older transcript, for the `load earlier` control.
+ *
+ * The same two halves a snapshot carries and nothing else. It is deliberately not a snapshot:
+ * a snapshot *replaces* the pane, which is what it is for, and this adds to the top of one.
+ */
+export interface UiEarlier {
+  readonly messages: readonly Message[];
+  readonly answers: readonly UiAgentMessage[];
+  /** The same run-id-to-name map the snapshot carries, for the window above it. */
+  readonly routineOrigins?: Record<string, string>;
+  /** Whether anything remains above this window. False is what ends the control. */
+  readonly moreAbove: boolean;
+}
+
 /** One thing an agent said, as a restored pane draws it. Answers only — never thinking. */
 export interface UiAgentMessage {
   readonly id: string;
@@ -179,6 +301,29 @@ export interface UiLog {
   readonly running: readonly UiRunningTool[];
   readonly tools: readonly UiToolLog[];
   readonly turns: readonly UiTurnLog[];
+  /** Sessions blobot replaced, or decided to keep. Ticket 10. */
+  readonly compactions: readonly UiCompaction[];
+}
+
+/**
+ * One moment blobot chose, as the transcript rebuilds it.
+ *
+ * The handoff travels in the snapshot rather than being fetched on disclosure, and that is a
+ * decision: it is a page of text at most, there are a handful of them in a team's whole history,
+ * and a fetch would make the one row a reader opens the one row that can fail to open.
+ */
+export interface UiCompaction {
+  readonly agentId: string;
+  readonly at: number;
+  readonly how: 'command' | 'handoff' | 'refused';
+  readonly used: number;
+  readonly ceiling: number;
+  readonly measured: boolean;
+  /** The fresh session took the agent's standing instructions as they stand now. Ticket 10. */
+  readonly personaRefreshed?: boolean;
+  readonly handoff?: string;
+  readonly handoffPath?: string;
+  readonly reason?: string;
 }
 
 /** A call the store knows started and has not seen end. */
@@ -295,8 +440,48 @@ export interface UiSnapshot {
   readonly messages: readonly Message[];
   /** The team's own words, so a restart shows a conversation rather than half of one. */
   readonly answers: readonly UiAgentMessage[];
+  /**
+   * Whether this team said anything above the window `messages` and `answers` carry.
+   *
+   * The transcript is bounded now, so a snapshot is the recent end of a conversation rather
+   * than the whole of it, and the pane has to say so: a reader who cannot tell the difference
+   * between "this is where the team started" and "this is where blobot stopped reading" has
+   * been told something false about their own history.
+   */
+  readonly moreAbove: boolean;
   /** Blocks nobody has answered yet, so a pane rebuilt mid-turn is not missing the question. */
   readonly permissions: readonly UiPermissionRequest[];
+  /**
+   * Which Routine each firing in this window belongs to, by run id, so the transcript can say
+   * `routine · nightly typecheck` above a prompt nobody typed at that hour.
+   *
+   * A name and not a flag. `messages.routine_run_id` is a **link**, because two screens ask two
+   * questions of it — *which Routine* here, and *has that run been seen* in the rail — and a
+   * boolean answers neither without a second lookup.
+   *
+   * Optional because absent and empty say the same thing, which is what a transcript with no
+   * Routine in it costs: nothing.
+   */
+  readonly routineOrigins?: Record<string, string>;
+  /**
+   * Agents carrying a Routine run the user has not looked at. Issue 11's unread mark.
+   *
+   * Every agent on every team, not just the one on screen: the mark folds onto the team row the
+   * same way `StatusWord` does, and a signal only visible once you are already on the team
+   * answers nothing.
+   *
+   * Optional for the same reason as above: nobody's morning has an empty list in it.
+   */
+  readonly unread?: readonly string[];
+  /**
+   * Routines this team's agents scheduled for themselves, within the transcript window.
+   *
+   * Restored from the rows rather than from an event log, which is what makes the transcript
+   * block survive a relaunch and a team switch: the Routine *is* the record, and a block that
+   * only existed while the app happened to be watching would be a disclosure you could miss by
+   * being on another team.
+   */
+  readonly scheduled?: readonly UiScheduledRoutine[];
   readonly turnsThisPrompt: number;
   /** Named so nobody mistakes the demo for real agents. */
   readonly demoMode: boolean;
@@ -390,6 +575,13 @@ export interface UiWorkspaceStatus {
   readonly branch?: string;
   readonly present: boolean;
   readonly changed?: number;
+  /**
+   * The same uncommitted work in lines, which is the figure a person decides on: *+412 −7* and
+   * *+4 −3* are two different afternoons and `3 changed` calls them the same thing. Against
+   * `HEAD`, so it is what a commit from here would take, and untracked files count as the
+   * additions committing them would make.
+   */
+  readonly churn?: UiChurn;
   readonly ahead?: number;
   readonly pushed?: boolean;
   readonly pr?: UiPullRequest;
@@ -402,6 +594,51 @@ export interface UiPullRequest {
   readonly title: string;
   readonly url: string;
 }
+
+/**
+ * One row in the branch menu under an agent's composer.
+ *
+ * `heldBy` is why a row cannot be chosen, and it is a name rather than a path: git refuses to
+ * check one branch out into two worktrees, and *Bob is standing on it* is the answer to the
+ * question the refusal raises. The renderer says the words; main does the mapping, because
+ * knowing which directory belongs to which agent is not the renderer's business.
+ */
+export interface UiBranch {
+  readonly name: string;
+  readonly current: boolean;
+  readonly heldBy?: {
+    readonly path: string;
+    readonly agentName?: string;
+    /** Their own hue, so the row draws that agent's face and not a second one. */
+    readonly agentHue?: number;
+    readonly isWorkspace?: boolean;
+  };
+}
+
+export interface UiBranches {
+  readonly current?: string;
+  readonly branches: readonly UiBranch[];
+  /** Said instead of an empty menu: a copy has no branches and never will have any. */
+  readonly unavailable?: string;
+}
+
+/** What became of a switch. git's own sentence on the way out, never a house phrase. */
+export type UiSwitchResult =
+  | { readonly ok: true; readonly branch: string }
+  | { readonly ok: false; readonly error: string };
+
+export interface UiChurn {
+  readonly added: number;
+  readonly removed: number;
+  readonly files: number;
+  /** Too many untracked files to count, so the additions are a floor rather than a total. */
+  readonly partial?: boolean;
+}
+
+/** What became of a commit. git's own sentence on the way out, `nothing to commit` included. */
+export type UiCommitResult =
+  | { readonly ok: true; readonly sha: string }
+  | { readonly ok: false; readonly error: string };
 
 /** What became of a push and an open. The url is where to send the user next. */
 export type UiPublishResult =
@@ -547,6 +784,14 @@ export interface UiAgentProfile {
    * write the sentence explaining each. Nothing here knows what either runtime does with it.
    */
   readonly trust?: TrustLevel;
+  /**
+   * Whether blobot may replace its session when the window fills up. Absent is `auto`.
+   *
+   * blobot's own vocabulary again, for the same reason and with the same licence: the renderer
+   * reads these two words and writes the sentence under each, and learns nothing about which
+   * runtime is behind them.
+   */
+  readonly compaction?: CompactionSetting;
   /** The teams it is currently on, by name. Empty for an agent nobody has put to work yet. */
   readonly teams: readonly string[];
 }
@@ -568,6 +813,8 @@ export interface NewAgentSpec {
   /** Which of the three the user picked. Absent is `normal`, and is what a form nobody
    *  touched sends, so an agent hired without a thought about this is where it always was. */
   readonly trust?: TrustLevel;
+  /** `auto` or `off`. Absent is `auto`, which is on: a form nobody touched leaves it on. */
+  readonly compaction?: CompactionSetting;
 }
 
 export interface NewTeamSpec {
@@ -679,6 +926,15 @@ export interface BlobotApi {
    * picture, and for an id nothing wrote.
    */
   attachmentUrl(id: string): Promise<string | undefined>;
+  /**
+   * The window of transcript above the one the pane is holding.
+   *
+   * `before` is the oldest `at` currently on screen. The team id travels because several teams
+   * are live and the user can switch while this is in flight: a window that arrived after a
+   * switch would prepend one team's history to another's, which is the worst version of being
+   * late. Main answers `undefined` when the id is not the open team, and the pane drops it.
+   */
+  earlier(teamId: string, before: number): Promise<UiEarlier | undefined>;
   /** A dropped file's path, which only the preload can produce. Undefined for a virtual file. */
   pathOf(file: File): string | undefined;
   /** The creation flow. `chooseWorkspace` opens the OS picker; the rest take a path. */
@@ -711,6 +967,31 @@ export interface BlobotApi {
   editAgent(profileId: string, spec: NewAgentSpec): Promise<EditAgentResult>;
   /** Retires the agent. Teams it is on keep working — ending one is a separate decision. */
   retireAgent(profileId: string): Promise<void>;
+  /**
+   * Every Routine the user has, armed or not, newest run first. Not scoped to a team: the screen
+   * is the whole set, and a Routine belongs to an agent rather than to whatever is on screen.
+   */
+  listRoutines(): Promise<readonly UiRoutine[]>;
+  /** Everyone a Routine could be given to. Per agent, because a workspace and a session are. */
+  routineTargets(): Promise<readonly UiRoutineTarget[]>;
+  /**
+   * Create a Routine, or restate one. The whole of it, not a patch, exactly as editing an agent
+   * is. A Routine saved here is **disarmed unless it already was armed**: arming is its own act.
+   */
+  saveRoutine(spec: NewRoutineSpec, routineId?: string): Promise<RoutineSaveResult>;
+  /** The only place authority enters a Routine, and the loudest control on its screen. */
+  setRoutineArmed(routineId: string, armed: boolean): Promise<void>;
+  /** Deleting a Routine, and discarding a proposal, which are the same act on the same row. */
+  deleteRoutine(routineId: string): Promise<void>;
+  /**
+   * Fire it now. Issue 02 made this the whole of the missed-firing remedy, so it is on every
+   * row and it is not a debug affordance. Answers when the turn has *started*, never when it ends.
+   */
+  runRoutineNow(routineId: string): Promise<{ ok: boolean; error?: string }>;
+  /** What this Routine has done, newest first. The surface that says whether automation is real. */
+  routineRuns(routineId: string): Promise<readonly UiRoutineRun[]>;
+  /** Opening that agent's pane, which is the only thing that clears issue 11's unread mark. */
+  seenRoutineRuns(agentId: string): Promise<void>;
   createTeam(spec: NewTeamSpec): Promise<TeamCreationResult>;
   selectTeam(teamId: string): Promise<TeamOpenResult>;
   /**
@@ -740,6 +1021,34 @@ export interface BlobotApi {
    * team makes no request nobody asked for.
    */
   workspaceStatus(teamId: string, forge?: boolean): Promise<readonly UiWorkspaceStatus[]>;
+  /**
+   * Every branch this agent's worktree could be on, read when the menu opens.
+   *
+   * Local branches only, so this never touches the network, and it is asked on opening the menu
+   * rather than kept current: a list of branches nobody is looking at is not worth a subprocess.
+   */
+  listBranches(teamId: string, agentId: string): Promise<UiBranches>;
+  /**
+   * Move this agent's worktree onto a branch, or onto a new one cut from where it stands.
+   *
+   * The user's own `git switch`. No runtime is told, nothing enters a session, and no agent has
+   * a path to it: `git switch` prompts at every trust level and is on no allowlist.
+   */
+  switchBranch(
+    teamId: string,
+    agentId: string,
+    branch: string,
+    options?: { create?: boolean },
+  ): Promise<UiSwitchResult>;
+  /** The exact commands a commit would run, shown before the user agrees to them. */
+  commitPlan(teamId: string, agentId: string, message: string): Promise<readonly string[]>;
+  /**
+   * Commit what is in this agent's workspace. The user's own git, at the user's own click.
+   *
+   * No runtime is told, nothing enters a session, and no agent has a path to it: `git commit`
+   * prompts at every trust level and is on no allowlist.
+   */
+  commitWork(teamId: string, agentId: string, message: string): Promise<UiCommitResult>;
   /** The exact commands `publishBranch` would run, for the confirm to show before it does. */
   publishPlan(
     teamId: string,
@@ -810,8 +1119,19 @@ export interface BlobotApi {
   onCommands(
     listener: (teamId: string, agentId: string, commands: readonly UiCommand[]) => void,
   ): () => void;
-  onMessage(listener: (teamId: string, message: Message) => void): () => void;
+  /**
+   * A committed message. The third argument is the Routine that caused it, when one did: the
+   * origin has to travel with the row, or a briefing that arrives while its pane is open draws
+   * as the user speaking at 09:00 when the user was asleep.
+   */
+  onMessage(
+    listener: (teamId: string, message: Message, routineName?: string) => void,
+  ) : () => void;
   onBudget(listener: (teamId: string, turnsUsed: number, turnBudget: number) => void): () => void;
+  /** An agent put itself on a schedule. It is already running when this arrives. */
+  onRoutineScheduled(
+    listener: (teamId: string, scheduled: UiScheduledRoutine) => void,
+  ): () => void;
   /**
    * An agent named a teammate you named, and wrote to nobody. An observation, never a repair:
    * there is no channel back and no button, because the message she did not send is not ours

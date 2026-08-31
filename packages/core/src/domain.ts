@@ -15,6 +15,7 @@ export type {
   AgentMessageDelta,
   AgentMessageSent,
   AgentThoughtDelta,
+  ContextCompacted,
   StopReason,
   ToolCallStarted,
   ToolCallStatus,
@@ -29,13 +30,33 @@ export type {
   AgentDefinition,
   AgentProfile,
   Attachment,
+  CompactionSetting,
   Message,
   Team,
 } from './orchestrator/domain.js';
+export { DEFAULT_COMPACTION } from './orchestrator/domain.js';
 export type { AttachmentKind, AttachmentSupport } from './runtime.js';
 export { findAgentByName } from './orchestrator/roster.js';
 export { AgentStatusTracker, statusAfter } from './status.js';
 export type { TrustLevel } from './trust.js';
 export { DEFAULT_TRUST, trustLevelOf } from './trust.js';
+/**
+ * The arithmetic half of the working ceiling, and only that half. The per-model tables live in
+ * the adapters and are not exported here: this entry point is what the renderer imports, and a
+ * component that could look a model up would be a component that knows about providers.
+ */
+export type { WorkingCeiling } from './context-ceiling.js';
+export { UNMEASURED_CAP, UNMEASURED_FRACTION, measuredCeiling, unmeasuredCeiling, workingCeiling } from './context-ceiling.js';
 
 export type { AgentStatus } from './status.js';
+
+// Routines. Pure by construction: a schedule is arithmetic on a wall clock and the scheduler
+// reads no clock of its own, so the renderer can say *next run* without asking main.
+export type { Routine, RoutineOutcome, RoutineRun, Schedule } from './routines/domain.js';
+export {
+  describeFrequency,
+  describeSchedule,
+  lastOccurrenceAtOrBefore,
+  nextOccurrenceAfter,
+  occurrencesBetween,
+} from './routines/schedule.js';

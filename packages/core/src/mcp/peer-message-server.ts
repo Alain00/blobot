@@ -1,7 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import type { PeerMessageAck, PeerMessageHandler } from '../runtime.js';
+import type {
+  PeerMessageAck,
+  PeerMessageHandler,
+  RoutineProposalAck,
+  RoutineProposalHandler,
+} from '../runtime.js';
 
 /**
  * blobot's own MCP server: one tool, `message_agent`, served over loopback HTTP.
@@ -26,13 +31,23 @@ export interface PeerMessageEndpoint {
 export interface PeerMessageServerOptions {
   /** The orchestrator's handler. Must never block: a stalled call hangs the sender's turn. */
   readonly handler: PeerMessageHandler;
+  /**
+   * Issue 05's `propose_routine`. **Omit it and the tool is not advertised at all** — a tool a
+   * model can see and call is a capability it will believe in, so a team that keeps no Routines
+   * must not be told otherwise.
+   */
+  readonly proposeRoutine?: RoutineProposalHandler;
   /** 0 takes an ephemeral port, which is what everything but a test wants. */
   readonly port?: number;
   readonly onLog?: (line: string) => void;
 }
 
 /** The MCP protocol version the runtimes negotiated in ticket 15's transcripts. */
-import { PEER_CONTEXT_LIMIT, PEER_MESSAGE_LIMIT } from '../orchestrator/bounds.js';
+import {
+  PEER_CONTEXT_LIMIT,
+  PEER_MESSAGE_LIMIT,
+  ROUTINE_NAME_LIMIT,
+} from '../orchestrator/bounds.js';
 
 const PROTOCOL_VERSION = '2025-06-18';
 
@@ -80,6 +95,64 @@ export const MESSAGE_AGENT_TOOL = {
   },
 } as const;
 
+/**
+ * Issue 05's tool. Exported beside `MESSAGE_AGENT_TOOL` and for the same reason: **its size is
+ * context**, on the wire to every agent on every turn, so the gauge measures the real thing.
+ *
+ * There is deliberately no recipient field, because the bearer token *is* the caller and a
+ * Routine proposed for a teammate is fan-out with a delay on it.
+ *
+ * There is no field that arms one either, and the reason **inverted on 2026-08-30**: it used to
+ * be that only a person could arm one, and it is now that every one of these is armed. Either way
+ * it is not the caller's to decide, so there is nothing to send.
+ */
+export const PROPOSE_ROUTINE_TOOL = {
+  name: 'propose_routine',
+  description:
+    'Schedule a Routine for yourself: an instruction you will be given again on a schedule, ' +
+    'like a nightly check. It STARTS RUNNING as soon as you call this, so only use it for work ' +
+    'you have been asked to repeat, and prefer the least frequent schedule that does the job. ' +
+    'The person you are working with is shown it immediately and can switch it off. Tell them ' +
+    'you have scheduled it, and say when it will run.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      name: {
+        type: 'string',
+        description: 'A few words a person will read in a list, like "nightly typecheck".',
+        maxLength: ROUTINE_NAME_LIMIT,
+      },
+      prompt: {
+        type: 'string',
+        description:
+          `What you would be asked to do, under ${PEER_MESSAGE_LIMIT} characters. Write it as ` +
+          'an instruction to yourself, on a day when nobody is watching and nobody can answer ' +
+          'a question.',
+        maxLength: PEER_MESSAGE_LIMIT,
+      },
+      schedule: {
+        type: 'object',
+        description: 'When it would run. Local time, and nothing finer than hourly is offered.',
+        properties: {
+          every: { type: 'string', enum: ['hour', 'day', 'week'] },
+          hour: { type: 'integer', minimum: 0, maximum: 23, description: 'Required for day and week.' },
+          minute: { type: 'integer', minimum: 0, maximum: 59 },
+          weekday: {
+            type: 'integer',
+            minimum: 0,
+            maximum: 6,
+            description: 'Required for week. 0 is Sunday.',
+          },
+        },
+        required: ['every', 'minute'],
+        additionalProperties: false,
+      },
+    },
+    required: ['name', 'prompt', 'schedule'],
+    additionalProperties: false,
+  },
+} as const;
+
 const TOOL = MESSAGE_AGENT_TOOL;
 
 interface JsonRpcRequest {
@@ -95,6 +168,7 @@ interface JsonRpcRequest {
 
 export class PeerMessageServer {
   readonly #handler: PeerMessageHandler;
+  readonly #proposeRoutine: RoutineProposalHandler | undefined;
   readonly #onLog: ((line: string) => void) | undefined;
   readonly #requestedPort: number;
   /** token → agentId. The token is the identity: it is how we know who is calling. */
@@ -108,6 +182,7 @@ export class PeerMessageServer {
 
   constructor(options: PeerMessageServerOptions) {
     this.#handler = options.handler;
+    this.#proposeRoutine = options.proposeRoutine;
     this.#onLog = options.onLog;
     this.#requestedPort = options.port ?? 0;
   }
@@ -285,7 +360,7 @@ export class PeerMessageServer {
       // transport drop, so every method has to work without a prior `initialize`. A server
       // that tracks sessions 404s after the first orchestrator restart and never recovers.
       this.#markReady(agentId);
-      return { jsonrpc: '2.0', id, result: { tools: [TOOL] } };
+      return { jsonrpc: '2.0', id, result: { tools: this.#tools() } };
     }
     if (method === 'resources/list') return { jsonrpc: '2.0', id, result: { resources: [] } };
     if (method === 'prompts/list') return { jsonrpc: '2.0', id, result: { prompts: [] } };
@@ -297,7 +372,14 @@ export class PeerMessageServer {
     return { jsonrpc: '2.0', id, error: { code: -32601, message: `method not found: ${method}` } };
   }
 
+  #tools(): object[] {
+    return this.#proposeRoutine === undefined ? [TOOL] : [TOOL, PROPOSE_ROUTINE_TOOL];
+  }
+
   async #callTool(agentId: string, message: JsonRpcRequest): Promise<object> {
+    if (message.params?.name === PROPOSE_ROUTINE_TOOL.name) {
+      return this.#callProposeRoutine(agentId, message);
+    }
     if (message.params?.name !== TOOL.name) {
       return toolError(`no tool named '${message.params?.name ?? ''}' on this server`);
     }
@@ -338,10 +420,60 @@ export class PeerMessageServer {
     }
   }
 
+  /**
+   * The proposal, and the answer the model reads.
+   *
+   * The ack is worded as carefully as the tool is, because this is the moment the hazard lands:
+   * an agent that proposes a Routine and is not told what happened next reports to the user that
+   * the work is scheduled. It is told, in the same breath, that nothing runs.
+   */
+  async #callProposeRoutine(agentId: string, message: JsonRpcRequest): Promise<object> {
+    const propose = this.#proposeRoutine;
+    if (propose === undefined) return toolError('no tool named `propose_routine` on this server');
+    const args = message.params?.arguments ?? {};
+    const name = typeof args['name'] === 'string' ? args['name'] : undefined;
+    const prompt = typeof args['prompt'] === 'string' ? args['prompt'] : undefined;
+    if (name === undefined || prompt === undefined || args['schedule'] === undefined) {
+      return toolError('propose_routine requires `name`, `prompt` and `schedule`');
+    }
+    // Refused by the absence of the field rather than by prose: there is nobody to name.
+    if (args['agent'] !== undefined || args['for'] !== undefined) {
+      return toolError(
+        'A Routine is proposed for yourself only. Ask a teammate with message_agent instead.',
+      );
+    }
+    try {
+      const ack: RoutineProposalAck = await propose({
+        from: agentId,
+        name,
+        prompt,
+        schedule: args['schedule'],
+      });
+      this.#log(`${agentId} proposed a Routine: ${ack.name}`);
+      return {
+        content: [
+          {
+            type: 'text',
+            text:
+              `Scheduled: "${ack.name}", ${ack.schedule}, which is ${ack.frequency}. It is ` +
+              'running now. The person you are working with has been shown it and can switch ' +
+              'it off. Tell them it is scheduled and say when it will run.',
+          },
+        ],
+        structuredContent: ack,
+      };
+    } catch (error) {
+      // A refused cap or an unparseable schedule is the caller's to read and account for, which
+      // is the point: a proposal that vanished quietly is how a model ends up reporting work as
+      // scheduled that nobody will ever run.
+      return toolError(error instanceof Error ? error.message : String(error));
+    }
+  }
+
   #markReady(agentId: string): void {
     if (this.#handshaked.has(agentId)) return;
     this.#handshaked.add(agentId);
-    this.#log(`${agentId} handshaked. It has the message_agent tool`);
+    this.#log(`${agentId} handshaked. It has ${this.#tools().length} of blobot's own tools`);
     for (const waiter of this.#handshakeWaiters.get(agentId) ?? []) waiter();
     this.#handshakeWaiters.delete(agentId);
   }

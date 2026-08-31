@@ -7,6 +7,7 @@ export type {
   AgentMessageDelta,
   AgentMessageSent,
   AgentThoughtDelta,
+  ContextCompacted,
   StopReason,
   ToolCallStarted,
   ToolCallStatus,
@@ -37,6 +38,18 @@ export type {
 
 export type { TrustLevel } from './trust.js';
 export { DEFAULT_TRUST, trustLevelOf } from './trust.js';
+export type { WorkingCeiling } from './context-ceiling.js';
+export {
+  UNMEASURED_CAP,
+  UNMEASURED_FRACTION,
+  ceilingFromTable,
+  measuredCeiling,
+  unmeasuredCeiling,
+} from './context-ceiling.js';
+export { CLAUDE_CEILINGS, claudeCeiling } from './adapters/claude/context.js';
+export { OPENCODE_CEILINGS, opencodeCeiling } from './adapters/opencode/context.js';
+export { CODEX_CEILINGS, codexCeiling } from './adapters/codex/context.js';
+export { workingCeiling } from './context-ceiling.js';
 
 export type { Clock } from './clock.js';
 export { SystemClock, VirtualClock } from './clock.js';
@@ -75,11 +88,33 @@ export type {
   AgentProfile,
   Attachment,
   AttachmentContent,
+  CompactionSetting,
   Message,
   Team,
 } from './orchestrator/domain.js';
+export { DEFAULT_COMPACTION } from './orchestrator/domain.js';
+// Ticket 10: the moment blobot is allowed to choose, and what it asks for when it does.
+export {
+  COMPACTION_TRIGGER,
+  HANDOFF_EMPTY,
+  HANDOFF_LIMIT,
+  HANDOFF_PROMPT,
+  HANDOFF_STOPPED,
+  RESTART_FAILED,
+  handoffTooLong,
+  overCompactionThreshold,
+  resumeFromHandoff,
+} from './orchestrator/compaction.js';
+export type { HandoffArchive, HandoffRecord } from './orchestrator/compaction.js';
 export {
   IMAGE_ATTACHMENT_LIMIT,
+  ROUTINE_NAME_LIMIT,
+  ROUTINE_PROPOSALS_PER_TURN,
+  ROUTINE_PROPOSALS_STANDING,
+  ROUTINE_BUSY_CEILING_MS,
+  ROUTINE_DISARM_AFTER,
+  ROUTINE_PERMISSION_CEILING_MS,
+  ROUTINE_TURN_BUDGET,
   TEXT_ATTACHMENT_LIMIT,
   attachmentNotSupported,
   attachmentTooLarge,
@@ -91,8 +126,10 @@ export { findAgentByName, namesMentioned } from './orchestrator/roster.js';
 export { InMemoryMessageStore } from './orchestrator/message-store.js';
 export type { AttachmentStore, MessageStore } from './orchestrator/message-store.js';
 export { Orchestrator } from './orchestrator/orchestrator.js';
+export type { RoutineStore, RoutineTurn } from './orchestrator/orchestrator.js';
 export type {
   BudgetExhausted,
+  Compacted,
   OrchestratorOptions,
   PendingPermission,
   PermissionOutcome,
@@ -145,6 +182,21 @@ export {
   type PullRequest,
   type PullRequestState,
 } from './workspace/status.js';
+export {
+  currentBranch,
+  listBranches,
+  switchBranch,
+  type Branch,
+  type BranchListing,
+  type SwitchOutcome,
+} from './workspace/branches.js';
+export { readChurn, type Churn } from './workspace/churn.js';
+export {
+  commitPlan,
+  commitWorktree,
+  type CommitOutcome,
+  type CommitRequest,
+} from './workspace/commit.js';
 export { publishBranch, publishPlan, type PublishOutcome, type PublishRequest } from './workspace/publish.js';
 export { WorkspaceError, branchNameFor, refSlug } from './workspace/workspace.js';
 export type {
@@ -158,7 +210,11 @@ export type {
 } from './workspace/workspace.js';
 
 // Ticket 15: blobot's own MCP server, over loopback HTTP. Not in `/domain` — it binds a port.
-export { MESSAGE_AGENT_TOOL, PeerMessageServer } from './mcp/peer-message-server.js';
+export {
+  MESSAGE_AGENT_TOOL,
+  PROPOSE_ROUTINE_TOOL,
+  PeerMessageServer,
+} from './mcp/peer-message-server.js';
 export type {
   PeerMessageEndpoint,
   PeerMessageServerOptions,
@@ -196,3 +252,17 @@ export type { BlobotDatabase, OpenDatabaseOptions, OpenedDatabase } from './stor
 export { SqliteStore } from './store/sqlite-store.js';
 export type { AgentProfileRecord, AgentRecord, SessionRecord } from './store/sqlite-store.js';
 export { SqliteRecorder } from './store/recorder.js';
+
+// Ticket 09's Routines. The scheduler decides only what is due; main owns the timer, the window
+// check and the calling, exactly as main owns the pool and core owns the wake policy.
+export type { Routine, RoutineOutcome, RoutineRun, Schedule } from './routines/domain.js';
+export {
+  describeFrequency,
+  describeSchedule,
+  lastOccurrenceAtOrBefore,
+  nextOccurrenceAfter,
+  occurrencesBetween,
+} from './routines/schedule.js';
+export { FIRING_TOLERANCE_MS, Scheduler } from './routines/scheduler.js';
+export { checkProposalText, parseProposedSchedule } from './routines/proposal.js';
+export type { Due } from './routines/scheduler.js';

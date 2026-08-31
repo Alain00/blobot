@@ -11,6 +11,8 @@ export interface RunningTeam {
   readonly orchestrator: Orchestrator;
   readonly store: SqliteStore;
   readonly runtimeLabels: Record<string, string>;
+  /** What blobot knows about each model's usable context, in tokens. Absent means unmeasured. */
+  readonly contextCeilings: Record<string, number>;
   readonly branches: Record<string, string>;
   /** False when the agents are real. The rail says so, so nobody mistakes a mock for a hire. */
   readonly demoMode: boolean;

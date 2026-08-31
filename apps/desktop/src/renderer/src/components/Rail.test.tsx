@@ -18,6 +18,7 @@ import { createRoot } from 'react-dom/client';
 import { describe, expect, it } from 'vitest';
 import type { AgentStatus } from '@blobot/core/domain';
 import type { UiAgent, UiTeam, UiTeamSummary } from '../../../shared/api.js';
+import type { Item } from '../model.js';
 import { Rail } from './Rail.js';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -27,7 +28,15 @@ import { Rail } from './Rail.js';
 // of production code that exists for the test environment.
 Element.prototype.scrollIntoView ??= function scrollIntoView(): void {};
 
-const OPEN: UiTeam = { id: 'open', name: 'portfolio', workspacePath: '/w', turnBudget: 10 };
+// With a lead, because who leads is now said on a row rather than under a team name and the
+// fixture has to be able to say it.
+const OPEN: UiTeam = {
+  id: 'open',
+  name: 'portfolio',
+  workspacePath: '/w',
+  turnBudget: 10,
+  leadAgentId: 'alice',
+};
 const OPEN_AGENTS: readonly UiAgent[] = [
   { id: 'alice', name: 'Alice', role: 'builds', runtimeLabel: 'mock', workspacePath: '/w/a', accepts: { images: true, textFiles: true } },
 ];
@@ -59,7 +68,11 @@ interface Drawn {
   readonly host: HTMLElement;
 }
 
-function draw(statuses: Record<string, AgentStatus>): Drawn {
+function draw(
+  statuses: Record<string, AgentStatus>,
+  unread: readonly string[] = [],
+  items: readonly Item[] = [],
+): Drawn {
   const host = document.createElement('div');
   document.body.appendChild(host);
   const root = createRoot(host);
@@ -70,8 +83,9 @@ function draw(statuses: Record<string, AgentStatus>): Drawn {
         teams: TEAMS,
         agents: OPEN_AGENTS,
         statuses,
-        items: [],
+        items,
         pane: { kind: 'team' },
+        unread,
         onSelect: () => {},
         onSelectTeam: () => {},
       }),
@@ -92,28 +106,31 @@ function backgrounded(drawn: Drawn): HTMLElement {
 }
 
 describe('a team the user is not looking at', () => {
-  it('draws its members rather than an anonymous silhouette', () => {
+  it('draws a mark rather than an anonymous silhouette', () => {
     const drawn = draw({});
     const row = backgrounded(drawn);
-    // A mark of real faces, not the ghost. The ghost is now only for a team with nobody on it.
+    // A real mark, not the ghost. The ghost is now only for a team with nobody on it.
     expect(row.querySelector('.mark')).not.toBeNull();
     expect(row.querySelector('.ghost')).toBeNull();
-    expect(row.querySelectorAll('.mark > .blob')).toHaveLength(2);
-    expect(drawn.text).toContain('2 agents');
+    // The member count that used to sit under the name went with the second line. It was the
+    // number of rows the team opens into, which is a worse way of saying what those rows say.
+    expect(drawn.text).not.toContain('2 agents');
     done(drawn);
   });
 
-  it('wears the team icon on the folder without giving up its faces', () => {
+  it('gives the mark to the project icon, and draws no faces beside it', () => {
     const drawn = draw({});
     const row = backgrounded(drawn);
-    // Both, and that is the whole claim: the icon says which project, the faces say who is on
-    // it, and an icon that replaced the mark would answer the first question by deleting the
-    // second — along with the folded status the folder is the body of.
+    // One question per slot. The icon wins it where there is one, because a column of
+    // similarly-named teams is what the rail is worst at and faces cannot help there: the same
+    // agents are on several teams, so two teams sharing a roster draw an identical stack.
+    // Who is on it is one click away, on the rows the team opens into.
     expect(row.querySelector('.mark .teamicon')).not.toBeNull();
-    expect(row.querySelectorAll('.mark > .blob')).toHaveLength(2);
-    // The open team has none, and draws none. No placeholder: a team without an icon is not a
-    // team missing one.
+    expect(row.querySelectorAll('.mark > .blob')).toHaveLength(0);
+    // The open team has none, so it falls back to its members' faces. No placeholder in either
+    // direction: a team without an icon is not a team missing one.
     expect(drawn.host.querySelector('.teamgroup .teamicon')).toBeNull();
+    expect(drawn.host.querySelectorAll('.teamgroup .teamrow .mark > .blob').length).toBeGreaterThan(0);
     done(drawn);
   });
 
@@ -261,12 +278,13 @@ describe('where a team sits in the rail', () => {
           statuses: {},
           items: [],
           pane: { kind: 'team' },
+          unread: [],
           onSelect: () => {},
           onSelectTeam: () => {},
         }),
       );
     });
-    const names = [...host.querySelectorAll('.teamrow .nm b')].map((node) => node.textContent ?? '');
+    const names = [...host.querySelectorAll('.teamrow .nm')].map((node) => node.textContent ?? '');
     act(() => root.unmount());
     host.remove();
     return names;
@@ -295,6 +313,7 @@ describe('where a team sits in the rail', () => {
           statuses: {},
           items: [],
           pane: { kind: 'team' },
+          unread: [],
           onSelect: () => {},
           onSelectTeam: () => {},
         }),
@@ -311,5 +330,86 @@ describe('where a team sits in the rail', () => {
     // The one case the prepend was for: `--demo`'s team is a TypeScript file and is in no
     // summary list, so there is no place to keep and the top is the only answer.
     expect(order([TEAMS[1] as UiTeamSummary], OPEN)).toEqual(['portfolio', 'hermes-agent']);
+  });
+});
+
+/**
+ * A team row is one small line now, so everything the second line carried had to go somewhere or
+ * go. `led by Alice` went to the lead's own row, which it can do because the roster is visibly
+ * nested under its team: a row inside this section is scoped to this team, so `LEAD` there is
+ * not the claim about the *agent* that `DESIGN.md` refused when it put the fact on the team.
+ */
+describe('who leads', () => {
+  it('says LEAD on the lead’s row, and on no other', () => {
+    const drawn = draw({});
+    const rows = [...drawn.host.querySelectorAll('.agentrow')];
+    expect(rows.length).toBeGreaterThan(0);
+    const labelled = rows.filter((row) => row.querySelector('.lead') !== null);
+    expect(labelled).toHaveLength(1);
+    expect(labelled[0]?.textContent).toContain('Alice');
+    done(drawn);
+  });
+
+  it('never says it on the team’s own row again', () => {
+    const drawn = draw({});
+    expect(drawn.text).not.toContain('led by');
+    expect(drawn.host.querySelector('.teamrow .lead')).toBeNull();
+    done(drawn);
+  });
+});
+
+/**
+ * Issue 11. A Routine whose value is the *message* lands in a pane the user has no reason to
+ * open, and a daily briefing nobody is told about is a daily briefing that does not exist.
+ *
+ * The constraint that makes it hard is what these check: `waiting` already spends the app's one
+ * contrast inversion and issue 03 made that the load-bearing way a parked run reaches the user,
+ * so this must lose to it — legibly, with both in the column at once.
+ */
+describe('a Routine run nobody has looked at', () => {
+  const spoke = [
+    {
+      kind: 'agent' as const,
+      id: 'a1',
+      at: 10,
+      agentId: 'alice',
+      text: 'here is this morning’s summary',
+      live: false,
+    },
+  ];
+
+  it('draws the line the rail already has at full ink, and adds no element', () => {
+    const drawn = draw({}, ['alice'], spoke);
+    const preview = drawn.host.querySelector('.agentrow .preview');
+
+    expect(preview?.className).toContain('unread');
+    // Not a dot and not a count: a dot is a new element in a column whose job is quiet, and two
+    // unread reports and five are the same decision.
+    expect(drawn.host.querySelectorAll('.agentrow .dot')).toHaveLength(0);
+    expect(drawn.text).not.toContain('1 unread');
+    done(drawn);
+  });
+
+  it('leaves the line quiet when there is nothing unread', () => {
+    const drawn = draw({}, [], spoke);
+    expect(drawn.host.querySelector('.agentrow .preview.unread')).toBeNull();
+    done(drawn);
+  });
+
+  it('never inverts, because waiting owns the app’s one inversion', () => {
+    const drawn = draw({}, ['alice'], spoke);
+    // `StatusWord` is what inverts, and nothing here draws one: an unread mark is not a status.
+    expect(drawn.host.querySelector('.agentrow .preview.unread .stat')).toBeNull();
+    done(drawn);
+  });
+
+  it('does not leak into an ordinary turn the user started', () => {
+    // The same agent and the same preview line, with no mark: an agent finishing work the user
+    // started is not unread, it is finished. The mark is earned by origin, and marking every
+    // turn would put one on almost every row within a day and make the signal worthless.
+    const drawn = draw({}, [], spoke);
+    expect(drawn.host.querySelector('.preview')?.textContent).toContain('summary');
+    expect(drawn.host.querySelector('.preview.unread')).toBeNull();
+    done(drawn);
   });
 });

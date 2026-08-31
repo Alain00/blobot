@@ -4,12 +4,14 @@ import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   MESSAGE_AGENT_TOOL,
+  PROPOSE_ROUTINE_TOOL,
   SqliteStore,
   SystemClock,
   WorkspaceError,
   openDatabase,
   remediesFor,
   remedyFor,
+  uuidv7,
   type AgentStatus,
   type OpenedDatabase,
   type PendingPermission,
@@ -38,7 +40,11 @@ import {
   measureTeam,
   publishAgentBranch,
   publishPlanFor,
+  commitAgentWork,
+  commitPlanFor,
+  readAgentBranches,
   readTeamWorkspaces,
+  switchAgentBranch,
   editAgentProfile,
   editTeamRoster,
   hireAgent,
@@ -56,6 +62,15 @@ import { knownRuntime, knownRuntimes, refreshKnownRuntimes } from './known-runti
 import { resizeStep, startStep, stopStep, writeStep } from './runtime-step.js';
 import { isWorking, type RunningTeam } from './running-team.js';
 import { TeamPool } from './team-pool.js';
+import { RoutineRunner } from './routine-runner.js';
+import {
+  routineOrigins,
+  routineRows,
+  routineTargets,
+  scheduledRoutines,
+  toRunRow,
+} from './routine-rows.js';
+import { ceilingFor } from './runtime-for.js';
 import type {
   EditAgentResult,
   HireResult,
@@ -67,15 +82,24 @@ import type {
   PermissionChoice,
   UiPermissionRequest,
   UiAgentProfile,
+  NewRoutineSpec,
+  RoutineSaveResult,
+  UiRoutine,
+  UiRoutineRun,
+  UiRoutineTarget,
   UiRuntimeChoice,
   UiRuntimeOptions,
   RuntimeStepOutcome,
   TeamOpenResult,
+  UiEarlier,
   UiSnapshot,
   UiTeamIcon,
   UiTeamDiskUsage,
   UiWorkspaceStatus,
+  UiBranches,
+  UiCommitResult,
   UiPublishResult,
+  UiSwitchResult,
   UiTeamSummary,
   UiWorkspaceInspection,
 } from '../shared/api.js';
@@ -235,6 +259,15 @@ function asStepRequest(
  * The live teams. Selecting one promotes it rather than restarting it, which is why switching
  * no longer costs a workspace reconcile, a process per agent and a transcript replay.
  */
+/**
+ * Routines: the timer, the window check and the calling, which are main's three (issue 09).
+ *
+ * Created with the database, because a Routine is a row like everything else, and never in demo
+ * mode: the scripted team's database is thrown away, so a Routine there would be a schedule
+ * nobody could keep. Only ever started once a window exists.
+ */
+let routines: RoutineRunner | undefined;
+
 const pool = new TeamPool<RunningTeam>({
   limit: LIVE_TEAM_LIMIT,
   start: async (team) => {
@@ -286,11 +319,16 @@ function current(): RunningTeam | undefined {
 }
 
 /**
- * The size of the one tool blobot adds, measured rather than typed: this definition is on the
+ * The size of the tools blobot adds, measured rather than typed: these definitions are on the
  * wire to every agent on every turn. What an agent's *other* tools cost is not knowable here,
  * because a tool list is not advertised to the client the way a command list is.
+ *
+ * Two of them now — `message_agent` and issue 05's `propose_routine` — which is exactly why this
+ * is measured: the number moved when the second tool was added, and nobody had to remember to
+ * change it.
  */
-const OWN_TOOL_CHARS = JSON.stringify(MESSAGE_AGENT_TOOL).length;
+const OWN_TOOL_CHARS =
+  JSON.stringify(MESSAGE_AGENT_TOOL).length + JSON.stringify(PROPOSE_ROUTINE_TOOL).length;
 
 function teamSummaries(): UiTeamSummary[] {
   if (store === undefined) return [];
@@ -355,6 +393,7 @@ function agentProfiles(): UiAgentProfile[] {
     ...(profile.hue === undefined ? {} : { hue: profile.hue }),
     ...(profile.runtimeOptions === undefined ? {} : { runtimeOptions: profile.runtimeOptions }),
     ...(profile.trust === undefined ? {} : { trust: profile.trust }),
+    ...(profile.compaction === undefined ? {} : { compaction: profile.compaction }),
     teams: store
       ? store
           .membershipsOf(profile.id)
@@ -400,6 +439,7 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
       ...(record.hue === undefined ? {} : { hue: record.hue }),
       // Nothing has advertised anything yet, so the paperclip is closed with the composer.
       accepts: { images: false, textFiles: false },
+      ...ceiling(record.runtimeId, record.runtimeOptions),
     })),
     // The teams the pool is still holding keep reporting: one of them can be working while
     // this one starts, and the rail draws all of them.
@@ -414,7 +454,7 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
     // The gauge is a persisted fact, so it is drawn while the team is still coming up: what
     // these agents were carrying when they were last awake is what they will resume with.
     usage: store?.lastUsageOfTeam(team.id) ?? {},
-    log: store?.logOfTeam(team.id) ?? { running: [], tools: [], turns: [] },
+    log: store?.logOfTeam(team.id) ?? { running: [], tools: [], turns: [], compactions: [] },
     // Composed but not yet sent: the personas exist, and nothing has been woken.
     injection: Object.fromEntries(
       records.map((record) => [
@@ -434,13 +474,75 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
         },
       ]),
     ),
-    messages: store?.forTeam(team.id) ?? [],
-    answers: store?.answersOfTeam(team.id) ?? [],
+    ...transcript(store, team.id),
     permissions: [],
     turnsThisPrompt: 0,
     demoMode: false,
     opening: true,
   };
+}
+
+/**
+ * The recent end of a team's transcript, for a snapshot.
+ *
+ * One call rather than two, because the window has to be *shared*: the pane merge-sorts the two
+ * halves, so bounding them independently gives a reply whose question fell off the top. The
+ * store owns that rule; this is only the shape the snapshot wants it in.
+ */
+function transcript(
+  store: SqliteStore | undefined,
+  teamId: string,
+): Pick<UiSnapshot, 'messages' | 'answers' | 'moreAbove' | 'routineOrigins'> {
+  if (store === undefined) return { messages: [], answers: [], moreAbove: false };
+  const window = store.transcriptOfTeam(teamId);
+  return {
+    messages: window.messages,
+    answers: window.answers,
+    moreAbove: window.more,
+    // Which Routine each firing in this window belongs to. Issue 07's disclosure needs a name,
+    // and the row carries a link — so the name is looked up beside the window it is about.
+    routineOrigins: routineOrigins(store, window.messages),
+  };
+}
+
+/**
+ * How far back the transcript window on screen reaches. The floor for the blocks above it, so a
+ * Routine scheduled last month does not reappear at the top of a pane showing this afternoon.
+ */
+function oldestOf(store: SqliteStore, teamId: string): number {
+  const window = store.transcriptOfTeam(teamId);
+  const times = [...window.messages.map((one) => one.at), ...window.answers.map((one) => one.at)];
+  return times.length === 0 ? 0 : Math.min(...times);
+}
+
+/**
+ * Agents carrying a Routine run nobody has looked at. Issue 11's unread mark.
+ *
+ * Every agent on every team the user has, not just the one on screen: the mark folds onto the
+ * team row the way `StatusWord` already folds, and a signal only visible once you are already on
+ * the team answers nothing — which is the whole failure the ticket was written about.
+ */
+function unreadAgents(): string[] {
+  if (store === undefined) return [];
+  const everybody = store.listTeams().flatMap((team) => store?.agentsOfTeam(team.id) ?? []);
+  const runs = store.unseenRoutineRuns(everybody.map((agent) => agent.id));
+  return [...new Set(runs.map((run) => run.agentId))];
+}
+
+/**
+ * What blobot knows about this model's usable context, for the agent it belongs to.
+ *
+ * Absent unless somebody measured that model, which is the ordinary case: the renderer falls
+ * back conservatively and says so, rather than the snapshot inventing a number here. Spread
+ * into the agent so an unmeasured model contributes no key at all.
+ */
+function ceiling(
+  runtimeId: string | undefined,
+  options: Readonly<Record<string, string>> | undefined,
+): { contextCeiling?: number } {
+  if (runtimeId === undefined) return {};
+  const tokens = ceilingFor(runtimeId, options?.['model']);
+  return tokens === undefined ? {} : { contextCeiling: tokens };
 }
 
 function snapshot(): UiSnapshot {
@@ -453,11 +555,13 @@ function snapshot(): UiSnapshot {
       statuses: {},
       commands: {},
       usage: {},
-      log: { running: [], tools: [], turns: [] },
+      log: { running: [], tools: [], turns: [], compactions: [] },
       injection: {},
       messages: [],
       answers: [],
+      moreAbove: false,
       permissions: [],
+      unread: unreadAgents(),
       turnsThisPrompt: 0,
       demoMode: false,
       ...(openError === undefined ? {} : { openError }),
@@ -496,6 +600,9 @@ function snapshot(): UiSnapshot {
       ...(agent.hue === undefined ? {} : { hue: agent.hue }),
       ...(team.branches[agent.id] === undefined ? {} : { branch: team.branches[agent.id] }),
       accepts: team.orchestrator.acceptsOf(agent.id),
+      ...(team.contextCeilings[agent.id] === undefined
+        ? {}
+        : { contextCeiling: team.contextCeilings[agent.id] }),
     })),
     statuses: liveStatuses(),
     // Read fresh rather than remembered: a team that was evicted and resumed re-advertises,
@@ -516,11 +623,19 @@ function snapshot(): UiSnapshot {
         },
       ]),
     ),
-    messages: team.store.forTeam(team.team.id),
-    answers: team.store.answersOfTeam(team.team.id),
+    ...transcript(team.store, team.team.id),
     // A block the user has not answered survives a re-snapshot, because the turn behind it is
     // still standing there: a switch away and back must not lose the question.
     permissions: team.orchestrator.pendingPermissions.map(asUiPermission),
+    // Issue 05's amendment, control two: a Routine an agent armed for itself opens in the
+    // transcript, and it comes back with the transcript rather than living only as long as the
+    // app happened to be watching. Bounded by the window, so the blocks arrive with their turns.
+    scheduled: scheduledRoutines(
+      team.store,
+      team.agents.map((agent) => agent.id),
+      oldestOf(team.store, team.team.id),
+    ),
+    unread: unreadAgents(),
     turnsThisPrompt: team.orchestrator.turnsThisPrompt,
     demoMode: team.demoMode,
   };
@@ -571,10 +686,32 @@ function attach(team: RunningTeam): void {
     permissions.delete(id);
     send('blobot:permission-settled', teamId, id, outcome);
   });
-  orchestrator.onMessage((message) => send('blobot:message', teamId, message));
+  // The Routine that caused it travels with it, when one did. A briefing that lands at 09:00
+  // while its pane is open would otherwise draw as the user speaking at 09:00, and the user was
+  // asleep: the words are theirs and the moment is not, which is the one thing the bubble gets
+  // wrong and the whole of what issue 07's `system` line is there to say.
+  orchestrator.onMessage((message) =>
+    send(
+      'blobot:message',
+      teamId,
+      message,
+      message.routineRunId === undefined
+        ? undefined
+        : team.store.routineNameOfRun(message.routineRunId),
+    ),
+  );
   orchestrator.onBudgetExhausted((exhausted) =>
     send('blobot:budget', teamId, exhausted.turnsUsed, exhausted.turnBudget),
   );
+  // An agent put itself on a schedule, and it is already running. The user is told where it
+  // happened rather than being left to find it on a screen they would have to go looking for:
+  // an agent arming something silently is the version of this feature that must not exist.
+  orchestrator.onRoutineScheduled((one) =>
+    send('blobot:routine-scheduled', teamId, { ...one, armed: true }),
+  );
+  // A proposal is the one thing an agent can put in front of the user without saying anything,
+  // so the screens that draw Routines are told rather than left to notice on the next open.
+  orchestrator.onRoutinesChanged(() => send('blobot:team'));
   orchestrator.onSilentHandoff((observed) =>
     send('blobot:silent-handoff', teamId, observed.agentId, observed.named, observed.at),
   );
@@ -622,6 +759,23 @@ async function createWindow(): Promise<void> {
       preload: join(here, '../preload/index.mjs'),
       sandbox: false,
     },
+  });
+
+  // Devtools, on the keys everybody already presses. They came free with Electron's default
+  // menu strip and went when that strip did — the menu was four menus of things this app does
+  // not do, and losing the inspector with it was not a decision anybody made. Bound on the
+  // window's own input rather than as a global shortcut, so it is blobot's key while blobot has
+  // focus and nobody else's while it does not. Not gated to a dev build: the packaged app is
+  // what a bug is usually reported against.
+  window.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown') return;
+    const asked =
+      input.key === 'F12' ||
+      (input.control && input.shift && input.key.toLowerCase() === 'i') ||
+      (input.meta && input.alt && input.key.toLowerCase() === 'i');
+    if (!asked) return;
+    event.preventDefault();
+    window?.webContents.toggleDevTools();
   });
 
   // Two review affordances, both of them "open on the surface a screenshot cannot click to".
@@ -717,6 +871,29 @@ void app.whenReady().then(async () => {
     // before the CLI has been spawned, so the hire dialog draws its picker instead of waiting.
     rememberRuntimeOptionsIn(join(app.getPath('userData'), 'runtime-options.json'));
     store = new SqliteStore(opened.db);
+    routines = new RoutineRunner({
+      store,
+      clock,
+      host: {
+        // Every platform, and the whole of issue 02's enforcement: with no window a firing has
+        // nobody to raise a permission request to, and the tick settles nothing, so what it
+        // slept through comes back as missed rather than as a run that happened in the dark.
+        hasWindow: () => window !== undefined && !window.isDestroyed(),
+        teamOfAgent: (agentId) => {
+          const agent = store?.agentById(agentId);
+          return agent === undefined ? undefined : store?.teamById(agent.teamId);
+        },
+        // Held rather than selected: a firing runs a team, it does not switch to it. The pool's
+        // own rule protects the team the user is working in, because it never evicts one
+        // mid-turn, and `startTeam` refuses by name when a runtime is not installed.
+        open: async (team) => (await pool.hold(team)).orchestrator,
+        finished: (team) => pool.letGo(team.id),
+        onLog: (line) => process.stderr.write(`${line}\n`),
+        // The rail draws what a team is doing, and a Routine is the one thing that starts work
+        // with nobody at the keyboard.
+        onChange: () => send('blobot:team'),
+      },
+    });
     launchTeam =
       liveLaunch === undefined
         ? store.listTeams()[0]
@@ -724,6 +901,21 @@ void app.whenReady().then(async () => {
   }
 
   ipcMain.handle('blobot:snapshot', () => snapshot());
+  // Bounded like the snapshot and paged by time, never by offset: rows arrive while the reader
+  // is reading, and an offset would slide a window that the transcript is still growing under.
+  ipcMain.handle('blobot:earlier', (_event, teamId: string, before: number): UiEarlier | undefined => {
+    const team = current();
+    // The user can switch teams while this is in flight. A window that came back late and got
+    // prepended to a different team's pane would be worse than no window at all.
+    if (team === undefined || team.team.id !== teamId) return undefined;
+    const window = team.store.transcriptOfTeam(teamId, { before });
+    return {
+      messages: window.messages,
+      answers: window.answers,
+      moreAbove: window.more,
+      routineOrigins: routineOrigins(team.store, window.messages),
+    };
+  });
   ipcMain.handle(
     'blobot:prompt',
     async (
@@ -1025,6 +1217,83 @@ void app.whenReady().then(async () => {
   ipcMain.handle('blobot:retireAgent', (_event, profileId: string) => {
     store?.tombstoneProfile(profileId, clock.now());
   });
+  // ---------------------------------------------------------------- Routines
+  //
+  // Issue 06's screen, and the two verbs that are not on it. Everything here goes through the
+  // store and the runner: the renderer holds no database handle, and `Run now` is the only way a
+  // person starts a firing, which is what keeps the tick the single thing that starts work
+  // nobody asked for at that second.
+  ipcMain.handle('blobot:listRoutines', (): readonly UiRoutine[] =>
+    store === undefined ? [] : routineRows(store, clock.now()),
+  );
+  ipcMain.handle('blobot:routineTargets', (): readonly UiRoutineTarget[] =>
+    store === undefined ? [] : routineTargets(store),
+  );
+  ipcMain.handle(
+    'blobot:saveRoutine',
+    (_event, spec: NewRoutineSpec, routineId?: string): RoutineSaveResult => {
+      if (store === undefined) return { ok: false, error: 'No database is open.' };
+      const name = spec.name.trim();
+      const prompt = spec.prompt.trim();
+      if (name === '') return { ok: false, error: 'Give it a name.' };
+      if (prompt === '') return { ok: false, error: 'Say what it should do.' };
+      const now = clock.now();
+      if (routineId !== undefined) {
+        // A restatement, not a patch, exactly as editing an agent is. The agent it belongs to is
+        // not among the fields: a Routine is `<team>/<agent>`, and moving one to somebody else
+        // would be a new Routine wearing an old one's run history.
+        if (store.routineById(routineId) === undefined) {
+          return { ok: false, error: 'That routine is gone.' };
+        }
+        store.updateRoutine(routineId, { name, prompt, schedule: spec.schedule });
+        // Editing a proposal is answering it: the person read it and made it theirs.
+        store.reviewRoutine(routineId, now);
+        send('blobot:team');
+        return { ok: true, id: routineId };
+      }
+      if (store.agentById(spec.agentId) === undefined) {
+        return { ok: false, error: 'That agent is no longer on a team.' };
+      }
+      // Disarmed, like every Routine at birth. Arming is its own act and its own control, and
+      // that is true of the ones a person writes as well as the ones an agent proposes.
+      const created = store.createRoutine({
+        id: uuidv7(now),
+        agentId: spec.agentId,
+        name,
+        prompt,
+        schedule: spec.schedule,
+        armed: false,
+        createdAt: now,
+      });
+      send('blobot:team');
+      return { ok: true, id: created.id };
+    },
+  );
+  ipcMain.handle('blobot:setRoutineArmed', (_event, routineId: string, armed: boolean) => {
+    store?.setRoutineArmed(routineId, armed);
+    // A person answered it, whichever way they answered. Separate from the arming itself,
+    // because the tick disarms a Routine that has failed three nights running and that is
+    // blobot noticing rather than somebody deciding.
+    store?.reviewRoutine(routineId, clock.now());
+    send('blobot:team');
+  });
+  ipcMain.handle('blobot:deleteRoutine', (_event, routineId: string) => {
+    // Discarding a proposal and deleting a Routine are the same act on the same row. The run
+    // history outlives it, as every tombstone here does.
+    store?.tombstoneRoutine(routineId, clock.now());
+    send('blobot:team');
+  });
+  ipcMain.handle('blobot:runRoutineNow', (_event, routineId: string) => {
+    if (routines === undefined) return { ok: false, error: 'Routines are not running.' };
+    return routines.runNow(routineId);
+  });
+  ipcMain.handle('blobot:routineRuns', (_event, routineId: string): readonly UiRoutineRun[] =>
+    store === undefined ? [] : store.routineRunsOf(routineId).map(toRunRow),
+  );
+  ipcMain.handle('blobot:seenRoutineRuns', (_event, agentId: string) => {
+    store?.markRoutineRunsSeen(agentId, clock.now());
+  });
+
   ipcMain.handle('blobot:createTeam', async (_event, spec: NewTeamSpec): Promise<TeamCreationResult> => {
     if (store === undefined) return { ok: false, error: 'No database is open.' };
     try {
@@ -1120,6 +1389,7 @@ void app.whenReady().then(async () => {
         ...(status.branch === undefined ? {} : { branch: status.branch }),
         present: status.present,
         ...(status.changed === undefined ? {} : { changed: status.changed }),
+        ...(status.churn === undefined ? {} : { churn: status.churn }),
         ...(status.ahead === undefined ? {} : { ahead: status.ahead }),
         ...(status.pushed === undefined ? {} : { pushed: status.pushed }),
         ...(status.forge.asked
@@ -1127,6 +1397,61 @@ void app.whenReady().then(async () => {
             ? {}
             : { pr: status.forge.pr }
           : { unavailable: status.forge.detail }),
+      }));
+    },
+  );
+
+  /**
+   * The branches an agent's worktree could be on, and the user moving it onto one.
+   *
+   * Local git only: the list is `for-each-ref` and the move is `git switch`, so neither reaches
+   * the network and neither needs the forge. The switch is the only write among these workspace
+   * handlers, and it is the user's: no runtime is told it happened, and no agent can reach it,
+   * because `git switch` prompts at every trust level and is on no allowlist.
+   */
+  ipcMain.handle(
+    'blobot:listBranches',
+    async (_event, teamId: string, agentId: string): Promise<UiBranches> => {
+      if (store === undefined) return { branches: [] };
+      return readAgentBranches(teamId, agentId, { store, clock }).catch(() => ({ branches: [] }));
+    },
+  );
+
+  ipcMain.handle(
+    'blobot:switchBranch',
+    async (
+      _event,
+      teamId: string,
+      agentId: string,
+      branch: string,
+      options: { create?: boolean } = {},
+    ): Promise<UiSwitchResult> => {
+      if (store === undefined) return { ok: false, error: 'No database is open.' };
+      return switchAgentBranch(teamId, agentId, branch, options, { store, clock }).catch(
+        (error: unknown) => ({ ok: false as const, error: describe(error) }),
+      );
+    },
+  );
+
+  /**
+   * Committing what is in an agent's workspace. The user's own git, twice over: the commands are
+   * shown before they run, and nothing an agent does can reach this handler.
+   */
+  ipcMain.handle(
+    'blobot:commitPlan',
+    async (_event, teamId: string, agentId: string, message: string): Promise<readonly string[]> => {
+      if (store === undefined) return [];
+      return commitPlanFor(teamId, agentId, message, { store, clock });
+    },
+  );
+
+  ipcMain.handle(
+    'blobot:commitWork',
+    async (_event, teamId: string, agentId: string, message: string): Promise<UiCommitResult> => {
+      if (store === undefined) return { ok: false, error: 'No database is open.' };
+      return commitAgentWork(teamId, agentId, message, { store, clock }).catch((error: unknown) => ({
+        ok: false as const,
+        error: describe(error),
       }));
     },
   );
@@ -1223,6 +1548,10 @@ void app.whenReady().then(async () => {
 
   await createWindow();
 
+  // After the window, and only after it: the tick's first question is whether there is one, and
+  // starting it before there was would be asking a question whose answer is always no.
+  routines?.start();
+
   // The launch team starts *after* the window, and is deliberately not awaited. It used to be
   // started before there was anything to draw on, so a cold start — a workspace reconcile and a
   // process per agent — was spent with no window at all: seconds of nothing on a local app that
@@ -1317,6 +1646,8 @@ function describe(error: unknown): string {
 app.on('window-all-closed', () => {
   // A login nobody is watching any more is a process holding a terminal open forever.
   stopStep();
+  // And a tick with no window to fire into is the background daemon issue 02 refused.
+  routines?.stop();
   void pool.closeAll();
   void demo?.close();
   opened?.close();

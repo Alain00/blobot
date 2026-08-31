@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import type { PeerMessageAck, PeerMessageCall } from '../runtime.js';
+import type {
+  PeerMessageAck,
+  PeerMessageCall,
+  RoutineProposalAck,
+  RoutineProposalCall,
+} from '../runtime.js';
 import { PeerMessageServer, type PeerMessageEndpoint } from './peer-message-server.js';
 
 /**
@@ -269,5 +274,144 @@ describe('protocol housekeeping', () => {
   it('reports an unknown method as a JSON-RPC error', async () => {
     const { json } = await harness();
     expect((await json('completion/complete'))['error']).toMatchObject({ code: -32601 });
+  });
+});
+
+/**
+ * Issue 05's `propose_routine`, on the wire. An agent may propose; only a person may arm.
+ */
+describe('the proposal tool', () => {
+  /** A server that keeps Routines, with whatever the orchestrator would have answered. */
+  async function proposing(
+    answer?: (call: RoutineProposalCall) => Promise<RoutineProposalAck>,
+  ): Promise<{ calls: RoutineProposalCall[]; json: Harness['json'] }> {
+    const calls: RoutineProposalCall[] = [];
+    const server = new PeerMessageServer({
+      handler: async () => ({ delivered: true, recipient: 'Bob', status: 'started' }),
+      proposeRoutine: async (call) => {
+        calls.push(call);
+        if (answer !== undefined) return answer(call);
+        return {
+          proposed: true,
+          routineId: 'rt_1',
+          name: call.name,
+          schedule: 'every day at 09:00',
+          frequency: '1 firing a day',
+          armed: true,
+        };
+      },
+    });
+    await server.start();
+    running = server;
+    const endpoint = server.endpointFor('alice');
+    const json = async (
+      method: string,
+      params?: unknown,
+    ): Promise<Record<string, unknown>> =>
+      (await fetch(endpoint.url, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${endpoint.token}`,
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method,
+          ...(params === undefined ? {} : { params }),
+        }),
+      }).then((response) => response.json())) as Record<string, unknown>;
+    return { calls, json };
+  }
+
+  it('is not advertised at all by a server that keeps no Routines', async () => {
+    const { json } = await harness();
+    const listed = await json('tools/list');
+    const tools = (listed['result'] as { tools: { name: string }[] }).tools;
+    // A tool a model can see is a capability it will believe in, and a demo team's database is
+    // thrown away when the window closes.
+    expect(tools.map((tool) => tool.name)).toEqual(['message_agent']);
+  });
+
+  it('is listed beside message_agent when the team keeps them', async () => {
+    const { json } = await proposing();
+    const listed = await json('tools/list');
+    const tools = (listed['result'] as { tools: { name: string }[] }).tools;
+    expect(tools.map((tool) => tool.name)).toEqual(['message_agent', 'propose_routine']);
+  });
+
+  it('has no field for a recipient and no field that arms one', async () => {
+    const { json } = await proposing();
+    const listed = await json('tools/list');
+    const tools = (listed['result'] as { tools: { name: string; inputSchema: { properties: Record<string, unknown> } }[] }).tools;
+    const schema = tools.find((tool) => tool.name === 'propose_routine')?.inputSchema;
+    // The absence is the rule: the bearer token is the caller, and only a person arms.
+    expect(Object.keys(schema?.properties ?? {})).toEqual(['name', 'prompt', 'schedule']);
+  });
+
+  it('carries the caller from the token, never from the arguments', async () => {
+    const { calls, json } = await proposing();
+    await json('tools/call', {
+      name: 'propose_routine',
+      arguments: {
+        name: 'nightly typecheck',
+        prompt: 'run the typecheck and say what broke',
+        schedule: { every: 'day', hour: 9, minute: 0 },
+      },
+    });
+    expect(calls[0]?.from).toBe('alice');
+  });
+
+  it('refuses a proposal aimed at a teammate rather than quietly making it your own', async () => {
+    const { calls, json } = await proposing();
+    const reply = await json('tools/call', {
+      name: 'propose_routine',
+      arguments: {
+        agent: 'Bob',
+        name: 'nightly typecheck',
+        prompt: 'run the typecheck',
+        schedule: { every: 'day', hour: 9, minute: 0 },
+      },
+    });
+    expect((reply['result'] as { isError?: boolean }).isError).toBe(true);
+    expect(toolText(reply)).toContain('for yourself');
+    expect(calls).toEqual([]);
+  });
+
+  it('tells the model in the answer that it is running, and when', async () => {
+    const { json } = await proposing();
+    const reply = await json('tools/call', {
+      name: 'propose_routine',
+      arguments: {
+        name: 'nightly typecheck',
+        prompt: 'run the typecheck',
+        schedule: { every: 'day', hour: 9, minute: 0 },
+      },
+    });
+    const text = toolText(reply);
+    // The hazard this wording exists for has not gone away, it changed direction. It used to be
+    // an agent reporting work as scheduled that nobody would run; under issue 05's amendment it
+    // is an agent that believes its Routine is inert, never mentions arming one, and leaves the
+    // user to find out from a turn at 03:00.
+    expect(text).toContain('It is running now.');
+    expect(text).toContain('every day at 09:00');
+    expect(text).toContain('1 firing a day');
+    expect(text).not.toContain('not running');
+    expect((reply['result'] as { structuredContent?: RoutineProposalAck }).structuredContent).toMatchObject({
+      proposed: true,
+      armed: true,
+    });
+  });
+
+  it('hands a refusal back as a tool error the model has to account for', async () => {
+    const { json } = await proposing(async () => {
+      throw new Error('You have already proposed a Routine this turn.');
+    });
+    const reply = await json('tools/call', {
+      name: 'propose_routine',
+      arguments: { name: 'another', prompt: 'do it again', schedule: { every: 'hour', minute: 0 } },
+    });
+    expect((reply['result'] as { isError?: boolean }).isError).toBe(true);
+    expect(toolText(reply)).toContain('already proposed');
   });
 });

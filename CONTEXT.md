@@ -63,6 +63,41 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
 - **Status** — an Agent's current activity, derived in memory from its AgentEvent stream. Never
   persisted.
 
+## Automation
+
+- **Routine** — a named, repeatable instruction to one Agent, delivered on a schedule instead of
+  by a person. It is a prompt with a clock behind it: the same words, the same single recipient,
+  the same turn. It has no steps, no branches and no output that feeds anything; work that needs
+  three agents in order is a prompt saying so, and `message_agent`. A Routine belongs to an
+  **Agent** — that is, to **one agent on one team**, `<team>/<agent>`, the same identity the
+  AgentWorkspace's branch is named for, and never to the AgentProfile behind it. The same person
+  hired onto two teams has two sets of Routines and they do not travel. A turn needs an
+  AgentWorkspace, a session and a mailbox, and none of those are a Team's to lend or a
+  Profile's to hold. It fires **only while blobot is open**, with a window on
+  screen. See `.scratch/routines/`.
+- **Firing** — one due moment. **Run** — the turn a firing started, and everything that followed,
+  which is what the run budget bounds and what the run's outcome is about.
+- A firing blobot was there for and did not run is **skipped**, and the reason is recorded on the
+  run: no agent on the roster, a Workspace that is gone, a runtime that is not installed, or a
+  previous run of the same Routine that had not finished. A firing blobot was **not** there for is
+  **missed**: it writes no run at all, because nothing happened and nothing decided not to, and it
+  is counted on the Routine so the screen can say `missed 4 firings`. Both are terminal and
+  neither is a queue. Missed is not a failure — a laptop that was shut is the ordinary condition
+  of a laptop — so it is the one thing that does not count toward the rule that disarms a Routine
+  after three firings in a row ending in anything but a run.
+- **Armed** — a Routine that fires. Disarmed is the resting state for one a person writes, which
+  is created disarmed and armed as its own act. An Agent may **schedule** a Routine for itself
+  with `propose_routine`, and **that one is armed when it is made** — issue 05's 2026-08-30
+  amendment, which reversed *only a person may arm one*. What pays for it: the Routine opens
+  inline in the transcript in the turn that created it, carrying `disarm`; it keeps an ink edge
+  at the top of the Routines screen until a person has answered it; and an agent may hold at most
+  three armed Routines of its own. An agent still may not schedule one for a teammate, delete
+  one, or edit an armed one.
+- **Reviewed** — a person has looked at a Routine an Agent scheduled and said which way. It does
+  not mean *approved*: a Routine armed and later disarmed is reviewed, because a decision the
+  user reversed is still a decision they made. It is what clears the ink edge, and it is why
+  *unreviewed* is a fact on the row rather than an inference from *armed or gone*.
+
 ## Avoid
 
 - **"worktree"** as a domain term — it is the git *mechanism* behind AgentWorkspace, not the
@@ -70,3 +105,5 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
 - **"Authenticated"** for runtime detection — the probe cannot prove a credential works. Say
   *Ready*, *Needs sign-in*, *Not installed*, or *Status unknown*.
 - **"done"** as an Agent Status — it was dropped; an Agent that finishes a Turn is *idle*.
+- **"Cron"** — it names a mechanism blobot does not implement and promises a guarantee it cannot
+  keep: a Routine does not fire while the app is closed, and a missed firing is never run late. Say *Routine*, and say *every day at 09:00* rather than a schedule expression.

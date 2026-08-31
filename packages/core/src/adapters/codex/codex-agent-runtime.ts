@@ -425,6 +425,62 @@ export class CodexAgentRuntime implements AgentRuntime {
     this.#connection?.notify('session/cancel', { sessionId: this.#sessionId });
   }
 
+  /** True, and this is the runtime it was noticed on. Codex stores `developer_instructions`
+   *  on the session, so an edited persona never reaches a resumed one and does reach a fresh
+   *  one. See `.scratch/codex-runtime/issues/06`. */
+  get personaIsSessionBound(): boolean {
+    return true;
+  }
+
+  /**
+   * Close this session and open a fresh one, without respawning the bridge.
+   *
+   * **The persona changes here, and that is the point worth knowing.** Codex stores
+   * `developer_instructions` on the session, so an edit the user made never reached a resumed
+   * one (`.scratch/codex-runtime/issues/06`). A new session takes what the process is holding,
+   * which is the definition as it stood when this team last started. So a restart can silently
+   * put an agent under instructions it has not been running under, at a moment nobody chose.
+   * The adapter cannot see that difference — `sessions.persona_text` is the record of what each
+   * session was actually told — so the caller compares and says so. It is not left to pass.
+   *
+   * The posture is re-asserted by `#assertPosture` and is fatal if it cannot be confirmed, for
+   * the same reason it is fatal at start: the bridge's default mode wrote a file into the
+   * user's home directory without asking once.
+   */
+  async restart(): Promise<void> {
+    const connection = this.#connection;
+    if (connection === undefined || this.#lifecycle !== 'ready') {
+      throw new Error(`${this.agentId}: cannot restart a runtime that is ${this.#lifecycle}`);
+    }
+    if (this.#turn !== undefined) {
+      throw new Error(`${this.agentId}: cannot restart mid-turn`);
+    }
+    const previous = this.#sessionId;
+    this.#sessionId = '';
+    if (previous !== '') {
+      await connection.request('session/close', { sessionId: previous }).catch(() => undefined);
+    }
+    try {
+      const session = await this.#newSession(connection);
+      if (session.sessionId === undefined || session.sessionId === '') {
+        throw new Error(`${this.agentId}: codex returned no sessionId`);
+      }
+      this.#sessionId = session.sessionId;
+      this.#resumed = false;
+      await this.#assertPosture(session.modes?.currentModeId);
+      this.#optionGroups = await applyOptionChoices(
+        connection,
+        this.#sessionId,
+        this.#options.options ?? {},
+        optionGroupsFrom(session.configOptions, SURFACED_OPTIONS),
+        (line) => this.#options.onStderr?.(line),
+      );
+    } catch (error) {
+      this.#setLifecycle('dead');
+      throw error;
+    }
+  }
+
   async stop(): Promise<void> {
     if (this.#lifecycle === 'stopped') return;
     this.#setLifecycle('stopped');

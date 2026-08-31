@@ -3,6 +3,7 @@ import type { AgentEvent, Message } from '@blobot/core/domain';
 import type { UiAgentMessage, UiLog } from '../../shared/api.js';
 import {
   addressedBy,
+  compactionLine,
   continuesSpeaker,
   failuresIn,
   initialState,
@@ -47,10 +48,11 @@ describe('a snapshot', () => {
     team: { id: 'team', name: 'checkout', workspacePath: '/repo', turnBudget: 6 },
     teams: [],
     agents: [],
+    moreAbove: false,
     statuses: {},
     commands: {},
     usage: {},
-    log: { running: [], tools: [], turns: [] },
+    log: { running: [], tools: [], turns: [], compactions: [] },
     injection: {},
     messages: [peerMessage],
     answers: [{ id: 'a1', agentId: 'bob', text: 'on it', at: 20 }],
@@ -87,6 +89,7 @@ describe('a snapshot', () => {
             },
           ],
           turns: [],
+          compactions: [],
         },
       },
     });
@@ -110,6 +113,66 @@ describe('a snapshot', () => {
     });
     expect(after.items).toEqual([]);
     expect(after.feed).toEqual([]);
+  });
+});
+
+/**
+ * Ticket 02 cut the transcript into a window, and this is the only action that adds to the top
+ * of one. It had no test of its own: the snapshot fixtures carry `moreAbove` and nothing ever
+ * asserted on what happens when a page of history arrives.
+ */
+describe('a window of older transcript', () => {
+  const older: Message = { ...peerMessage, id: 'm0', body: 'the first thing anybody said', at: 2 };
+
+  it('prepends, so the live tail it was reading is still there', () => {
+    const live = apply([
+      { ...identity, type: 'agent_message_delta', messageId: 'live', at: 40, text: 'still writing' },
+    ]);
+    const state = reduce(live, {
+      type: 'earlier',
+      messages: [older],
+      answers: [{ id: 'a0', agentId: 'bob', text: 'and the reply', at: 3 }],
+      moreAbove: true,
+    });
+    // Oldest first, and the message that was mid-stream is still mid-stream at the bottom.
+    expect(state.items).toMatchObject([
+      { kind: 'peer', id: 'm0' },
+      { kind: 'agent', agentId: 'bob', text: 'and the reply' },
+      { kind: 'agent', agentId: 'alice', text: 'still writing', live: true },
+    ]);
+  });
+
+  it('keeps the copy on screen where a page overlaps, because that one may be mid-stream', () => {
+    const live = apply([
+      { ...identity, type: 'agent_message_delta', messageId: 'live', at: 40, text: 'half a sentence' },
+    ]);
+    const streaming = live.items.at(-1) as Item & { id: string };
+    const state = reduce(live, {
+      type: 'earlier',
+      messages: [],
+      // The same id the live row is keyed by, as the store would return it once it settled.
+      answers: [{ id: streaming.id, agentId: 'alice', text: 'half a sentence, finished', at: 40 }],
+      moreAbove: false,
+    });
+    expect(state.items).toHaveLength(1);
+    expect(state.items[0]).toMatchObject({ text: 'half a sentence', live: true });
+  });
+
+  it('takes the store’s word for whether anything is left above it', () => {
+    const state = reduce(
+      { ...initialState, moreAbove: true },
+      { type: 'earlier', messages: [older], answers: [], moreAbove: false },
+    );
+    expect(state.moreAbove).toBe(false);
+    expect(state.oldest).toBe(2);
+  });
+
+  it('never moves the cursor forward, so an empty page cannot ask for the same window twice', () => {
+    const state = reduce(
+      { ...initialState, oldest: 2, moreAbove: true },
+      { type: 'earlier', messages: [], answers: [], moreAbove: false },
+    );
+    expect(state.oldest).toBe(2);
   });
 });
 
@@ -422,10 +485,11 @@ describe('a permission block', () => {
         team: { id: 'team', name: 'checkout', workspacePath: '/repo', turnBudget: 10 },
         teams: [],
         agents: [],
+        moreAbove: false,
         statuses: {},
         commands: {},
         usage: {},
-        log: { running: [], tools: [], turns: [] },
+        log: { running: [], tools: [], turns: [], compactions: [] },
         injection: {},
         messages: [],
         answers: [],
@@ -661,10 +725,11 @@ describe('the context gauge', () => {
         team: { id: 'team', name: 'checkout', workspacePath: '/repo', turnBudget: 10 },
         teams: [],
         agents: [],
+        moreAbove: false,
         statuses: {},
         commands: {},
         usage: { alice: { used: 37_000, size: 1_000_000 } },
-        log: { running: [], tools: [], turns: [] },
+        log: { running: [], tools: [], turns: [], compactions: [] },
         injection: {},
         messages: [],
         answers: [],
@@ -726,6 +791,7 @@ describe('the activity column, after a team switch', () => {
         team: { id: 'team', name: 'checkout', workspacePath: '/repo', turnBudget: 10 },
         teams: [],
         agents: [],
+        moreAbove: false,
         statuses: {},
         commands: {},
         usage: {},
@@ -754,6 +820,7 @@ describe('the activity column, after a team switch', () => {
         },
       ],
       turns: [{ turnId: 'turn_1', agentId: 'alice', at: 20, stopReason: 'end_turn' }],
+      compactions: [],
     });
     expect(state.feed.map((entry) => entry.text)).toEqual([
       'turn ended · end_turn',
@@ -776,6 +843,7 @@ describe('the activity column, after a team switch', () => {
         },
       ],
       turns: [],
+      compactions: [],
     });
     expect(state.feed[0]?.id).toBe('call_1:done');
   });
@@ -787,6 +855,7 @@ describe('the activity column, after a team switch', () => {
       running: [],
       tools: [],
       turns: [{ turnId: 'turn_1', agentId: 'alice', at: 20, stopReason: 'max_tokens' }],
+      compactions: [],
     });
     expect(state.items).toMatchObject([
       { kind: 'system', agentId: 'alice', text: 'turn stopped · the context window is full' },
@@ -799,6 +868,7 @@ describe('the activity column, after a team switch', () => {
       running: [],
       tools: [],
       turns: [{ turnId: 'turn_1', agentId: 'alice', at: 20, stopReason: 'end_turn' }],
+      compactions: [],
     });
     expect(state.items).toEqual([]);
   });
@@ -944,10 +1014,11 @@ describe('a restored transcript', () => {
         team: { id: 'team', name: 'checkout', workspacePath: '/repo', turnBudget: 10 },
         teams: [],
         agents: [],
+        moreAbove: false,
         statuses: {},
         commands: {},
         usage: {},
-        log: { running: [], tools, turns: [] },
+        log: { running: [], tools, turns: [], compactions: [] },
         injection: {},
         messages: [],
         answers,
@@ -1017,6 +1088,7 @@ it('brings back a call that was in flight when the snapshot was read, and lets i
       agents: [
         { id: 'alice', name: 'Alice', role: 'builds', runtimeLabel: 'mock', workspacePath: '/w', accepts: { images: true, textFiles: true } },
       ],
+      moreAbove: false,
       statuses: {},
       commands: {},
       usage: {},
@@ -1032,6 +1104,7 @@ it('brings back a call that was in flight when the snapshot was read, and lets i
         ],
         tools: [],
         turns: [],
+        compactions: [],
       },
       injection: {},
       messages: [],
@@ -1102,5 +1175,301 @@ describe('what an edit changed, on its way to the line', () => {
       event: { type: 'tool_call_updated', toolCallId: 'c1', status: 'completed', exit: 0, at: 3, ...identity },
     });
     expect(done.items[0]).not.toHaveProperty('changed');
+  });
+});
+
+describe('a session blobot replaced', () => {
+  const compacted = {
+    type: 'context_compacted' as const,
+    agentId: 'alice',
+    sessionId: 's1',
+    at: 40,
+    used: 110_000,
+    ceiling: 120_000,
+    measured: false,
+  };
+
+  it('draws the pair of numbers, and says when the ceiling is an estimate', () => {
+    // Ticket 09's two honest facts rather than one derived percentage, and the estimate said
+    // out loud: restarting a session off a guess about a model is a stronger claim than
+    // drawing that guess on a gauge, and the line must not conflate them.
+    expect(compactionLine('command', 110_000, 120_000, false)).toBe(
+      'context compacted · 110k of 120k estimated',
+    );
+    expect(compactionLine('command', 110_000, 120_000, true)).toBe(
+      'context compacted · 110k of 120k',
+    );
+  });
+
+  it('names the standing instructions only where they could have moved', () => {
+    // On a runtime that re-asserts the persona every session this is not news, and a clause
+    // that is always there is a clause nobody reads on the day it matters.
+    expect(compactionLine('handoff', 110_000, 120_000, true, undefined, true)).toContain(
+      'standing instructions re-read',
+    );
+    expect(compactionLine('handoff', 110_000, 120_000, true, undefined, false)).not.toContain(
+      'standing instructions',
+    );
+  });
+
+  it('leads a refusal with what did not happen, and offers no remedy', () => {
+    const line = compactionLine('refused', 110_000, 120_000, true, 'the agent wrote no handoff');
+    expect(line.startsWith('session kept')).toBe(true);
+    expect(line).toContain('the agent wrote no handoff');
+    // Ticket 05's rule survives: `/compact` is in the palette and nothing here suggests it.
+    expect(line).not.toContain('/compact');
+  });
+
+  it('lands in the transcript with the note the agent wrote, so it can be opened', () => {
+    const state = reduce(initialState, {
+      type: 'event',
+      event: {
+        ...compacted,
+        how: 'handoff',
+        handoff: 'Migrating the old call sites; four left in checkout.',
+        handoffPath: '/handoffs/alice-40.md',
+      },
+    });
+    expect(state.items).toMatchObject([
+      {
+        kind: 'compaction',
+        agentId: 'alice',
+        how: 'handoff',
+        handoff: 'Migrating the old call sites; four left in checkout.',
+        handoffPath: '/handoffs/alice-40.md',
+      },
+    ]);
+  });
+
+  it('is emphasised in the activity column only when nothing happened', () => {
+    const worked = reduce(initialState, { type: 'event', event: { ...compacted, how: 'command' } });
+    const kept = reduce(initialState, {
+      type: 'event',
+      event: { ...compacted, how: 'refused', reason: 'the agent wrote no handoff' },
+    });
+    expect(worked.feed[0]?.emphasis).toBe(false);
+    expect(kept.feed[0]?.emphasis).toBe(true);
+  });
+
+  it('comes back on a team switch, in the transcript and in the column alike', () => {
+    const state = reduce(initialState, {
+      type: 'snapshot',
+      snapshot: {
+        team: { id: 'team', name: 'checkout', workspacePath: '/repo', turnBudget: 10 },
+        teams: [],
+        agents: [],
+        moreAbove: false,
+        statuses: {},
+        commands: {},
+        usage: {},
+        injection: {},
+        messages: [],
+        answers: [],
+        permissions: [],
+        turnsThisPrompt: 0,
+        demoMode: false,
+        log: {
+          running: [],
+          tools: [],
+          turns: [],
+          compactions: [
+            {
+              agentId: 'alice',
+              at: 40,
+              how: 'handoff',
+              used: 110_000,
+              ceiling: 120_000,
+              measured: false,
+              handoff: 'Migrating the old call sites.',
+            },
+          ],
+        },
+      },
+    });
+    expect(state.items).toMatchObject([{ kind: 'compaction', how: 'handoff' }]);
+    expect(state.feed[0]?.text).toContain('fresh session');
+  });
+});
+
+/**
+ * Issue 07's answer, and issue 11's. Both turn on the same one fact — that a turn was started by
+ * a clock and not by the person the bubble is drawn as — which `promptFromRoutine` records on the
+ * `messages` row. One fact, two uses.
+ */
+describe('a turn a clock started', () => {
+  const base = {
+    team: { id: 'team', name: 'checkout', workspacePath: '/repo', turnBudget: 6 },
+    teams: [],
+    agents: [],
+    moreAbove: false,
+    statuses: {},
+    commands: {},
+    usage: {},
+    log: { running: [], tools: [], turns: [], compactions: [] },
+    injection: {},
+    answers: [],
+    turnsThisPrompt: 0,
+    demoMode: false,
+    permissions: [],
+  };
+
+  const { routineRunId: _run, ...ordinary } = {
+    id: 'm_routine',
+    teamId: 'team',
+    fromAgentId: null,
+    toAgentId: 'alice',
+    body: 'run the typecheck and say what broke',
+    at: 300,
+    routineRunId: 'run_1',
+  } as const;
+
+  const fired = {
+    id: 'm_routine',
+    teamId: 'team',
+    fromAgentId: null,
+    toAgentId: 'alice',
+    body: 'run the typecheck and say what broke',
+    at: 300,
+    routineRunId: 'run_1',
+  } as const;
+
+  it('draws the prompt in the user own voice, under a system line naming the Routine', () => {
+    const state = reduce(initialState, {
+      type: 'snapshot',
+      snapshot: {
+        ...base,
+        messages: [fired],
+        routineOrigins: { run_1: 'nightly typecheck' },
+      },
+    });
+
+    // The words are the user's — they authored them and nobody else said them. What the bubble
+    // gets wrong is *when*, and that is the whole of what the line above it discloses. No fourth
+    // voice: `system` is not a voice, and it exists to carry exactly this kind of fact.
+    expect(state.items.map((item) => item.kind)).toEqual(['system', 'user']);
+    expect(state.items[0]).toMatchObject({
+      kind: 'system',
+      text: 'routine · nightly typecheck',
+      agentId: 'alice',
+    });
+  });
+
+  it('says nothing above an ordinary prompt', () => {
+    const state = reduce(initialState, {
+      type: 'snapshot',
+      // Absent rather than `undefined`: a message nobody scheduled has no origin at all.
+      snapshot: { ...base, messages: [ordinary] },
+    });
+
+    expect(state.items.map((item) => item.kind)).toEqual(['user']);
+  });
+
+  it('names it on a message that arrives live, not only on one that is restored', () => {
+    const state = reduce(reduce(initialState, { type: 'snapshot', snapshot: { ...base, messages: [] } }), {
+      type: 'message',
+      message: fired,
+      routineName: 'nightly typecheck',
+    });
+
+    expect(state.items.map((item) => item.kind)).toEqual(['system', 'user']);
+    // Remembered, so a re-render and a page above it draw the same line the live one did.
+    expect(state.routineOrigins).toEqual({ run_1: 'nightly typecheck' });
+  });
+
+  it('leaves an unread mark, and opening that agent pane is the only thing that clears it', () => {
+    const state = reduce(initialState, {
+      type: 'snapshot',
+      snapshot: { ...base, messages: [], unread: ['alice', 'bob'] },
+    });
+    expect(state.unread).toEqual(['alice', 'bob']);
+
+    const opened = reduce(state, { type: 'seen', agentId: 'alice' });
+
+    expect(opened.unread).toEqual(['bob']);
+  });
+});
+
+/**
+ * Issue 05's 2026-08-30 amendment, and the control that pays for it.
+ *
+ * An agent arms what it schedules now, so the only thing standing between that and an agent
+ * quietly giving itself a job at 03:00 is that **a person is told, where it happened**. These
+ * are the claims that keeps: it opens in the turn that did it, it survives a relaunch, and it
+ * never disappears once answered.
+ */
+describe('an agent that put itself on a schedule', () => {
+  const base = {
+    team: { id: 'team', name: 'checkout', workspacePath: '/repo', turnBudget: 6 },
+    teams: [],
+    agents: [],
+    moreAbove: false,
+    statuses: {},
+    commands: {},
+    usage: {},
+    log: { running: [], tools: [], turns: [], compactions: [] },
+    injection: {},
+    messages: [],
+    answers: [],
+    turnsThisPrompt: 0,
+    demoMode: false,
+    permissions: [],
+  };
+
+  const scheduled = {
+    routineId: 'rt_1',
+    agentId: 'alice',
+    name: 'nightly typecheck',
+    schedule: 'every day at 09:00',
+    frequency: '1 firing a day',
+    at: 400,
+    armed: true,
+  };
+
+  it('opens a block in the transcript when it happens', () => {
+    const state = reduce(reduce(initialState, { type: 'snapshot', snapshot: base }), {
+      type: 'scheduled',
+      scheduled,
+    });
+
+    expect(state.items).toMatchObject([
+      { kind: 'routine', agentId: 'alice', name: 'nightly typecheck', frequency: '1 firing a day' },
+    ]);
+    expect(state.routineArmed).toEqual({ rt_1: true });
+  });
+
+  it('comes back with the transcript, because the Routine is the record', () => {
+    // A disclosure the user could miss by being on another team when it happened would not be
+    // one. Restored from the rows rather than from the event that announced it.
+    const state = reduce(initialState, {
+      type: 'snapshot',
+      snapshot: { ...base, scheduled: [scheduled] },
+    });
+
+    expect(state.items).toMatchObject([{ kind: 'routine', routineId: 'rt_1' }]);
+    expect(state.routineArmed).toEqual({ rt_1: true });
+  });
+
+  it('says so rather than vanishing once the user disarms it', () => {
+    const opened = reduce(initialState, {
+      type: 'snapshot',
+      snapshot: { ...base, scheduled: [scheduled] },
+    });
+
+    const answered = reduce(opened, { type: 'routineArmed', routineId: 'rt_1', armed: false });
+
+    // The transcript is a record of what happened here. A block that disappeared would take the
+    // fact that an agent scheduled anything at all with it.
+    expect(answered.items).toMatchObject([{ kind: 'routine', routineId: 'rt_1' }]);
+    expect(answered.routineArmed).toEqual({ rt_1: false });
+  });
+
+  it('is written once, however many times it is announced', () => {
+    const once = reduce(reduce(initialState, { type: 'snapshot', snapshot: base }), {
+      type: 'scheduled',
+      scheduled,
+    });
+    const twice = reduce(once, { type: 'scheduled', scheduled });
+
+    expect(twice.items).toHaveLength(1);
   });
 });

@@ -1,0 +1,1 @@
+ALTER TABLE `routines` ADD `reviewed_at` integer;

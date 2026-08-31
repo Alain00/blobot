@@ -4,7 +4,7 @@
  * This is *our* type, never an ACP passthrough — see
  * `.scratch/first-demo/issues/04-the-normalized-agentevent-vocabulary.md`.
  * `packages/core` exports no ACP type; every provider quirk dies inside an adapter and
- * emerges as one of these nine members.
+ * emerges as one of these ten members.
  */
 
 /** Every event carries agent and session identity — the orchestrator multiplexes many agents. */
@@ -135,6 +135,55 @@ export interface TurnEnded extends AgentEventBase {
 }
 
 /**
+ * blobot chose a moment, and here is what came of it.
+ *
+ * The one event in this vocabulary that is not the agent's news. Every other member is
+ * something a runtime said; this is something blobot did *to* a session, and it is in the
+ * vocabulary rather than beside it because the alternative was a second durable channel
+ * carrying one fact. It travels the path the rest already travel: published to the pane,
+ * appended by the recorder, and read back into the transcript on a switch.
+ *
+ * It never says the word *compacted* on its own. `how` is the whole of what happened, and
+ * `refused` is a real outcome and the most important one: blobot decided the session was too
+ * full, asked for a handoff, did not get an ordinary ending, and **kept the session it had**.
+ * See `.scratch/transcript-scale/issues/10-compaction-by-handoff.md`.
+ */
+export interface ContextCompacted extends AgentEventBase {
+  readonly type: 'context_compacted';
+  /**
+   * `command` is the runtime's own compaction, which keeps the session id. `handoff` is a
+   * fresh session carrying what the agent wrote down. `refused` is neither, and says why.
+   */
+  readonly how: 'command' | 'handoff' | 'refused';
+  /** Occupancy when blobot decided, in the tokens the runtime reports. */
+  readonly used: number;
+  /** What it decided against: ticket 09's working ceiling, never the advertised window. */
+  readonly ceiling: number;
+  /**
+   * Whether a person established that ceiling for this model, or it is blobot's conservative
+   * estimate. Carried because firing a session restart off a guess is a stronger claim than
+   * drawing that guess on a gauge, and the line the user reads should not conflate the two.
+   */
+  readonly measured: boolean;
+  /** What the agent wrote for its successor. Present on `handoff`, and on nothing else. */
+  readonly handoff?: string;
+  /** Where that was archived, outside every AgentWorkspace. */
+  readonly handoffPath?: string;
+  /** Why nothing happened, on `refused`. In blobot's words, never a protocol enum. */
+  readonly reason?: string;
+  /**
+   * Whether the fresh session came up under the agent's standing instructions **as they stand
+   * now**, which the closed one may never have been given.
+   *
+   * Only on `handoff`, and only where the runtime binds a persona to a session. It is here
+   * rather than left implicit because it is the one way a compaction changes *who the agent
+   * is* rather than only what it remembers, and it would otherwise land at a moment nobody
+   * chose with nothing on screen. See `AgentRuntime.personaIsSessionBound`.
+   */
+  readonly personaRefreshed?: boolean;
+}
+
+/**
  * Fatal only: protocol errors and process death. An **event, not a thrown rejection**, so a
  * partial turn's transcript survives intact.
  */
@@ -154,6 +203,7 @@ export type AgentEvent =
   | ToolCallUpdated
   | AgentMessageSent
   | UsageUpdated
+  | ContextCompacted
   | TurnEnded
   | AgentError;
 

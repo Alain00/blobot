@@ -1,0 +1,1 @@
+ALTER TABLE `messages` ADD `routine_run_id` text;

@@ -1,0 +1,1 @@
+ALTER TABLE `routines` ADD `missed_firings` integer DEFAULT 0 NOT NULL;

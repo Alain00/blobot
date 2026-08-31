@@ -3,6 +3,7 @@ import { ChevronDown } from 'lucide-react';
 import type { AgentStatus, ToolKind } from '@blobot/core/domain';
 import type { PermissionChoice, UiAgent, UiPermissionOutcome } from '../../../shared/api.js';
 import {
+  compactionLine,
   continuesSpeaker,
   failuresIn,
   isPending,
@@ -24,15 +25,30 @@ export function Conversation({
   statuses,
   items,
   onAnswerPermission,
+  routineArmed,
+  onDisarmRoutine,
   opening = false,
   workspacePath,
   chrome,
+  moreAbove = false,
+  onLoadEarlier,
 }: {
   pane: Pane;
   agents: readonly UiAgent[];
   statuses: Record<string, AgentStatus>;
   items: readonly Item[];
   onAnswerPermission: (requestId: string, choice: PermissionChoice) => void;
+  /**
+   * Whether each Routine an agent scheduled for itself is still running, by routine id. The
+   * block draws `disarm` only while it is, so this pane and the Routines screen cannot end up
+   * saying different things about one row.
+   */
+  routineArmed: Record<string, boolean>;
+  onDisarmRoutine: (routineId: string) => void;
+  /** Whether the team said anything above this window. False means this is the beginning. */
+  moreAbove?: boolean;
+  /** Fetch the window above. Resolves when the pane has it, which is what ends the wait. */
+  onLoadEarlier?: () => Promise<void>;
   /** Where the team's agents branch from. Only the team pane says it; an agent says its own. */
   workspacePath?: string;
   /** The window's controls, rendered at the end of this row. App owns them; this row is
@@ -45,7 +61,9 @@ export function Conversation({
   const focused = pane.kind === 'agent' ? byId.get(pane.agentId) : undefined;
   const stream = useStickToBottom();
   const answer = useLatest(onAnswerPermission);
+  const disarm = useLatest(onDisarmRoutine);
   const rows = rowsOf(items);
+  const earlier = useLoadEarlier(stream, onLoadEarlier);
 
   // The pane's own chrome only: App owns the column, so the composer sits under this in the
   // same flex container.
@@ -79,11 +97,25 @@ export function Conversation({
           nothing else on screen carries it, and the controls that strip held (the turn pips
           and the activity toggle) come with it, at the end of this row. */}
       <div className="convhead">
+        {/* The words are blobot's and the path is git's, so only the path is mono. */}
         <span className="where">
-          {focused === undefined
-            ? `${agents.length} agents · a workspace each${workspacePath === undefined ? '' : ` · ${workspacePath}`}`
-            : // The runtime appears exactly once, as a label. The UI never branches on it.
-              `${focused.role} · ${focused.runtimeLabel} · ${focused.branch ?? focused.workspacePath}`}
+          {focused === undefined ? (
+            <>
+              {`${agents.length} agents · a workspace each`}
+              {workspacePath !== undefined && (
+                <>
+                  {' · '}
+                  <span className="mono">{workspacePath}</span>
+                </>
+              )}
+            </>
+          ) : (
+            // The runtime appears exactly once, as a label. The UI never branches on it.
+            <>
+              {`${focused.role} · ${focused.runtimeLabel} · `}
+              <span className="mono">{focused.branch ?? focused.workspacePath}</span>
+            </>
+          )}
         </span>
         {chrome !== undefined && <span className="chrome">{chrome}</span>}
       </div>
@@ -92,6 +124,29 @@ export function Conversation({
           stops at a measure a paragraph can be read at, centred in whatever is left. */}
       <div className="stream" ref={stream}>
         <div className="col">
+          {/* The top of the window, said out loud.
+
+              The transcript is bounded (`transcriptOfTeam`), so what the pane holds is the
+              recent end of a conversation and not the whole of it. Without this the reader has
+              no way to tell that from a team that started here, which is the app telling them
+              something false about their own history — the same failure the activity column had
+              when a switch emptied it silently.
+
+              A control and not a scroll trigger, decided with the author 2026-08-30. Infinite
+              scroll is what a chat pane usually does, and it wants a second scroll-position
+              mutation inside the one ResizeObserver that already pins this column to the
+              bottom; the two fight, and the pane that results is the jumpy one. A click cannot
+              fire twice on a flick, and it puts the boundary on screen instead of implying it.
+
+              It borrows `.route`'s mono label and nothing else. No chevron: a chevron promises
+              the thing is already here and folded, and this is a fetch. */}
+          {moreAbove && onLoadEarlier !== undefined && (
+            <div className="earlier">
+              <button className="route" onClick={earlier.load} disabled={earlier.loading}>
+                <span className="lbl">{earlier.loading ? 'loading' : 'load earlier'}</span>
+              </button>
+            </div>
+          )}
           {rows.map((row, index) => {
             // A fold is *inside* a turn, so what the row after it groups against is the last
             // item the fold swallowed, not the fold. Otherwise every block would reopen the
@@ -110,7 +165,8 @@ export function Conversation({
                     grouped={rule === undefined && continuesSpeaker(row.item, previous)}
                     teamPane={pane.kind === 'team'}
                     onAnswerPermission={answer}
-                    {...castOf(row.item, pane, byId, statuses)}
+                    onDisarmRoutine={disarm}
+                    {...castOf(row.item, pane, byId, statuses, routineArmed)}
                   />
                 )}
               </React.Fragment>
@@ -181,6 +237,13 @@ interface Cast {
    * the fidget `DESIGN.md` reserves the team mark's single animation to avoid.
    */
   status?: AgentStatus | undefined;
+  /**
+   * Whether the Routine an agent scheduled is still running. A **boolean** rather than the map
+   * it comes from, and deliberately: `ItemView` is memoized, and a fresh object handed to every
+   * row on every delta would re-render the whole history for the sake of one live message. That
+   * cost has a test.
+   */
+  armed?: boolean | undefined;
 }
 
 function castOf(
@@ -188,10 +251,17 @@ function castOf(
   pane: Pane,
   byId: Map<string, UiAgent>,
   statuses: Record<string, AgentStatus>,
+  routineArmed: Record<string, boolean>,
 ): Cast {
   switch (item.kind) {
     case 'user':
       // Everybody it went to, in the order they were addressed. One name is the ordinary case.
+      //
+      // Nothing at all on a team of one. The tag's rule is "only where a message could have gone
+      // somewhere else", and on a one-agent team the team pane has exactly the same single
+      // recipient the agent pane does — so `to Alice` under every message the user sends is a
+      // caption restating the only fact on screen that was never in question.
+      if (byId.size < 2) return {};
       return { toName: item.agentIds.map((id) => byId.get(id)?.name ?? id).join(', ') };
     case 'agent': {
       const agent = byId.get(item.agentId);
@@ -215,7 +285,18 @@ function castOf(
     }
     case 'permission':
       return { fromName: byId.get(item.agentId)?.name ?? item.agentId };
+    // A claim about one agent, which the team pane has to attribute or it reads as the team
+    // having done it. Plus whether it is still running, resolved here so the row itself takes a
+    // boolean and stays memoizable.
+    case 'routine':
+      return {
+        fromName: pane.kind === 'team' ? byId.get(item.agentId)?.name : undefined,
+        armed: routineArmed[item.routineId] ?? false,
+      };
     case 'system':
+    // Same rule for a compaction, which is a system line that opens: in an agent's pane the
+    // agent is the pane, and in the team pane the line has to say whose session it was.
+    case 'compaction':
       // No fallback to the id: an unrecognised agent leaves the line unattributed rather than
       // prefixing it with a row id nobody can read.
       return { fromName: pane.kind === 'team' ? byId.get(item.agentId)?.name : undefined };
@@ -393,11 +474,14 @@ const ItemView = React.memo(function ItemView({
   toHue,
   received = false,
   status,
+  armed = false,
+  onDisarmRoutine,
 }: {
   item: Item;
   grouped: boolean;
   teamPane: boolean;
   onAnswerPermission: (requestId: string, choice: PermissionChoice) => void;
+  onDisarmRoutine: (routineId: string) => void;
 } & Cast): React.JSX.Element | null {
   switch (item.kind) {
     // From you: a solid bubble on the right. There is only ever one "you", so the side is an
@@ -419,7 +503,7 @@ const ItemView = React.memo(function ItemView({
           <div className="bubble">{item.text}</div>
           {/* Only where a message could have gone somewhere else. In an agent's pane the
               recipient is the pane. */}
-          {teamPane && <div className="tag">to {toName}</div>}
+          {teamPane && toName !== undefined && <div className="tag">to {toName}</div>}
         </div>
       );
 
@@ -492,46 +576,7 @@ const ItemView = React.memo(function ItemView({
     case 'permission':
       if (item.outcome !== undefined) return <ToolLine item={item} />;
       return (
-        <div className="perm">
-          <div className="ask">
-            <b>{fromName}</b> wants to run <span className="mono">{item.title}</span>
-          </div>
-          {/* Said every time rather than once at team creation: this is the moment the sentence
-              is about something, and the block is where a user decides what blobot is.
-
-              It used to say "this reaches outside its own workspace or cannot be undone", which
-              was a reason blobot cannot know and which was false of most of what it was printed
-              over: on Claude, `default` mode asked about every edit inside the agent's own
-              worktree. Ticket 14's 2026-08-30 amendment. It now says the one thing that is true
-              of every request that reaches here, at all three trust levels — naming what blobot
-              vouches for would be wrong for a `careful` agent, which it vouches for nothing
-              for. */}
-          <div className="why">
-            blobot did not vouch for this one, so the runtime is asking and the agent waits until
-            you answer. What it vouches for is what this agent is set to, in its own definition.
-            Allow once covers this call. Allow always writes a rule into this agent&apos;s own
-            .claude/settings.local.json and stops asking for this one thing.
-          </div>
-          <div className="acts">
-            <button
-              className="btn"
-              disabled={!item.canAllow}
-              onClick={() => onAnswerPermission(item.id, 'allow')}
-            >
-              allow once
-            </button>
-            <button
-              className="btn"
-              disabled={!item.canAllowAlways}
-              onClick={() => onAnswerPermission(item.id, 'allow_always')}
-            >
-              allow always
-            </button>
-            <button className="btn" onClick={() => onAnswerPermission(item.id, 'reject')}>
-              reject
-            </button>
-          </div>
-        </div>
+        <Permission item={item} fromName={fromName} onAnswerPermission={onAnswerPermission} />
       );
 
     // A structural event, in the timeline rather than in the activity column — it is part of
@@ -543,14 +588,256 @@ const ItemView = React.memo(function ItemView({
           <span>{fromName === undefined ? item.text : `${fromName} · ${item.text}`}</span>
         </div>
       );
+
+    // blobot chose a moment. It draws in the system voice because it is structural rather than
+    // said, and it is the one system line that opens: on a handoff the note the agent wrote is
+    // underneath it. Nothing here offers `/compact` or advises anything — that is ticket 05's
+    // rule, which this ticket freed the *trigger* from and not the gauge.
+    case 'compaction':
+      return <Compaction item={item} fromName={fromName} />;
+
+    // An agent put itself on a schedule, and it is already running.
+    //
+    // Issue 05's 2026-08-30 amendment reversed *only a person may arm one*, and this block is
+    // what pays for it: **the user is told, where it happened.** blobot has never interrupted
+    // the user and does not start here — the block sits in the turn, in the transcript, at the
+    // moment it was created. What it refuses is to let an agent arm something off screen.
+    //
+    // It carries `disarm` and nothing else. There is no `keep`, because keeping it is what
+    // happens if you do nothing, and a button for the status quo would read as a question the
+    // agent was asking. It was not asking.
+    case 'routine':
+      return (
+        <div className="card scheduled">
+          {/* Sans, because it is a sentence. It was 10px mono and lowercase, which is neither of
+              the two things mono is for here: it is not a value or a literal, and it is not an
+              uppercase signage label. The same argument that took `.sysline` off mono. */}
+          <div className="said">
+            {fromName === undefined ? 'A routine was scheduled' : `${fromName} scheduled a routine`}
+          </div>
+          <div className="what">
+            <b>{item.name}</b>
+            {/* The shape and what the shape costs, because an agent choosing `every hour` chose
+                twenty-four times what `every day` costs and the person reading this is the one
+                who can undo it. A count, never a price. Mono here and not above: this pair is
+                two values, which is the case mono exists for. */}
+            <span className="mono muted">
+              {item.schedule} · {item.frequency}
+            </span>
+          </div>
+          <div className="acts">
+            {armed ? (
+              <button className="btn" onClick={() => onDisarmRoutine(item.routineId)}>
+                disarm
+              </button>
+            ) : (
+              // Answered, and it says so rather than the block disappearing: the transcript is a
+              // record of what happened here, and a block that vanished would take the fact that
+              // an agent scheduled anything with it.
+              <span className="mono muted">disarmed</span>
+            )}
+          </div>
+        </div>
+      );
   }
 });
+
+/**
+ * Ticket 14's permission block: the agent has stopped, and it will stay stopped until this is
+ * answered.
+ *
+ * A **card** — raised ground, one hairline, 14px radius — rather than the ink edge it wore until
+ * now. The edge was `.refusal`'s on the argument that this is the same kind of event, and the
+ * argument held for a refusal, which is one sentence. This is four things: a claim, a literal of
+ * unbounded length, a reason, and three answers. An edge does not contain four things; it just
+ * runs down the side of them, and the block read as loose transcript rather than as one object
+ * that has stopped. DESIGN.md carries the amendment.
+ *
+ * What the card does *not* borrow from every other permission dialog on earth: an armed button.
+ * `.btn.primary` is the app's other inversion and it means "this is the thing to do here";
+ * blobot has no opinion about whether an agent should run this, which is the entire reason it is
+ * asking. All three answers are the same weight, and the colour stays on the blobatars.
+ *
+ * The *always* sentence is behind the transcript's own disclosure rather than on the face of the
+ * block. It is three of the four lines the block used to open with, all of them about the
+ * rarest of the three answers, and the paragraph out-massed both the command and the buttons.
+ * DESIGN.md's rule that the block says where an always goes is kept: it says it, one click away,
+ * on the control that is about to write the rule.
+ */
+function Permission({
+  item,
+  fromName,
+  onAnswerPermission,
+}: {
+  item: Extract<Item, { kind: 'permission' }>;
+  fromName: string | undefined;
+  onAnswerPermission: (requestId: string, choice: PermissionChoice) => void;
+}): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="card perm">
+      {/* The sentence and the literal are two lines, not one. A command is quoted from somewhere
+          else and can be any length: run inline through the sentence, a long one wraps three
+          times and the only thing on the block the user has to actually read is the hardest
+          thing on it to find. It scrolls rather than wraps, for the reason a path does. */}
+      <div className="ask">
+        <b>{fromName}</b> wants to run
+      </div>
+      <div className="cmd mono">{item.title}</div>
+      {/* Nothing else on the face of the card. What was here was four lines of prose, identical
+          on every request forever, and it was the largest thing on a block whose whole content
+          is one command and three answers: read once, noise every time after. Both sentences are
+          behind the disclosure, which is where a thing you need on your first permission request
+          and never again belongs. */}
+      {open && (
+        <div className="always">
+          blobot did not vouch for this one, so the runtime is asking and the agent waits until
+          you answer. What it vouches for is what this agent is set to, in its own definition.
+          Allow always writes a rule into this agent&apos;s own .claude/settings.local.json and
+          stops asking for this one thing. It is a file in this agent&apos;s own copy of the
+          folder, so you can read it and delete it, and it says nothing about any other agent.
+        </div>
+      )}
+      <div className="acts">
+        <button className="route" aria-expanded={open} onClick={() => setOpen(!open)}>
+          <ChevronDown size={12} className={open ? '' : 'shut'} aria-hidden />
+          <span className="lbl">why you are asked</span>
+        </button>
+        <div className="btns">
+          <button
+            className="btn"
+            disabled={!item.canAllow}
+            onClick={() => onAnswerPermission(item.id, 'allow')}
+          >
+            allow once
+          </button>
+          <button
+            className="btn"
+            disabled={!item.canAllowAlways}
+            onClick={() => onAnswerPermission(item.id, 'allow_always')}
+          >
+            allow always
+          </button>
+          <button className="btn" onClick={() => onAnswerPermission(item.id, 'reject')}>
+            reject
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A session blobot replaced, or kept, with the agent's own note under it.
+ *
+ * The disclosure is `.route`'s again rather than a third gesture, and it is shut by default for
+ * the reason `Steps` is: this is a thing that happened, not a thing to read, until the reader
+ * asks why their agent stopped remembering yesterday. Then it is the whole answer.
+ *
+ * The path is drawn under the note rather than in the line. It is where the file was archived,
+ * outside every AgentWorkspace, and it is a fact for somebody who wants the file, not part of
+ * the sentence about what happened.
+ */
+function Compaction({
+  item,
+  fromName,
+}: {
+  item: Extract<Item, { kind: 'compaction' }>;
+  fromName: string | undefined;
+}): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+  const line = compactionLine(
+    item.how,
+    item.used,
+    item.ceiling,
+    item.measured,
+    item.reason,
+    item.personaRefreshed,
+  );
+  const said = fromName === undefined ? line : `${fromName} · ${line}`;
+  if (item.handoff === undefined) {
+    return (
+      <div className="sysline">
+        <span>{said}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="handoff">
+      <button className="route" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <ChevronDown size={12} className={open ? '' : 'shut'} aria-hidden />
+        <span className="lbl">{said}</span>
+      </button>
+      {open && (
+        <div className="note">
+          <div className="said">{item.handoff}</div>
+          {item.handoffPath !== undefined && <div className="where">{item.handoffPath}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * The transcript follows the newest line, and stops following the moment the reader scrolls
  * away from the bottom — an agent streaming for a minute must not yank a reader out of the
  * paragraph they went back to read.
  */
+/**
+ * Load the window above without moving what the reader is looking at.
+ *
+ * Prepending content above the viewport pushes everything down by exactly the height of what
+ * arrived, and `useStickToBottom` only knows about the bottom — so left alone, a reader who
+ * reaches the top and asks for more is thrown to a random place in their own history, which is
+ * the one thing the ticket said would be got wrong.
+ *
+ * The fix is to hold the distance from the *bottom* rather than the scroll position. `scrollTop`
+ * is measured from the top and every prepended pixel invalidates it; `scrollHeight - scrollTop`
+ * is measured from the end of the column, and prepending does not move the end. Restore it in a
+ * layout effect, before the browser paints, or the jump is visible on the way to being fixed.
+ *
+ * Markdown lays out a frame late, which would defeat a one-shot restore, so the anchor is held
+ * across the observer's next callbacks too: it is released on the first frame in which the
+ * column's height has stopped changing. `pinned` is false throughout — the reader is at the top,
+ * a long way from the bottom — so this cannot race the stick-to-bottom path.
+ */
+function useLoadEarlier(
+  stream: React.RefObject<HTMLDivElement | null>,
+  onLoadEarlier: (() => Promise<void>) | undefined,
+): { load: () => void; loading: boolean } {
+  const [loading, setLoading] = useState(false);
+  const anchor = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    const node = stream.current;
+    const content = node?.firstElementChild;
+    if (node === null || content === null || content === undefined) return;
+    let last = -1;
+    const hold = new ResizeObserver(() => {
+      const held = anchor.current;
+      if (held === undefined) return;
+      node.scrollTop = node.scrollHeight - held;
+      // Released only once the column has settled: a late-laying-out code block would otherwise
+      // move the page after the anchor had been dropped.
+      if (node.scrollHeight === last) anchor.current = undefined;
+      last = node.scrollHeight;
+    });
+    hold.observe(content);
+    return () => hold.disconnect();
+  }, [stream]);
+
+  const load = useCallback(() => {
+    const node = stream.current;
+    if (node === null || onLoadEarlier === undefined) return;
+    // The distance from the bottom, captured before anything arrives.
+    anchor.current = node.scrollHeight - node.scrollTop;
+    setLoading(true);
+    void onLoadEarlier().finally(() => setLoading(false));
+  }, [stream, onLoadEarlier]);
+
+  return { load, loading };
+}
+
 function useStickToBottom(): React.RefObject<HTMLDivElement | null> {
   const ref = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);

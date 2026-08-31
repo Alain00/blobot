@@ -23,3 +23,13 @@ quietly stop being true while the app keeps displaying it.
   session and lands in the user's repository.
 - `03-an-agent-that-cannot-reach-its-teammates.md` — the loopback server can be switched off
   from inside the session, and the failure is silence.
+- `04-the-mcp-surface-nobody-counted.md` — a fourth of the same family, arrived at from the
+  context gauge and filed under `transcript-scale` until the decision was taken. blobot tells the
+  user what an agent inherits and ADR-0003 narrowed it; **for tools that promise has no handle at
+  all.** 198 inherited tools reach a blobot-launched agent in an empty directory, 272.8k of
+  schema, and 90 of them come from a plugin and a connector that `settingSources` cannot reach.
+  `strictMcpConfig` is measured working through blobot's `_meta`, keeping blobot's own loopback
+  tool. **Decided 2026-08-30: a per-agent choice at hire time**, blobot's own word beside `trust`
+  and `compaction`, because it costs capability rather than tokens and blobot cannot see which
+  agents need it. Unbuilt, with one open half — no equivalent lever is known on OpenCode and Codex
+  was never probed.

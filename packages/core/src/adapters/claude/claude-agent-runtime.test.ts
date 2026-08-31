@@ -766,3 +766,68 @@ describe('what the user may choose', () => {
     expect(bridge.options['effort']).toBe('high');
   });
 });
+
+describe('starting the session again', () => {
+  it('closes the old session before opening a new one, and comes back on a different id', async () => {
+    const { runtime, bridge } = await started();
+    const before = runtime.sessionId;
+
+    await runtime.restart();
+
+    // Closed first. A bridge holding two live sessions for one agent is two sets of tools
+    // pointed at one worktree, and the second would still be there after a failure that left
+    // us reporting the session was kept.
+    expect(bridge.closed).toEqual([before]);
+    expect(runtime.sessionId).not.toBe(before);
+    expect(runtime.lifecycle).toBe('ready');
+    // The one thing a restart is for: the provider remembers nothing of what came before.
+    expect(runtime.resumed).toBe(false);
+  });
+
+  it('re-asserts ticket 14’s permission mode on the session it just opened', async () => {
+    const { runtime, bridge } = await started();
+    await runtime.restart();
+
+    // `session/new` reports whatever mode it likes and the fake reports `auto`, which is the
+    // one ticket 14 refuses. The mode is a per-session setting, so a fresh session gets the
+    // same forcing the first one did or the agent comes back under a posture nobody chose.
+    expect(runtime.permissionMode).toBe('default');
+    expect(bridge.sessionId).toBe(runtime.sessionId);
+  });
+
+  it('re-applies the user’s option choices, which are per session too', async () => {
+    const bridge = new FakeBridge();
+    const runtime = new ClaudeAgentRuntime({
+      agentId: 'bob',
+      cwd: '/tmp/blobot/bob',
+      persona: 'You are Bob.',
+      claudeExecutable: '/usr/bin/true',
+      options: { effort: 'high' },
+      spawn: () => bridge,
+    });
+    await runtime.start();
+    expect(bridge.options['effort']).toBe('high');
+
+    bridge.options['effort'] = 'medium';
+    await runtime.restart();
+
+    // `set_config_option` names a session id, so the choices do not travel: an agent set to
+    // high effort that came back on the runtime's default would be a setting silently undone.
+    expect(bridge.options['effort']).toBe('high');
+  });
+
+  it('refuses to restart mid-turn, because a session cannot be replaced under a prompt', async () => {
+    const { runtime } = await started();
+    const turn = runtime.sendPrompt({ text: 'hello', from: 'user' });
+    const reading = (async () => {
+      for await (const _event of turn) {
+        // Drained so the iterator is live while the restart is attempted.
+      }
+    })();
+    await tick();
+
+    await expect(runtime.restart()).rejects.toThrow(/mid-turn/);
+    await runtime.stop();
+    await reading;
+  });
+});

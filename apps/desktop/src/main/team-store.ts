@@ -1,9 +1,15 @@
 import { randomBytes } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { TrustLevel } from '@blobot/core';
+import type { CompactionSetting, TrustLevel } from '@blobot/core';
 import {
+  commitPlan,
+  commitWorktree,
+  currentBranch,
   inspectWorkspace as inspectPath,
+  listBranches,
+  spawnCommand,
+  switchBranch,
   prepareWorkspace as preparePath,
   publishBranch,
   publishPlan,
@@ -13,6 +19,8 @@ import {
   WorkspaceError,
   refSlug,
   uuidv7,
+  type CommitOutcome,
+  type SwitchOutcome,
   type AgentProfileRecord,
   type AgentWorkspaceStatus,
   type Clock,
@@ -42,6 +50,11 @@ export interface NewAgentSpec {
    * every agent hired before the selector existed is.
    */
   readonly trust?: TrustLevel;
+  /**
+   * Whether blobot may replace this agent's session when its window fills up. Absent is `auto`,
+   * which is on, and is what every agent hired before the selector existed is.
+   */
+  readonly compaction?: CompactionSetting;
 }
 
 /** Forming a team out of agents that already exist. */
@@ -133,6 +146,7 @@ export function hireAgent(spec: NewAgentSpec, deps: CreateTeamDeps): AgentProfil
     ...(spec.hue === undefined ? {} : { hue: spec.hue }),
     ...(spec.runtimeOptions === undefined ? {} : { runtimeOptions: spec.runtimeOptions }),
     ...(spec.trust === undefined ? {} : { trust: spec.trust }),
+    ...(spec.compaction === undefined ? {} : { compaction: spec.compaction }),
     createdAt: now,
   });
 }
@@ -198,6 +212,7 @@ export function editAgentProfile(
     // now, and clearing the picker back to the runtime's defaults has to be sayable.
     ...(spec.runtimeOptions === undefined ? {} : { runtimeOptions: spec.runtimeOptions }),
     ...(spec.trust === undefined ? {} : { trust: spec.trust }),
+    ...(spec.compaction === undefined ? {} : { compaction: spec.compaction }),
     ...(instructions === undefined || instructions === '' ? {} : { instructions }),
     ...(spec.hue === undefined ? {} : { hue: spec.hue }),
   });
@@ -214,6 +229,8 @@ export function editAgentProfile(
       ...(spec.hue === undefined ? {} : { hue: spec.hue }),
       ...(spec.runtimeOptions === undefined ? {} : { runtimeOptions: spec.runtimeOptions }),
       ...(spec.trust === undefined ? {} : { trust: spec.trust }),
+      ...(spec.compaction === undefined ? {} : { compaction: spec.compaction }),
+    ...(spec.compaction === undefined ? {} : { compaction: spec.compaction }),
     });
   }
 
@@ -327,6 +344,7 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
       ...(profile.executablePath === undefined ? {} : { executablePath: profile.executablePath }),
       ...(profile.runtimeOptions === undefined ? {} : { runtimeOptions: profile.runtimeOptions }),
       ...(profile.trust === undefined ? {} : { trust: profile.trust }),
+      ...(profile.compaction === undefined ? {} : { compaction: profile.compaction }),
       workspacePath: workspace.path,
       ...(workspace.branch === undefined ? {} : { branch: workspace.branch }),
       createdAt: deps.clock.now(),
@@ -469,6 +487,147 @@ export async function readTeamWorkspaces(
   return statuses;
 }
 
+/**
+ * One agent's own branch, the holder of every other one, in blobot's terms rather than git's.
+ *
+ * A path is what git answers with and an agent is what the user is looking at, so the mapping
+ * happens here: this is the layer that knows both which directory belongs to which agent and
+ * which one is the user's own project folder. The renderer is handed names and never paths to
+ * interpret.
+ */
+export interface AgentBranch {
+  readonly name: string;
+  readonly current: boolean;
+  /** Absent when the branch is free. Present means git will refuse it, and this says who has it. */
+  readonly heldBy?: {
+    readonly path: string;
+    /** The teammate whose worktree it is, where it is one. */
+    readonly agentName?: string;
+    /**
+     * That teammate's own hue, carried so the menu can draw their face rather than describe
+     * them. Without it `Blob` derives a colour from the name, which would put a *second* face
+     * on one agent: a hue is an identity in this app, not a decoration.
+     */
+    readonly agentHue?: number;
+    /** The Workspace itself: the repository the user opened, not any agent's copy of it. */
+    readonly isWorkspace?: boolean;
+  };
+}
+
+export interface AgentBranches {
+  readonly current?: string;
+  readonly branches: readonly AgentBranch[];
+  /** Why there is nothing to choose from. A copy has no branches and never grows any. */
+  readonly unavailable?: string;
+}
+
+/** Every branch this agent's worktree could be on, and who is standing on the ones it cannot. */
+export async function readAgentBranches(
+  teamId: string,
+  agentId: string,
+  deps: CreateTeamDeps,
+): Promise<AgentBranches> {
+  const found = branchTarget(teamId, agentId, deps);
+  if ('error' in found) return { branches: [], unavailable: found.error };
+
+  const listing = await listBranches(found.path, spawnCommand);
+  return {
+    ...(listing.current === undefined ? {} : { current: listing.current }),
+    branches: listing.branches.map((branch) => {
+      const holder = branch.heldBy === undefined ? undefined : found.holders.get(branch.heldBy);
+      return {
+        name: branch.name,
+        current: branch.current,
+        ...(branch.heldBy === undefined
+          ? {}
+          : { heldBy: { path: branch.heldBy, ...(holder ?? {}) } }),
+      };
+    }),
+  };
+}
+
+/**
+ * Move this agent's worktree onto a branch, at the user's own click.
+ *
+ * The one write among the workspace reads, and it stays the user's: no runtime is told, nothing
+ * enters a session, and `git switch` is on no trust level's allowlist, so an agent cannot do
+ * this for itself. It is not a restart either. The session's cwd does not move, because the
+ * worktree is still the same directory; what changed is what is in it, which is the same thing
+ * that happens when a person switches branch in a terminal an agent is working in.
+ */
+export async function switchAgentBranch(
+  teamId: string,
+  agentId: string,
+  branch: string,
+  options: { readonly create?: boolean },
+  deps: CreateTeamDeps,
+): Promise<SwitchOutcome> {
+  const found = branchTarget(teamId, agentId, deps);
+  if ('error' in found) return { ok: false, error: found.error };
+  return switchBranch(found.path, branch, options, spawnCommand);
+}
+
+/** The directory to run git in, plus what every other worktree path in it means. */
+function branchTarget(
+  teamId: string,
+  agentId: string,
+  deps: CreateTeamDeps,
+):
+  | { path: string; holders: Map<string, { agentName?: string; agentHue?: number; isWorkspace?: boolean }> }
+  | { error: string } {
+  const team = deps.store.teamById(teamId);
+  if (team === undefined) return { error: 'That team is already gone.' };
+  const record = deps.store.agentsOfTeam(team.id).find((agent) => agent.id === agentId);
+  if (record === undefined) return { error: 'That agent is not on this team.' };
+  if (team.workspaceKind !== 'git') {
+    // A copy has no branches and a nested tree has a set of them per repository. Neither is one
+    // menu, and offering an empty one would read as a repository with no branches in it.
+    return { error: 'this workspace is not a single git repository' };
+  }
+  const workspaces = deps.workspaces ?? workspaceProviderFor(team.workspaceKind);
+  const holders = new Map<string, { agentName?: string; agentHue?: number; isWorkspace?: boolean }>();
+  holders.set(team.workspacePath, { isWorkspace: true });
+  for (const member of deps.store.agentsOfTeam(team.id)) {
+    holders.set(workspaces.workspaceFor(requestFor(team, member.id, member.name)).path, {
+      agentName: member.name,
+      ...(member.hue === undefined || member.hue === null ? {} : { agentHue: member.hue }),
+    });
+  }
+  return { path: workspaces.workspaceFor(requestFor(team, record.id, record.name)).path, holders };
+}
+
+/** The two commands a commit would run, for the confirm to show before it runs them. */
+export function commitPlanFor(
+  teamId: string,
+  agentId: string,
+  message: string,
+  deps: CreateTeamDeps,
+): readonly string[] {
+  const found = branchTarget(teamId, agentId, deps);
+  if ('error' in found) return [];
+  return commitPlan({ path: found.path, message });
+}
+
+/**
+ * Commit what is in this agent's workspace, at the user's click.
+ *
+ * The user's own git, on the user's own say-so, with the commands shown first. No runtime is
+ * told, nothing enters a session, and `git commit` is on no trust level's allowlist, so an agent
+ * cannot do this for itself. The message is the user's and is never generated: blobot provides
+ * no inference, and asking the agent that wrote the code to name what it did is a different
+ * feature with a different way of being wrong.
+ */
+export async function commitAgentWork(
+  teamId: string,
+  agentId: string,
+  message: string,
+  deps: CreateTeamDeps,
+): Promise<CommitOutcome> {
+  const found = branchTarget(teamId, agentId, deps);
+  if ('error' in found) return { ok: false, error: found.error };
+  return commitWorktree({ path: found.path, message }, spawnCommand);
+}
+
 /** What a pull request from this agent would merge into, and what `ahead` counts against. */
 async function baseBranchOf(team: Team, deps: CreateTeamDeps): Promise<string | undefined> {
   if (team.workspaceKind !== 'git') return undefined;
@@ -534,10 +693,14 @@ async function publishTarget(
   }
   const workspaces = deps.workspaces ?? workspaceProviderFor(team.workspaceKind);
   const workspace = workspaces.workspaceFor(requestFor(team, record.id, record.name));
-  if (workspace.branch === undefined) return { error: 'This agent has no branch to push.' };
+  // What is checked out, falling back to the name the provider gave it. A worktree the user has
+  // switched must push the branch they are looking at: pushing `blobot/<team>/<agent>` because
+  // that is what it was called at creation would publish work the user is not standing on.
+  const branch = (await currentBranch(workspace.path, spawnCommand)) ?? workspace.branch;
+  if (branch === undefined) return { error: 'This agent has no branch to push.' };
   const base = await baseBranchOf(team, deps);
   if (base === undefined) return { error: 'blobot cannot tell what this branch would merge into.' };
-  return { request: { path: workspace.path, branch: workspace.branch, base } };
+  return { request: { path: workspace.path, branch, base } };
 }
 
 /**
@@ -576,6 +739,11 @@ export async function deleteTeam(
     // a number reported after the fact would have to be the estimate rather than the result.
     if (clean) freedBytes += await measureWorkspaceOf(record, team, workspaces);
     removals.push(await removeWorkspaceOf(record, team, workspaces, clean));
+    // The one case where a Routine's record is not kept. Everywhere else a Routine that cannot
+    // run is disarmed and left saying who it belonged to; here it would be a pointer to nothing.
+    for (const routine of deps.store.routinesOfAgent(record.id)) {
+      deps.store.tombstoneRoutine(routine.id, deps.clock.now());
+    }
     deps.store.tombstoneAgent(record.id, deps.clock.now());
   }
   deps.store.tombstoneTeam(team.id, deps.clock.now());
@@ -649,6 +817,7 @@ export async function editTeamRoster(
       ...(profile.executablePath === undefined ? {} : { executablePath: profile.executablePath }),
       ...(profile.runtimeOptions === undefined ? {} : { runtimeOptions: profile.runtimeOptions }),
       ...(profile.trust === undefined ? {} : { trust: profile.trust }),
+      ...(profile.compaction === undefined ? {} : { compaction: profile.compaction }),
       workspacePath: workspace.path,
       ...(workspace.branch === undefined ? {} : { branch: workspace.branch }),
       createdAt: deps.clock.now(),
@@ -672,6 +841,13 @@ export async function editTeamRoster(
   const removals: AgentRemoval[] = [];
   for (const member of leaving) {
     removals.push(await removeWorkspaceOf(member, team, workspaces));
+    // The agent's Routines are **disarmed and kept**, not tombstoned: unlike a deleted team,
+    // this is a roster the user is still looking at, and a Routine that says who it belonged to
+    // is how they find out their nightly typecheck stopped. Never reassigned to whoever is
+    // left, because blobot does not decide who a message is for.
+    for (const routine of deps.store.routinesOfAgent(member.id)) {
+      deps.store.setRoutineArmed(routine.id, false);
+    }
     // Tombstoned, never deleted: a peer message names two agents, and a cascade would tear a
     // hole in a transcript that has nothing to do with the agent who left.
     deps.store.tombstoneAgent(member.id, deps.clock.now());

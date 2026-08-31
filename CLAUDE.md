@@ -239,9 +239,10 @@ up. Read it before starting work.
 
 - **How full an agent's context is, on screen.** A `CONTEXT` block at the head of the activity
   column: face, name, `used/size`, percent, per agent, from the `usage_updated` the runtimes
-  already sent and the renderer already threw away. Observation only, and the rule is unchanged:
-  blobot does not compact, the CLI behind the adapter owns that, and `/compact` in the palette is
-  the whole of the remedy. A turn that stops early now says why in the transcript rather than
+  already sent and the renderer already threw away. Observation only: the gauge advises nothing,
+  and the CLI behind the adapter still owns compaction. **Corrected 2026-08-30 by ticket 10:
+  `/compact` in the palette is no longer the whole of the remedy** — blobot chooses the moment
+  now, though it still writes no summary of its own. A turn that stops early now says why in the transcript rather than
   naming a protocol enum (`turn stopped · the context window is full`), and the activity column
   and that line both survive a team switch, because the snapshot carries the persisted log. And
   **what blobot itself injects is bounded**: `orchestrator/bounds.ts` refuses a peer message over
@@ -346,6 +347,75 @@ up. Read it before starting work.
   and never draw the same. Local git follows the work and is re-read as turns finish; GitHub is
   asked on opening a team and on the user's refresh and on no timer. Verified against real
   repositories, `BLOBOT_LIVE_GH=<repo>`.
+
+- **blobot chooses the moment, and still does not compact.** `.scratch/transcript-scale/10`.
+  The rule this file carried — *blobot does not compact* — was too wide in one direction and too
+  narrow in the other, and both halves are now true separately. blobot provides no inference,
+  writes no summary of its own, and never rewrites an agent's history; it could not in any case,
+  because `session/prompt` carries a session id and this turn's blocks, so the transcript we
+  would rewrite lives inside the CLI and was never ours. TanStack's compaction middleware, which
+  is what prompted this, is unavailable on the merits rather than declined. What blobot *does*
+  own is a **session boundary**, so at 80% of ticket 09's working ceiling it asks the agent for a
+  **handoff** and opens a fresh session with it. It shipped trying the runtime's own `/compact`
+  first, on a cost argument, and **the author reversed that the same day from a live run**: a
+  self-compacted agent came back having lost too much, and a cheap compaction that leaves an agent
+  unable to continue is not cheaper than an expensive one that leaves it able to. `/compact` stays
+  in the palette for a person to type; it is not something blobot reaches for. Survivable because **an agent's real state is a git
+  worktree, not a conversation**: the branch, the commits and the working tree are untouched, and
+  the loopback token and the mailbox are per agent rather than per session. Occupancy triggered
+  and never time triggered, because compaction *is* cache invalidation and a timer firing on an
+  idle team is background spend nobody asked for. Fired with margin, because the handoff turn is
+  the most expensive one available: a handoff that stops, is empty, or runs past 6,000 characters
+  is a **refusal to restart**, the old session is kept, and the transcript says so — and a real
+  `claude` was measured writing 1,473 characters against that 6,000 limit, so the margin holds
+  (`orchestrator/live-compaction.test.ts`, under `BLOBOT_LIVE_CLAUDE=1`, which trips the threshold
+  by injecting a small `contextCeilings` entry rather than by editing the trigger). Per agent and
+  on by default (`compaction` on the profile, `on`/`off` under *starting over when it runs out of
+  room*), because a session and a worktree are per agent. blobot's own turns are published and
+  recorded for what they *cost* and never for what they *said*: the handoff rides the
+  `context_compacted` event, opens inline in the transcript, and is archived under
+  `~/.local/share/blobot/handoffs/` — never in the AgentWorkspace, which is a checkout an agent
+  could commit home. It travels into the fresh session as text and never as a path, which is
+  ADR-0004's refusal applied again.
+
+- **A prompt with a clock behind it.** `.scratch/routines/`, eleven tickets, all built. A
+  **Routine** is one named instruction to **one Agent** — `<team>/<agent>`, never a team and never
+  an AgentProfile, because a workspace, a session and a mailbox are what a turn needs and none of
+  them are a Team's to lend. The schedule is a **closed set of three shapes** (hourly, daily,
+  weekly) and never an expression: issue 04's cost ceiling is a vocabulary, so the runaway case is
+  not bounded, it is *not offered*, and `cron` appears nowhere in the app. `Scheduler.due` is pure
+  and core's; the timer, the window check and the calling are main's `RoutineRunner`. **blobot
+  runs these while it is open and never in the background**, stated once on the screen: with no
+  window the tick settles nothing, so a machine that slept and a machine that was shut give the
+  same answer, and what they missed comes back as `missed 4 firings` with `Run now` beside it
+  rather than as four turns arriving at once. A run gets **three turns**, not the team's ten, and
+  a permission it raises **expires** — both because nobody is watching. **An agent may schedule
+  one for itself with `propose_routine`, and it is armed when it is made** — issue 05's
+  2026-08-30 amendment, which reversed *only a person may arm one* at the author's direction and
+  records on its own ticket both the argument against it and what it costs. Four things pay for
+  it, and none is optional: the Routine **opens inline in the transcript**, in the turn that
+  created it, carrying `disarm`, because an agent arming something off screen is the version of
+  this that must not exist; it keeps an **ink edge at the top of the Routines screen** until a
+  person answers it, meaning *you have not seen this* and never *this is waiting for you*; an
+  agent may hold at most **three armed Routines of its own**, a cap on spend rather than on
+  attention, so disarming one frees a slot and waiting frees nothing; and everything an agent
+  still may not do is untouched — no scheduling for a teammate, no deleting, no editing an armed
+  one, one proposal per turn. In the transcript a firing draws in the
+  **user's voice under a `system` line** naming the Routine — the words are theirs, the hour is
+  not, and that is the whole disclosure, with no fourth voice invented for it. A run the user has
+  not looked at leaves an **unread mark as ink weight** on the rail line already there, never an
+  inversion, earned by origin and never by a turn they started.
+
+- **The rail is about teams, and the doors are at its foot.** `YOUR AGENTS` and `ROUTINES` stood
+  above `TEAMS` because an agent exists before a team — true of the model, wrong on screen: two
+  headed rows over the list read as a second list stacked on the first. They are three rows at
+  the bottom now, over the rail's one hairline: *Agents*, *Routines*, **Settings**. Settings is a
+  third door and **not a lid over the other two** — an AgentProfile is the roster and a Routine
+  is standing work that can put an unread mark on a rail row, and nothing behind a settings door
+  should be able to do that. What is behind it is the machine: ticket 11's four states with
+  ticket 11's remedies, which until now were reachable only from inside the hire dialog. One
+  section, because a sidebar with one true item is more honest than four invented ones. The list
+  row is **filled** everywhere now (`.listrow`), and picker rows keep `.rosterrow`.
 
 Next: handing a real runtime a real attachment (neither live suite has an attachment case yet),
 then surfacing whether an agent resumed or started fresh.

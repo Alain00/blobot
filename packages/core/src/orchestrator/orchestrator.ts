@@ -7,6 +7,8 @@ import type {
   AttachmentSupport,
   PeerMessageAck,
   PeerMessageCall,
+  RoutineProposalAck,
+  RoutineProposalCall,
   PermissionOption,
   PermissionRequest,
   Prompt,
@@ -14,16 +16,37 @@ import type {
 } from '../runtime.js';
 import type { AvailableCommand } from '../runtime.js';
 import { AgentStatusTracker, type AgentStatus } from '../status.js';
-import type { Agent, Message, Team } from './domain.js';
+import { DEFAULT_COMPACTION, type Agent, type Message, type Team } from './domain.js';
+import type { ScheduledRoutine } from '../routines/domain.js';
 import { findAgentByName, namesMentioned } from './roster.js';
 import {
   PEER_CONTEXT_LIMIT,
   PEER_MESSAGE_LIMIT,
+  ROUTINE_PROPOSALS_PER_TURN,
+  ROUTINE_PROPOSALS_STANDING,
+  ROUTINE_TURN_BUDGET,
   WAKE_BATCH_LIMIT,
   attachmentNotAccepted,
   contextTooLong,
   tooLongToSend,
+  tooManyProposalsStanding,
+  tooManyProposalsThisTurn,
 } from './bounds.js';
+import { describeFrequency, describeSchedule } from '../routines/schedule.js';
+import { checkProposalText, parseProposedSchedule } from '../routines/proposal.js';
+import type { Routine } from '../routines/domain.js';
+import {
+  HANDOFF_EMPTY,
+  HANDOFF_LIMIT,
+  HANDOFF_PROMPT,
+  HANDOFF_STOPPED,
+  RESTART_FAILED,
+  handoffTooLong,
+  overCompactionThreshold,
+  resumeFromHandoff,
+  type HandoffArchive,
+} from './compaction.js';
+import { workingCeiling } from '../context-ceiling.js';
 import { composeLeadBrief, composeWakePrompt } from './envelope.js';
 import {
   InMemoryMessageStore,
@@ -47,6 +70,34 @@ export interface OrchestratorOptions {
   readonly createId?: IdFactory;
   /** Where the durable subset of the stream is written. Omit and nothing is persisted. */
   readonly recorder?: TurnRecorder;
+  /**
+   * What anybody has established about each agent's model, in tokens, keyed by agent id.
+   *
+   * A plain number, resolved by whoever had the `runtime_id` in hand — ticket 09's split, so
+   * only the *lookup* knows a provider exists and the arithmetic here does not. An absent key
+   * is the ordinary case and means nobody measured this model, not that there is no ceiling:
+   * `workingCeiling` falls back conservatively against whatever window the runtime reports.
+   */
+  readonly contextCeilings?: ReadonlyMap<string, number>;
+  /**
+   * Where a handoff is kept for the user to read. Omit and one is still carried into the fresh
+   * session — the archive is the record, never the route.
+   */
+  readonly handoffs?: HandoffArchive;
+  /**
+   * Where Routines are kept. Omit and `propose_routine` is not offered at all, which is the
+   * honest answer for a team whose database is thrown away when the window closes.
+   */
+  readonly routines?: RoutineStore;
+}
+
+/**
+ * The half of the store a proposal needs. Structural, and `SqliteStore` satisfies it, so the
+ * orchestrator still imports no SQLite.
+ */
+export interface RoutineStore {
+  createRoutine(routine: Routine): Routine;
+  routinesOfAgent(agentId: string): Routine[];
 }
 
 /**
@@ -112,6 +163,26 @@ interface HandoffWatch {
   readonly leading: boolean;
 }
 
+/**
+ * What a compaction did, for the caller that has to write it down.
+ *
+ * `sessionId` is what the agent is on *now*: unchanged on `command` and on `refused`, and a
+ * string the provider has never used before on `handoff`. That last case is the reason this
+ * exists at all — a relaunch resumes from the last session row, and a row still naming the
+ * closed session would bring an agent back to a conversation the provider has thrown away.
+ */
+export interface Compacted {
+  readonly teamId: string;
+  readonly agentId: string;
+  readonly how: 'command' | 'handoff' | 'refused';
+  /** The session that was open when blobot decided. */
+  readonly previousSessionId: string;
+  /** The session the agent is on now. Equal to the above unless `how` is `handoff`. */
+  readonly sessionId: string;
+  readonly at: number;
+  readonly handoff?: string;
+}
+
 export interface BudgetExhausted {
   readonly teamId: string;
   readonly turnsUsed: number;
@@ -121,12 +192,38 @@ export interface BudgetExhausted {
 }
 
 /**
+ * How a Routine's firing ended, as the orchestrator saw it.
+ *
+ * `busy` is not a {@link RoutineOutcome} and is deliberately not recorded as one: nothing was
+ * committed, nothing ran, and no firing has yet happened. It is the answer to *may I start*, and
+ * the caller holds the firing until the agent is free or the run has waited long enough.
+ */
+export type RoutineTurn =
+  | { readonly outcome: 'ran' }
+  /** A turn started and did not finish. The reason is prose, and goes on the run. */
+  | { readonly outcome: 'stopped'; readonly reason: string }
+  | { readonly outcome: 'busy' };
+
+/**
  * Owns agent-to-agent communication: the mailbox, the wake policy, the turn budget, and the
  * peer-message tool handler itself. A plain TypeScript module with no Electron imports.
  *
  * Everything here is *our* concern rather than ACP's, and no part of it knows which provider
  * an agent is.
  */
+/**
+ * The event types that are the agent *talking*, as opposed to the agent working.
+ *
+ * Held apart only for compaction turns, where what was said was addressed to blobot rather than
+ * to the reader. Everything outside this set is what a turn did, and is published and recorded
+ * whoever asked for it.
+ */
+const SPOKEN = new Set<AgentEvent['type']>([
+  'agent_message_delta',
+  'agent_message_completed',
+  'agent_thought_delta',
+]);
+
 export class Orchestrator {
   readonly team: Team;
 
@@ -182,8 +279,48 @@ export class Orchestrator {
    */
   readonly #wroteThisTurn = new Map<string, Set<string>>();
 
-  /** The budget is per *user prompt*: it is the thing that bounds cost when agents ping-pong. */
+  /** The budget is per *prompt*: it is the thing that bounds cost when agents ping-pong. */
   #turnsThisPrompt = 0;
+  /**
+   * What the current prompt's budget is. The team's `turnBudget` for the user's own words, and
+   * {@link ROUTINE_TURN_BUDGET} for a Routine run, which has no person to answer *continue?*.
+   */
+  #budgetCeiling: number;
+  /**
+   * Agents holding a Routine run right now, and how long a permission request may wait.
+   *
+   * Issue 03: a parked run expires, and **the expiry belongs to the run rather than to the
+   * request**. A user's own turn still waits forever, because they started it and can answer
+   * it, and an agent blocked on a human sitting there until answered is the property the rail's
+   * one contrast inversion is spent on. A timeout on that would be this effort quietly changing
+   * a decision that is not its own.
+   */
+  readonly #routines: RoutineStore | undefined;
+  readonly #routineListeners = new Set<() => void>();
+  readonly #scheduledListeners = new Set<(scheduled: ScheduledRoutine) => void>();
+  /**
+   * Proposals made in the turn each agent is holding. Reset where `#wroteThisTurn` is, because
+   * both answer a question about one turn and neither survives it.
+   */
+  readonly #proposedThisTurn = new Map<string, number>();
+  readonly #routineRuns = new Map<
+    string,
+    { runId: string; expiryMs: number; expired?: string; budgetHalted?: boolean }
+  >();
+
+  /**
+   * The last real occupancy reading per agent, which is what a threshold is measured against.
+   *
+   * Ticket 08's trap applies here as much as it does to the gauge: a cancelled turn leaves
+   * `used: 0` behind, and a stored zero is a reset rather than an empty context. Taking it
+   * would make a full agent look empty and quietly switch compaction off for it.
+   */
+  readonly #usage = new Map<string, { used: number; size: number }>();
+  readonly #contextCeilings: ReadonlyMap<string, number>;
+  readonly #handoffs: HandoffArchive | undefined;
+  /** Agents inside a compaction right now. The turns it runs must not start another one. */
+  readonly #compacting = new Set<string>();
+  readonly #compactionListeners = new Set<(compacted: Compacted) => void>();
 
   constructor(options: OrchestratorOptions) {
     this.team = options.team;
@@ -193,6 +330,10 @@ export class Orchestrator {
     this.#clock = options.clock ?? new SystemClock();
     this.#createId = options.createId ?? uuidv7;
     this.#recorder = options.recorder;
+    this.#contextCeilings = options.contextCeilings ?? new Map();
+    this.#handoffs = options.handoffs;
+    this.#budgetCeiling = options.team.turnBudget;
+    this.#routines = options.routines;
 
     for (const agent of this.#agents) {
       const tracker = new AgentStatusTracker(agent.id);
@@ -314,6 +455,19 @@ export class Orchestrator {
   }
 
   /** An agent named a teammate the user named, and messaged nobody. See {@link SilentHandoff}. */
+  /**
+   * blobot chose a moment and something came of it.
+   *
+   * Separate from the `context_compacted` event, which is the *record*: this carries the fresh
+   * session id, which nothing in the vocabulary does and which the caller needs in order to
+   * write the row that lets a relaunch resume the right conversation. A listener that only
+   * wants to draw the line should read the event.
+   */
+  onCompaction(listener: (compacted: Compacted) => void): Unsubscribe {
+    this.#compactionListeners.add(listener);
+    return () => this.#compactionListeners.delete(listener);
+  }
+
   onSilentHandoff(listener: (observed: SilentHandoff) => void): Unsubscribe {
     this.#silentHandoffListeners.add(listener);
     return () => this.#silentHandoffListeners.delete(listener);
@@ -389,6 +543,7 @@ export class Orchestrator {
       }
     }
     this.#turnsThisPrompt = 0;
+    this.#budgetCeiling = this.team.turnBudget;
     const now = this.#clock.now();
     // The lead was the one addressed only if the user named nobody. Lexical, like every other
     // reading blobot does of prose: a prompt that says the lead's name addressed them by name,
@@ -401,6 +556,23 @@ export class Orchestrator {
       namesMentioned(text, this.#agents.filter((candidate) => candidate.id === leadId)).length ===
         0;
     const dispatched = agents.map((agent) => {
+      /**
+       * An agent already holding a turn takes this through the mailbox, not through a second
+       * `sendPrompt`.
+       *
+       * Prompts on a session are serialized and the adapters throw when they are not, which is
+       * the check doing its job. Until blobot could start a turn of its own this could not
+       * happen: the only turns were ones the user or a peer began, and the composer is downstream
+       * of the status those produce. A compaction turn is neither, so a user typing a perfectly
+       * ordinary next message during one reached an adapter that refused it — and the message
+       * had already been committed and marked delivered, so it sat in the transcript with
+       * nothing left that would ever answer it.
+       *
+       * The mailbox is exactly the queue for this and has been all along: `#runTurn` ends by
+       * draining it, which is the path a mid-turn peer message already takes. So the row is
+       * committed and drawn, and simply not marked delivered.
+       */
+      const busy = this.#busy.has(agent.id);
       const message = this.#store.commit({
         id: this.#createId(now),
         teamId: this.team.id,
@@ -414,7 +586,7 @@ export class Orchestrator {
           ? {}
           : { attachments: attachments.map(({ data: _data, at: _at, ...record }) => record) }),
       });
-      this.#store.markDelivered([message.id], now);
+      if (!busy) this.#store.markDelivered([message.id], now);
       this.#announceMessage(message);
       if (attachments.length > 0) {
         const sent = this.#attachmentsSent.get(agent.id) ?? { count: 0, bytes: 0 };
@@ -423,13 +595,15 @@ export class Orchestrator {
           bytes: sent.bytes + attachments.reduce((total, one) => total + one.bytes, 0),
         });
       }
-      return { agent, message };
+      return { agent, message, busy };
     });
     // Committed for everybody before anybody starts. A turn can message a teammate mid-flight,
     // and a recipient who has not been written to yet would take that wake before the user's
     // own words — which is the user watching their prompt arrive second.
     await Promise.all(
-      dispatched.map((entry) =>
+      dispatched
+        .filter((entry) => !entry.busy)
+        .map((entry) =>
         // The brief goes to the runtime and never into the `messages` row above: the transcript
         // keeps what the user typed, and what blobot added to the turn is blobot's.
         this.#runTurn(
@@ -461,6 +635,203 @@ export class Orchestrator {
         ),
       ),
     );
+  }
+
+  // ------------------------------------------------------------------ a Routine's prompt
+
+  /**
+   * A **Routine** fires: the same words, the same single recipient, the same turn, with a clock
+   * behind them instead of a person.
+   *
+   * **A sibling of {@link promptFromUser} and deliberately not a parameter on it.** Three things
+   * differ, and every one of them is a thing you do not want reaching a user's turn by accident:
+   *
+   * - **The budget.** {@link ROUTINE_TURN_BUDGET}, not the team's ten. The team's release valve
+   *   is a person answering *continue?* and there is no person here.
+   * - **The origin.** `routineRunId` on the `messages` row. The words are the user's — they
+   *   authored the Routine — so the transcript still draws them in the user's voice, and the
+   *   `system` line above the bubble carries the one thing the bubble gets wrong, which is
+   *   *when*.
+   * - **The permission expiry.** A request raised inside this turn is cancelled if nobody has
+   *   answered within `permissionExpiryMs`. Without it, a parked run holds a session, a bridge
+   *   process and a pool slot forever, and four nights of that is a pool that can no longer
+   *   start the team the user is trying to open.
+   *
+   * One recipient, always: a Routine names one Agent, because a turn needs an AgentWorkspace, a
+   * session and a mailbox and none of those are a Team's to lend. There is no fan-out here and
+   * no attachment — only the user attaches, and a Routine is not at the keyboard.
+   */
+  async promptFromRoutine(
+    agentId: string,
+    text: string,
+    run: { readonly runId: string; readonly permissionExpiryMs: number },
+  ): Promise<RoutineTurn> {
+    const agent = this.#requireAgent(agentId);
+    // Nothing is committed and nothing runs. A session runs one turn at a time, and the two
+    // existing paths into `#runTurn` both reach it through a mailbox that knows that; this one
+    // does not, so it asks. The caller holds the firing rather than stacking a second turn on a
+    // live session, which is also what makes the coalescing rule expressible.
+    if (this.#busy.has(agent.id)) return { outcome: 'busy' };
+    this.#turnsThisPrompt = 0;
+    this.#budgetCeiling = ROUTINE_TURN_BUDGET;
+    const now = this.#clock.now();
+
+    const message = this.#store.commit({
+      id: this.#createId(now),
+      teamId: this.team.id,
+      fromAgentId: null, // still the user's words, and still the user's authority
+      toAgentId: agent.id,
+      body: text,
+      at: now,
+      routineRunId: run.runId,
+    });
+    this.#store.markDelivered([message.id], now);
+    this.#announceMessage(message);
+
+    const record: {
+      runId: string;
+      expiryMs: number;
+      expired?: string;
+      budgetHalted?: boolean;
+    } = {
+      runId: run.runId,
+      expiryMs: run.permissionExpiryMs,
+    };
+    this.#routineRuns.set(agent.id, record);
+    try {
+      await this.#runTurn(
+        agent,
+        { text: this.#withBrief(agent.id, text), from: 'user' },
+        message.id,
+        // Nobody was named, and nobody is leading: a Routine is one instruction to one agent.
+        // The silent-handoff observation has nothing to watch for and says nothing.
+        { prompt: text, leading: false, addressed: [agent.id] },
+      );
+      // The run is the turn **and what it set off**. A Routine's turns are agents waking each
+      // other, which is what `ROUTINE_TURN_BUDGET` bounds and what the budget halts, so a run
+      // that returned at the end of its own first turn would report `ran` for a night that
+      // stopped at the ceiling two turns later. `promptFromUser` does not wait for this because
+      // there is a person watching it happen; nobody is watching this one.
+      await this.settled();
+    } finally {
+      this.#routineRuns.delete(agent.id);
+    }
+    // How the run ended, read here rather than watched for from outside: the two ways a Routine
+    // run dies are both this method's own doing, and a caller correlating a budget event with a
+    // cancelled permission would be reconstructing what was known here all along.
+    if (record.expired !== undefined) {
+      return { outcome: 'stopped', reason: `needed permission for ${record.expired}` };
+    }
+    if (record.budgetHalted === true) {
+      return { outcome: 'stopped', reason: `the run budget of ${ROUTINE_TURN_BUDGET} turns` };
+    }
+    return { outcome: 'ran' };
+  }
+
+  // ------------------------------------------------------------------ the proposal tool
+
+  /**
+   * The `propose_routine` tool handler. **An agent may propose; only a person may arm.**
+   *
+   * Issue 05's argument in one method: a stored, recurring, unattended turn is more authority
+   * than a peer message, and this channel carries no operator authority at all — `envelope.ts`
+   * says so, and `.scratch/team-addressing/issues/03` refused relayed authority permanently. So
+   * the row lands `armed: false` and nothing an agent can call ever changes that. What the author
+   * asked for is satisfied all the same: the agent makes the Routine. What it cannot do is give
+   * it a clock.
+   *
+   * Every refusal here is at the tool boundary and comes back as something the model has to
+   * account for, never as a silent trim: this is `bounds.ts`'s posture, and a proposal quietly
+   * dropped is how an agent ends up telling the user that work is scheduled when it is not.
+   */
+  async handleProposeRoutine(call: RoutineProposalCall): Promise<RoutineProposalAck> {
+    const agent = this.#requireAgent(call.from);
+    const routines = this.#routines;
+    if (routines === undefined) throw new Error('This team does not keep Routines.');
+
+    // Before anything is written, and in this order because the cheapest refusals are the ones
+    // that say the most: the caps are about the agent's behaviour, the parse is about this call.
+    if ((this.#proposedThisTurn.get(agent.id) ?? 0) >= ROUTINE_PROPOSALS_PER_TURN) {
+      throw new Error(tooManyProposalsThisTurn());
+    }
+    // **Armed and proposed by this agent**, which is issue 05's amendment and the third of the
+    // four controls that are the price of it. The cap counted *unreviewed* proposals, which was
+    // the right thing to count while nothing an agent proposed could fire; now that every one of
+    // them fires, nothing is ever unreviewed in that sense and the cap would have gone dead at
+    // the moment it started to matter. What it bounds instead is the thing that costs: how much
+    // recurring, unattended work an agent can give itself. Disarming frees a slot.
+    const standing = routines
+      .routinesOfAgent(agent.id)
+      .filter((routine) => routine.proposedBy !== undefined && routine.armed);
+    if (standing.length >= ROUTINE_PROPOSALS_STANDING) {
+      throw new Error(tooManyProposalsStanding(standing.length));
+    }
+    const said = checkProposalText(call.name, call.prompt);
+    if (said !== undefined) throw new Error(said);
+    const parsed = parseProposedSchedule(call.schedule);
+    if ('error' in parsed) throw new Error(parsed.error);
+
+    const now = this.#clock.now();
+    const routine: Routine = {
+      id: this.#createId(now),
+      // The proposal is for the caller and there is no field that could say otherwise. A Routine
+      // proposed for a teammate is fan-out with a delay on it, which is a different ticket.
+      agentId: agent.id,
+      name: call.name.trim(),
+      prompt: call.prompt.trim(),
+      schedule: parsed.schedule,
+      // **Armed.** Issue 05's 2026-08-30 amendment reversed the answer this line used to carry.
+      // The controls that pay for it are not here — they are the cap above, the transcript block
+      // this returns the id for, the ink edge that stands until `reviewedAt` is set, and
+      // everything an agent still may not do, which the amendment leaves untouched.
+      armed: true,
+      // Who **asked**, not who owns it. An agent id and never free text, so a proposal cannot
+      // claim to come from somebody it did not. It still means *asked* rather than *approved*:
+      // the row is armed, and a person has still not looked at it.
+      proposedBy: agent.id,
+      createdAt: now,
+    };
+    routines.createRoutine(routine);
+    this.#proposedThisTurn.set(agent.id, (this.#proposedThisTurn.get(agent.id) ?? 0) + 1);
+    // Two channels, because they answer different questions. The first says *the list changed*;
+    // the second says *this happened, in this turn*, which is what the transcript block is built
+    // from and the whole of how a person finds out without having gone looking.
+    for (const listener of this.#routineListeners) listener();
+    const scheduled: ScheduledRoutine = {
+      routineId: routine.id,
+      agentId: agent.id,
+      name: routine.name,
+      schedule: describeSchedule(routine.schedule),
+      frequency: describeFrequency(routine.schedule),
+      at: now,
+    };
+    for (const listener of this.#scheduledListeners) listener(scheduled);
+    return {
+      proposed: true,
+      routineId: routine.id,
+      name: routine.name,
+      schedule: scheduled.schedule,
+      frequency: scheduled.frequency,
+      armed: true,
+    };
+  }
+
+  /**
+   * An agent put itself on a schedule. **The user is told where it happened.**
+   *
+   * The second of issue 05's four compensating controls, and the one that makes the rest
+   * bearable: an agent arming something silently is the version of this feature that must not
+   * exist. blobot still never interrupts — what it refuses is to let this happen off screen.
+   */
+  onRoutineScheduled(listener: (scheduled: ScheduledRoutine) => void): Unsubscribe {
+    this.#scheduledListeners.add(listener);
+    return () => this.#scheduledListeners.delete(listener);
+  }
+
+  /** Something changed about this team's Routines. Whatever draws them is out of date. */
+  onRoutinesChanged(listener: () => void): Unsubscribe {
+    this.#routineListeners.add(listener);
+    return () => this.#routineListeners.delete(listener);
   }
 
   // ------------------------------------------------------------------ the peer-message tool
@@ -601,18 +972,34 @@ export class Orchestrator {
     prompt: Prompt,
     triggerMessageId?: string,
     watch?: HandoffWatch,
+    /**
+     * blobot's own turns, which are the compaction ones, do not spend the user's budget.
+     *
+     * `turnBudget` bounds agents ping-ponging on somebody's prompt. A compaction turn is not
+     * that: nobody asked for it, it happens at most twice per agent per fill-up, and charging
+     * it would mean an agent whose window filled mid-conversation had its team halted for
+     * asking *continue?* about work the user never requested.
+     */
+    counted = true,
   ): Promise<void> {
     const runtime = this.#runtimes.get(agent.id);
     const tracker = this.#trackers.get(agent.id);
     if (runtime === undefined || tracker === undefined) return;
 
+    // Whether somebody else is already holding this agent. A second turn against one session
+    // is a programming error the adapters throw on, and every caller here guards against it —
+    // but the *bookkeeping* must not make it worse. Deleting a flag this call did not set is
+    // how one refused prompt used to leave a live turn looking idle, and the next thing to ask
+    // about the agent got a wrong answer.
+    const held = this.#busy.has(agent.id);
     this.#busy.add(agent.id);
-    this.#turnsThisPrompt += 1;
+    if (counted) this.#turnsThisPrompt += 1;
     tracker.turnStarted();
     this.#recorder?.turnStarted(agent.id, this.#clock.now(), triggerMessageId);
     // Populated for every turn, not only a watched one: the routing-turn refund below is
     // defined by what a turn *did*, never by who did it or what started it.
     this.#wroteThisTurn.set(agent.id, new Set());
+    this.#proposedThisTurn.set(agent.id, 0);
 
     const turn = (async () => {
       // What the agent actually said, and whether the turn got to the end of itself.
@@ -629,15 +1016,23 @@ export class Orchestrator {
           if (event.type === 'agent_message_completed') said += `\n${event.text}`;
           if (event.type === 'turn_ended') endedOrdinarily = event.stopReason === 'end_turn';
           if (event.type === 'error') endedOrdinarily = false;
+          // A cancelled turn reports `used: 0`, and a stored zero is a gauge reset rather than
+          // an empty context. Taking it would make a full agent look empty to the threshold.
+          if (event.type === 'usage_updated' && event.used > 0) {
+            this.#usage.set(agent.id, { used: event.used, size: event.size });
+          }
         }
       } finally {
-        this.#busy.delete(agent.id);
+        if (!held) this.#busy.delete(agent.id);
       }
       if (watch !== undefined && endedOrdinarily) {
         this.#observeSilentHandoff(agent, watch, said);
       }
-      this.#refundRoutingTurn(agent.id, said);
+      if (counted) this.#refundRoutingTurn(agent.id, said);
       this.#wroteThisTurn.delete(agent.id);
+      // Before the mailbox drains, so a queued message is answered by whichever session the
+      // agent ends up on rather than by one that is about to be closed underneath it.
+      await this.#maybeCompact(agent);
       // Whatever arrived mid-turn is delivered now, as one prompt.
       await this.#wake(agent.id);
     })();
@@ -714,11 +1109,260 @@ export class Orchestrator {
     return `${text}\n\n${brief}`;
   }
 
+  /**
+   * The moment blobot is allowed to choose, and everything it refuses to conclude from.
+   *
+   * Five ways to answer *no* before anything happens, and every one of them leaves the agent
+   * exactly as it was:
+   *
+   * - the user turned it off for this agent, which is per agent because a session is;
+   * - blobot is already inside a compaction for this agent, and its own turns must not start
+   *   another one;
+   * - the runtime has never reported occupancy, so there is no numerator;
+   * - the ceiling works out at zero, so there is no denominator, and an unknown denominator is
+   *   not a reason to close somebody's session;
+   * - a turn is in flight, because prompts on a session are serialized;
+   * - the agent is not full enough yet.
+   *
+   * It runs after every turn rather than on a timer, and that is a decision rather than
+   * convenience. **Occupancy triggered and never time triggered**: compaction *is* cache
+   * invalidation, so it buys headroom and quality and never cache economy, and a timer firing
+   * on an idle team would pay a full uncached read of a context nobody is using to pre-pay a
+   * cost the user may never incur. `TeamPool` holds three teams live precisely so switching is
+   * cheap; a compaction timer would turn that into background spend nobody asked for.
+   */
+  async #maybeCompact(agent: Agent): Promise<void> {
+    if ((agent.compaction ?? DEFAULT_COMPACTION) === 'off') return;
+    if (this.#compacting.has(agent.id)) return;
+    /**
+     * And never while a turn is in flight, which is a narrower window than it looks.
+     *
+     * `#runTurn` clears `#busy` before it asks this question, so between that clear and the
+     * compaction's own first turn the agent is momentarily free — and a user prompt landing in
+     * that gap starts a turn this would then try to run a second `sendPrompt` against. It is a
+     * microtask wide and it is still real, and skipping is the right answer rather than
+     * waiting: the check runs after every turn, so the next one asks again.
+     */
+    if (this.#busy.has(agent.id)) return;
+    const runtime = this.#runtimes.get(agent.id);
+    const usage = this.#usage.get(agent.id);
+    if (runtime === undefined || usage === undefined) return;
+    if (runtime.lifecycle !== 'ready') return;
+    const ceiling = workingCeiling(this.#contextCeilings.get(agent.id), usage.size);
+    if (!overCompactionThreshold(usage.used, ceiling.tokens)) return;
+
+    this.#compacting.add(agent.id);
+    try {
+      await this.#compact(agent, runtime, usage.used, ceiling);
+    } finally {
+      this.#compacting.delete(agent.id);
+    }
+  }
+
+  /**
+   * A handoff and a fresh session. Always, and never the runtime's own compaction.
+   *
+   * This was two mechanisms, ordered, with the runtime's own first: it keeps the session id,
+   * costs one turn, and is written by people who can see the real message list. **Reversed by
+   * the author 2026-08-30, on the evidence of the first live run** — a real Claude agent
+   * compacted itself at 223k and came back having lost too much of what mattered. The argument
+   * for going first was cost; the argument against it is quality, and quality is the entire
+   * reason this ticket exists. A cheap compaction that leaves an agent unable to continue is not
+   * cheaper than an expensive one that leaves it able to.
+   *
+   * `/compact` stays in the composer's palette. What changed is what blobot reaches for on
+   * somebody's behalf, not what a person may still choose to type.
+   */
+  async #compact(
+    agent: Agent,
+    runtime: AgentRuntime,
+    used: number,
+    ceiling: { tokens: number; measured: boolean },
+  ): Promise<void> {
+    const previousSessionId = runtime.sessionId;
+
+    // Only the agent can write its own handoff, so this costs one turn at the most expensive
+    // moment available. `said` is the whole of what it wrote: a handoff turn that stopped for
+    // any reason at all is a refusal, because a truncated handoff plus a discarded session is
+    // worse than either alone.
+    const written = await this.#runCompactionTurn(agent, () =>
+      runtime.sendPrompt({ text: HANDOFF_PROMPT, from: 'peer' }),
+    );
+    const refuse = (reason: string): void => {
+      this.#announceCompaction(agent, runtime, {
+        how: 'refused',
+        used,
+        ceiling,
+        previousSessionId,
+        reason,
+      });
+    };
+    if (!written.endedOrdinarily) return refuse(HANDOFF_STOPPED);
+    const handoff = written.said.trim();
+    if (handoff === '') return refuse(HANDOFF_EMPTY);
+    if (handoff.length > HANDOFF_LIMIT) return refuse(handoffTooLong(handoff.length));
+
+    // Archived before the session is closed, so a crash between the two leaves the note on
+    // disk rather than losing both. A failure to write is not a failure to compact: the text
+    // travels in the fresh session's first prompt and is in the transcript either way.
+    const handoffPath = await this.#handoffs
+      ?.write({
+        teamId: this.team.id,
+        agentId: agent.id,
+        agentName: agent.name,
+        sessionId: previousSessionId,
+        at: this.#clock.now(),
+        handoff,
+      })
+      .catch(() => undefined);
+
+    try {
+      await runtime.restart();
+    } catch {
+      // The old session is already closed by the time an adapter finds out, so this says the
+      // session was kept and is the one refusal where that is not quite true. It is still the
+      // honest half: nothing was compacted, and the agent needs a relaunch.
+      return refuse(RESTART_FAILED);
+    }
+
+    // Not counted, not watched, and deliberately the fresh session's first turn: the handoff
+    // has to be in the context before any queued mail is answered against it.
+    await this.#runCompactionTurn(agent, () =>
+      runtime.sendPrompt({ text: resumeFromHandoff(handoff), from: 'peer' }),
+    );
+
+    this.#announceCompaction(agent, runtime, {
+      how: 'handoff',
+      used,
+      ceiling,
+      previousSessionId,
+      // Asked of the adapter rather than assumed: on one runtime the fresh session takes the
+      // definition as it stands today, and on another the live one was already running it.
+      personaRefreshed: runtime.personaIsSessionBound,
+      handoff,
+      ...(handoffPath === undefined ? {} : { handoffPath }),
+    });
+  }
+
+  /**
+   * One of blobot's own turns: published, folded and recorded like any other, and unbudgeted.
+   *
+   * Published because it is real. It costs the user tokens, the blobatar should move while it
+   * happens, and a compaction that ran invisibly would be the thing this whole ticket exists to
+   * avoid — an agent that changed underneath somebody with nothing on screen. What it does not
+   * do is go through `#runTurn`: that ends by draining the mailbox and asking whether to
+   * compact, and both are exactly wrong in the middle of a compaction.
+   *
+   * **What the agent says here is not published and not recorded**, which is the one departure
+   * and was found by looking at the screen. Three of blobot's own turns rendered as three
+   * paragraphs in Alice's own voice, in a conversation where nobody had asked her anything — a
+   * compaction summary, a handoff written *to blobot*, and an acknowledgement of a note the
+   * user had not seen. A reader has no way to tell those from an answer.
+   *
+   * So the words go where they were addressed: the handoff rides the `context_compacted` event,
+   * durable in `events`, openable in the transcript and archived to a file. Everything else
+   * about the turn — its tool calls, its occupancy, its ending — is published and recorded
+   * exactly as any turn is, because that is what it cost and the gauge must not understate it.
+   */
+  async #runCompactionTurn(
+    agent: Agent,
+    start: () => AsyncIterable<AgentEvent>,
+  ): Promise<{ said: string; endedOrdinarily: boolean }> {
+    const tracker = this.#trackers.get(agent.id);
+    if (tracker === undefined) return { said: '', endedOrdinarily: false };
+    let said = '';
+    let endedOrdinarily = false;
+    this.#busy.add(agent.id);
+    tracker.turnStarted();
+    this.#recorder?.turnStarted(agent.id, this.#clock.now());
+    try {
+      for await (const event of start()) {
+        if (event.type === 'agent_message_completed') said += `\n${event.text}`;
+        // The status fold still sees everything: an agent that is writing is `responding`,
+        // whoever it happens to be writing to.
+        tracker.apply(event);
+        if (!SPOKEN.has(event.type)) {
+          this.#publish(event);
+          this.#recorder?.record(event);
+        }
+        if (event.type === 'turn_ended') endedOrdinarily = event.stopReason === 'end_turn';
+        if (event.type === 'error') endedOrdinarily = false;
+        if (event.type === 'usage_updated' && event.used > 0) {
+          this.#usage.set(agent.id, { used: event.used, size: event.size });
+        }
+      }
+    } catch {
+      endedOrdinarily = false;
+    } finally {
+      this.#busy.delete(agent.id);
+    }
+    return { said, endedOrdinarily };
+  }
+
+  /**
+   * Say what happened, twice, and for two different readers.
+   *
+   * The event is the record: it goes to the pane, through the recorder into `events`, and comes
+   * back on a team switch, which is ticket 06's lesson applied to a line that would otherwise
+   * be live-only. The callback carries the fresh session id, which the vocabulary has no place
+   * for and which the caller needs in order to write the row a relaunch resumes from.
+   */
+  #announceCompaction(
+    agent: Agent,
+    runtime: AgentRuntime,
+    outcome: {
+      how: 'command' | 'handoff' | 'refused';
+      used: number;
+      ceiling: { tokens: number; measured: boolean };
+      previousSessionId: string;
+      personaRefreshed?: boolean;
+      handoff?: string;
+      handoffPath?: string;
+      reason?: string;
+    },
+  ): void {
+    const at = this.#clock.now();
+    const event: AgentEvent = {
+      type: 'context_compacted',
+      agentId: agent.id,
+      // The session this is *about*, which on a handoff is the one that was closed. The fresh
+      // id travels on the callback: an event stamped with a session that had not started when
+      // the decision was taken would be a lie about when it happened.
+      sessionId: outcome.previousSessionId,
+      at,
+      how: outcome.how,
+      used: outcome.used,
+      ceiling: outcome.ceiling.tokens,
+      measured: outcome.ceiling.measured,
+      ...(outcome.personaRefreshed === true ? { personaRefreshed: true } : {}),
+      ...(outcome.handoff === undefined ? {} : { handoff: outcome.handoff }),
+      ...(outcome.handoffPath === undefined ? {} : { handoffPath: outcome.handoffPath }),
+      ...(outcome.reason === undefined ? {} : { reason: outcome.reason }),
+    };
+    this.#publish(event);
+    this.#recorder?.record(event);
+    const compacted: Compacted = {
+      teamId: this.team.id,
+      agentId: agent.id,
+      how: outcome.how,
+      previousSessionId: outcome.previousSessionId,
+      sessionId: runtime.sessionId,
+      at,
+      ...(outcome.handoff === undefined ? {} : { handoff: outcome.handoff }),
+    };
+    for (const listener of this.#compactionListeners) listener(compacted);
+  }
+
   #budgetIsSpent(): boolean {
-    return this.#turnsThisPrompt >= this.team.turnBudget;
+    return this.#turnsThisPrompt >= this.#budgetCeiling;
   }
 
   #announceBudget(): void {
+    // A Routine run in flight when the budget halts the team is a run the budget stopped, and
+    // this is the only moment that is knowable. Reading `#budgetIsSpent()` after the turn does
+    // not answer it: the routing-turn refund can put the count back under the ceiling, so a run
+    // that was halted would report itself as having ended ordinarily.
+    for (const record of this.#routineRuns.values()) record.budgetHalted = true;
     const pending = this.#agents.reduce(
       (total, agent) => total + this.#store.undelivered(agent.id).length,
       0,
@@ -727,7 +1371,7 @@ export class Orchestrator {
       listener({
         teamId: this.team.id,
         turnsUsed: this.#turnsThisPrompt,
-        turnBudget: this.team.turnBudget,
+        turnBudget: this.#budgetCeiling,
         pending,
       });
     }
@@ -830,6 +1474,20 @@ export class Orchestrator {
     const answer = await new Promise<string | null>((resolve) => {
       this.#pendingPermissions.set(id, { pending, resolve });
       for (const listener of this.#permissionListeners) listener(pending);
+      // Issue 03's expiry, and only for a Routine run. `null` is cancelled, which is the one
+      // answer blobot may give on nobody's behalf — approving unwatched is the answer it may
+      // not. A user's own turn has no timer here and waits until it is answered.
+      const routine = this.#routineRuns.get(request.agentId);
+      if (routine !== undefined) {
+        void this.#clock.sleep(routine.expiryMs).then(() => {
+          if (!this.#pendingPermissions.has(id)) return;
+          // Remembered on the run rather than inferred afterwards from a cancelled permission:
+          // the user answering `Reject` also settles as cancelled, and a run the user answered
+          // is not a run that died of nobody being there.
+          routine.expired = request.title;
+          resolve(null);
+        });
+      }
     });
     this.#pendingPermissions.delete(id);
     this.#trackers.get(request.agentId)?.permissionResolved();

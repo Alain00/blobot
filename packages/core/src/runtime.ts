@@ -105,6 +105,52 @@ export interface PeerMessageAck {
 export type PeerMessageHandler = (call: PeerMessageCall) => Promise<PeerMessageAck>;
 
 /**
+ * The `propose_routine` MCP tool call. Issue 05: **an agent may propose, only a person arms.**
+ *
+ * There is no recipient field, and that absence is the rule rather than an omission. A Routine
+ * proposed for a teammate is fan-out with a delay on it; the bearer token *is* the caller, so the
+ * only Agent a proposal can name is the one that made it.
+ */
+export interface RoutineProposalCall {
+  readonly from: string;
+  readonly name: string;
+  readonly prompt: string;
+  /** The three shapes, as the model gives them. Parsed and refused at the tool boundary. */
+  readonly schedule: unknown;
+}
+
+/**
+ * What the proposing agent is told, and the wording matters as much as the fields.
+ *
+ * A model that proposes a Routine and is not told what happened next will report to the user that
+ * the work is scheduled — the same hazard the Codex adapter answers by saying in words that it
+ * has no subagents. `armed` is false here and always will be: nothing an agent can call arms one.
+ */
+export interface RoutineProposalAck {
+  readonly proposed: true;
+  /** The row, so the transcript block that opens on this can name it and disarm it. */
+  readonly routineId: string;
+  readonly name: string;
+  /** The schedule in blobot's own words, so the agent repeats those rather than inventing some. */
+  readonly schedule: string;
+  /**
+   * What the shape costs, as a count of firings. Handed to the model as well as to the screen,
+   * because an agent choosing `every hour` is choosing twenty-four times what `every day` costs
+   * and now arms it itself.
+   */
+  readonly frequency: string;
+  /**
+   * **True.** Issue 05's 2026-08-30 amendment: an agent's Routine fires when it is proposed.
+   *
+   * Kept as a field rather than dropped, because it is what the ack sentence is built out of and
+   * because the day a per-agent setting decides this, the ack has to be able to say either.
+   */
+  readonly armed: boolean;
+}
+
+export type RoutineProposalHandler = (call: RoutineProposalCall) => Promise<RoutineProposalAck>;
+
+/**
  * Process-level state, distinct from Status (ticket 09), which is derived from the event
  * stream. `starting` is the one Status that comes from here rather than from events.
  */
@@ -184,6 +230,39 @@ export interface AgentRuntime {
 
   /** Cancel the turn in flight. Resolves once the cancellation has been requested. */
   cancel(): Promise<void>;
+
+  /**
+   * Close this session and open a fresh one, in the same process.
+   *
+   * The fallback when compaction is unavailable or did not bring the session under the ceiling.
+   * `sessionId` is a different string afterwards and the provider remembers nothing of what came
+   * before, which is the point. Everything else about the agent is untouched: same worktree,
+   * same branch, same loopback token, same mailbox.
+   *
+   * A fresh session takes whatever the runtime is currently holding — persona, posture, options
+   * — which on at least one runtime is how an edit the user made hours ago finally lands. That
+   * is a real behaviour change and the caller is expected to say so rather than let it pass.
+   *
+   * Rejects if the fresh session cannot be opened, and leaves the runtime `dead` if so: a
+   * caller that cannot restart has to say the session was kept, and cannot say that truthfully
+   * about a session it has already closed.
+   */
+  restart(): Promise<void>;
+
+  /**
+   * Whether the standing instructions this session runs under were fixed when it was opened.
+   *
+   * True means a fresh session may come up under a *different* persona than the live one — the
+   * definition as it stands now, including an edit the user made hours ago that never reached
+   * the open session. That is a real behaviour change at a moment nobody chose, so the caller
+   * says it out loud rather than letting it pass. False means the runtime re-asserts the
+   * persona on every session it has, and a restart changes nothing about who the agent is.
+   *
+   * blobot's own word for a provider fact, like `accepts` and `compacts`. The reason it differs
+   * between runtimes is where the persona lives: on the session for some, in the process's
+   * configuration for others. Nothing above an adapter may ask which.
+   */
+  readonly personaIsSessionBound: boolean;
 
   stop(): Promise<void>;
 

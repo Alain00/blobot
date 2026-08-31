@@ -1,5 +1,5 @@
 Type: research
-Status: needs-triage
+Status: answered, awaiting the author's decision
 
 # The MCP surface nobody counted
 
@@ -68,3 +68,50 @@ and the first symptom would be an agent that fails at something it did yesterday
 Adjacent to `.scratch/runtime-posture/`, which holds the three hazards a menu filter cannot fix.
 This is a fourth of the same family, and it is filed here only because the author reached it
 through the context gauge.
+
+## Answer
+
+Researched 2026-08-30. Numbers in `.scratch/transcript-scale/prototype/08-mcp-surface.md`,
+measured against a real `claude`, the pinned bridge 0.70.0 and a real `opencode` 1.18.4. **No
+preference is attached and nothing was changed**, which is what this ticket asked for.
+
+**1. It can be bounded, and this was verified against a real agent rather than read.** Through
+blobot's own `ClaudeAgentRuntime`, with `strictMcpConfig` in `_meta.claudeCode.options` and
+blobot's loopback server passed in `session/new.mcpServers`, the agent came up with exactly one
+MCP tool: `mcp__blobot__message_agent`. The same runtime without the flag reports 198. The `model`
+precedent did not repeat — this one is honoured — and the bridge reading explains why:
+`...userProvidedOptions` is spread wholesale at `acp-agent.js:4866`, `strictMcpConfig` is not
+among the fields ACP overrides afterwards, and `mcpServers` is merged with blobot's entries
+landing last.
+
+**2. OpenCode inherits too, so this is two adapters' problem.** `OPENCODE_CONFIG_CONTENT`
+**merges**: blobot's persona agent is added and the user's four MCP servers survive untouched,
+measured with `opencode debug config` with and without it. OpenCode has the smaller window of the
+two and no `strictMcpConfig` equivalent was found.
+
+**3. The population is larger than anyone would say they had installed, and the shape of it
+matters more than the size.** 198 tools in a blobot-launched probe running in an empty `/tmp`
+directory: meta-ads 106, a **plugin** 57, a **connector** 33, posthog 1, blobot 1. **Ninety of
+those come from a plugin and a connector, which `settingSources` cannot reach at all** — the
+lever ADR-0003 settled on is the right one for commands and has no handle on tools. And `posthog`
+is one tool for an entire product while `meta-ads` is a hundred and six, which is an argument
+against any control that is per server.
+
+**4. It can be measured cheaply and only partly.** The config paths are readable, so counting
+declared *servers* costs nothing. Counting their *tools* means connecting to each and calling
+`tools/list`, which is a side effect blobot has no other reason to cause. The caution is that a
+server count for this machine would have said **two** and missed 90 tools — wrong in the
+direction of reassurance, which is worse than silent. The panel's existing note stays.
+
+**What is left is the decision**, and it is ADR-0003's rather than this effort's: a blanket
+`strictMcpConfig`, a per-agent choice at hire time beside `trust`, or a measurement and nothing
+else. The write-up states what each now costs and recommends none. Moving to
+`.scratch/runtime-posture/` is the right home once it is taken.
+
+## Taken, 2026-08-30, and gone
+
+**A per-agent choice at hire time**, beside `trust` and `compaction`. This ticket is closed here
+and continues at `.scratch/runtime-posture/issues/04-the-mcp-surface-nobody-counted.md`, which is
+the write-up with the decision and its reasons on the end of it. Nothing further is decided in
+this effort; the remaining work is a build with one open half, because no equivalent lever is
+known on OpenCode and Codex was never probed.

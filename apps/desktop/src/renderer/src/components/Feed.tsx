@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { workingCeiling } from '@blobot/core/domain';
 import type {
   UiAgent,
   UiInjection,
@@ -59,18 +60,26 @@ export function Feed({
 
   return (
     <div className="feed">
-      <div className="feedhead">
-        <span className="mono muted">ACTIVITY</span>
+      {/* The column's head, pinned. CONTEXT is the one figure here a reader watches *while*
+          reading the log below it, and it scrolled away the moment they did. The log passes
+          under it; nothing floats. See the note in DESIGN.md on why this is not the rail's
+          rejected pinned group. It carries its own ceiling and scrolls inside itself, because
+          both blocks are one row per agent and a six-agent roster would otherwise pin the
+          whole column. */}
+      <div className="feedtop">
+        <div className="feedhead">
+          <span className="mono muted">ACTIVITY</span>
+        </div>
+        <Context agents={agents} usage={usage} injection={injection} />
+        <WorkspacePanel
+          statuses={workspaces}
+          agents={agents}
+          looking={looking}
+          onRefresh={onRefreshWorkspaces}
+          onPublish={onPublish}
+          onPlan={onPlan}
+        />
       </div>
-      <Context agents={agents} usage={usage} injection={injection} />
-      <WorkspacePanel
-        statuses={workspaces}
-        agents={agents}
-        looking={looking}
-        onRefresh={onRefreshWorkspaces}
-        onPublish={onPublish}
-        onPlan={onPlan}
-      />
       {entries.length === 0 && (
         // A header over nothing is what a fifth of the window looked like on a quiet team.
         // The column keeps its width rather than collapsing: it would reappear on the first
@@ -124,14 +133,19 @@ function Context({
   const [open, setOpen] = useState<string | undefined>(undefined);
   const rows = agents
     .map((agent) => ({ agent, reading: usage[agent.id] }))
-    .filter((row): row is { agent: UiAgent; reading: UiUsage } => row.reading !== undefined);
+    .filter((row): row is { agent: UiAgent; reading: UiUsage } => row.reading !== undefined)
+    // The ceiling is arithmetic here and a lookup in the adapter: main resolved whatever anybody
+    // has established for this agent's model, and this turns it into a number against the window
+    // the runtime actually reported — clamped to it, or the conservative fallback when nobody
+    // has measured. Nothing in this file can tell which runtime is behind either case.
+    .map((row) => ({ ...row, ceiling: workingCeiling(row.agent.contextCeiling, row.reading.size) }));
   if (rows.length === 0) return null;
   return (
     <div className="ctx">
       <div className="ctxhead">
         <span className="mono muted">CONTEXT</span>
       </div>
-      {rows.map(({ agent, reading }) => (
+      {rows.map(({ agent, reading, ceiling }) => (
         <div key={agent.id}>
           <button
             type="button"
@@ -145,7 +159,19 @@ function Context({
             <span className="n">
               {tokens(reading.used)}/{tokens(reading.size)}
             </span>
-            <span className="p">{percent(reading)}%</span>
+            {/* The percent is of the *working ceiling*, and the ceiling is named beside it so
+                the denominator is never hidden. Dividing by the advertised window drew 3% for
+                an agent 300k into a million, which reads as barely started and is the opposite
+                of what the number is for. Past the mark it says so in words: a percentage over
+                a hundred is not a fact about anything. See ticket 09. */}
+            {reading.used >= ceiling.tokens ? (
+              <span className="p past">past {tokens(ceiling.tokens)}</span>
+            ) : (
+              <>
+                <span className="p">{percent(reading.used, ceiling.tokens)}%</span>
+                <span className="of">of {tokens(ceiling.tokens)}</span>
+              </>
+            )}
           </button>
           {open === agent.id && <Sent id={`sent-${agent.id}`} sent={injection[agent.id]} />}
         </div>
@@ -244,8 +270,15 @@ function tokens(count: number): string {
   return `${count}`;
 }
 
-/** Floored, so a context that is not yet full never reads as full. */
-function percent({ used, size }: UiUsage): number {
-  if (size <= 0) return 0;
-  return Math.min(100, Math.floor((used / size) * 100));
+/**
+ * Floored, so a context that is not yet full never reads as full.
+ *
+ * Against the working ceiling rather than the advertised window, since ticket 09. The window is
+ * still drawn, as the right-hand half of `used/size`, because it is what the runtime said; this
+ * is the figure a reader acts on, and the two are not the same question. An agent past its
+ * ceiling never reaches here — that case is words, not a number.
+ */
+function percent(used: number, ceiling: number): number {
+  if (ceiling <= 0) return 0;
+  return Math.min(100, Math.floor((used / ceiling) * 100));
 }

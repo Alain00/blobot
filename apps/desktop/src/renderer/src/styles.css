@@ -16,7 +16,25 @@
      Deliberately low-chroma — a blobatar at full saturation must still win the eye, or the
      governing rule has been broken rather than bent. Nothing else may use them. */
   --added:#6f9c72; --removed:#b8756a;
-  --sans:"Geist",ui-sans-serif,system-ui,sans-serif;
+  /* The tray under the composer: tucked behind the pill, so it has to read as a shelf and not as
+     a hole cut in the page, which is what the page's own black made of it.
+     **On the ramp, not beside it.** It is the midpoint of `--ground` and `--raised` channel by
+     channel, which puts its blue at +2 over its grey exactly as `--raised` does. The first
+     value here was +4 and read as blue: this ramp's coolness is a hair, and a step that
+     out-cools its neighbours stops looking like a surface and starts looking like a colour. */
+  --tray:#0e0e10;
+  /* The ramp's fourth step, and it is the only one *below* the page. The flanks: the rail and
+     the activity column, which are chrome around the surface you read on.
+     It is not the black `--ground` is kept off. Ten levels separate them, and the refusal a few
+     lines above is of #000 exactly — against true black a blobatar silhouette reads as cut out,
+     which is an argument about the floor and not about everything above it. Four levels down
+     is a recess, and it *helps* the faces: the rail is where they live, and they gain the
+     contrast this takes away from the grey around them.
+     On the ramp like every other step: 6 -> 10 -> 14 -> 19, blue held at +2 over the grey. */
+  --recessed:#060608;
+  /* `Geist Sans` is what the bundled faces are called; `Geist` is what a machine with the
+     typeface installed calls it. Both, so neither case falls through to the system stack. */
+  --sans:"Geist Sans","Geist",ui-sans-serif,system-ui,sans-serif;
   --mono:"Geist Mono",ui-monospace,monospace;
   /* The display face of the one page that is read rather than worked in. It was already here
      for one line on that page; it now carries the page. No second family was added for it. */
@@ -126,8 +144,12 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 @media (prefers-reduced-motion:reduce){.dots i{animation:none;opacity:.6}}
 .stat .dots{gap:3px}
 .stat .dots i{width:3px;height:3px}
-/* the one inversion on the page, spent on the one state a human must clear */
-.stat.is-waiting{background:var(--ink);color:var(--ground);padding:2px 6px;font-weight:500}
+/* The one inversion on the page, spent on the one state a human must clear. **A pill**, like
+   every other filled thing here: it shipped as a square-cornered block, which is the one corner
+   in the interface that was not rounded and read as a sticker stuck onto the row rather than as
+   part of it. `.btn`'s full round, since this is the same size of thing; the extra pixel of side
+   padding is what a round needs to keep the word off the curve. */
+.stat.is-waiting{background:var(--ink);color:var(--ground);padding:2px 7px;border-radius:999px;font-weight:500}
 .stat.is-failed{color:var(--ink);text-decoration:line-through;text-decoration-thickness:1px}
 .stat.is-idle{opacity:.55}
 
@@ -136,7 +158,38 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    scroll: a grid item's automatic minimum is its content, so without them the conversation
    grows the row past the viewport instead of overflowing inside it. */
 .vA{position:relative;flex:1;display:grid;grid-template-columns:232px minmax(0,1fr) 288px;grid-auto-rows:minmax(0,1fr);min-height:0;overflow:hidden}
-.vA .rail{border-right:1px solid var(--line);overflow:auto;padding:10px 0}
+/* THE FLANKS.
+   `--ground` is the reading surface and nothing else: the transcript, and the transcript alone.
+   Everything either side of it is chrome, so both sides sit one step up, on the plane the
+   composer's own tray already occupies. It is a rule rather than a decoration, which is what
+   the rail-alone version could not answer: the activity column is exactly as much *not the
+   transcript* as the rail is, and toning one without the other reads as a window that got
+   dressed on one side.
+
+   Down, not up. A flank that is lifted above the thing it navigates was the first version and
+   it fights what the shape already says: a sidebar is the wall of the room, not a thing hovering
+   over it. Recessed also spends the tone where it earns something, because the rail is where
+   the blobatars live and a darker ground under a face is more contrast for it, not less.
+   The hairlines stay either way: the tone says *different plane*, the line says *edge*.
+
+   TO TRY THE RAIL ALONE: drop `.vA .feed` from the two selectors below. Everything else here
+   is scoped to `.rail`, so nothing else needs touching. */
+.vA .rail,.vA .feed{background:var(--recessed)}
+/* A face is cut out of the surface behind it, so the surface behind it has to be told. Both of
+   these were `--ground` and would have drawn a halo of the old black around every blobatar on
+   the rail — the one bug this change cannot get away with, since the faces are the point. */
+.vA .rail .mark{--cut:var(--recessed)}
+.vA .rail .mark .more{background:var(--recessed)}
+/* Nothing else moves, which is the other argument for going down. Every lifted surface inside a
+   flank — Search at the head of the rail, a selected row, the highlighted feed row, the gauge's
+   open row, the workspace row's hover — is still `--raised`, and its gap widened from nine
+   levels to thirteen instead of collapsing to five. The upward version needed a fifth surface
+   to buy that back. This one needs none. */
+/* A column in two parts: the list, which scrolls, and the doors at its foot, which do not.
+   The rail itself stopped being the scroll container when the doors moved down here — a place
+   that is not about any team must not be at the far end of every team. */
+.vA .rail{border-right:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column}
+.railscroll{flex:1;min-height:0;overflow:auto;padding:10px 0}
 /* Drag to resize the rail. Out of flow so it does not become a fourth grid column, and wider
    than the hairline it sits on because a 1px target is a target nobody hits. */
 .railgrab{position:absolute;top:0;bottom:0;width:9px;margin-left:-4px;cursor:col-resize;z-index:10}
@@ -148,7 +201,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    app is: the bubble, the field, the menu, the roster's own row. The 6px margin plus 8px of
    padding keeps the text on the 14px column the labels and headers already sit on, so nothing
    above or below these rows moves. 12px is `.field`'s radius, the sheet's documented default. */
-.agentrow{display:flex;gap:11px;align-items:center;padding:9px 8px;width:calc(100% - 12px);margin:0 6px;border-radius:12px;text-align:left}
+.agentrow{display:flex;gap:6px;align-items:center;padding:4px 8px;width:calc(100% - 12px);margin:0 6px;border-radius:12px;text-align:left}
 /* Hover and selection answer different questions — "where is the pointer" and "which pane am I
    in" — so they cannot both be the raised ground, which is what they were: two identical
    declarations, and no way to tell the row you are pointing at from the one you are already in.
@@ -164,45 +217,94 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .agentrow .nm b{font-weight:500}
 .agentrow .role{color:var(--muted);font-size:12px;flex:0 0 auto}
 .agentrow .stat{font-size:10px}
+/* Who leads, on the row it leads. A mono label at the size every other one on these rows is,
+   in muted ink and not a chip: it is a fact about this row's place in this team, not a badge
+   the agent wears. It sits directly after the name rather than at the right edge, where the
+   `when` already is and where it would read as a status. */
+.agentrow .lead{font-size:9px;color:var(--muted);letter-spacing:.06em;flex:0 0 auto}
 /* When it last spoke, and the line it spoke. The preview takes the width and truncates; the
    status word beside it never does, because a half-printed state is worse than none. */
 .agentrow .when{font-family:var(--mono);font-size:10px;color:var(--muted);flex:0 0 auto}
 .agentrow .preview{color:var(--muted);font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .agentrow .sub .stat{flex:0 0 auto}
 .agentrow:hover .preview,.agentrow:hover .role{color:var(--ink)}
-/* The same box as an agent row, down to the padding, because the two sit in one column and a
-   team row standing 11px taller made the rail look like two lists. The heights are equal rather
-   than tuned to be: both rows are two lines of text at 37px, which is taller than either icon,
-   so the icons cannot drive the height and the padding is all that is left to match. */
-.teamrow{display:flex;gap:11px;align-items:center;padding:9px 8px;width:calc(100% - 12px);margin:0 6px;border-radius:12px;text-align:left}
+/* A team row is **one small line**, and an agent row is two. They were the same box down to
+   the padding, and the reason on that rule was that a team row standing *taller* made the column
+   read as two lists stacked rather than one. Shorter does the opposite: the rail is a list of
+   agents under headings, and a heading that is quieter and lower than what it heads is what
+   makes the nesting legible without a second frame around it.
+
+   Everything the second line used to carry is gone or moved. `led by Alice` is `LEAD` on the
+   lead's own row below. The member count is the number of rows the team opens into. What is
+   kept is the folded status, which had to be: an inverted `waiting` here is the only way a
+   backgrounded team blocked on a permission reaches the user. */
+.teamrow{display:flex;gap:9px;align-items:center;padding:7px 8px;width:calc(100% - 12px);margin:0 6px;border-radius:9px;text-align:left}
 .teamrow.sel{background:var(--raised)}
-.teamrow .who{min-width:0;flex:1}
-.teamrow .nm{display:flex;align-items:baseline;gap:6px}
-.teamrow .nm b{font-weight:500}
-.teamrow .sub{display:flex;align-items:baseline;gap:6px;line-height:1.35}
-.teamrow .n{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto}
-.teamrow:hover .n{color:var(--ink)}
-.teamrow .sub .stat{flex:0 0 auto}
-.teamrow .stat{font-size:10px}
-/* A team with nobody on it, which is the only team that has no face to draw. It used to be
-   every team but the one on screen, because the row was handed a count instead of its members.
-   The ghost holds the mark's whole box so the names stay on one left edge, and draws a single
-   silhouette inside it at the size a team of one would be. */
-.teamrow.off .ghost{position:relative;width:34px;height:34px;flex:0 0 auto}
-.teamrow.off .ghost::after{content:"";position:absolute;left:5px;top:5px;width:24px;height:24px;border:1px dashed var(--line);border-radius:40% 60% 55% 45%}
+.teamrow .nm{font-size:12px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Right of the line, and one at a time: status outranks recency, because a team that is working
+   is not also usefully described by when it last did. */
+.teamrow .when{font-family:var(--mono);font-size:10px;color:var(--muted);flex:0 0 auto}
+.teamrow .stat{font-size:10px;flex:0 0 auto}
+/* The gutter, and the chevron that says a team row opens. The row is still one click target:
+   this is an indicator, not a control, because exactly one team is open at a time and there is
+   no "open but collapsed" state for a twisty to toggle into.
+
+   The negative margin buys back three of the row's 9px gap, so the gutter is 18px in a column
+   the user can drag narrow. `.teamgroup > .roster` is indented by the same 18px, which is what
+   keeps the rule that every blobatar in this column shares one left edge: the mark moved right,
+   so the faces under it move with it.
+
+   `rotate` rather than a `transform`, the property the disclosure arrows in the transcript
+   already use, and the same 180ms. It is part of the team-opening gesture rather than a fourth
+   thing to notice. */
+.teamrow .twisty{width:12px;height:12px;margin-right:-3px;flex:0 0 auto;color:var(--muted);display:flex;align-items:center;justify-content:center;rotate:0deg}
+.teamrow .twisty.on{rotate:90deg}
+.teamrow:hover .twisty,.teamrow.sel .twisty{color:var(--ink)}
+@media (prefers-reduced-motion:no-preference){
+  .teamrow .twisty{transition:rotate 180ms var(--ease-out)}
+}
+/* A team with nobody on it, which is the only team that has no face to draw. The ghost holds the
+   mark's whole box so the names stay on one left edge, and draws a single silhouette inside it
+   at the size a team of one would be. */
+.teamrow.off .ghost{position:relative;width:20px;height:20px;flex:0 0 auto}
+.teamrow.off .ghost::after{content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border:1px dashed var(--line);border-radius:40% 60% 55% 45%}
 /* A team you are not in reads one step back: lighter name, muted ink. Contrast is the app's
    attention channel, and the team on screen is what has it. */
-.teamrow.off b{font-weight:400;color:var(--muted)}
-.teamrow.off:hover b{color:var(--ink)}
+.teamrow.off .nm{font-weight:400;color:var(--muted)}
+.teamrow.off:hover .nm{color:var(--ink)}
 /* Unless it is working. A row that is saying `2 working` while its name sits at --muted is a
    row that whispers the one thing on it worth noticing. Spending contrast here is the whole
    reason this row can be glanced at instead of clicked into. */
-.teamrow.off.busy b{color:var(--ink)}
+.teamrow.off.busy .nm{color:var(--ink)}
+/* Air between one team and the next, and it is mostly the row's own **padding** rather than the
+   space between rows. A collapsed row is one small line, so with only 4px of padding the teams
+   below the open group ran together into the block of text the short row was made to avoid — but
+   buying the gap back with margin alone left thin rows floating in it, which read as a list that
+   had been pulled apart rather than one with room in it. Padding grows the box the row is, so the
+   hover and selection grounds grow with it and the row stays a comfortable target. The margin is
+   the minimum that keeps two grounds from touching. */
+.teamrow.off{margin-bottom:2px}
 .teamrow.off:disabled{cursor:default}
-/* Not indented under their team: only one team runs at a time, so there is never a second
-   group to tell them apart from, and the rule under the group already closes it. Flush left
-   also puts every blobatar on one column, where the team's mark is the wider one. */
-.teamgroup{border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:6px}
+/* Set down off its heading, and **flush left under it**. A team row is a small line and an agent
+   row is two tall ones, and with only the agent row's own 9px above it the first face sat almost
+   against the heading's box — a heading needs air under it more than a row needs air above it, or
+   the group reads as one crushed block rather than a title and a list. The margin is on the box
+   and not on the first row, so the agent rows keep one rule for all three of them.
+
+   The indent is **8px, not the twisty's full 18px gutter**. The first version aligned the faces
+   under the team's mark, which is the arithmetic answer and made the roster read as a nested
+   sub-list rather than as the rail's own contents — an agent row is the substance of this column
+   and a team row is a label on it, so stepping the substance in is backwards. Flush left was the
+   correction and overshot: with nothing at all the two rows read as one flat list and the group
+   lost its shape. Half a gutter is enough to say *these belong to that* without claiming a
+   second level; the chevron column carries the rest. */
+/* Air, and no rule. There was a hairline under the open team's roster, drawn to close the
+   group off from the teams below it. It was doing nothing the gap was not already doing: the
+   group is the only thing in this column with rows nested under it, so its extent is legible
+   from the nesting alone, and a line under it made the roster read as a panel dropped into the
+   list rather than as part of it. The rail's one hairline belongs at the foot, over the doors,
+   which is the only place here where what is below is not more of what is above. */
+.teamgroup{padding-bottom:6px;margin-bottom:6px}
 /* The open team's group is **not** pinned. It was, briefly: sticky against both edges of the
    scrollport, so that the rows you actually click could not leave the column. It was reverted by
    the author the same day — a group that floats over the teams above and below it is a second
@@ -217,13 +319,20 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    up to the folder is not cut off on its way out of a box that is still short. What covers the
    overlap while the teams below slide away is the rows' own fade. */
 .roster{overflow:visible}
+/* Indented by the gutter above, so the agent rows' faces sit on the same left edge as the mark
+   they came out of. Scoped to `.teamgroup`, because `.roster` is also the creation flow's list
+   of agents — one flat namespace, and an unscoped padding here would have indented that too. */
+.teamgroup > .roster{padding-left:8px;margin-top:7px}
 /* Editing and deleting a team, on the row it is about. Hidden until the row is hovered or
    something inside it takes focus: the rail is a list of teams to work in, and a delete button
    sitting on every row at rest would be the loudest thing in a column whose job is quiet.
    `:focus-within` is not a nicety here — hover-only would make both actions unreachable from
    the keyboard. */
 .teamrowwrap{position:relative}
-.rowacts{position:absolute;right:16px;top:8px;display:flex;gap:4px;opacity:0;pointer-events:none}
+.rowacts{position:absolute;right:16px;top:50%;translate:0 -50%;display:flex;gap:4px;opacity:0;pointer-events:none}
+/* Standing, rather than waiting for a pointer. For the one block on a screen that is asking the
+   reader a question: there is nothing quiet about it to protect. */
+.rowacts.on{opacity:1;pointer-events:auto}
 .teamrowwrap:hover .rowacts,.teamrowwrap:focus-within .rowacts{opacity:1;pointer-events:auto}
 /* Two icons appearing in one frame is a pop, and this is the quietest column in the app. 120ms
    is under the threshold where a reveal reads as delayed, so it removes the pop without making
@@ -233,43 +342,42 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 }
 /* The rail's own size for a chrome button: the 32px circle would be taller than the row's
    second line and would push the name off centre. */
-.iconbtn.sm{width:24px;height:24px;background:var(--ground)}
-/* The team reads as one mark: a monochrome folder with its members peeking over the front.
-   The container is chrome and the faces are the only colour in it, which is the governing rule
-   as an object rather than merely obeyed. `TeamMark` owns the arithmetic of where a face sits;
-   everything here is the folder around them, and `TeamMark` owns its paths. */
-.mark{position:relative;flex:0 0 auto;display:block;--cut:var(--ground)}
-/* The two halves of the folder, each an inline SVG filling the box. `TeamMark` owns the paths;
-   these rules only say what colour they are and which one is in front.
+.iconbtn.sm{width:22px;height:22px;background:var(--ground)}
+/* The team's mark: its project icon when it has one, its members' faces when it does not.
+   `TeamMark` says why, and owns the arithmetic of where a face sits; these rules are only what
+   the two states look like.
 
-   `--ground` for the back and `--raised` for the front: the back is the inside of a container,
-   which is not lifted off the page, and the front is the near side, which is. */
-.mark svg{position:absolute;inset:0;width:100%;height:100%;display:block}
-.mark .back path{fill:var(--ground);stroke:var(--line)}
-.mark .front path{fill:var(--raised);stroke:var(--line)}
-/* Members overlap, so each is cut out of the ground behind it. The cut follows the silhouette
-   rather than a circle, because these are blobs and not headshots. */
+   It was a drawn folder — a back panel, a front panel, three faces cropped by the front, a `+N`
+   on the panel and the icon straddling its bottom edge. Six paths and two questions answered in
+   one 34px box, down a column whose job is to be quiet. The container was the noise. Both SVGs
+   and the `--cut` against them are gone with it; a face is now cut out of the face behind it and
+   nothing else. */
+.mark{position:relative;flex:0 0 auto;display:block;--cut:var(--ground)}
+/* Faces overlap, so each is cut out of the one behind it. The cut follows the silhouette rather
+   than a circle, because these are blobs and not headshots. */
 .mark > .blob{position:absolute;filter:drop-shadow(1.5px 0 0 var(--cut)) drop-shadow(-1.5px 0 0 var(--cut)) drop-shadow(0 1.5px 0 var(--cut)) drop-shadow(0 -1.5px 0 var(--cut))}
 .teamrow.sel .mark{--cut:var(--raised)}
-/* The rest of the team, labelled on the front panel where a folder carries its label. Inside
-   the panel, not under it: hanging below the mark it read as a detached footnote. */
-.mark .more{position:absolute;right:7%;bottom:20%;font-size:9px;line-height:1;color:var(--muted)}
-/* The team's own icon, on the folder's front panel where a folder carries its label.
-   `TeamMark` owns where it sits and how big it is; this is what it looks like.
+/* The rest of the team, in the last slot rather than beside the stack: it is one of the things
+   being counted, so it is drawn as one of them. Circular and outlined rather than filled — a
+   solid disc among the faces would be the darkest thing in the mark and would read as a member
+   with no face rather than as a count. */
+.mark .more{position:absolute;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--ground);border-radius:50%;font-size:9px;line-height:1;color:var(--muted)}
+.teamrow.sel .mark .more{background:var(--raised)}
+/* The team's own icon, filling the mark.
 
    Greyed, and that is the design decision rather than a taste: the blobatars are the only
    saturated thing on screen, and a column of teams wearing full-colour favicons would put the
    loudest thing in the rail on the chrome instead of on the faces. Grayscale rather than a
-   silhouette mask, because luminance is most of what makes a logo recognisable at 7px and a
-   flat silhouette of one is usually a blob. `contain`, so a wordmark is letterboxed rather
-   than cropped into initials nobody chose. */
-.mark .teamicon{position:absolute;object-fit:contain;opacity:.92;filter:grayscale(1)}
-/* In a folder the faces are cargo and do not move. Neither does the folder: it used to wear the
-   folded status as the body animation, which is how a hop on one team's `working` became the
-   loudest thing in a column whose job is quiet. The folded status is still on the row, said by
-   the same word and the same dots the agent rows use, so nothing was lost but the motion. */
-.mark.folder > .blob{animation:none}
-.mark.folder{transform-origin:50% 62%}
+   silhouette mask, because luminance is most of what makes a logo recognisable at this size and
+   a flat silhouette of one is usually a blob. `contain`, so a wordmark is letterboxed rather
+   than cropped into initials nobody chose — which is also why there is no background behind it:
+   a plate under a letterboxed image draws a box the artwork does not fill. */
+.mark .teamicon{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:6px;opacity:.92;filter:grayscale(1)}
+/* The faces in a mark do not move. The mark used to wear the folded team status as a body
+   animation, which is how a hop on one team's `working` became the loudest thing in a column
+   whose job is quiet. The folded status is still on the row, said by the same word and the same
+   dots the agent rows use, so nothing was lost but the motion. */
+.mark > .blob{animation:none}
 /* The navigator's door. A field's box — the raised ground and the 12px radius every lifted
    surface in this app uses — because that is the shape a person looks for when they want to
    type a name, even though this one opens a layer rather than taking the keystrokes itself.
@@ -281,15 +389,25 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .railadd:hover{color:var(--ink)}
 .raillabel{padding:12px 14px 6px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .badge{font-family:var(--mono);font-size:10px;border:1px solid var(--ink);padding:0 4px;line-height:14px}
-.vA .conv{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
-/* One mono row of the facts the rail does not carry. It was a two-line block with a blobatar,
+.vA .conv{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+/* One row of the facts the rail does not carry. It was a two-line block with a blobatar,
    a bold name, a role and a status word, all of which the selected rail row is already saying
-   larger and to the left of it. */
-.convhead{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:6px 16px 6px 20px;min-height:37px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--muted);min-width:0}
+   larger and to the left of it.
+
+   The whole row was mono, which made `3 agents · a workspace each` and a role and a runtime's
+   name into values. Only the path and the branch are quoted from outside this window, so only
+   they keep the family — a `.mono` span inside a sans row, which is the shape the workspace
+   tray already had. */
+.convhead{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:6px 16px 6px 20px;min-height:37px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--muted);min-width:0}
 .convhead .where{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* The window's controls, at the end of the only row of chrome above the transcript. */
 .convhead .chrome{margin-left:auto;display:flex;align-items:center;gap:14px;flex:0 0 auto}
-.stream{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:20px 20px 28px;display:flex;flex-direction:column}
+/* The bottom padding is the room the floating composer takes, measured by `useComposerRoom`
+   and written onto `.conv` as `--composerroom`. It is padding on the scroll container rather
+   than a spacer element, because stick-to-bottom scrolls to `scrollHeight` and this is the one
+   way the newest message lands *above* the pill instead of behind it. The fallback is one
+   empty composer, for the first frame before the observer has measured anything. */
+.stream{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:20px 20px calc(var(--composerroom, 76px) + 12px);display:flex;flex-direction:column}
 /* The transcript is a column, not a left margin. It fills the pane up to a measure a paragraph
    can still be read at and centres in whatever is left, so a wide window widens the reading
    column instead of stranding every message against the rail.
@@ -300,25 +418,47 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* One pill, centred over the same column as the transcript, with a round send inside it. The
    bar it replaced was a full-width rule with a mono button pinned to the far right, which put
    the control furthest from the words being typed. */
-.composer{flex:0 0 auto;padding:12px 20px 16px;display:flex;flex-direction:column;align-items:center;gap:7px}
+/* Floating, over the transcript rather than beside it. The pane is one surface now: the
+   transcript runs to the bottom edge of the window and the composer rests on top of it, which
+   is what lets the blur have something to blur. The transcript is not covered, because
+   `--composerroom` above buys back exactly this element's height as scrollable padding.
+
+   The blur is on the pill and the tray themselves and never on a panel behind them: a
+   full-width frosted band is a second bar pinned over the pane, and what floats here is the
+   field, not a bar. */
+.composer{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:12px 20px 16px;display:flex;flex-direction:column;align-items:center;gap:7px}
 /* Said only when the field has words in it and nowhere to send them, which is the one moment
    the placeholder that used to say it is gone. Names both exits and promotes nobody. */
-.stranded{width:100%;max-width:900px;padding-left:16px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.stranded{width:100%;max-width:900px;padding-left:16px;font-size:11.5px;color:var(--muted)}
 /* Bottom-aligned, because the field grows upward as it wraps: the send stays where the hand
    left it and the last line typed is the one beside it. */
-.pill{width:100%;max-width:900px;display:flex;gap:10px;align-items:flex-end;background:var(--raised);border:1px solid var(--line);border-radius:22px;padding:8px 8px 8px 16px}
+/* `position:relative` and a stacking context, because the workspace tray below is tucked
+   under it and the pill is what has to be in front. */
+/* Glass, because it floats: the pill is the only thing between the reader and the last
+   messages now, so it is translucent over its own blur rather than an opaque bar laid on top
+   of them. Enough ground to keep the placeholder legible, enough blur that what passes under
+   it is unreadable — a half-legible sentence sliding behind the field is worse than either.
+   No tint and no saturation: `--raised` is the ground it always had, only thinner. */
+.pill{position:relative;z-index:1;width:100%;max-width:900px;display:flex;gap:10px;align-items:flex-end;background:color-mix(in srgb, var(--raised) 78%, transparent);backdrop-filter:blur(16px) saturate(.9);-webkit-backdrop-filter:blur(16px) saturate(.9);border:1px solid var(--line);border-radius:22px;padding:8px 8px 8px 16px}
 .pill:focus-within{border-color:var(--muted)}
-.send{border:1px solid var(--line);padding:4px 10px;font-family:var(--mono);font-size:11px;display:inline-flex;align-items:center;gap:6px}
+.send{border:1px solid var(--line);padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px}
 .send[disabled]{opacity:.35;cursor:not-allowed}
 /* Send is the page's primary action and it shared the grey of every secondary button. Once it
-   is armed it inverts, which answers "will this go anywhere?" before it is read. */
+   is armed it inverts, which answers "will this go anywhere?" before it is read.
+
+   Disarmed it is the same control turned down, not a control being erased. `.send`'s own
+   `opacity:.35` is for a button in a row of buttons, where the neighbours say where you are; the
+   composer's send is alone at the end of the field, and faded to a third it stopped being a
+   shape at all — the arrow and the lead's name both went with it. So the disabled state keeps
+   full opacity and moves down the ramp instead: `--raised` fill, `--line` edge, `--muted` ink.
+   Same size, same round, same name, one step quieter. */
 .composer .send{flex:0 0 auto;width:32px;height:32px;padding:0;border-radius:50%;justify-content:center;color:var(--muted)}
 .composer .send:not([disabled]){background:var(--ink);border-color:var(--ink);color:var(--ground)}
-.composer .send[disabled]{opacity:.55}
+.composer .send[disabled]{opacity:1;background:var(--raised);border-color:var(--line);color:var(--muted)}
 /* the team pane's send says who, because there the recipient can be one nobody typed: a name
    the placeholder stops saying the moment the first key is pressed. */
 .composer .send.named{width:auto;padding:0 9px 0 13px;border-radius:16px;gap:7px}
-.composer .send .to{font-family:var(--mono);font-size:11px;letter-spacing:.02em}
+.composer .send .to{font-size:12px}
 /* The paperclip: the discoverable door, since paste and drop are invisible. `.iconbtn`'s
    dimensions without its class, because it sits inside the pill and not in the chrome. */
 .composer .clip{flex:0 0 auto;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:0;background:none;color:var(--muted);border-radius:50%}
@@ -379,7 +519,18 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .suggest [cmdk-item][data-selected='true']{background:var(--ground)}
 .suggest .r{color:var(--muted);font-size:12px;margin-left:auto}
 .hint{font-family:var(--mono);font-size:10.5px;color:var(--muted);white-space:nowrap}
-.vA .feed{border-left:1px solid var(--line);overflow:auto;padding:14px 0}
+.vA .feed{border-left:1px solid var(--line);overflow:auto;padding:0 0 14px}
+/* The column's head stays put while the log scrolls under it. Opaque on the column's own
+   ground, no radius, no shadow and no translucency: it is chrome the log passes beneath, not
+   a card floating on top of it, which is the distinction between this and the pinned rail
+   group DESIGN.md rejects. `padding-top` moved off `.feed` and onto here, so the head keeps
+   its 14px whether it is resting or pinned.
+
+   The ceiling is what stops it eating the column: CONTEXT and WORKSPACE are one row per
+   agent, and an expanded `.sent` panel adds nine more, so a large roster would pin the entire
+   height and leave the log with nothing. Past the ceiling the head scrolls inside itself, and
+   `overscroll-behavior` keeps that scroll from continuing into the log underneath. */
+.feedtop{position:sticky;top:0;z-index:2;background:var(--recessed);padding-top:14px;max-height:min(60%,420px);overflow:auto;overscroll-behavior:contain}
 .feedhead{padding:0 14px 10px;display:flex;align-items:baseline;justify-content:space-between}
 .fev{display:flex;gap:8px;padding:5px 14px;font-family:var(--mono);font-size:11px;color:var(--muted);align-items:baseline}
 .fev .t{opacity:.5;flex:0 0 auto}
@@ -389,7 +540,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    guard for a long unbroken token. */
 .fev .what{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .fev.hi{background:var(--raised)}
-.feedempty{padding:2px 14px;font-family:var(--mono);font-size:10.5px;line-height:1.5;color:var(--muted);opacity:.6}
+.feedempty{padding:2px 14px;font-size:11.5px;line-height:1.5;color:var(--muted);opacity:.6}
 /* The context gauge, at the head of the activity column. Occupancy is a value, so it is mono
    and monochrome: no bar, no fill, and nothing that turns a colour as it grows. The runtimes
    report it at different moments (one during a turn, one only at the end of it), so nothing
@@ -427,6 +578,15 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    of occupancies rather than as two sentences of different lengths. */
 .ctxrow .n{margin-left:auto}
 .ctxrow .p{flex:0 0 auto;width:34px;text-align:right;color:var(--ink)}
+/* The ceiling blobot reckons, named next to the percent it is the denominator of. Muted and
+   narrower than the figure it qualifies: it is the same fact on every row of a team that shares
+   a model, so it must not compete with the number that actually moves. Not a warning and not
+   coloured — it is a fact about the model, sitting next to a fact about the agent. */
+.ctxrow .of{flex:0 0 auto;width:52px;text-align:right}
+/* Past it, the row says so instead of drawing a percentage over a hundred. It takes the width
+   of both columns because it replaces both, and it stays monochrome: the gauge does not advise,
+   and a red row here would be blobot telling the user to compact. */
+.ctxrow .p.past{width:86px;color:var(--ink)}
 
 /* ---------- messages ---------- */
 .msg{display:flex;gap:12px}
@@ -520,6 +680,24 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    at the transcript's own size it would outweigh the calls it is a caption on all over again. */
 .ran .did .said{font-size:12.5px;color:var(--muted);line-height:1.5}
 @media (prefers-reduced-motion:reduce){.ran .route svg{transition:none}.ran .did{animation:none}}
+/* A session blobot replaced, with the note the agent wrote for itself under it.
+   It sits in the system voice's own register — muted, small, no container — because it is
+   structural rather than said, and takes `.route`'s chevron so the transcript still has one
+   disclosure gesture and not three. No rules either side: the ruled `.sysline` is a divider
+   across the column, and a divider you can open reads as a section rather than as a line.
+   The note itself is the agent's own words, so it sets at the folded caption's size like
+   `.ran .said` does, and the path under it is a filesystem fact and therefore mono. */
+.handoff{display:flex;flex-direction:column;padding:2px 0}
+.handoff .route{display:flex;align-items:center;gap:7px;text-align:left;color:var(--muted)}
+.handoff .route:hover .lbl{color:var(--ink)}
+.handoff .route svg{flex:0 0 auto;transition:rotate 180ms var(--ease-out)}
+.handoff .route svg.shut{rotate:-90deg}
+.handoff .route .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.07em;color:var(--muted);transition:color 120ms}
+.handoff .note{margin:7px 0 4px 5px;padding-left:13px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:6px;animation:enterpeer 200ms var(--ease-out)}
+.handoff .note .said{font-size:12.5px;color:var(--muted);line-height:1.55;white-space:pre-wrap}
+.handoff .note .where{font-family:var(--mono);font-size:10px;color:var(--muted);opacity:.7;word-break:break-all}
+@media (prefers-reduced-motion:reduce){.handoff .route svg{transition:none}.handoff .note{animation:none}}
+
 /* Ticket 14's permission block. It stands where the in-flight tool line would have stood, in
    the same gutter, because it is the same thing at a moment when it cannot proceed.
    It carries an ink edge, which is `.refusal`'s device rather than a new one: the two are the
@@ -541,15 +719,46 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    it from the first paint — and a starved fade holds its opening frame for as long as the
    starvation lasts. Held at `.3` that is content the user can read; held at `0` it is a screen
    that looks broken. Over 200ms the difference between the two is not visible. */
-.perm{margin-left:40px;border-left:2px solid var(--ink);padding:2px 0 2px 12px;display:flex;flex-direction:column;gap:6px;animation:enterperm 200ms var(--ease-out)}
-@keyframes enterperm{from{opacity:.3;translate:-4px 0}}
+/* ---------- something structural happened inside a turn ----------
+
+   One grammar for two blocks: an agent stopped to ask, and an agent put itself on a schedule.
+   Both are a card rather than an edge, because each is four things — a claim, a value, a reason
+   and a control — and an edge runs down the side of four things without containing them. The
+   composer's own ground, border and radius, because every control in this app descends from the
+   composer and these are the two places in the transcript that *are* controls. They sit in the
+   gutter a tool line would have used and take their own width up to a measure, so two words do
+   not produce a card the width of the window. */
+.card{margin-left:40px;align-self:flex-start;max-width:min(620px,calc(100% - 40px));background:var(--raised);border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;animation:enterperm 200ms var(--ease-out)}
+@keyframes enterperm{from{opacity:.3;translate:0 4px}}
+/* **No ink edge on either.** The permission card carried one for a few minutes, on the argument
+   that a card which has stopped an agent should not look like a card reporting a fact — and on
+   screen it read as a highlight stuck to one side of a closed shape rather than as a signal. A
+   hairline that goes all the way around is already the shape; a second, heavier edge on one side
+   of it is decoration. What separates the two is what they say and the fact that one of them is
+   holding three answers, which is legible before a word is parsed. */
 .perm .ask{font-size:13.5px}
-.perm .ask .mono{font-size:12.5px;color:var(--ink)}
-.perm .why{font-size:12px;color:var(--muted);line-height:1.5;max-width:52ch}
-.perm .acts{display:flex;gap:8px;margin-top:2px}
+/* The command on its own line: a literal quoted from somewhere else, at any length. It scrolls
+   in its own track rather than wrapping into the sentence above it, which is the rule the
+   transcript's code blocks already follow — a wrapped command is a different command to read. */
+.perm .cmd{font-size:12.5px;color:var(--ink);overflow-x:auto;white-space:pre;padding-bottom:2px}
+.perm .always{font-size:12px;color:var(--muted);line-height:1.5;max-width:52ch}
+/* The answers on their own row, with the disclosure at the far end from them: what *always*
+   means is reading, and the three buttons are the doing, and they are not the same errand. Air
+   above, because at the block's shared 6px gap the buttons read as the paragraph's last line. */
+.perm .acts{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px}
+.perm .btns{display:flex;gap:8px}
 .perm .btn{padding:5px 14px;font-size:12.5px}
+.perm .route{display:flex;align-items:center;gap:6px;background:none;border:0;padding:0;cursor:pointer;color:var(--muted)}
+.perm .route:hover .lbl{color:var(--ink)}
+.perm .route svg{flex:0 0 auto;transition:rotate 180ms var(--ease-out)}
+.perm .route svg.shut{rotate:-90deg}
+.perm .route .lbl{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);transition:color 120ms}
+@media (prefers-reduced-motion:reduce){.perm .route svg{transition:none}}
 .tool .k{color:var(--ink)}
-.sysline{display:flex;align-items:center;gap:10px;color:var(--muted);font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase}
+/* Prose, and the reason it is no longer a mono label: this is the one line that explains why
+   an answer stopped, and uppercase mono with letter-spacing is the least readable setting on
+   the page. The rules on either side are what make it a divider; the family never was. */
+.sysline{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:11.5px}
 /* The time between sittings: centred like the sysline it sits among, but without its rules —
    two ruled lines in a row would read as one enclosure. */
 .timerule{text-align:center;color:var(--muted);font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;opacity:.65;margin:2px 0 -4px}
@@ -829,7 +1038,7 @@ textarea.field{resize:vertical;line-height:1.5}
 .md pre code > span{display:block}
 .md table{border-collapse:collapse;margin:0 0 10px;font-size:13px;display:block;overflow-x:auto;max-width:100%}
 .md th,.md td{border:1px solid var(--line);padding:4px 9px;text-align:left;vertical-align:top}
-.md th{font-weight:500;color:var(--muted);font-family:var(--mono);font-size:11px;letter-spacing:.04em;text-transform:uppercase;background:var(--raised);white-space:nowrap}
+.md th{font-weight:500;color:var(--muted);background:var(--raised);white-space:nowrap}
 .md img{max-width:100%}
 /* Long paths and URLs must wrap rather than widen the column — but `anywhere` breaks ordinary
    words mid-word at a line end, so it is scoped to the things that have no spaces to break at. */
@@ -876,8 +1085,6 @@ textarea.field{resize:vertical;line-height:1.5}
 .subhead.lg{font-size:24px;margin-top:2px}
 /* Three lines rather than two, so the blobatar sits with the name instead of centred against a
    block of text whose height depends on whether this agent has standing instructions. */
-.rosterrow.tall{align-items:flex-start;padding:11px 12px}
-.rosterrow.tall > :first-child{margin-top:1px}
 .rosterrow .who > .sub{margin-top:1px}
 /* What the agent is told on every team it joins. Clamped: it is a paragraph the user wrote, and
    at full height one verbose agent would push the rest of the roster off the screen. */
@@ -889,12 +1096,64 @@ textarea.field{resize:vertical;line-height:1.5}
 .agentcardwrap:hover .rowacts,.agentcardwrap:focus-within .rowacts{opacity:1;pointer-events:auto}
 .agentcardwrap .rowacts{top:11px;right:11px}
 
-/* The way in, above the teams because that is the order the model reads in. A whole row rather
-   than an icon beside TEAMS: the label has to say *your agents* somewhere, or the screen is
-   something the user has to already know about. */
-.railsection{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:6px 14px 10px;color:var(--muted)}
-.railsection .mono{font-size:10px;letter-spacing:.16em}
-.railsection:hover{color:var(--ink)}
+/* The doors at the foot of the rail: agents, routines, settings. They were `.railsection`,
+   two mono headings above TEAMS, and they read as a second list stacked on the first.
+
+   A hairline over the group, because it is the one place in this column where the thing below
+   is not more of the thing above. No raised ground: `Search` at the top of the rail is raised
+   because it stands in for a field, and these stand in for nothing — they are the quietest
+   rows here at rest and take ink on hover, like every other row in the column. */
+.railfoot{flex:0 0 auto;border-top:1px solid var(--line);padding:6px 0 8px}
+.raildoor{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:7px 14px;color:var(--muted);font-size:13px}
+.raildoor:hover{color:var(--ink)}
+
+/* ---------- settings: the machine, and a column to find it in ----------
+
+   The screen behind the third door. It borrows the agents page's sheet for its content —
+   `.agentssheet`, `.agentshead` — because it is the same kind of thing, a working surface with
+   a header and a list. What it does not borrow is the centring: this page has a column of its
+   own on the left, so the sheet sits in the space that column leaves rather than in the middle
+   of the window.
+
+   `.setrail` is deliberately not the rail. Same width and the same header, and nothing else:
+   no marks, no faces, no status. A second column that drew like the first would read as the
+   rail having changed its mind about what it lists. */
+.setpage{position:absolute;inset:0;z-index:20;background:var(--ground);display:flex;animation:entersheet 220ms var(--ease-out)}
+.setrail{flex:0 0 208px;border-right:1px solid var(--line);background:var(--recessed);padding:10px 0;overflow:auto}
+.setrailrow{display:block;width:calc(100% - 12px);margin:0 6px;padding:7px 8px;border-radius:12px;text-align:left;font-size:13px;color:var(--muted)}
+.setrailrow:hover{color:var(--ink)}
+/* Selection is the raised ground alone, which is the rule the rail's rows follow. */
+.setrailrow.sel{background:var(--raised);color:var(--ink)}
+/* The sheet is set against the left of what the column leaves rather than centred in it: the
+   agents page centres because it has the whole window, and centring what is left of a window
+   after a 208px column puts the content nowhere in particular. */
+.setbody{flex:1;min-width:0;overflow:auto;display:flex;justify-content:flex-start;padding:40px 32px 32px}
+/* ---------- the standard list row ----------
+
+   One row in a list of things: a runtime, an agent, a routine. **Filled, not outlined.** The
+   first version of every list here was a transparent row inside a hairline that lifted to
+   `--raised` on hover, which spends a border on saying *this is a row* — something a list of
+   rows says by being a list — and leaves the resting state of a screen full of them as a grid
+   of empty boxes. Filled at rest reads as one list of solid things, and it frees the hairline
+   to mean what it means everywhere else in this app: a division between two kinds of thing.
+
+   Hover cannot be "lift it", because the row is already the lifted ground. It is a hairline
+   drawn *inside* the row — the same line the outlined version wore at rest, now spent on the
+   one row the pointer is on. An outline rather than a border so nothing reflows, and only on
+   rows that are pressable: a list you cannot click must not answer the pointer. */
+.listrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 12px;border-radius:12px;background:var(--raised)}
+button.listrow:hover{outline:1px solid var(--line);outline-offset:-1px}
+.listrow .who{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+.listrow .nm{display:flex;align-items:baseline;gap:8px}
+.listrow .nm b{font-weight:500}
+.listrow .sub{line-height:1.4;font-size:11px}
+/* Two lines of text against one face: the face sits on the first line rather than in the middle
+   of the pair, which is where a name is read from. */
+.listrow.tall{align-items:flex-start;padding:11px 12px}
+.listrow.tall > :first-child{margin-top:1px}
+/* A runtime's row is not pressable and its facts are its whole content, so the name does not
+   take the width a pressable row's does. */
+.runtimerow .who{flex:0 1 auto}
 
 /* A command in the composer's menu. Mono, because it is a literal string the user is about to
    put in a message, and monochrome, because a command is not an agent.
@@ -996,16 +1255,37 @@ textarea.field{resize:vertical;line-height:1.5}
 /* Where an agent's work is, and whether GitHub has it. Mono and monochrome throughout,
    including the pull request's state: a green `merged` would be the second saturated thing on
    screen, and the blobatars are the only saturated thing on screen. */
-/* Under the composer, in an agent's pane. `flex:0 0 auto` because `.conv` is a flex column
-   that hides its overflow, and a row left to shrink shrank to nothing. Centred on the same
-   900px column as the pill, and inset the further 16px that puts it under the pill's own text
-   rather than under its edge, so it hangs off the field it is about. */
-.wsline{flex:0 0 auto;align-self:center;width:100%;max-width:940px;padding:0 36px 12px;margin-top:-8px}
+/* The tray under the field, in an agent's pane.
+   Tucked *behind* the pill rather than floating below it. A sentence sitting under the composer
+   read as another thing on the page; this is not another thing, it is the field's own footing.
+   The negative margin is undone by the tray's top padding, so the overlap costs no height and
+   the visible strip is what is left below the pill's edge. `.pill` takes the stacking context
+   that puts it over this, which is the whole of the effect. */
+.wsline{flex:0 0 auto;align-self:center;width:100%;max-width:900px;margin-top:-25px;z-index:0}
+/* Inset from the pill on both sides, so the tray reads as sitting under it rather than as a
+   second control of the same width. 22px clears the pill's own corner radius, which is what
+   keeps the two shapes from fighting where they meet.
+
+   **The top padding is not free space, and that is what got this wrong.** 18px of this bar is
+   behind the pill — `.composer`'s 7px gap minus `.wsline`'s 25px lift — so the padding has to
+   spend 18 before a single pixel of it is visible. At 29/6 the row measured 14px of air above
+   the ink and 12 below, which is the bar reading bottom-heavy. 28/7 puts the ink's centre on the
+   visible strip's centre, counting the bottom border, which is a stroke the top edge does not
+   have. Measured, not reasoned: `google-chrome --headless --screenshot` against this sheet. */
+.wstray{margin:0 22px;background:color-mix(in srgb, var(--tray) 78%, transparent);backdrop-filter:blur(16px) saturate(.9);-webkit-backdrop-filter:blur(16px) saturate(.9);border:1px solid var(--line);border-top:0;border-radius:0 0 14px 14px;padding:28px 14px 7px;display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--muted);min-width:0}
+/* Left is what is in the folder and the commit that would take it, right is where it goes. Read
+   at different moments and in that order, so they are pushed apart rather than centred: a centred
+   row makes the two halves one sentence. */
+.wsplace{display:flex;align-items:center;gap:12px;min-width:0;overflow:hidden}
+.wsdest{margin-left:auto;display:flex;align-items:center;gap:10px;flex:0 0 auto}
+.wsdest .wsrefresh{margin-left:0}
 /* In the activity column, in the team pane. The same inset and the same rule as the gauge
    above it, because they are two readings of the same roster and must line up. */
 .ws{padding:0 0 10px;border-bottom:1px solid var(--line);margin-bottom:10px}
 .wshead{display:flex;align-items:center;gap:6px;padding:0 14px 6px}
-.wsrow{font-family:var(--mono);font-size:11px;color:var(--muted)}
+/* The panel half of the tray, and the tray had already decided this at `.wschurn`: the branch
+   is quoted from git, `checkout` and `clean` and `2 ahead` are blobot's own words. */
+.wsrow{font-size:11.5px;color:var(--muted)}
 .ws .wsrow{padding:3px 8px;margin:0 6px;border-radius:8px}
 .ws .wsrow:hover{background:var(--raised)}
 /* Wraps rather than truncating. A branch name is the one thing here that cannot be recovered
@@ -1013,25 +1293,218 @@ textarea.field{resize:vertical;line-height:1.5}
 .wsfacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
 .wsfacts .who{color:var(--ink)}
 .wsbranch{display:inline-flex;align-items:center;gap:4px;color:var(--ink);word-break:break-all}
+/* Only when it really is a branch. The same slot says `checkout` or `a copy` where there is
+   none, and that is a word blobot chose. */
+.wsbranch.named{font-family:var(--mono);font-size:11px}
 .wsseg{color:var(--muted)}
 .wsseg::before{content:'· '}
 /* The one thing on the line that leads somewhere, so it is the one thing that looks pressable. */
+/* The panel's rows keep the boxed pull request: they are a list, and a list of branches needs
+   its one control marked out. The tray does not — see `.wsflat`. */
 .wspr{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:11px;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:1px 6px;cursor:pointer}
 .wspr:hover{border-color:var(--muted)}
 .wsopen{font-family:var(--mono);font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;cursor:pointer}
 .wsopen:hover{color:var(--ink);border-color:var(--muted)}
+/* Every control in the tray, and the branch picker is the same shape with a chevron on it.
+   **Type, not a box**: a row of bordered pills a few pixels under the composer's own border read
+   as controls inside a control, so the resting state is a line of facts and the hover ground is
+   what says some of them are doors. The negative margin keeps the resting state aligned with
+   type while the ground still has padding to draw. */
+.wsflat{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted);background:transparent;border:0;border-radius:7px;padding:3px 7px;margin:-3px -7px;cursor:pointer}
+.wsflat + .wsflat{margin-left:3px}
+.wsflat:hover,.wsflat[data-state='open']{background:var(--raised);color:var(--ink)}
+.wsflat svg{color:var(--muted);flex:0 0 auto}
+.wsflat:hover svg,.wsflat[data-state='open'] svg{color:var(--ink)}
+.wsflat[disabled]{opacity:.4;cursor:not-allowed}
+.wsflat[disabled]:hover{background:transparent;color:var(--muted)}
+/* The one mono thing left in this tray, and the reason the rest of it is not: these are numbers,
+   and mono is what keeps `+412 −7` from reflowing as it counts up. `clean`, `commit`, the branch
+   and the pull request are words, and a word in mono is a value pretending to be code.
+   `tabular-nums` for the same reason as the family: a count that changes must not shift.
+   In the same low-chroma pair the transcript's diff counts take.
+   It is the same object at a different altitude: two small numbers whose sign already carries
+   the meaning, so the hue reinforces a fact that is legible without it. Greying these while the
+   transcript coloured its own would read as an inconsistency rather than as a rule. */
+/* The zero of the same number, and muted, because there is nothing here to act on. It is not
+   the `checkout` that came off this row: that was constant, and this changes on every turn. */
+.wsclean{font-size:11.5px;color:var(--muted)}
+.wschurn{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;font-variant-numeric:tabular-nums}
+.wsadd,.wsdel{white-space:nowrap}
+.wsadd{color:var(--added)}
+.wsdel{color:var(--removed)}
+/* The branch, which is the tray's only control. **Type, not a box.** A hairline border here was
+   a second bordered shape sitting a few pixels under the composer's own, and two nested outlines
+   at the foot of the window read as a control inside a control. The chevron is what says it can
+   be pressed, and the hover ground is what confirms it: a button that is drawn as a border can
+   only ever be pressable, where this is a fact you read *and* a door, and it should look like
+   the fact until you go near it.
+
+   Negative margins so the hover ground can have padding without the row shifting when it is not
+   showing: the resting state has to line up with type, and the ground is drawn around it. */
+.wsbranchpick{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink);background:transparent;border:0;border-radius:7px;padding:3px 7px;margin:-3px -7px;cursor:pointer;max-width:340px;overflow:hidden;white-space:nowrap}
+.wsbranchpick:hover,.wsbranchpick[data-state='open']{background:var(--raised)}
+/* The two glyphs stay muted at rest and come up with the row, so the name is the thing being
+   read and the chevron is the thing being offered. */
+.wsbranchpick svg{color:var(--muted);flex:0 0 auto}
+.wsbranchpick:hover svg,.wsbranchpick[data-state='open'] svg{color:var(--ink)}
+.wsbranchname{min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* Borrowed outright from the runtime options menu, which is DESIGN.md's rule for a second menu:
+   one that looked different would be claiming the two are different kinds of thing. Only the
+   width is its own, because a branch name is longer than a model name and wraps to nothing. */
+.branchmenu{min-width:320px;max-width:420px;flex-direction:column}
+.branchitem{gap:8px}
+.branchname{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.branchnew{color:var(--ink)}
+/* Who is holding this row's branch, at the end of the row: a face for a teammate, a folder for
+   the project, a path for a worktree nobody here made. The face is the identity and the row's
+   own dimming is the refusal, so this slot carries no words. */
+.branchheld{margin-left:auto;flex:0 0 auto;display:inline-flex;align-items:center;font-size:10px;color:var(--muted)}
+/* A held row is dimmed as a whole. The face keeps its own colour: a desaturated blobatar is a
+   different agent, and the point of drawing one here is that it is recognisably that person. */
+.branchitem[data-disabled] .branchname,.branchitem[aria-disabled='true'] .branchname{opacity:.55}
+.branchnote{padding:12px 10px;font-size:11px}
+/* A refusal is an ink rule and a line of text, said where the user can act on it: the menu is
+   still open on the row that raised it. */
+.branchfailed{border-top:1px solid var(--line);padding:8px 10px 4px;font-size:12px;color:var(--ink)}
 .wsrefresh{margin-left:auto;color:var(--muted);display:inline-flex;align-items:center;cursor:pointer}
 .wsrefresh:hover{color:var(--ink)}
 .wsrefresh[disabled]{opacity:.4;cursor:not-allowed}
 /* Opens in place under its own row, the same rule the gauge's breakdown keeps: nothing in a
    column covers anything else in it. */
-.wspublish{display:flex;flex-direction:column;gap:6px;padding:8px 0 4px 8px}
-.wstitle{width:100%;background:var(--raised);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-family:var(--sans);font-size:12px;color:var(--ink)}
+/* The popover the pull request is opened from. `.field`'s ground, border and radius, at the
+   width a command line needs to be read at without wrapping mid-flag. Anchored above its
+   trigger, because the tray it hangs off sits at the foot of the window. */
+.wspop{width:420px;max-width:calc(100vw - 24px);background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:0 10px 30px rgba(0,0,0,.45);z-index:20}
+.wspublish{display:flex;flex-direction:column;gap:8px}
+.wstitle{width:100%;background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-family:var(--sans);font-size:12px;color:var(--ink)}
 .wstitle:focus{border-color:var(--muted);outline:none}
 .wsdraft{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted)}
 /* The commands themselves, not a description of them. The user is agreeing to what they would
    have pasted, which is `detect/remedies.ts`'s rule for the other place blobot runs a vendor
    CLI on their behalf. */
-.wsplan{font-family:var(--mono);font-size:10.5px;color:var(--muted);background:var(--raised);border:1px solid var(--line);border-radius:8px;padding:6px 8px;word-break:break-all}
+.wsplan{font-family:var(--mono);font-size:10.5px;color:var(--muted);background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:6px 8px;word-break:break-all}
 .wsfailed{font-family:var(--mono);font-size:10.5px;color:var(--ink)}
 .wsactions{display:flex;gap:8px;justify-content:flex-end}
+
+/* The top of the loaded window.
+
+   Centred and alone above the first turn, so it reads as an edge of the transcript rather than
+   as something one of the agents said. It borrows `.route`'s mono label, which is the app's
+   existing word for a control that reveals more; the padding under it is a turn's worth, so the
+   first restored line does not sit against it. */
+.earlier {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 20px;
+}
+.earlier .route {
+  opacity: 0.55;
+}
+.earlier .route:hover:not(:disabled) {
+  opacity: 1;
+}
+.earlier .route:disabled {
+  cursor: default;
+}
+
+/* ── Routines ────────────────────────────────────────────────────────────────
+   Issue 06's screen. It borrows the agents page's sheet outright — `.agentspage`,
+   `.agentssheet`, `.agentshead` — because it is the same kind of thing: a **working** surface
+   over the working surface, reached from a row above TEAMS, that you come back to. A second
+   sheet that looked like a different sheet would be claiming the two are different kinds of
+   place, which is the rule the runtime options menu already follows about menus. */
+
+/* A row is taller than an agent's: it carries a name, whose it is, when it next runs and the
+   prompt, with two controls that stay put. `position:relative` for the same `.rowacts` reveal
+   the rail's team rows use. */
+/* A Routine's row wears the standard ground. It keeps a wrapper of its own rather than being a
+   `.listrow`, because what is inside it is two things stacked — the row, and the run history it
+   opens into — and that is more than a row. */
+.routinewrap{position:relative;border-radius:12px;padding:11px 12px;background:var(--raised)}
+.routinewrap:hover{outline:1px solid var(--line);outline-offset:-1px}
+/* Disarmed is the resting state and reads as such. It is not an error and not a disabled
+   control: it is a Routine that does not fire, which is what every Routine is until a person
+   says otherwise. */
+.routinewrap.off .routinename b{color:var(--muted)}
+.routinewrap:hover .rowacts,.routinewrap:focus-within .rowacts{opacity:1;pointer-events:auto}
+.routinewrap .rowacts{top:11px;right:11px}
+.routinerow{display:flex;align-items:flex-start;gap:12px}
+.routinerow .who{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+.routinerow .sub{font-size:11px;line-height:1.4}
+.routinename{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.routinename b{font-weight:500}
+.routinename .mono{font-size:10px}
+.whose{display:flex;align-items:center;gap:6px}
+/* Right of the row, and always drawn. Arming is the loudest control on this screen because it
+   is the only thing on it that grants authority, so it does not hide behind a hover the way
+   editing and deleting do — and it sits clear of the icon buttons, which is why the row's own
+   actions are inset from the top corner rather than centred. */
+.routineacts{display:flex;flex-direction:column;gap:6px;flex:0 0 auto;margin-top:18px}
+.routineacts .btn{font-size:12px;padding:6px 12px;justify-content:center}
+/* What it last did, as a control: pressing it opens the run history underneath. A button drawn
+   as a line, for the reason the rail's search row is a button drawn as a field — the fact and
+   the door are the same thing, and two of them would be one too many. */
+.routinefoot{margin-top:8px}
+.lastrun{font-size:10px;text-align:left}
+.lastrun:hover{color:var(--ink)}
+.runs{display:flex;flex-direction:column;gap:3px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:10px}
+.runrow{display:flex;gap:10px}
+.runrow .when{flex:0 0 64px;opacity:.7}
+
+/* A proposal is **not** a disarmed Routine and must not draw like one: a Routine the user
+   disarmed is a decision they made, and this is a decision they have not made yet. An ink edge,
+   above the list rather than sorted into it, and two verbs — there is no third that quietly
+   keeps one around unanswered. The prompt is in full rather than clamped, because a person is
+   being asked to read it and that is the entire mechanism. */
+/* A proposal wears the standard list ground and keeps its ink edge. *Amended 2026-08-30.* It
+   was an ink edge on the page's own ground, which was right while it was the only block on the
+   screen and wrong once every other list here became a filled row: it read as the one thing on
+   the Routines screen that was not a Routine. The edge is what says *you have not seen this*,
+   so it stays; the ground is what says *this is one of these*, so it arrives. */
+.proposal{position:relative;border-left:2px solid var(--ink);border-radius:12px;background:var(--raised);padding:11px 12px 11px 13px;display:flex;flex-direction:column;gap:6px}
+.proposal > .mono{font-size:10px;letter-spacing:.06em}
+.proposedprompt{font-size:12.5px;line-height:1.5;white-space:pre-wrap}
+.proposalacts{display:flex;gap:8px;margin-top:2px}
+/* `--ground` under a small icon button is for the rail, where the row it sits on is recessed.
+   On the raised block it would read as a hole punched in it. */
+.proposal .rowacts{top:11px;right:11px;translate:none}
+.proposal .rowacts .iconbtn{background:transparent}
+
+/* The dialog's schedule line: the shape, then only the parts that shape has. An hourly Routine
+   has no hour to be at, so there is no control for one — the closed set of three is the whole
+   of what can be said here, and a greyed field would be offering a fourth shape. */
+.scheduleline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.scheduleline > *{flex:1 1 0;min-width:0}
+.selecttrigger.sm{padding:7px 10px;font-size:13px}
+/* Whose it is, on an edit, where it is stated rather than offered: a Routine is `<team>/<agent>`
+   and moving one would be a new Routine wearing an old one's run history. */
+.whostated{display:flex;align-items:center;gap:8px;padding:9px 0;font-size:13px}
+
+/* Issue 11's unread mark. **Ink weight on the line the rail already draws**, and nothing else:
+   not an inversion, because `waiting` owns the app's one inversion and this must lose to it,
+   which weight against quiet does legibly with both in the column at once. Not a dot and not a
+   count — a dot is a new element in a column whose job is quiet, and two unread reports and
+   five are the same decision. Monochrome, like every other status signal here. */
+.agentrow .preview.unread,.teamrow .when.unread{color:var(--ink);font-weight:500}
+
+/* An agent put itself on a schedule, in the turn that did it.
+   Issue 05's 2026-08-30 amendment reversed *only a person may arm one*, and this block is what
+   pays for it: the user is told **where it happened**. It borrows the permission block's
+   grammar deliberately, because it is the same shape of thing — something structural happened
+   inside this turn and there is one control about it — but it is not a question, so it takes
+   the system voice's quiet rather than the permission block's weight. blobot has never
+   interrupted the user and this does not start. */
+.scheduled{font-size:13.5px}
+/* No ink edge: this is not a question. It has been running since the moment it appeared, and a
+   mark that meant *waiting for you* would be the card lying about what already happened. */
+.scheduled .said{font-size:13.5px}
+.scheduled .mono{font-size:11px;letter-spacing:.04em}
+.scheduled .what{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0}
+.scheduled .what b{font-weight:500}
+/* The one control on its own row and at the end of it, the permission card's rule. It shared a
+   baseline with the sentence before this, which put the only thing here you can press inside a
+   run of text at 11px. */
+.scheduled .acts{display:flex;justify-content:flex-end;margin-top:2px}
+/* Not `.btn.primary`. The loud one is the control that *grants* authority, and here the
+   authority was already taken: what this offers is taking it back, which is a reduction. */
+.scheduled .btn{font-size:11px;padding:4px 11px}

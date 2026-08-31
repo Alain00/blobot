@@ -48,3 +48,24 @@ function dayWord(when: Date, now: Date): string | undefined {
 function sameDay(left: Date, right: Date): boolean {
   return left.toDateString() === right.toDateString();
 }
+
+/**
+ * When a Routine next comes due, said the way a person would say it.
+ *
+ * Forward-looking, which the two above are not: `2h` reads as *two hours ago* on a rail row and
+ * has to read as *in two hours* here. Past about a day the clock time stops being the useful
+ * half and the day takes over, because nobody schedules a briefing and then wonders about the
+ * minute it lands on next Tuesday.
+ */
+export function nextRun(at: number, now = Date.now()): string {
+  const minutes = Math.round((at - now) / 60_000);
+  if (minutes <= 0) return 'due now';
+  if (minutes < 60) return `in ${minutes}m`;
+  const when = new Date(at);
+  const clock = when.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (sameDay(when, new Date(now))) return `today ${clock}`;
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (sameDay(when, tomorrow)) return `tomorrow ${clock}`;
+  return `${when.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} ${clock}`;
+}

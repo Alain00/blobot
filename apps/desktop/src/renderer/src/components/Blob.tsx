@@ -33,7 +33,6 @@ export function Blob({
   status,
   hue,
   animated = false,
-  face,
 }: {
   name: string;
   size?: number;
@@ -51,19 +50,12 @@ export function Blob({
    * grows all day, which is the case the `<img>` default was chosen for.
    */
   animated?: boolean;
-  /**
-   * Marks this face as one that flies out of its team's folder when the team opens. Only the
-   * rail's agent rows set it: `useFaceFlight` reads the roster off the document in row order,
-   * and a face anywhere else would be a member of a team it is not on.
-   */
-  face?: string | undefined;
 }): React.JSX.Element {
   if (!animated) {
     return (
       <span
         className={`b-${status ?? 'still'}`}
         style={{ width: size, height: size }}
-        {...(face === undefined ? {} : { 'data-face': face })}
       >
         <span className="blob" style={{ width: size, height: size }}>
           <Blobatar name={name} size={size} {...(hue === undefined ? {} : { hue })} />
@@ -76,7 +68,6 @@ export function Blob({
     <span
       className={`b-${status ?? 'still'}`}
       style={{ width: size, height: size }}
-      {...(face === undefined ? {} : { 'data-face': face })}
     >
       <span className="blob" style={{ width: size, height: size }}>
         {/* `always` raises the library's `--mo-amp` to 1, which is the one variable every idle

@@ -5,7 +5,12 @@ import { MockAgentRuntime, type ScenarioScript } from '../mock/mock-agent-runtim
 import { Scenario, scenario } from '../mock/scenario.js';
 import { scenarios } from '../mock/scenarios/index.js';
 import type { AgentRuntime } from '../runtime.js';
-import { PEER_CONTEXT_LIMIT, PEER_MESSAGE_LIMIT, WAKE_BATCH_LIMIT } from './bounds.js';
+import {
+  PEER_CONTEXT_LIMIT,
+  PEER_MESSAGE_LIMIT,
+  ROUTINE_TURN_BUDGET,
+  WAKE_BATCH_LIMIT,
+} from './bounds.js';
 import type { Agent, Team } from './domain.js';
 import { InMemoryMessageStore } from './message-store.js';
 import { Orchestrator, type BudgetExhausted, type SilentHandoff } from './orchestrator.js';
@@ -821,5 +826,111 @@ describe('a turn that only routed', () => {
     await h.run(alice.id, 'get the retry loop reviewed');
 
     expect(h.orchestrator.turnsThisPrompt).toBe(1);
+  });
+});
+
+describe("a Routine's prompt", () => {
+  const fire = async (
+    h: Harness,
+    text = 'summarise hacker news and send it back to me',
+    expiryMs = 60_000,
+  ): Promise<void> => {
+    const done = h.orchestrator.promptFromRoutine(alice.id, text, {
+      runId: 'run_1',
+      permissionExpiryMs: expiryMs,
+    });
+    await h.clock.runAll();
+    await h.orchestrator.settled();
+    await done;
+  };
+
+  it("delivers the words in the user's voice, and records which firing brought them", async () => {
+    const h = await harness({});
+    await fire(h);
+
+    const [message] = h.store.forAgent(alice.id);
+    // Still the user's words and still the user's authority: they authored the Routine.
+    expect(message?.fromAgentId).toBeNull();
+    expect(message?.body).toBe('summarise hacker news and send it back to me');
+    // The one thing the bubble gets wrong is *when*, and this is what the `system` line above
+    // it and the rail's unread mark are both drawn from.
+    expect(message?.routineRunId).toBe('run_1');
+    expect(h.prompts.get(alice.id)?.[0]).toContain('summarise hacker news');
+  });
+
+  it('an ordinary prompt still carries no firing', async () => {
+    const h = await harness({});
+    await h.run(alice.id, 'hello');
+    expect(h.store.forAgent(alice.id)[0]?.routineRunId).toBeUndefined();
+  });
+
+  /**
+   * The team's ten is per *user prompt* and its release valve is a person answering *continue?*.
+   * A Routine has no person, so the valve is shut and a smaller ceiling is the only thing between
+   * an hourly firing and a bill.
+   */
+  it('spends the run budget and not the team’s', async () => {
+    const pingPong = (target: string): ScenarioScript =>
+      scenario('ping-pong')
+        .say('On it.')
+        .messageAgent(target, 'thanks, let me know if you need anything')
+        .end();
+    const h = await harness({ [alice.id]: pingPong('Bob'), [bob.id]: pingPong('Alice') });
+
+    await fire(h, 'go');
+
+    expect(h.orchestrator.turnsThisPrompt).toBe(ROUTINE_TURN_BUDGET);
+    expect(h.budget[0]).toMatchObject({ turnBudget: ROUTINE_TURN_BUDGET });
+    // Halted, not truncated. The team's own budget is untouched and still ten.
+    expect(team.turnBudget).toBe(10);
+  });
+
+  const asksToDelete = (): ScenarioScript =>
+    scenario('rm')
+      .say('Clearing the build directory.')
+      .callTool('rm -rf dist', 'execute', { asks: true })
+      .say('Done.')
+      .end();
+
+  /**
+   * Issue 03. Nobody was ever cancelling: main subscribes at team start, so a request at 03:00
+   * waits forever, the agent is `waiting`, and the pool never evicts a working team. Four nights
+   * of that is a pool that cannot start the team the user is trying to open.
+   */
+  it('cancels a permission nobody answered, rather than parking the run forever', async () => {
+    const h = await harness({ [alice.id]: asksToDelete() });
+    const settled: string[] = [];
+    h.orchestrator.onPermissionSettled((_id, outcome) => settled.push(outcome));
+    // Somebody is listening — a window is open — and simply never answers.
+    h.orchestrator.onPermissionRequested(() => {});
+
+    await fire(h, 'tidy the build directory', 60_000);
+
+    expect(settled).toEqual(['cancelled']);
+    // The run ended. It did not hold a session, a bridge process and a pool slot until morning.
+    expect(h.orchestrator.statusOf(alice.id)).toBe('idle');
+  });
+
+  /**
+   * The line issue 03 drew on purpose: the expiry belongs to the run, never to the request. A
+   * user started their own turn and can answer it, and an agent blocked on a human sitting there
+   * until answered is what the rail's one contrast inversion is spent on.
+   */
+  it("never expires a permission on the user's own turn", async () => {
+    const h = await harness({ [alice.id]: asksToDelete() });
+    h.orchestrator.onPermissionRequested(() => {});
+
+    const done = h.orchestrator.promptFromUser([alice.id], 'tidy the build directory');
+    await h.clock.runAll();
+    await h.clock.advance(60 * 60_000);
+
+    expect(h.orchestrator.pendingPermissions).toHaveLength(1);
+    expect(h.orchestrator.statusOf(alice.id)).toBe('waiting');
+
+    // Let the turn finish so the test does not leave one in flight.
+    const [pending] = h.orchestrator.pendingPermissions;
+    h.orchestrator.answerPermission(pending?.id ?? '', null);
+    await h.clock.runAll();
+    await done;
   });
 });

@@ -8,12 +8,14 @@ import type {
   ToolKind,
 } from '@blobot/core/domain';
 import type {
+  UiAgentMessage,
   UiAttachment,
   UiPermissionOutcome,
   UiPermissionRequest,
   UiCommand,
   UiInjection,
   UiLog,
+  UiScheduledRoutine,
   UiSnapshot,
   UiUsage,
 } from '../../shared/api.js';
@@ -74,6 +76,55 @@ export type Item =
       changed?: { added: number; removed: number };
     }
   | { kind: 'system'; id: string; at: number; agentId: string; text: string }
+  /**
+   * blobot chose a moment and something came of it.
+   *
+   * Its own kind rather than a `system` line, for one reason: on a handoff it carries the note
+   * the agent wrote for itself, and that note is the whole argument for preferring a restart to
+   * an opaque `/compact`. A line that only said a session had been replaced would be asking the
+   * reader to take blobot's word for what survived.
+   */
+  | {
+      kind: 'compaction';
+      id: string;
+      at: number;
+      agentId: string;
+      how: 'command' | 'handoff' | 'refused';
+      /** Occupancy when blobot decided, and what it decided against. Both drawn, as ticket 09
+       *  draws the gauge: two honest numbers rather than one derived percentage. */
+      used: number;
+      ceiling: number;
+      /** False when nobody measured this model and the ceiling is blobot's own estimate. */
+      measured: boolean;
+      /** The fresh session took the agent's standing instructions as they stand now. */
+      personaRefreshed?: boolean;
+      /** What the agent wrote. Present on `handoff`, and what the row discloses. */
+      handoff?: string;
+      handoffPath?: string;
+      reason?: string;
+    }
+  /**
+   * An agent put itself on a schedule, and it is already running.
+   *
+   * Issue 05's 2026-08-30 amendment reversed *only a person may arm one*, and this block is the
+   * second of the four controls that pay for it: **the user is told, where it happened.** It is
+   * an item rather than a banner for the same reason a permission request is — it belongs in the
+   * turn that did it, and the team pane has to say which agent.
+   *
+   * It carries `disarm` and nothing else. blobot has never interrupted the user and this does not
+   * start; what it refuses is to let an agent arm something off screen.
+   */
+  | {
+      kind: 'routine';
+      id: string;
+      at: number;
+      agentId: string;
+      routineId: string;
+      name: string;
+      /** In blobot's own words, and beside it what the shape costs. A count, never a price. */
+      schedule: string;
+      frequency: string;
+    }
   /**
    * A tool call an agent is blocked on. It is an item rather than a banner because it belongs
    * where the turn stopped: two agents can be waiting at once, and the team pane has to say
@@ -168,14 +219,73 @@ export interface AppState {
   usage: Record<string, UiUsage>;
   /** What blobot itself put into each agent's turn. Snapshot-only: nothing streams it. */
   injection: Record<string, UiInjection>;
+  /**
+   * Agents carrying a Routine run the user has not looked at. Issue 11's unread mark.
+   *
+   * A set of agent ids and never a count: two unread reports and five are the same decision, and
+   * a count answers a question nobody asked. It arrives with the snapshot and is cleared here
+   * the moment the pane opens rather than waiting for main to answer, because the mark is about
+   * what the user is looking at and they are looking at it now.
+   */
+  unread: readonly string[];
+  /**
+   * Which Routine each firing in this pane belongs to, by run id. Issue 07's disclosure: a
+   * prompt the user wrote but did not say at 03:00 gets a `system` line above it saying so.
+   */
+  routineOrigins: Record<string, string>;
+  /**
+   * Whether each Routine an agent scheduled is still running, by routine id.
+   *
+   * Held beside the items rather than on them, because two surfaces act on one row: the block in
+   * the transcript and the Routines screen. A block whose control still said `disarm` after the
+   * user disarmed it elsewhere would be the app disagreeing with itself about one Routine.
+   */
+  routineArmed: Record<string, boolean>;
+  /**
+   * Whether the team said anything above what the pane is holding.
+   *
+   * The transcript is a window now, not the whole history, so the pane has to be able to say
+   * which of the two it is showing. False means the top of the column really is the beginning.
+   */
+  moreAbove: boolean;
+  /**
+   * The cursor for reaching that history: the oldest time this pane holds *from the store*.
+   *
+   * Deliberately not the oldest `at` in `items`. A tool line sits at the moment its call
+   * started and a stopped-turn line at the moment the turn ended, and neither is a row the
+   * transcript window is cut by — paging from one of those would ask for a range the store
+   * already answered and hand the pane a page it has.
+   */
+  oldest: number | undefined;
 }
 
 export type Action =
   | { type: 'snapshot'; snapshot: UiSnapshot }
+  /**
+   * A window of older transcript, prepended.
+   *
+   * A separate action from `snapshot` on purpose, and the comment on that case says why: a
+   * snapshot *replaces* the pane, which is what it is for. This is the one thing that adds to
+   * the top of one, and it must never be expressed as a snapshot of a wider window — that would
+   * throw away the live tail, the pending rows and the permission blocks standing in it.
+   */
+  | {
+      type: 'earlier';
+      messages: readonly Message[];
+      answers: readonly UiAgentMessage[];
+      moreAbove: boolean;
+      routineOrigins?: Record<string, string>;
+    }
   | { type: 'event'; event: AgentEvent }
   | { type: 'status'; agentId: string; status: AgentStatus }
   | { type: 'commands'; agentId: string; commands: readonly UiCommand[] }
-  | { type: 'message'; message: Message }
+  | { type: 'message'; message: Message; routineName?: string }
+  /** That agent's pane is open, which is the only thing that clears issue 11's unread mark. */
+  | { type: 'seen'; agentId: string }
+  /** An agent put itself on a schedule. It is running by the time this arrives. */
+  | { type: 'scheduled'; scheduled: UiScheduledRoutine }
+  /** The user answered one of those blocks, or answered it on the Routines screen. */
+  | { type: 'routineArmed'; routineId: string; armed: boolean }
   | { type: 'budget'; used: number; budget: number }
   | { type: 'silentHandoff'; agentId: string; named: readonly string[]; at: number }
   | { type: 'turns'; turnsThisPrompt: number }
@@ -192,6 +302,11 @@ export const initialState: AppState = {
   budget: undefined,
   usage: {},
   injection: {},
+  moreAbove: false,
+  oldest: undefined,
+  unread: [],
+  routineOrigins: {},
+  routineArmed: {},
 };
 
 /**
@@ -201,6 +316,53 @@ export const initialState: AppState = {
  * for the adapter to tag its own tool so the UI never has to know a name at all.
  */
 const OWN_TOOL = /(^|_)message_agent$/;
+
+/**
+ * The two halves of a stored transcript as items, through one function.
+ *
+ * A snapshot and a `load earlier` page carry exactly the same pair of row sets and must draw
+ * them identically — a restored message that looked one way at launch and another way after
+ * scrolling up would be the transcript contradicting itself about its own history. The store
+ * bounds the two halves against a shared cutoff for the same reason.
+ */
+function transcriptItems(
+  messages: readonly Message[],
+  answers: readonly UiAgentMessage[],
+  origins: Record<string, string> = {},
+): Item[] {
+  return [
+    ...messages.flatMap((message) =>
+      itemsOfMessage(
+        message,
+        message.routineRunId === undefined ? undefined : origins[message.routineRunId],
+      ),
+    ),
+    ...answers.map(
+      (answer): Item => ({
+        kind: 'agent',
+        id: answer.id,
+        at: answer.at,
+        agentId: answer.agentId,
+        text: answer.text,
+        live: false,
+      }),
+    ),
+  ];
+}
+
+/**
+ * How far back a stored window reaches, which is the cursor for asking for the one above it.
+ *
+ * Both halves, because they are bounded together: taking the oldest message alone would skip
+ * every answer written before it, which is the ragged edge the shared cutoff exists to prevent.
+ */
+function oldestOf(
+  messages: readonly Message[],
+  answers: readonly UiAgentMessage[],
+): number | undefined {
+  const times = [...messages.map((message) => message.at), ...answers.map((answer) => answer.at)];
+  return times.length === 0 ? undefined : Math.min(...times);
+}
 
 /**
  * A tool's title, on one line.
@@ -253,17 +415,16 @@ export function reduce(state: AppState, action: Action): AppState {
         usage: { ...action.snapshot.usage },
         injection: { ...action.snapshot.injection },
         turnsThisPrompt: action.snapshot.turnsThisPrompt,
+        unread: action.snapshot.unread ?? [],
+        routineOrigins: action.snapshot.routineOrigins ?? {},
+        routineArmed: Object.fromEntries(
+          (action.snapshot.scheduled ?? []).map((one) => [one.routineId, one.armed]),
+        ),
         items: [
-          ...action.snapshot.messages.map(toItem),
-          ...action.snapshot.answers.map(
-            (answer): Item => ({
-              kind: 'agent',
-              id: answer.id,
-              at: answer.at,
-              agentId: answer.agentId,
-              text: answer.text,
-              live: false,
-            }),
+          ...transcriptItems(
+            action.snapshot.messages,
+            action.snapshot.answers,
+            action.snapshot.routineOrigins ?? {},
           ),
           // A question nobody has answered is still being asked, so it comes back with the
           // pane. It sorts to the end because that is where the turn is standing.
@@ -318,6 +479,16 @@ export function reduce(state: AppState, action: Action): AppState {
               ...(tool.exit === undefined ? {} : { exit: tool.exit }),
               ...(tool.changed === undefined ? {} : { changed: tool.changed }),
             })),
+          // A session blobot replaced is conversation for the same reason a stopped turn is:
+          // an agent that stops remembering last week, with nothing in the transcript to say
+          // why, is the exact shape of a bug report nobody can act on.
+          ...action.snapshot.log.compactions.map((compaction) =>
+            compactionItem(`${compaction.agentId}:${compaction.at}:compacted`, compaction),
+          ),
+          // Restored from the rows, so the disclosure survives a relaunch and a team switch. A
+          // block that only existed while the app happened to be watching would be one the user
+          // could miss by being on another team when the agent scheduled it.
+          ...(action.snapshot.scheduled ?? []).map(scheduledItem),
           ...action.snapshot.permissions.map(
             (request): Item => ({
               kind: 'permission',
@@ -331,6 +502,8 @@ export function reduce(state: AppState, action: Action): AppState {
             }),
           ),
         ].sort((left, right) => left.at - right.at),
+        moreAbove: action.snapshot.moreAbove,
+        oldest: oldestOf(action.snapshot.messages, action.snapshot.answers),
         // Rebuilt from the same rows, through the same formatting as a live line. The column
         // used to empty on every snapshot while the transcript beside it came back in full,
         // which is what a team switch looked like: the log of what the team had done was gone
@@ -338,6 +511,25 @@ export function reduce(state: AppState, action: Action): AppState {
         feed: restoreFeed(action.snapshot.log),
         budget: undefined,
       };
+    case 'earlier': {
+      // Prepend, never replace, and dedupe by id: the window is cut by time, so a page whose
+      // oldest rows share a millisecond with the page below it can legitimately overlap. An
+      // item already on screen is the one kept, because it may be mid-stream and this is not.
+      const held = new Set(state.items.map((item) => item.id));
+      const origins = { ...state.routineOrigins, ...action.routineOrigins };
+      const added = transcriptItems(action.messages, action.answers, origins).filter(
+        (item) => !held.has(item.id),
+      );
+      return {
+        ...state,
+        routineOrigins: origins,
+        items: [...added, ...state.items].sort((left, right) => left.at - right.at),
+        moreAbove: action.moreAbove,
+        // Never forward. A page that came back empty must not move the cursor down and make
+        // the control ask for the same window forever.
+        oldest: oldestOf(action.messages, action.answers) ?? state.oldest,
+      };
+    }
     case 'turns':
       return { ...state, turnsThisPrompt: action.turnsThisPrompt };
     case 'status':
@@ -413,10 +605,42 @@ export function reduce(state: AppState, action: Action): AppState {
       return { ...state, items };
     }
     case 'message':
-      return applyMessage(state, action.message);
+      return applyMessage(state, action.message, action.routineName);
+    case 'seen':
+      // Opening that agent's pane, and nothing else. Not opening the team: the team pane is not
+      // where that agent's turn is.
+      return { ...state, unread: state.unread.filter((id) => id !== action.agentId) };
+    case 'scheduled': {
+      const id = `${action.scheduled.routineId}:scheduled`;
+      if (state.items.some((item) => item.id === id)) return state;
+      return {
+        ...state,
+        routineArmed: { ...state.routineArmed, [action.scheduled.routineId]: action.scheduled.armed },
+        items: [...state.items, scheduledItem(action.scheduled)],
+      };
+    }
+    case 'routineArmed':
+      return {
+        ...state,
+        routineArmed: { ...state.routineArmed, [action.routineId]: action.armed },
+      };
     case 'event':
       return applyEvent(state, action.event);
   }
+}
+
+/** One agent-scheduled Routine as the transcript draws it. */
+function scheduledItem(one: UiScheduledRoutine): Item {
+  return {
+    kind: 'routine',
+    id: `${one.routineId}:scheduled`,
+    at: one.at,
+    agentId: one.agentId,
+    routineId: one.routineId,
+    name: one.name,
+    schedule: one.schedule,
+    frequency: one.frequency,
+  };
 }
 
 /** `Bob`, `Bob and Carol`, `Bob, Carol and Dave`. Prose, because the line is read as a sentence. */
@@ -425,9 +649,46 @@ function listNames(names: readonly string[]): string {
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1] as string}`;
 }
 
-function applyMessage(state: AppState, message: Message): AppState {
+function applyMessage(state: AppState, message: Message, routineName?: string): AppState {
   if (state.items.some((item) => item.id === message.id)) return state;
-  return { ...state, items: [...state.items, toItem(message)] };
+  return {
+    ...state,
+    items: [...state.items, ...itemsOfMessage(message, routineName)],
+    // Remembered, so a re-render and a `load earlier` page draw the same line the live one did.
+    ...(message.routineRunId === undefined || routineName === undefined
+      ? {}
+      : { routineOrigins: { ...state.routineOrigins, [message.routineRunId]: routineName } }),
+  };
+}
+
+/**
+ * One committed Message as the pane draws it, and the line above it when a clock delivered it.
+ *
+ * **The prompt draws in the user's voice** — solid, filled, right-aligned. The words *are* the
+ * user's: they authored them and nobody else said them. What the bubble gets wrong is *when*, and
+ * that is the whole of what the line above it discloses.
+ *
+ * A `system` line rather than a fourth voice, and the instrument already existed: it is not a
+ * voice, and it was invented to carry a fact the three cannot say (`turn stopped · the context
+ * window is full`). `DESIGN.md`'s three voices exist because three was hard enough, and dashed
+ * against solid is the trick that must not be softened by a third texture competing with it.
+ */
+function itemsOfMessage(message: Message, routineName: string | undefined): Item[] {
+  const item = toItem(message);
+  // Only the user's voice can be wrong about when. A peer message was sent when it says it was.
+  if (routineName === undefined || message.fromAgentId !== null) return [item];
+  return [
+    {
+      kind: 'system',
+      id: `${message.id}:routine`,
+      // The same moment, so the sort cannot separate them. Emitted first, and `Array.sort` is
+      // stable, which is what keeps the line above the bubble it is about.
+      at: message.at,
+      agentId: message.toAgentId,
+      text: `routine · ${routineName}`,
+    },
+    item,
+  ];
 }
 
 /** One committed Message as the pane draws it: the user's voice, or a peer's. */
@@ -646,12 +907,116 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
           },
         },
       };
+    case 'context_compacted': {
+      const id = `${event.agentId}:${event.at}:compacted`;
+      if (state.items.some((item) => item.id === id)) return state;
+      return {
+        ...state,
+        items: [...state.items, compactionItem(id, event)],
+        feed: pushFeed(state.feed, {
+          id,
+          at: event.at,
+          agentId: event.agentId,
+          text: compactionLine(
+            event.how,
+            event.used,
+            event.ceiling,
+            event.measured,
+            event.reason,
+            event.personaRefreshed,
+          ),
+          // Emphasised only when nothing happened. A compaction that worked is routine; a
+          // session blobot decided to keep is the one a reader may want to act on.
+          emphasis: event.how === 'refused',
+        }),
+      };
+    }
     // Thinking has no pane of its own yet, and the peer message is rendered from its record
     // rather than from this announcement.
     case 'agent_thought_delta':
     case 'agent_message_sent':
       return state;
   }
+}
+
+/** One `context_compacted` as the transcript holds it. Shared by the live and restored paths. */
+function compactionItem(
+  id: string,
+  event: {
+    agentId: string;
+    at: number;
+    how: 'command' | 'handoff' | 'refused';
+    used: number;
+    ceiling: number;
+    measured: boolean;
+    personaRefreshed?: boolean;
+    handoff?: string;
+    handoffPath?: string;
+    reason?: string;
+  },
+): Item {
+  return {
+    kind: 'compaction',
+    id,
+    at: event.at,
+    agentId: event.agentId,
+    how: event.how,
+    used: event.used,
+    ceiling: event.ceiling,
+    measured: event.measured,
+    ...(event.personaRefreshed === true ? { personaRefreshed: true } : {}),
+    ...(event.handoff === undefined ? {} : { handoff: event.handoff }),
+    ...(event.handoffPath === undefined ? {} : { handoffPath: event.handoffPath }),
+    ...(event.reason === undefined ? {} : { reason: event.reason }),
+  };
+}
+
+/**
+ * What blobot did to this session, in one line.
+ *
+ * Three shapes for three outcomes, and none of them says the word blobot: the subject of every
+ * one is the session, because that is what changed. `refused` leads with what did *not* happen,
+ * since a reader scanning a column needs to know the agent is still carrying everything it was.
+ *
+ * The numbers are the pair ticket 09 settled on rather than a percentage — occupancy, and the
+ * ceiling it was judged against — and the ceiling says when nobody measured it. Firing a session
+ * restart off a guess about a model is a stronger claim than drawing that guess on a gauge, and
+ * the line a person reads should not quietly conflate the two.
+ *
+ * It offers no remedy, which is ticket 05's rule surviving intact: `/compact` is in the palette
+ * and the user may still type it, and nothing here suggests they should.
+ */
+export function compactionLine(
+  how: 'command' | 'handoff' | 'refused',
+  used: number,
+  ceiling: number,
+  measured: boolean,
+  reason?: string,
+  personaRefreshed?: boolean,
+): string {
+  const against = `${formatTokens(used)} of ${formatTokens(ceiling)}${measured ? '' : ' estimated'}`;
+  switch (how) {
+    case 'command':
+      return `context compacted · ${against}`;
+    case 'handoff':
+      // The standing instructions are named only where they could actually have moved. On a
+      // runtime that re-asserts the persona every session it is not news, and a clause that is
+      // always there is a clause nobody reads on the day it matters.
+      return (
+        `fresh session · ${against}` +
+        (personaRefreshed === true ? ' · standing instructions re-read' : '') +
+        ' · the handoff is below'
+      );
+    case 'refused':
+      return `session kept · ${against} · ${reason ?? 'nothing was changed'}`;
+  }
+}
+
+/** `4k`, `168k`, `1m`. The activity column's own shortening, so two surfaces agree on a size. */
+function formatTokens(tokens: number): string {
+  if (tokens >= 1_000_000) return `${Math.round(tokens / 100_000) / 10}m`;
+  if (tokens >= 1_000) return `${Math.round(tokens / 1_000)}k`;
+  return String(tokens);
 }
 
 /**
@@ -711,7 +1076,25 @@ function restoreFeed(log: UiLog): FeedEntry[] {
       emphasis: turn.stopReason !== 'end_turn',
     }),
   );
-  return [...tools, ...turns].sort((left, right) => right.at - left.at).slice(0, 200);
+  const compactions = log.compactions.map(
+    (compaction): FeedEntry => ({
+      id: `${compaction.agentId}:${compaction.at}:compacted`,
+      at: compaction.at,
+      agentId: compaction.agentId,
+      text: compactionLine(
+        compaction.how,
+        compaction.used,
+        compaction.ceiling,
+        compaction.measured,
+        compaction.reason,
+        compaction.personaRefreshed,
+      ),
+      emphasis: compaction.how === 'refused',
+    }),
+  );
+  return [...tools, ...turns, ...compactions]
+    .sort((left, right) => right.at - left.at)
+    .slice(0, 200);
 }
 
 function pushFeed(feed: FeedEntry[], entry: FeedEntry): FeedEntry[] {

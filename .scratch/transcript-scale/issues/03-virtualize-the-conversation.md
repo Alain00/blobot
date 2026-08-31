@@ -1,5 +1,5 @@
 Type: prototype
-Status: needs-triage
+Status: deferred
 Blocked by: 01, 02
 
 # Virtualize the conversation
@@ -51,3 +51,38 @@ Rough and throwaway. React to it, do not polish it.
 Do not reach for a library before establishing that the hand-rolled version is the problem. The
 list is one column of items with a stable id, which is the case a general-purpose virtualizer
 is most over-built for.
+
+## Answer
+
+**Deferred, 2026-08-30**, which this ticket named in advance as a legitimate outcome and not as a
+failure. The measurement is `.scratch/transcript-scale/prototype/03-measurement.md`; the
+instruments were throwaway and are gone.
+
+**The derivation is not the problem, by a factor nobody needs to argue about.** The reducer,
+`itemsFor` and `rowsOf` together cost **0.35ms at five thousand items**. Anything that starts by
+memoizing the row fold would be optimising the cheap half.
+
+**What the pane actually costs is nodes: about nineteen per item, flat.** 3,755 at two hundred,
+93,759 at five thousand. That is the number a windowed list would reduce and the only number in
+the table jsdom reports honestly — it does no layout and no paint, so its timings are wrong in
+the direction that flatters this decision, and the write-up says so rather than leaning on them.
+
+**Three reasons to defer.** The steady state is 200 items, because ticket 02 windows the
+snapshot, and virtualization would change nothing about the state the app is in nearly all of the
+time. Reaching a bad state takes twenty-four deliberate clicks of *load earlier* by a reader who
+is not streaming a turn while they do it. And two of the four questions this ticket asked turn
+out to be **capability losses rather than performance trades** — find-in-page and selection
+across a scroll boundary both die when rows are unmounted, and both are exactly what a reader who
+has paged back through a week is doing it for.
+
+**The finding worth keeping is a different bug.** The unbounded thing is not the window, it is
+the *accumulation*: `case 'earlier'` in `model.ts` prepends, dedupes and caps nothing, so `items`
+grows for as long as somebody keeps clicking. The feed has had a ceiling of 200 since it was
+written and the transcript has none. **A ceiling on `items`, dropping from the bottom as pages
+arrive at the top, is the move to try before a windowed list** — a small diff in one reducer
+case, it keeps find-in-page and selection over everything mounted, and it bounds nodes at a
+number somebody chose. It is not built here, because nothing has complained yet and this ticket
+is about not building things nothing has complained about.
+
+**What reopens this:** a user reporting a slow pane on a transcript they can describe, with *load
+earlier* in the story. Not a number in a table.

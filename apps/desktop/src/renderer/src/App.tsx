@@ -8,11 +8,14 @@ import { WorkspaceLine } from './components/Workspaces.js';
 import { Navigator } from './components/Navigator.js';
 import { NewTeam } from './components/NewTeam.js';
 import { Rail } from './components/Rail.js';
+import { Routines } from './components/Routines.js';
+import { Settings } from './components/Settings.js';
 import { DeleteTeam, EditTeam } from './components/TeamEdits.js';
 import { initialState, itemsFor, reduce, type Pane } from './model.js';
 import { useFeedVisible } from './useFeedVisible.js';
 import { useWorkspaces } from './useWorkspaces.js';
 import { useRailWidth } from './useRailWidth.js';
+import { useComposerRoom } from './useComposerRoom.js';
 
 export function App(): React.JSX.Element {
   const [state, dispatch] = useReducer(reduce, initialState);
@@ -32,6 +35,12 @@ export function App(): React.JSX.Element {
   const [browsingAgents, setBrowsingAgents] = useState(
     opened.get('screen') === 'agents' || opened.get('screen') === 'hire',
   );
+  /** *Routines*, the second door in that group. `--screen=routines` for a screenshot. */
+  const [browsingRoutines, setBrowsingRoutines] = useState(
+    opened.get('screen') === 'routines' || opened.get('screen') === 'new-routine',
+  );
+  /** *Settings*, the third door. `--screen=settings` for a screenshot. */
+  const [inSettings, setInSettings] = useState(opened.get('screen') === 'settings');
   /** The navigator, on ctrl+k. `--screen=find` opens it for a screenshot. */
   const [finding, setFinding] = useState(opened.get('screen') === 'find');
   /** The team a modal is about, and which one. Never the team on screen by implication. */
@@ -40,6 +49,8 @@ export function App(): React.JSX.Element {
   /** Why the last team the user clicked would not open. Cleared by the next click. */
   const [openError, setOpenError] = useState<string | undefined>(undefined);
   const rail = useRailWidth();
+  /** The composer floats over the transcript; this keeps the transcript's last line clear of it. */
+  const convRoom = useComposerRoom();
   const feed = useFeedVisible();
 
   /**
@@ -51,6 +62,12 @@ export function App(): React.JSX.Element {
    * registered once, and a stale closure here would show another team's words.
    */
   const showing = useRef<string | undefined>(undefined);
+  /**
+   * How far back the pane reaches, for `load earlier`. A ref rather than a dependency: the
+   * callback is handed to a memoized child, and rebuilding it on every page would remount the
+   * control the reader is clicking.
+   */
+  const oldest = useRef<number | undefined>(undefined);
 
   // Resetting the pane belongs to a team *change*: the agent it was showing belongs to the
   // team that just went away. On the first snapshot it threw away `--pane=<agentId>`, which is
@@ -64,6 +81,29 @@ export function App(): React.JSX.Element {
    * roster it names has actually arrived.
    */
   const wanted = useRef<string | undefined>(undefined);
+
+  /**
+   * The window of transcript above the one on screen.
+   *
+   * The team id and the cursor both travel, and main refuses the call if the id is not the open
+   * team: the user can switch while this is in flight, and a page that came back late and
+   * prepended one team's history to another's is a worse outcome than no page.
+   */
+  const loadEarlier = useCallback(async (): Promise<void> => {
+    const teamId = showing.current;
+    const before = oldest.current;
+    if (teamId === undefined || before === undefined) return;
+    const page = await window.blobot.earlier(teamId, before);
+    // Undefined is main saying the pane moved on. Dropping it is the whole of the handling.
+    if (page === undefined || showing.current !== teamId) return;
+    dispatch({
+      type: 'earlier',
+      messages: page.messages,
+      answers: page.answers,
+      moreAbove: page.moreAbove,
+      ...(page.routineOrigins === undefined ? {} : { routineOrigins: page.routineOrigins }),
+    });
+  }, []);
 
   const refresh = useCallback((resetPane = false) => {
     void window.blobot.snapshot().then((snapshot) => {
@@ -79,6 +119,21 @@ export function App(): React.JSX.Element {
           : { kind: 'team' },
       );
     });
+  }, []);
+
+  /**
+   * Open a pane, and clear issue 11's unread mark when it is an agent's.
+   *
+   * **Opening that agent's pane is the only thing that clears it.** Not opening the team: the
+   * team pane is not where that agent's turn is. Cleared here as well as in main so the mark
+   * goes the moment the row is clicked rather than on the next snapshot — the mark is about
+   * what the user is looking at, and they are looking at it now.
+   */
+  const openPane = useCallback((next: Pane) => {
+    setPane(next);
+    if (next.kind !== 'agent') return;
+    dispatch({ type: 'seen', agentId: next.agentId });
+    void window.blobot.seenRoutineRuns(next.agentId);
   }, []);
 
   // One key for the navigator, and the same one the rest of the desktop uses for "find the
@@ -115,11 +170,23 @@ export function App(): React.JSX.Element {
       window.blobot.onCommands((teamId, agentId, commands) => {
         if (mine(teamId)) dispatch({ type: 'commands', agentId, commands });
       }),
-      window.blobot.onMessage((teamId, message) => {
-        if (mine(teamId)) dispatch({ type: 'message', message });
+      window.blobot.onMessage((teamId, message, routineName) => {
+        if (mine(teamId)) {
+          dispatch({
+            type: 'message',
+            message,
+            ...(routineName === undefined ? {} : { routineName }),
+          });
+        }
       }),
       window.blobot.onBudget((teamId, used, budget) => {
         if (mine(teamId)) dispatch({ type: 'budget', used, budget });
+      }),
+      // An agent put itself on a schedule. Filtered to the team on screen like every other
+      // transcript channel; a backgrounded team's block comes back with its snapshot, because
+      // the block is restored from the Routine row rather than from this event.
+      window.blobot.onRoutineScheduled((teamId, scheduled) => {
+        if (mine(teamId)) dispatch({ type: 'scheduled', scheduled });
       }),
       window.blobot.onSilentHandoff((teamId, agentId, named, at) => {
         if (mine(teamId)) dispatch({ type: 'silentHandoff', agentId, named, at });
@@ -154,6 +221,9 @@ export function App(): React.JSX.Element {
   }, []);
 
   const items = useMemo(() => itemsFor(state.items, pane), [state.items, pane]);
+  // Kept current on every render, so the callback above reads the cursor as it is now rather
+  // than as it was when it was built.
+  oldest.current = state.oldest;
   /**
    * Where each agent's work is. Local git follows the feed, so the count moves as the agents do;
    * GitHub is asked on opening the team and on the user's own refresh, and never on a timer.
@@ -246,7 +316,8 @@ export function App(): React.JSX.Element {
           statuses={state.statuses}
           items={state.items}
           pane={pane}
-          onSelect={setPane}
+          unread={state.unread}
+          onSelect={openPane}
           // Not gated on having several teams, unlike the rest of the rail's chrome: a door
           // that appears once you have eight teams is a door nobody finds. Demo mode has it
           // too, where it switches panes and cannot switch teams.
@@ -257,11 +328,13 @@ export function App(): React.JSX.Element {
                 onSelectTeam: (teamId: string) => openTeam(teamId),
                 onNewTeam: () => setCreating(true),
                 onOpenAgents: () => setBrowsingAgents(true),
+                onOpenRoutines: () => setBrowsingRoutines(true),
+                onOpenSettings: () => setInSettings(true),
                 onEditTeam: (teamId: string) => setEditing(teamId),
                 onDeleteTeam: (teamId: string) => setDeleting(teamId),
               })}
         />
-        <div className="conv">
+        <div className="conv" ref={convRoom}>
           <Conversation
             pane={pane}
             agents={snapshot.agents}
@@ -269,9 +342,18 @@ export function App(): React.JSX.Element {
             items={items}
             opening={snapshot.opening === true}
             workspacePath={snapshot.team.workspacePath}
+            moreAbove={state.moreAbove}
+            onLoadEarlier={loadEarlier}
             onAnswerPermission={(requestId, choice) =>
               void window.blobot.answerPermission(requestId, choice)
             }
+            routineArmed={state.routineArmed}
+            // The same call the Routines screen makes, which also marks it answered: pressing
+            // this is a person deciding, and the two surfaces must not disagree about one row.
+            onDisarmRoutine={(routineId) => {
+              dispatch({ type: 'routineArmed', routineId, armed: false });
+              void window.blobot.setRoutineArmed(routineId, false);
+            }}
             chrome={
               <>
                 {snapshot.demoMode && <span className="badge">DEMO</span>}
@@ -317,19 +399,26 @@ export function App(): React.JSX.Element {
             onSend={(agentIds, text, attachmentIds) =>
               void window.blobot.prompt(agentIds, text, attachmentIds)
             }
+            /* The tray under the field, and only in an agent's pane: there it is one branch and
+               one possible pull request, which is a sentence that can be true. The team pane's
+               answer is N of them, and it is drawn in the activity column instead. Passed as a
+               node, so the composer still knows nothing about branches. */
+            {...(pane.kind !== 'agent'
+              ? {}
+              : {
+                  footer: (
+                    <WorkspaceLine
+                      status={workspaces.statuses.find((row) => row.agentId === pane.agentId)}
+                      teamId={openTeamId}
+                      busy={(state.statuses[pane.agentId] ?? 'idle') !== 'idle'}
+                      onSwitched={workspaces.refresh}
+                      onCommitted={workspaces.refresh}
+                      onPublish={(options) => publish(pane.agentId, options)}
+                      onPlan={(options) => plan(pane.agentId, options)}
+                    />
+                  ),
+                })}
           />
-          {/* Under the input, and only in an agent's pane: there it is one branch and one
-              possible pull request, which is a sentence that can be true. The team pane's
-              answer is N of them, and it is drawn in the activity column instead. */}
-          {pane.kind === 'agent' && (
-            <WorkspaceLine
-              status={workspaces.statuses.find((row) => row.agentId === pane.agentId)}
-              looking={workspaces.looking}
-              onRefresh={workspaces.refresh}
-              onPublish={(options) => publish(pane.agentId, options)}
-              onPlan={(options) => plan(pane.agentId, options)}
-            />
-          )}
         </div>
         {feed.visible && (
           <Feed
@@ -363,6 +452,19 @@ export function App(): React.JSX.Element {
             hiringAtOnce={opened.get('screen') === 'hire'}
           />
         )}
+        {/* Over the panes for the same reason *your agents* is: the team behind it keeps
+            running, and nothing on this screen restarts one. Arming a Routine changes what the
+            tick will do at the next firing and nothing that is happening now. */}
+        {browsingRoutines && (
+          <Routines
+            onClose={() => setBrowsingRoutines(false)}
+            writingAtOnce={opened.get('screen') === 'new-routine'}
+          />
+        )}
+        {/* Over the panes like the two doors beside it, and for the same reason: nothing here
+            restarts a team. Signing a runtime in changes what the *next* team start can do, and
+            an agent already running on that runtime is already running. */}
+        {inSettings && <Settings onClose={() => setInSettings(false)} />}
         {deletingTeam !== undefined && (
           <DeleteTeam
             team={deletingTeam}
@@ -381,7 +483,7 @@ export function App(): React.JSX.Element {
             onSelectAgent={(teamId, agentId) => {
               setFinding(false);
               setBrowsingAgents(false);
-              if (teamId === team.id) setPane({ kind: 'agent', agentId });
+              if (teamId === team.id) openPane({ kind: 'agent', agentId });
               else openTeam(teamId, agentId);
             }}
             {...(snapshot.demoMode
@@ -400,6 +502,10 @@ export function App(): React.JSX.Element {
                   onNewTeam: () => {
                     setFinding(false);
                     setCreating(true);
+                  },
+                  onOpenSettings: () => {
+                    setFinding(false);
+                    setInSettings(true);
                   },
                 })}
           />

@@ -26,6 +26,7 @@ const AGENTS: readonly UiAgent[] = [
 function render(
   usage: Record<string, { used: number; size: number }>,
   injection: Record<string, UiInjection> = {},
+  agents: readonly UiAgent[] = AGENTS,
 ): HTMLElement {
   const host = document.createElement('div');
   document.body.append(host);
@@ -33,7 +34,7 @@ function render(
     createRoot(host).render(
       <Feed
         entries={[]}
-        agents={AGENTS}
+        agents={agents}
         usage={usage}
         injection={injection}
         pane={{ kind: 'team' }}
@@ -57,16 +58,37 @@ const rows = (host: HTMLElement): string[] =>
   [...host.querySelectorAll('.ctxrow')].map((row) => row.textContent ?? '');
 
 describe('the context gauge', () => {
-  it('draws both numbers and the percent, so two different windows can be read together', () => {
+  it('draws both numbers, and the percent against what is usable rather than what is advertised', () => {
     const host = render({
       alice: { used: 37_000, size: 1_000_000 },
       bob: { used: 148_000, size: 200_000 },
     });
-    expect(rows(host)).toEqual(['Alice37k/1m3%', 'Bob148k/200k74%']);
+    // Neither model is measured, so both take the conservative fallback and the row names it.
+    // Alice read `3%` before ticket 09 — 37k of an advertised million — which is the number the
+    // ticket was written about: it says barely started about an agent well into its usable
+    // window. Bob is past his fallback ceiling entirely, and says so in words.
+    expect(rows(host)).toEqual(['Alice37k/1m18%of 200k', 'Bob148k/200kpast 120k']);
+  });
+
+  it('uses a measured ceiling where somebody established one, clamped to the window', () => {
+    const measured: readonly UiAgent[] = [
+      { ...(AGENTS[0] as UiAgent), contextCeiling: 300_000 },
+      // A ceiling larger than the window this agent is actually running: the clamp is what stops
+      // the row promising room past the end of its own gauge.
+      { ...(AGENTS[1] as UiAgent), contextCeiling: 300_000 },
+    ];
+    const host = render(
+      { alice: { used: 37_000, size: 1_000_000 }, bob: { used: 100_000, size: 200_000 } },
+      {},
+      measured,
+    );
+    expect(rows(host)).toEqual(['Alice37k/1m12%of 300k', 'Bob100k/200k50%of 200k']);
   });
 
   it('leaves out an agent that has never reported', () => {
-    expect(rows(render({ bob: { used: 148_000, size: 200_000 } }))).toEqual(['Bob148k/200k74%']);
+    expect(rows(render({ bob: { used: 148_000, size: 200_000 } }))).toEqual([
+      'Bob148k/200kpast 120k',
+    ]);
   });
 
   it('says nothing at all when nobody has reported', () => {
@@ -141,5 +163,61 @@ describe('what blobot sent', () => {
     const host = render({ alice: { used: 4_000, size: 200_000 } }, {});
     click(host, 0);
     expect(host.querySelector('.sentnote')?.textContent).toContain('not been woken');
+  });
+});
+
+/**
+ * The head is pinned, and jsdom performs no layout, so `position:sticky` itself is not
+ * testable here. What is testable is the thing the stylesheet depends on and a screenshot
+ * would not catch: that CONTEXT and WORKSPACE are inside one wrapper, and that the log is
+ * outside it. Put a log line into `.feedtop` by accident and it pins to the top of the column
+ * forever; take the gauge out of it and it scrolls away again, which is the bug this fixed.
+ */
+describe('the head of the column', () => {
+  const workspaces = [
+    { agentId: 'alice', agentName: 'Alice', kind: 'git' as const, branch: 'blobot/t/alice', present: true },
+  ];
+  const entries = [
+    { id: 'e1', at: 1, agentId: 'alice', text: 'read src/index.ts' },
+    { id: 'e2', at: 2, agentId: 'bob', text: 'ran the tests' },
+  ];
+
+  function renderFull(): HTMLElement {
+    const host = document.createElement('div');
+    document.body.append(host);
+    act(() => {
+      createRoot(host).render(
+        <Feed
+          entries={entries}
+          agents={AGENTS}
+          usage={{ alice: { used: 1000, size: 200_000 } }}
+          injection={{}}
+          pane={{ kind: 'team' }}
+          workspaces={workspaces}
+          looking={false}
+          onRefreshWorkspaces={() => undefined}
+          onPublish={async () => ({ ok: false, step: 'create', error: 'not in this test' })}
+          onPlan={async () => []}
+        />,
+      );
+    });
+    return host;
+  }
+
+  it('holds both blocks that are one row per agent, and nothing else', () => {
+    const top = renderFull().querySelector('.feedtop') as HTMLElement;
+    expect(top.querySelector('.ctx')).not.toBeNull();
+    expect(top.querySelector('.ws')).not.toBeNull();
+    expect(top.querySelectorAll('.fev')).toHaveLength(0);
+  });
+
+  it('leaves the log outside it, after it', () => {
+    const feed = renderFull().querySelector('.feed') as HTMLElement;
+    const children = [...feed.children];
+    expect(children[0]?.className).toBe('feedtop');
+    expect(feed.querySelectorAll('.fev')).toHaveLength(2);
+    for (const line of feed.querySelectorAll('.fev')) {
+      expect(line.closest('.feedtop')).toBeNull();
+    }
   });
 });

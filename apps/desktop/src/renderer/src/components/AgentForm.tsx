@@ -5,14 +5,17 @@ import { Check, ChevronDown, Shuffle, X } from 'lucide-react';
 import type {
   EditAgentResult,
   NewAgentSpec,
+  CompactionSetting,
   TrustLevel,
   UiAgentProfile,
   UiRuntimeChoice,
 } from '../../../shared/api.js';
 import { Blob } from './Blob.js';
+import { READINESS_WORD } from './readiness.js';
 import { RuntimeMark } from './RuntimeMark.js';
 import { RuntimeOptions } from './RuntimeOptions.js';
 import { TrustPick } from './TrustPick.js';
+import { CompactionPick } from './CompactionPick.js';
 import { RuntimeSetup } from './RuntimeSetup.js';
 
 /**
@@ -41,13 +44,6 @@ import { RuntimeSetup } from './RuntimeSetup.js';
  */
 const HUES = [0, 22, 42, 62, 96, 145, 172, 194, 215, 245, 275, 310, 335] as const;
 
-const READINESS_WORD: Record<UiRuntimeChoice['readiness'], string> = {
-  ready: 'ready',
-  needs_sign_in: 'needs sign-in',
-  not_installed: 'not installed',
-  unknown: 'status unknown',
-};
-
 /** What both dialogs are made of, and the only place these fields are laid out. */
 function AgentFields({
   runtimes,
@@ -65,6 +61,8 @@ function AgentFields({
   setRuntimeOptions,
   trust,
   setTrust,
+  compaction,
+  setCompaction,
   /** The name's face until there is a name. An edit always has one; hiring does not yet. */
   seedFallback,
   onRuntimesChanged,
@@ -84,6 +82,8 @@ function AgentFields({
   setRuntimeOptions: (value: Readonly<Record<string, string>>) => void;
   trust: TrustLevel;
   setTrust: (value: TrustLevel) => void;
+  compaction: CompactionSetting;
+  setCompaction: (value: CompactionSetting) => void;
   seedFallback: string;
   /** The machine changed under the picker: a runtime was signed in to, or installed. */
   onRuntimesChanged?: () => void;
@@ -240,6 +240,14 @@ function AgentFields({
           <span className="fieldlabel mono">WHAT IT CAN DO WITHOUT ASKING</span>
           <TrustPick value={trust} onChange={setTrust} />
         </div>
+        {/* Beside the other two for the same reason they are beside each other: three
+            questions about one agent, in blobot's own words, that no runtime advertises. It is
+            last because it is the one a person is least likely to have an opinion about, and
+            the default answer is the one almost everybody will keep. */}
+        <div className="labelled">
+          <span className="fieldlabel mono">STARTING OVER WHEN IT RUNS OUT OF ROOM</span>
+          <CompactionPick value={compaction} onChange={setCompaction} />
+        </div>
         <label className="labelled">
           <span className="fieldlabel mono">STANDING INSTRUCTIONS</span>
           <textarea
@@ -283,6 +291,9 @@ export function HireAgent({
   const [runtimeOptions, setRuntimeOptions] = useState<Readonly<Record<string, string>>>({});
   /** Where an agent nobody has thought about this for starts, and where most will stay. */
   const [trust, setTrust] = useState<TrustLevel>('normal');
+  /** On, which is the documented default and what an agent nobody has thought about this for
+   *  runs under. See `DEFAULT_COMPACTION`. */
+  const [compaction, setCompaction] = useState<CompactionSetting>('auto');
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
 
@@ -292,7 +303,7 @@ export function HireAgent({
   const hire = async (): Promise<void> => {
     setBusy(true);
     const result = await window.blobot.hireAgent(
-      specOf({ name, role, instructions, hue, runtimeOptions, trust }, selected),
+      specOf({ name, role, instructions, hue, runtimeOptions, trust, compaction }, selected),
     );
     setBusy(false);
     if (!result.ok || result.profileId === undefined) {
@@ -333,6 +344,8 @@ export function HireAgent({
             setRuntimeOptions={setRuntimeOptions}
             trust={trust}
             setTrust={setTrust}
+            compaction={compaction}
+            setCompaction={setCompaction}
             seedFallback="new agent"
             {...(onRuntimesChanged === undefined ? {} : { onRuntimesChanged })}
           />
@@ -391,6 +404,7 @@ export function EditAgent({
     agent.runtimeOptions ?? {},
   );
   const [trust, setTrust] = useState<TrustLevel>(agent.trust ?? 'normal');
+  const [compaction, setCompaction] = useState<CompactionSetting>(agent.compaction ?? 'auto');
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   /** What the save actually did, once it has done it. Kept open to be read. */
@@ -405,13 +419,14 @@ export function EditAgent({
     instructions.trim() !== (agent.instructions ?? '') ||
     hue !== agent.hue ||
     !sameOptions(runtimeOptions, agent.runtimeOptions ?? {}) ||
-    trust !== (agent.trust ?? 'normal');
+    trust !== (agent.trust ?? 'normal') ||
+    compaction !== (agent.compaction ?? 'auto');
 
   const save = async (): Promise<void> => {
     setBusy(true);
     const edit = await window.blobot.editAgent(
       agent.id,
-      specOf({ name, role, instructions, hue, runtimeOptions, trust }, runtimeId),
+      specOf({ name, role, instructions, hue, runtimeOptions, trust, compaction }, runtimeId),
     );
     setBusy(false);
     if (!edit.ok) {
@@ -468,6 +483,8 @@ export function EditAgent({
                 setRuntimeOptions={setRuntimeOptions}
                 trust={trust}
                 setTrust={setTrust}
+                compaction={compaction}
+                setCompaction={setCompaction}
                 seedFallback={agent.name}
                 {...(onRuntimesChanged === undefined ? {} : { onRuntimesChanged })}
               />
@@ -638,6 +655,7 @@ function specOf(
     hue: number | undefined;
     runtimeOptions: Readonly<Record<string, string>>;
     trust: TrustLevel;
+    compaction: CompactionSetting;
   },
   runtimeId: string,
 ): NewAgentSpec {
@@ -653,6 +671,9 @@ function specOf(
     // `normal` is sent rather than omitted, for the same reason: an agent lowered back from
     // `trusting` has to be able to say `normal` and not merely stop saying `trusting`.
     trust: form.trust,
+    // Sent whichever way it is set, again for the same reason: an agent switched back on has
+    // to be able to say `auto` rather than merely stop saying `off`.
+    compaction: form.compaction,
   };
 }
 
