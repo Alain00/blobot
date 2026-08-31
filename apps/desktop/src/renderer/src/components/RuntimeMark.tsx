@@ -11,7 +11,7 @@
  *
  * All five are taken from the vendor's own origin (`claude.ai/favicon.svg`, `sst/opencode`'s
  * brand folder, `developers.openai.com/favicon.svg`, `fx.sh/icon.svg`,
- * `cursor.com/brand/icon.svg`), stripped to one `currentColor` and
+ * Cursor's brand-assets Cube), stripped to one `currentColor` and
  * normalised so they carry the same optical weight beside each other and beside a Lucide glyph.
  * Nothing here is blobot's to license: these are the vendors' marks, used to name the product we
  * speak to, which is why they are also never restyled beyond the greying and never stand in for
@@ -114,22 +114,20 @@ function FxMark(): React.JSX.Element {
 }
 
 /**
- * Cursor's mark, from the vendor's own origin (`cursor.com/brand/icon.svg`, 2026-08-31).
+ * Cursor's mark: the Cube, from the vendor's own brand-assets package
+ * (`cursor-brand-assets/General Logos/Cube/SVG/CUBE_2D_DARK.svg`, supplied by the author,
+ * 2026-09-01).
  *
- * The pointer the product is named for — the vendor's own alpha-mask path, verbatim, with the
- * plate, the gradients and the blue dropped, which is the same reduction the four marks above
- * went through. The `viewBox` is cropped to the glyph's own mask bounds so it carries the same
- * optical weight beside them. PR #1 drew a pointer here too, from memory; this one is traced
- * from the file the vendor serves.
+ * The 2D variant is the one drawn: a single path, so stripping the vendor's `#edecec` to
+ * `currentColor` is the whole of the reduction, the same one every mark above went through.
+ * The 2.5D and 3D variants ship as shaded plates and would grey into a smudge at 15px. An
+ * earlier version of this file traced the pointer from `cursor.com/favicon.svg` — that is the
+ * app icon, and the brand package says the Cube is the logo, so the Cube it is.
  */
 function CursorMark(): React.JSX.Element {
   return (
-    <svg viewBox="235 242 459 553" width="100%" height="100%" fill="currentColor" aria-hidden>
-      <path
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d="M682.055 244.201c5.112-3.382 11.891.52 11.536 6.639l-30.783 529.892c-.833 14.332-19.6 19.462-27.639 7.568-40.255-59.551-117.96-170.956-148.402-190.037-30.407-19.06-165.524-30.387-237.415-35.17-14.356-.955-19.409-19.842-7.408-27.78z"
-      />
+    <svg viewBox="0 0 466.73 532.09" width="100%" height="100%" fill="currentColor" aria-hidden>
+      <path d="M457.43,125.94L244.42,2.96c-6.84-3.95-15.28-3.95-22.12,0L9.3,125.94c-5.75,3.32-9.3,9.46-9.3,16.11v247.99c0,6.65,3.55,12.79,9.3,16.11l213.01,122.98c6.84,3.95,15.28,3.95,22.12,0l213.01-122.98c5.75-3.32,9.3-9.46,9.3-16.11v-247.99c0-6.65-3.55-12.79-9.3-16.11h-.01ZM444.05,151.99l-205.63,356.16c-1.39,2.4-5.06,1.42-5.06-1.36v-233.21c0-4.66-2.49-8.97-6.53-11.31L24.87,145.67c-2.4-1.39-1.42-5.06,1.36-5.06h411.26c5.84,0,9.49,6.33,6.57,11.39h-.01Z" />
     </svg>
   );
 }
