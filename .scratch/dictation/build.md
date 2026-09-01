@@ -124,8 +124,20 @@ three tested against fake sockets and a fake fetch; none has met its provider ye
 
 ## Left
 
-- **Run the workflow** (push the tag or dispatch it), then pin the four hashes from
-  `SHA256SUMS` into `ENGINE_BUILDS`. Until then the Settings row refuses the engine by name.
+- **The repository is private, and the engine's release URL is therefore private too.** Found
+  2026-09-01, the day the workflow first ran: `gh release download` works and a plain `fetch`
+  of the same URL answers `Not Found`, and the app downloads with a plain `fetch` and no token
+  — ADR-0005 would refuse one anyway. The workflow, the release and the pinned hashes are all
+  real and verified; what does not work yet is the *in-app* engine download for anyone, until
+  the author decides between making the repo public, a small public releases-only repo (one URL
+  changes in `catalog.ts`), or another public host. **The author's call, deliberately not made
+  here.** Weights are unaffected — Hugging Face is public.
+- ~~Run the workflow and pin the hashes~~ — done 2026-09-01: `whisper-b4938-1` built all four
+  binaries, the hashes are pinned in `ENGINE_BUILDS`, and the darwin-arm64 asset was verified
+  live through the adapter: 8.2 s cold (Metal's first-run shader cache), **325 ms warm** for
+  the 10 s clip, identifiers intact. The binary is placed at
+  `~/.local/share/blobot/speech/bin/whisper-b4938-1/` on this machine, exactly where the app's
+  own download would put it.
 - **The live done-when, by hand**: enable, download, *say something*, the Spanish sentence with
   identifiers into a real agent; the same through one provider with a key from the file and one
   from the environment. The author judges the audio and the visual.

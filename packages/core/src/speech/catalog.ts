@@ -81,11 +81,36 @@ export interface EngineBuild {
   readonly bytes?: number;
 }
 
+// Hashes from the release's `SHA256SUMS`, run 2026-09-01 on the `whisper-b4938-1` tag.
 export const ENGINE_BUILDS: readonly EngineBuild[] = [
-  { platform: 'darwin', arch: 'arm64', asset: 'whisper-cli-darwin-arm64', url: `${RELEASE}/whisper-cli-darwin-arm64` },
-  { platform: 'linux', arch: 'x64', asset: 'whisper-cli-linux-x64', url: `${RELEASE}/whisper-cli-linux-x64` },
-  { platform: 'linux', arch: 'arm64', asset: 'whisper-cli-linux-arm64', url: `${RELEASE}/whisper-cli-linux-arm64` },
-  { platform: 'win32', arch: 'x64', asset: 'whisper-cli-win32-x64.exe', url: `${RELEASE}/whisper-cli-win32-x64.exe` },
+  {
+    platform: 'darwin',
+    arch: 'arm64',
+    asset: 'whisper-cli-darwin-arm64',
+    url: `${RELEASE}/whisper-cli-darwin-arm64`,
+    sha256: 'd20b3efa4833bbab443ba2dc19e97f66b801ae7a5274726d4fb8ccbbdd1cb779',
+  },
+  {
+    platform: 'linux',
+    arch: 'x64',
+    asset: 'whisper-cli-linux-x64',
+    url: `${RELEASE}/whisper-cli-linux-x64`,
+    sha256: 'd275a9595d89f459111c44cb060bfd02224a158e4e8a78ad18789decaf382c5e',
+  },
+  {
+    platform: 'linux',
+    arch: 'arm64',
+    asset: 'whisper-cli-linux-arm64',
+    url: `${RELEASE}/whisper-cli-linux-arm64`,
+    sha256: '3455495e976b42858399dab7e7ca62ecddbf2794e9561b0d58a4b19da8bba521',
+  },
+  {
+    platform: 'win32',
+    arch: 'x64',
+    asset: 'whisper-cli-win32-x64.exe',
+    url: `${RELEASE}/whisper-cli-win32-x64.exe`,
+    sha256: 'f78c81e63f70d49458cc6deeeefa2ba13b7af25e942a8b922aef9ce6ae15d734',
+  },
 ];
 
 export function engineBuildFor(platform: string, arch: string): EngineBuild | undefined {
