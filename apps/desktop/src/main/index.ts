@@ -994,6 +994,10 @@ async function createWindow(): Promise<void> {
   const parts = [
     ...(pane === undefined ? [] : [`pane=${pane}`]),
     ...(screen === undefined ? [] : [`screen=${screen}`]),
+    // A screenshot run is exactly the context where nobody is present and something may be
+    // capturing, so it is silent above the user's own switch. The only place the sound effort
+    // touches main, and it reads a flag that already existed rather than adding one.
+    ...(screenshotPath === undefined ? [] : ['silent=1']),
   ];
   const hash = parts.length === 0 ? undefined : parts.join('&');
   const devServer = process.env['ELECTRON_RENDERER_URL'];

@@ -11,6 +11,7 @@ import type {
 import { Blob } from './Blob.js';
 import { IconPick } from './IconPick.js';
 import { LeadPicker } from './Lead.js';
+import { usePlaySound } from '../sound/useSound.js';
 
 /**
  * The two things you can do to a team that already exists: change who is on it, and end it.
@@ -114,6 +115,7 @@ export function DeleteTeam({
    * branch and no copy will give back.
    */
   const [clean, setClean] = useState(false);
+  const playSound = usePlaySound();
   /** What the clean would recover. `undefined` while it is still being counted. */
   const [usage, setUsage] = useState<UiTeamDiskUsage | undefined>();
   const [freed, setFreed] = useState<number | undefined>();
@@ -131,6 +133,9 @@ export function DeleteTeam({
   }, [team.id]);
 
   const remove = async (): Promise<void> => {
+    // Falling, and the full clean puts a floor under the tail: it is the one unrecoverable act in
+    // the app, and this dialog is the one place that difference is already priced.
+    playSound(clean ? 'purge' : 'remove');
     setBusy(true);
     const result = await window.blobot.deleteTeam(team.id, clean);
     setBusy(false);
@@ -387,7 +392,6 @@ export function EditTeam({
               </div>
 
               <IconPick
-                agents={roster.filter((agent) => chosen.includes(agent.id))}
                 {...(icon === undefined ? {} : { icon })}
                 onChoose={() => void chooseIcon()}
                 onClear={() => setIcon(undefined)}

@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>blobot · sound prototype</title>
+<style>
+:root{
+  --ground:#0a0a0b; --raised:#131315; --recessed:#060608; --tray:#0e0e10;
+  --ink:#fafaf8; --muted:#8a8a93; --line:#232327;
+  --sans:"Geist Sans","Geist",ui-sans-serif,system-ui,sans-serif;
+  --mono:"Geist Mono",ui-monospace,monospace;
+  --ease-out:cubic-bezier(0.23,1,0.32,1);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--ink);outline-offset:3px}
+.mono{font-family:var(--mono);font-size:11px;letter-spacing:.02em}
+.muted{color:var(--muted)}
+
+.wrap{max-width:800px;margin:0 auto;padding:48px 24px 96px}
+h1{font-size:15px;font-weight:500;margin:0 0 4px}
+.lede{color:var(--muted);margin:0 0 32px;max-width:62ch}
+
+.sec{margin:0 0 40px}
+.sechead{display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+  border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:4px}
+.sechead .mono{color:var(--muted);text-transform:uppercase}
+.sechead .right{display:flex;align-items:baseline;gap:14px}
+.sechead .note{color:var(--muted);font-size:12px;text-align:right;max-width:40ch}
+.grp{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.02em;
+  border:1px solid var(--line);padding:3px 7px;white-space:nowrap}
+.grp:hover{color:var(--ink);border-color:var(--muted)}
+
+/* The row is the app's listrow: filled, hairline under. The switch is its own cell so the
+   rest of the row stays a single control that auditions the sound. */
+.row{display:grid;grid-template-columns:36px 1fr;background:var(--raised);
+  border-bottom:1px solid var(--ground);transition:opacity .12s var(--ease-out)}
+.row.off{opacity:.40}
+.row.lit .body{background:var(--recessed)}
+.tog{display:flex;align-items:center;justify-content:center;border-right:1px solid var(--ground)}
+.tog i{display:block;width:9px;height:9px;border:1px solid var(--muted);background:transparent;
+  transition:background .12s var(--ease-out),border-color .12s var(--ease-out)}
+.tog:hover i{border-color:var(--ink)}
+.tog[aria-pressed="true"] i{background:var(--ink);border-color:var(--ink)}
+.body{display:grid;grid-template-columns:14px 150px 1fr auto;gap:14px;align-items:baseline;
+  text-align:left;padding:11px 12px;transition:background .12s var(--ease-out)}
+.body:hover{background:var(--tray)}
+.body:active{background:var(--recessed)}
+.body .k{font-family:var(--mono);font-size:10px;color:var(--line)}
+.body:hover .k{color:var(--muted)}
+.body .name{font-family:var(--mono);font-size:11px;letter-spacing:.02em}
+.body .why{color:var(--muted);font-size:12px;line-height:1.45}
+.body .shape{font-family:var(--mono);font-size:10px;color:var(--muted);white-space:nowrap}
+
+/* voice picker: the same row, outlined until it is chosen */
+.voices{display:flex;gap:8px;margin-top:12px}
+.voice{flex:1;padding:12px;background:transparent;border:1px solid var(--line);text-align:left;
+  transition:border-color .12s var(--ease-out),background .12s var(--ease-out)}
+.voice:hover{border-color:var(--muted)}
+.voice[aria-pressed="true"]{background:var(--raised);border-color:var(--ink)}
+.voice .name{font-family:var(--mono);font-size:11px;display:block}
+.voice .why{color:var(--muted);font-size:12px;display:block;margin-top:2px}
+
+.bar{display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--line);
+  position:sticky;top:0;background:var(--ground);z-index:2;flex-wrap:wrap}
+.bar label{display:flex;align-items:center;gap:8px}
+input[type=range]{accent-color:var(--ink);width:110px}
+.mute{border:1px solid var(--line);padding:5px 10px;font-family:var(--mono);font-size:11px}
+.mute[aria-pressed="true"]{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.presets{display:flex;gap:6px;margin-left:auto}
+.preset{border:1px solid var(--line);padding:5px 9px;font-family:var(--mono);font-size:10px;
+  letter-spacing:.02em;color:var(--muted)}
+.preset:hover{color:var(--ink);border-color:var(--muted)}
+
+.play{border:1px solid var(--line);padding:7px 14px;font-family:var(--mono);font-size:11px}
+.play:hover{border-color:var(--muted)}
+.play[aria-pressed="true"]{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+
+/* the density strip: one tick per sound, ink for committed, hairline for navigational */
+.strip{height:34px;background:var(--recessed);position:relative;overflow:hidden;margin-top:12px}
+.tick{position:absolute;bottom:0;width:1px;background:var(--line)}
+.tick.hi{background:var(--ink)}
+.tick.mid{background:var(--muted)}
+.playhead{position:absolute;top:0;bottom:0;width:1px;background:var(--muted);opacity:.5}
+.count{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:8px;display:flex;gap:18px;flex-wrap:wrap}
+.count b{font-weight:400;color:var(--ink)}
+.simopts{display:flex;gap:16px;align-items:center;margin-top:14px;flex-wrap:wrap}
+.simopts .hint{color:var(--muted);font-size:12px}
+.verdict{margin-top:14px;color:var(--muted);font-size:12px;min-height:1.5em;max-width:66ch}
+.state{margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--muted);
+  background:var(--recessed);padding:10px 12px;white-space:pre-wrap;word-break:break-all;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>blobot · sound prototype</h1>
+<p class="lede">Throwaway. Every sound is independently switchable and the state persists, so the
+question is no longer which of these to build but which are on by default. Everything is
+synthesized live, so no two plays are identical. The switch on the left of a row arms it; the rest
+of the row auditions it whether it is armed or not. Nothing here is wired to the app.</p>
+
+<div class="bar">
+  <button class="mute" id="mute" aria-pressed="false">SOUND ON</button>
+  <label class="mono muted">LEVEL <input type="range" id="vol" min="0" max="100" value="32"></label>
+  <span class="mono muted" id="ctxstate">tap anything to start audio</span>
+  <span class="presets">
+    <button class="preset" data-preset="all">ALL</button>
+    <button class="preset" data-preset="committed">COMMITTED</button>
+    <button class="preset" data-preset="minimal">MINIMAL</button>
+    <button class="preset" data-preset="none">NONE</button>
+    <button class="preset" data-preset="reset">DEFAULTS</button>
+  </span>
+</div>
+
+<section class="sec" style="margin-top:32px">
+  <div class="sechead">
+    <span class="mono">Voice</span>
+    <span class="note">One voice for the whole app. A second timbre would be a second channel,
+      and this app spends channels carefully.</span>
+  </div>
+  <div class="voices" id="voices"></div>
+</section>
+
+<section class="sec">
+  <div class="sechead">
+    <span class="mono">Interaction · committed acts</span>
+    <span class="right">
+      <span class="note">You caused these, so none of them can interrupt you.</span>
+      <button class="grp" data-set="interaction">ALL</button>
+    </span>
+  </div>
+  <div id="set-interaction"></div>
+</section>
+
+<section class="sec">
+  <div class="sechead">
+    <span class="mono">Notification</span>
+    <span class="right">
+      <span class="note">blobot caused these. The half DESIGN.md:1031 is actually about.</span>
+      <button class="grp" data-set="notification">ALL</button>
+    </span>
+  </div>
+  <div id="set-notification"></div>
+</section>
+
+<section class="sec">
+  <div class="sechead">
+    <span class="mono">Navigational</span>
+    <span class="right">
+      <span class="note">Off by default and argued against, not absent. Frequency is the whole
+        argument, so hear it before deciding.</span>
+      <button class="grp" data-set="navigational">ALL</button>
+    </span>
+  </div>
+  <div id="set-navigational"></div>
+</section>
+
+<section class="sec">
+  <div class="sechead">
+    <span class="mono">A working session</span>
+    <span class="note">Twenty five seconds at real cadence: two prompts typed and sent, a
+      permission allowed, one allowed always, a Routine armed, a team deleted.</span>
+  </div>
+  <div class="simopts">
+    <button class="play" id="sim" aria-pressed="false">PLAY SESSION</button>
+    <span class="hint">plays exactly what is armed above</span>
+  </div>
+  <div class="strip" id="strip"><div class="playhead" id="head" style="left:0"></div></div>
+  <div class="count">
+    <span>committed <b id="c-interaction">0</b></span>
+    <span>notification <b id="c-notification">0</b></span>
+    <span>navigational <b id="c-navigational">0</b></span>
+    <span>total <b id="c-all">0</b></span>
+  </div>
+  <p class="verdict" id="verdict"></p>
+</section>
+
+<section class="sec">
+  <div class="sechead">
+    <span class="mono">The shape this ports as</span>
+    <span class="note">What a settings row would hold. Thirteen switches is the failure mode, so
+      what ships is probably the three group switches and not this.</span>
+  </div>
+  <div class="state mono" id="state"></div>
+</section>
+
+<p class="mono muted">Number keys 1 to 9 audition the interaction and notification rows in order.</p>
+
+</div>
+
+<script>
+/* ---------------- engine ---------------- */
+
+var ctx = null, master = null, noiseBuf = null;
+var vol = 0.32, muted = false;
+
+function ensure(){
+  if (ctx) return ctx;
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  master = ctx.createGain();
+  master.gain.value = muted ? 0 : vol;
+  master.connect(ctx.destination);
+  var n = Math.floor(ctx.sampleRate * 0.2);
+  noiseBuf = ctx.createBuffer(1, n, ctx.sampleRate);
+  var d = noiseBuf.getChannelData(0);
+  for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+  document.getElementById('ctxstate').textContent = 'audio running · ' + ctx.sampleRate + ' Hz';
+  return ctx;
+}
+function jit(v, amt){ return v * (1 + (Math.random() - 0.5) * amt); }
+
+var VOICES = {
+  signature: {
+    label:'signature', why:'the reference. one sine, a whisper of octave, medium decay.',
+    partials:[{r:1,g:1,t:'sine'},{r:2,g:0.10,t:'sine'}],
+    attack:0.004, decay:0.20, cutoff:4200, q:0.7
+  },
+  velvet: {
+    label:'velvet', why:'warm. two detuned sines, dark filter, a long soft tail.',
+    partials:[{r:1,g:1,t:'sine'},{r:1.006,g:0.45,t:'sine'},{r:2,g:0.04,t:'sine'}],
+    attack:0.014, decay:0.38, cutoff:1750, q:0.6
+  },
+  crisp: {
+    label:'crisp', why:'sharp. a triangle, a third harmonic, a transient, gone fast.',
+    partials:[{r:1,g:1,t:'triangle'},{r:3,g:0.16,t:'sine'}],
+    attack:0.0012, decay:0.085, cutoff:8200, q:0.9, click:0.16
+  }
+};
+var voice = VOICES.crisp;
+
+function note(f, at, dur, gain){
+  ensure();
+  var v = voice, t0 = ctx.currentTime + at;
+  var freq = jit(f, 0.012), g = Math.max(jit(gain, 0.16), 0.0005);
+  var filt = ctx.createBiquadFilter();
+  filt.type = 'lowpass'; filt.frequency.value = v.cutoff; filt.Q.value = v.q;
+  var env = ctx.createGain();
+  var d = v.decay * dur;
+  env.gain.setValueAtTime(0.0001, t0);
+  env.gain.exponentialRampToValueAtTime(g, t0 + v.attack);
+  env.gain.exponentialRampToValueAtTime(0.0001, t0 + v.attack + d);
+  filt.connect(env); env.connect(master);
+  v.partials.forEach(function(p){
+    var o = ctx.createOscillator();
+    o.type = p.t; o.frequency.value = freq * p.r;
+    var pg = ctx.createGain(); pg.gain.value = p.g;
+    o.connect(pg); pg.connect(filt);
+    o.start(t0); o.stop(t0 + v.attack + d + 0.06);
+  });
+  if (v.click){
+    var s = ctx.createBufferSource(); s.buffer = noiseBuf;
+    var hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2400;
+    var ng = ctx.createGain();
+    ng.gain.setValueAtTime(g * v.click, t0);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.02);
+    s.connect(hp); hp.connect(ng); ng.connect(master);
+    s.start(t0); s.stop(t0 + 0.03);
+  }
+}
+function play(id, at){
+  at = at || 0;
+  EVENTS[id].seq.forEach(function(n){
+    note(n.f, at + jit(n.t, 0.10), n.d === undefined ? 1 : n.d, n.g);
+  });
+}
+
+/* ---------------- the vocabulary ----------------
+   One pentatonic set so two sounds landing together never clash:
+   D3 146.83  D4 293.66  F4 349.23  G4 392  A4 440  C5 523.25  D5 587.33  E5 659.25
+   Yes rises a fifth, no falls the same fifth. That is one interval, not two sounds.
+   `on` is the DEFAULT, never the current state. Current state lives in `enabled`. */
+var EVENTS = {
+  send: { set:'interaction', on:true, label:'send a prompt', shape:'one note',
+    why:'the most frequent committed act, so the shortest and quietest thing here. It marks that the turn left, which the composer does not otherwise report once your eye has moved.',
+    seq:[{f:587.33, t:0, g:0.30, d:0.75}] },
+
+  allow: { set:'interaction', on:true, label:'allow once', shape:'A4 to E5, up a fifth',
+    why:'answering a permission request. The interval carries the direction, the words on screen carry the rest.',
+    seq:[{f:440, t:0, g:0.34, d:0.9},{f:659.25, t:0.085, g:0.32, d:1.1}] },
+
+  allowAlways: { set:'interaction', on:true, label:'allow always', shape:'A4 to E5, then E5 again',
+    why:'the allow sound with its last note repeated at a whisper. Same echo grammar as arming a Routine, because both write a standing rule. It must not sound identical to allow once: allowed and allowed_always are not the same record of what happened.',
+    seq:[{f:440, t:0, g:0.34, d:0.9},{f:659.25, t:0.085, g:0.32, d:1.1},{f:659.25, t:0.34, g:0.10, d:1.4}] },
+
+  reject: { set:'interaction', on:true, label:'reject', shape:'E5 to A4, down a fifth',
+    why:'the same interval mirrored. Informative, never punitive: no buzz, no dissonance, the same voice pointed the other way.',
+    seq:[{f:659.25, t:0, g:0.32, d:0.9},{f:440, t:0.085, g:0.34, d:1.2}] },
+
+  arm: { set:'interaction', on:true, label:'arm a Routine', shape:'G4 to C5, then G4 again',
+    why:'a rise, then the first note again a beat later at a whisper. The echo is the schedule: a thing that will happen more than once.',
+    seq:[{f:392, t:0, g:0.32, d:0.9},{f:523.25, t:0.09, g:0.30, d:1.0},{f:392, t:0.34, g:0.09, d:1.4}] },
+
+  disarm: { set:'interaction', on:true, label:'disarm a Routine', shape:'C5 to G4',
+    why:'the arm sound reversed with the echo removed, because the echo was the part that meant it recurs.',
+    seq:[{f:523.25, t:0, g:0.30, d:0.9},{f:392, t:0.09, g:0.30, d:1.1}] },
+
+  remove: { set:'interaction', on:true, label:'delete a team', shape:'A4 F4 D4, falling',
+    why:'three falling notes and a longer tail. Consequence, and the transcript survives, so it is not the bottom of anything.',
+    seq:[{f:440, t:0, g:0.30, d:1.0},{f:349.23, t:0.10, g:0.30, d:1.2},{f:293.66, t:0.20, g:0.30, d:2.0}] },
+
+  purge: { set:'interaction', on:true, label:'delete and full clean', shape:'the same, with a floor under it',
+    why:'the delete sound with a low note under the tail. The one unrecoverable act in the app, and the only place the range goes below everything else.',
+    seq:[{f:440, t:0, g:0.30, d:1.0},{f:349.23, t:0.10, g:0.30, d:1.2},{f:293.66, t:0.20, g:0.30, d:2.0},{f:146.83, t:0.24, g:0.22, d:3.4}] },
+
+  waiting: { set:'notification', on:true, label:'an agent is waiting', shape:'C5 to D5, a step',
+    why:'a permission request on a team you are not looking at. A step and never a leap, because the point is to be noticed and not announced. The one state where silence has a real cost: with nobody listening the request is cancelled, never allowed.',
+    seq:[{f:523.25, t:0, g:0.26, d:1.0},{f:587.33, t:0.16, g:0.24, d:1.3}] },
+
+  waitingPatient: { set:'notification', on:false, label:'an agent is waiting · patient', shape:'the same step, said twice',
+    why:'an alternative to the row above, never an addition. The same two notes with a wider gap, then the pair again a second later at half. Crisp at a low level is 85ms of bright and easy to miss from across the room, and the fix for that is duration, never volume. Arm one or the other.',
+    seq:[{f:523.25, t:0, g:0.24, d:1.4},{f:587.33, t:0.22, g:0.22, d:1.8},{f:523.25, t:1.05, g:0.12, d:1.4},{f:587.33, t:1.27, g:0.11, d:1.8}] },
+
+  handoff: { set:'notification', on:true, label:'a session was restarted', shape:'D5 to G4, soft',
+    why:'a compaction handoff. blobot chose the moment and the agent kept its worktree, so nothing is asked of you. The quietest thing in the set, because it reports rather than requests.',
+    seq:[{f:587.33, t:0, g:0.16, d:1.1},{f:392, t:0.13, g:0.15, d:1.5}] },
+
+  hover:  { set:'navigational', on:false, label:'hover a control', shape:'tick',
+    why:'dozens a minute.', seq:[{f:1174.66, t:0, g:0.06, d:0.30}] },
+  key:    { set:'navigational', on:false, label:'a keystroke', shape:'tick',
+    why:'hundreds a minute.', seq:[{f:987.77, t:0, g:0.05, d:0.22}] },
+  popover:{ set:'navigational', on:false, label:'a panel opens', shape:'blip',
+    why:'the mention list opens mid sentence.', seq:[{f:783.99, t:0, g:0.10, d:0.5}] }
+};
+
+/* ---------------- armed state ----------------
+   One flat map of event id to boolean, and that is deliberately the whole shape: no nesting,
+   no per team, no per agent. Sound is a property of this machine and this person, never of a
+   team, so nothing here is keyed the way a workspace or a mailbox is. */
+
+var ID = Object.keys(EVENTS);
+var enabled = {};
+function defaults(){ var o = {}; ID.forEach(function(k){ o[k] = EVENTS[k].on; }); return o; }
+function load(){
+  enabled = defaults();
+  try {
+    var raw = localStorage.getItem('blobot.sound.enabled');
+    if (raw){ var s = JSON.parse(raw); ID.forEach(function(k){ if (k in s) enabled[k] = !!s[k]; }); }
+  } catch (e) {}
+}
+function save(){
+  try { localStorage.setItem('blobot.sound.enabled', JSON.stringify(enabled)); } catch (e) {}
+}
+load();
+
+/* ---------------- rows ---------------- */
+
+var vhost = document.getElementById('voices');
+Object.keys(VOICES).forEach(function(k){
+  var b = document.createElement('button');
+  b.className = 'voice'; b.setAttribute('aria-pressed', k === 'crisp');
+  b.innerHTML = '<span class="name">' + VOICES[k].label + '</span><span class="why">' + VOICES[k].why + '</span>';
+  b.onclick = function(){
+    voice = VOICES[k];
+    [].forEach.call(vhost.children, function(c, i){
+      c.setAttribute('aria-pressed', Object.keys(VOICES)[i] === k);
+    });
+    paint(); play('allow');
+  };
+  vhost.appendChild(b);
+});
+
+var keyed = [];
+ID.forEach(function(id){
+  var e = EVENTS[id];
+  var k = '';
+  if (e.set !== 'navigational' && keyed.length < 9){ keyed.push(id); k = String(keyed.length); }
+
+  var row = document.createElement('div');
+  row.className = 'row';
+
+  var tog = document.createElement('button');
+  tog.className = 'tog'; tog.title = 'arm or disarm this sound';
+  tog.setAttribute('aria-label', 'arm ' + e.label);
+  tog.innerHTML = '<i></i>';
+  tog.onclick = function(){ enabled[id] = !enabled[id]; save(); paint(); if (enabled[id]) play(id); };
+
+  var body = document.createElement('button');
+  body.className = 'body';
+  body.innerHTML = '<span class="k">' + k + '</span>' +
+    '<span class="name">' + e.label + '</span>' +
+    '<span class="why">' + e.why + '</span>' +
+    '<span class="shape">' + e.shape + '</span>';
+  body.onclick = function(){ play(id); lit(row); };
+
+  row.appendChild(tog); row.appendChild(body);
+  document.getElementById('set-' + e.set).appendChild(row);
+  e.row = row; e.tog = tog;
+});
+
+function lit(row){ row.classList.add('lit'); setTimeout(function(){ row.classList.remove('lit'); }, 160); }
+
+function paint(){
+  ID.forEach(function(id){
+    EVENTS[id].row.classList.toggle('off', !enabled[id]);
+    EVENTS[id].tog.setAttribute('aria-pressed', !!enabled[id]);
+  });
+  ['interaction','notification','navigational'].forEach(function(set){
+    var ids = ID.filter(function(i){ return EVENTS[i].set === set; });
+    var allOn = ids.every(function(i){ return enabled[i]; });
+    document.querySelector('.grp[data-set="' + set + '"]').textContent = allOn ? 'NONE' : 'ALL';
+  });
+  var on = ID.filter(function(i){ return enabled[i]; });
+  document.getElementById('state').textContent =
+    'voice   ' + voice.label + '\nlevel   ' + vol.toFixed(2) + '\nmuted   ' + muted +
+    '\narmed   ' + on.length + ' of ' + ID.length + '\n\n' + JSON.stringify(enabled, null, 2);
+}
+
+[].forEach.call(document.querySelectorAll('.grp'), function(b){
+  b.onclick = function(){
+    var set = b.getAttribute('data-set');
+    var ids = ID.filter(function(i){ return EVENTS[i].set === set; });
+    var to = !ids.every(function(i){ return enabled[i]; });
+    ids.forEach(function(i){ enabled[i] = to; });
+    save(); paint();
+  };
+});
+
+var PRESETS = {
+  all:       function(){ ID.forEach(function(i){ enabled[i] = true; }); enabled.waitingPatient = false; },
+  committed: function(){ ID.forEach(function(i){ enabled[i] = EVENTS[i].set === 'interaction'; }); },
+  minimal:   function(){ ID.forEach(function(i){ enabled[i] = false; });
+                         ['send','allow','reject','waiting'].forEach(function(i){ enabled[i] = true; }); },
+  none:      function(){ ID.forEach(function(i){ enabled[i] = false; }); },
+  reset:     function(){ enabled = defaults(); }
+};
+[].forEach.call(document.querySelectorAll('.preset'), function(b){
+  b.onclick = function(){ PRESETS[b.getAttribute('data-preset')](); save(); paint(); };
+});
+
+document.addEventListener('keydown', function(ev){
+  if (ev.target.tagName === 'INPUT') return;
+  var i = parseInt(ev.key, 10);
+  if (i >= 1 && i <= keyed.length){ play(keyed[i-1]); lit(EVENTS[keyed[i-1]].row); }
+});
+
+/* ---------------- level and mute ---------------- */
+
+var muteBtn = document.getElementById('mute');
+function setMuted(v){
+  muted = v;
+  muteBtn.setAttribute('aria-pressed', muted);
+  muteBtn.textContent = muted ? 'MUTED' : 'SOUND ON';
+  if (master) master.gain.value = muted ? 0 : vol;
+  try { localStorage.setItem('blobot.sound.muted', muted ? '1' : '0'); } catch (e) {}
+  paint();
+}
+muteBtn.onclick = function(){ setMuted(!muted); };
+document.getElementById('vol').oninput = function(e){
+  vol = e.target.value / 100;
+  if (master && !muted) master.gain.value = vol;
+  try { localStorage.setItem('blobot.sound.vol', String(vol)); } catch (e) {}
+  paint();
+};
+try {
+  var sv = localStorage.getItem('blobot.sound.vol');
+  if (sv !== null){ vol = parseFloat(sv); document.getElementById('vol').value = Math.round(vol * 100); }
+} catch (e) {}
+try { if (localStorage.getItem('blobot.sound.muted') === '1') setMuted(true); } catch (e) {}
+paint();
+
+/* ---------------- the session ---------------- */
+
+var SESSION = (function(){
+  var s = [];
+  function add(t, id){ s.push({ t:t, id:id }); }
+  function type(from, n, gap){ for (var i = 0; i < n; i++) add(from + i * gap, 'key'); }
+
+  add(0.2,'hover'); add(0.7,'hover'); add(1.1,'popover'); add(1.7,'hover'); add(2.0,'hover');
+  add(2.4,'popover');
+  type(2.9, 26, 0.085);
+  add(5.3,'send');
+  add(7.6,'waiting'); add(7.6,'waitingPatient');
+  add(8.9,'hover'); add(9.3,'hover');
+  add(9.8,'allow');
+  add(11.2,'hover'); add(11.6,'hover'); add(12.1,'popover');
+  type(12.6, 22, 0.085);
+  add(14.8,'send');
+  add(16.9,'handoff');
+  add(17.9,'waiting'); add(17.9,'waitingPatient');
+  add(18.6,'hover');
+  add(19.1,'allowAlways');
+  add(20.4,'hover'); add(20.8,'popover');
+  add(21.5,'arm');
+  add(22.8,'hover'); add(23.1,'hover'); add(23.4,'popover');
+  add(24.2,'remove');
+  return s.sort(function(a, b){ return a.t - b.t; });
+})();
+var SESSION_LEN = 25.5;
+
+var simBtn = document.getElementById('sim');
+var strip = document.getElementById('strip');
+var head = document.getElementById('head');
+var running = false, timers = [], raf = null;
+
+function reset(){
+  timers.forEach(clearTimeout); timers = [];
+  if (raf) cancelAnimationFrame(raf);
+  [].slice.call(strip.querySelectorAll('.tick')).forEach(function(t){ t.remove(); });
+  head.style.left = '0';
+  ['c-interaction','c-notification','c-navigational','c-all'].forEach(function(id){
+    document.getElementById(id).textContent = '0';
+  });
+  document.getElementById('verdict').textContent = '';
+}
+function bump(set){
+  var el = document.getElementById('c-' + set);
+  el.textContent = String(parseInt(el.textContent, 10) + 1);
+  var all = document.getElementById('c-all');
+  all.textContent = String(parseInt(all.textContent, 10) + 1);
+}
+function stop(){
+  running = false;
+  simBtn.setAttribute('aria-pressed', false);
+  simBtn.textContent = 'PLAY SESSION';
+}
+simBtn.onclick = function(){
+  if (running){ stop(); reset(); return; }
+  ensure(); reset();
+  running = true; simBtn.setAttribute('aria-pressed', true); simBtn.textContent = 'STOP';
+  var t0 = performance.now();
+
+  SESSION.forEach(function(step){
+    if (!enabled[step.id]) return;
+    var set = EVENTS[step.id].set;
+    timers.push(setTimeout(function(){
+      play(step.id);
+      var tick = document.createElement('div');
+      tick.className = 'tick ' + (set === 'interaction' ? 'hi' : set === 'notification' ? 'mid' : '');
+      tick.style.left = (step.t / SESSION_LEN * 100) + '%';
+      tick.style.height = (set === 'interaction' ? 30 : set === 'notification' ? 20 : 10) + 'px';
+      strip.appendChild(tick);
+      bump(set);
+      lit(EVENTS[step.id].row);
+    }, step.t * 1000));
+  });
+
+  (function tick(){
+    var e = (performance.now() - t0) / 1000;
+    head.style.left = Math.min(e / SESSION_LEN, 1) * 100 + '%';
+    if (e < SESSION_LEN && running) raf = requestAnimationFrame(tick);
+    else if (running){
+      stop();
+      var n = parseInt(document.getElementById('c-all').textContent, 10);
+      document.getElementById('verdict').textContent =
+        n + ' sounds in 25 seconds, about ' + (n / SESSION_LEN * 60).toFixed(0) + ' a minute. ' +
+        (n > 40 ? 'This is the version you would mute inside a day, and muting it takes the useful half with it.'
+                : n > 12 ? 'Busier than it needs to be. Ask which of these you would actually miss.'
+                : n > 0 ? 'Sparse enough that each one still means something. That is the whole test.'
+                        : 'Nothing armed.');
+    }
+  })();
+};
+</script>
+</body>
+</html>

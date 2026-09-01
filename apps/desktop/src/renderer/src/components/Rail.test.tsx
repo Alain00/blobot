@@ -113,7 +113,8 @@ describe('a team the user is not looking at', () => {
   it('draws a mark rather than an anonymous silhouette', () => {
     const drawn = draw({});
     const row = backgrounded(drawn);
-    // A real mark, not the ghost. The ghost is now only for a team with nobody on it.
+    // A real mark. The ghost is gone: the mark is about the project, and a team with nobody
+    // on it is still a folder.
     expect(row.querySelector('.mark')).not.toBeNull();
     expect(row.querySelector('.ghost')).toBeNull();
     // The member count that used to sit under the name went with the second line. It was the
@@ -122,19 +123,19 @@ describe('a team the user is not looking at', () => {
     done(drawn);
   });
 
-  it('gives the mark to the project icon, and draws no faces beside it', () => {
+  it('gives the mark to the project icon, and a folder to a team without one', () => {
     const drawn = draw({});
     const row = backgrounded(drawn);
-    // One question per slot. The icon wins it where there is one, because a column of
-    // similarly-named teams is what the rail is worst at and faces cannot help there: the same
-    // agents are on several teams, so two teams sharing a roster draw an identical stack.
-    // Who is on it is one click away, on the rows the team opens into.
+    // One question per slot, and it is *which project is this*. The icon answers it where there
+    // is one; faces never could, since the same agents are on several teams and two teams
+    // sharing a roster drew an identical stack. Who is on it is one click away, on the rows the
+    // team opens into.
     expect(row.querySelector('.mark .teamicon')).not.toBeNull();
-    expect(row.querySelectorAll('.mark > .blob')).toHaveLength(0);
-    // The open team has none, so it falls back to its members' faces. No placeholder in either
-    // direction: a team without an icon is not a team missing one.
+    expect(row.querySelector('.mark .teamfolder')).toBeNull();
+    // The open team has none, so it wears the plain folder. No placeholder in either direction:
+    // a team without an icon is not a team missing one.
     expect(drawn.host.querySelector('.teamgroup .teamicon')).toBeNull();
-    expect(drawn.host.querySelectorAll('.teamgroup .teamrow .mark > .blob').length).toBeGreaterThan(0);
+    expect(drawn.host.querySelector('.teamgroup .teamrow .mark .teamfolder')).not.toBeNull();
     done(drawn);
   });
 
@@ -244,15 +245,14 @@ describe('status worn on the face', () => {
     expect(dead.querySelector('.b-failed .blob svg .mo-root')).not.toBeNull();
   });
 
-  it('never poses a team mark, whatever its members are doing', () => {
-    // The whole of the marks-unposed decision, in one assertion. If this fails, a team of four
-    // is drawing four faces claiming the thing one of them is doing.
+  it('puts no face in a team mark at all, whatever its members are doing', () => {
+    // The whole of the marks-are-about-the-project decision, in one assertion. A face here
+    // would be one member's status claimed by a slot that stands for the whole team, and a
+    // roster that cannot tell two teams apart in the first place.
     for (const status of ['thinking', 'starting', 'waiting'] as const) {
       const drawn = draw({ mara: status, nils: 'idle' });
       for (const mark of drawn.host.querySelectorAll('.mark')) {
-        // The mark's own two `svg`s are the folder. What must not be here is a *posed* face,
-        // which is what the library renders as inline SVG inside the `.blob`.
-        expect(mark.querySelector('.blob svg')).toBeNull();
+        expect(mark.querySelector('.blob')).toBeNull();
       }
       done(drawn);
     }

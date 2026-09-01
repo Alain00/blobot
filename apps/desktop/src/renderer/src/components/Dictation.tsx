@@ -12,7 +12,7 @@ import { sizeOf } from './Attached.js';
 import { Wave } from './Composer.js';
 
 /**
- * *Dictation*, the settings screen's third section, and **the section is the flow** (ticket 10):
+ * *Dictation*, the settings screen's fourth section, and **the section is the flow** (ticket 10):
  * rows appear by state, no wizard. The switch; readiness with its figure and *check again*; the
  * engine and the three speech models, each with `download` / `downloading · 412 MB of 574 MB` /
  * `remove · recovers about 574 MB`; the *say something* row that measures a real sentence; the

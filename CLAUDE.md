@@ -579,9 +579,42 @@ problem, because four Handbooks do not fold into one the way four statuses fold 
   three ugly scenarios in demo mode with the microphone genuinely open. Nothing has met a real
   provider yet; the whisper adapter has (1.8 s on `base` for a 10 s clip, identifiers intact).
 
-Next: **run the `whisper-cli` workflow and pin its hashes**, then the dictation done-when by
-hand — a Spanish sentence with identifiers into a real agent, locally and through one provider.
-Then **brief a real agent**, which is the only thing left in that effort and what every
+- **blobot makes a sound now, and it is a fourth channel spent the way the other three were.**
+  `.scratch/sound/`, ten tickets, all resolved, built, and `DESIGN.md` has a **Sound** section
+  beside Motion. Raised from Velvet UI, and the author's own framing is what the effort is built
+  on: a sound is either **interaction** or **notification**, and one test separates them —
+  *did the person cause this sound in the last 200ms by an act they committed?* That split is
+  what let the rule in the Routines bullet stand: *blobot still never interrupts: no notification,
+  no badge, no sound* turns on the word **interrupts**, and a sound you caused cannot, which is
+  the same argument `DESIGN.md` already accepted twice for interaction motion and for the gaze
+  layer. Eight committed acts sound; **one notification does**, and it is bought rather than
+  assumed — an agent `waiting` on a team you are not looking at, because with nobody listening a
+  permission request is *cancelled, never allowed*, so silence there loses work nobody chose to
+  lose. It never fires for a team already on screen in a focused window, and at most once in two
+  seconds **app-wide**, since the rail already carries who and how many. A Routine firing does not
+  sound (the unread mark is earned by origin), a turn ending does not (one prompt to four agents
+  ends four turns), and nothing navigational does — the `@mention` list was refused its open
+  animation on frequency alone, and frequency is harsher for a sound because a sound cannot be
+  looked away from. **One voice, synthesized and never a file**, so no two plays are identical and
+  no asset ships; a second timbre would be a fourth channel inside a fourth channel. The grammar is
+  three rules: yes rises a fifth and no falls the same fifth, a repeated note at a whisper means a
+  standing rule was written (`arm` and `allow always` share it, `disarm` is `arm` with it taken
+  away), and consequence goes down and takes longer. **Attention is bought with duration and never
+  with volume.** There is no `prefers-reduced-sound` and blobot **infers nothing** — reusing
+  `prefers-reduced-motion` is refused, because it is a signal about a different sense and some of
+  the people who set it rely on audio more — so the switch is the whole accommodation, three of
+  them in Settings' third section, on by default, stated rather than consented to. The standing
+  constraint that falls out of having no media query: **no sound may be the only carrier of its
+  fact.** `--screenshot` is a hard mute above the switch, and jsdom having no `AudioContext` is
+  why the suite is silent with no test-only branch. Tuned by ear in
+  `.scratch/sound/prototype.html`, which stays: three voices and thirteen per-event switches the
+  app deliberately does not offer, and a twenty five second session at real cadence that is the
+  only honest way to argue about frequency.
+
+Next: **the dictation done-when by hand** — a Spanish sentence with identifiers into a real
+agent, locally and through one provider (the `whisper-cli` workflow ran and its hashes are
+pinned; the engine's release URL is private for now, on `build.md`). Then **brief a real
+agent**, which is the only thing left in that effort and what every
 provisional number in it is waiting on: measure the Handbook a real interview produces, watch
 whether ticket 04's empty-state block actually opens the conversation, and do it on OpenCode as
 well, since it is the runtime that confabulated. Then surfacing whether an agent resumed or

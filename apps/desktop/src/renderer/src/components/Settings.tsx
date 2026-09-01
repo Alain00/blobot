@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import type { UiRuntimeChoice } from '../../../shared/api.js';
 import { READINESS_WORD } from './readiness.js';
 import { RuntimeMark } from './RuntimeMark.js';
 import { RuntimeSetup } from './RuntimeSetup.js';
 import { ContextCeilings } from './ContextCeilings.js';
 import { Dictation } from './Dictation.js';
+import { useSoundSettings } from '../sound/useSound.js';
 
 /**
  * Settings: the third door at the foot of the rail, and a screen with a column of its own.
@@ -21,15 +22,19 @@ import { Dictation } from './Dictation.js';
  * was behind a decision about an agent the user had not decided to hire.
  *
  * A **working** surface with a list of sections down its left edge, the same shape *your agents*
- * and *routines* take on the right of it. Two sections, and both are about the machine rather
- * than about a screen: which runtimes it has, and how much room each model is worth. A section
- * gets added here when there is something true to configure, never to fill the column out.
+ * and *routines* take on the right of it. Four sections, all of them about the machine rather
+ * than about a screen: which runtimes it has, how much room each model is worth, whether it
+ * makes a sound, and how it turns speech into text. A section gets added here when there is
+ * something true to configure, never to fill the column out — which is the test **Sound** had
+ * to pass, and the reason it is here rather than behind a lid over the other two doors.
+ * *2026-08-31, `.scratch/sound/issues/06`.*
  */
-export type Section = 'runtimes' | 'context' | 'dictation';
+export type Section = 'runtimes' | 'context' | 'sound' | 'dictation';
 
 const SECTIONS: readonly { readonly id: Section; readonly label: string }[] = [
   { id: 'runtimes', label: 'Runtimes' },
   { id: 'context', label: 'Context' },
+  { id: 'sound', label: 'Sound' },
   { id: 'dictation', label: 'Dictation' },
 ];
 
@@ -163,6 +168,9 @@ export function Settings({
           )}
 
           {section === 'context' && <ContextCeilings />}
+
+          {section === 'sound' && <SoundSection />}
+
           {section === 'dictation' && <Dictation />}
         </div>
       </div>
@@ -178,5 +186,98 @@ export function Settings({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * The third section. `.scratch/sound/issues/06-the-mute-and-the-default.md`.
+ *
+ * Three switches and nothing else. **No level slider and no voice picker**: those are `issues/03`'s
+ * decisions, and offering either would be blobot asking the user to do design work. **No per-event
+ * list either** — thirteen sounds persist under these three and are deliberately not exposed, on
+ * the `bounds.ts` principle that blobot states its own ceilings in words a person can hold.
+ *
+ * All three default on, and the notification default is the argued one: the single notification
+ * that ships reports the one state where silence itself loses work, because a permission request
+ * with nobody listening is cancelled, never allowed. A default of off would make the failure this
+ * sound exists to prevent the default experience.
+ *
+ * **Stated, never consented to.** No first-run prompt: ticket 14's permission disclosure closes the
+ * creation flow the same way, and a consent dialog for something one click reverses trains people
+ * to dismiss dialogs.
+ */
+function SoundSection(): React.JSX.Element {
+  const { settings, set } = useSoundSettings();
+  const rows: readonly {
+    readonly id: 'interaction' | 'notifications';
+    readonly label: string;
+    readonly detail: string;
+  }[] = [
+    {
+      id: 'interaction',
+      label: 'when you act',
+      detail: 'you caused it, so it never interrupts',
+    },
+    {
+      id: 'notifications',
+      label: 'when an agent is waiting on you',
+      detail: 'only for a team you are not looking at',
+    },
+  ];
+
+  return (
+    <>
+      {/* The complete specification, in one sentence. That it fits in one is the test of whether
+          the vocabulary stayed small enough. */}
+      <div className="note muted">
+        blobot plays a short sound when you commit an action, and one when an agent is waiting on
+        you from a team you are not looking at. Nothing else makes a sound. With nobody listening
+        a permission request is cancelled rather than allowed, which is the one thing silence
+        costs here. It plays on this machine only: blobot sends nothing anywhere else.
+      </div>
+
+      <div className="roster">
+        <button
+          className={`listrow pick${settings.on ? ' on' : ''}`}
+          aria-pressed={settings.on}
+          onClick={() => set({ ...settings, on: !settings.on })}
+        >
+          <span className="who">
+            <span className="nm">
+              <b>sound</b>
+            </span>
+            <span className="sub mono muted">remembered on this machine</span>
+          </span>
+          <span style={{ flex: 1 }} />
+          <span className={`tick${settings.on ? ' on' : ''}`}>
+            {settings.on && <Check size={14} aria-hidden />}
+          </span>
+        </button>
+
+        {rows.map((row) => (
+          <button
+            key={row.id}
+            className={`listrow pick${settings[row.id] ? ' on' : ''}`}
+            aria-pressed={settings[row.id]}
+            /* Dimmed rather than removed while the master is off: a row that vanishes takes the
+               fact that the choice exists with it, and these two are what the master is over. */
+            style={settings.on ? undefined : { opacity: 0.4 }}
+            disabled={!settings.on}
+            onClick={() => set({ ...settings, [row.id]: !settings[row.id] })}
+          >
+            <span className="who">
+              <span className="nm">
+                <b>{row.label}</b>
+              </span>
+              <span className="sub mono muted">{row.detail}</span>
+            </span>
+            <span style={{ flex: 1 }} />
+            <span className={`tick${settings[row.id] ? ' on' : ''}`}>
+              {settings[row.id] && <Check size={14} aria-hidden />}
+            </span>
+          </button>
+        ))}
+      </div>
+    </>
   );
 }
