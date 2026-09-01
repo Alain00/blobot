@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
-import type { AgentEvent, AgentStatus, Message } from '@blobot/core/domain';
+import type { AgentEvent, AgentStatus, Message, TranscriberEvent } from '@blobot/core/domain';
 import type {
   BlobotApi,
   EditAgentResult,
@@ -37,6 +37,12 @@ import type {
   UiPublishResult,
   UiSwitchResult,
   UiRuntimeOptions,
+  UiDictationStart,
+  UiDictationSettings,
+  UiSpeechFileState,
+  UiSpeechMeasurement,
+  UiSpeechTarget,
+  DictationPatch,
 } from '../shared/api.js';
 
 /**
@@ -235,6 +241,44 @@ const api: BlobotApi = {
         listener(teamId, requestId, outcome),
     ),
   onTeamChanged: (listener) => subscribe('blobot:team', () => listener()),
+  // Dictation. The audio goes out as bytes and nothing else: no device, no path, no file.
+  startDictation: (teamId) =>
+    ipcRenderer.invoke('dictation:start', teamId) as Promise<UiDictationStart>,
+  feedDictation: (pcm) => ipcRenderer.invoke('dictation:feed', pcm) as Promise<'taken' | 'dropped'>,
+  markDictation: () => ipcRenderer.send('dictation:mark'),
+  stopDictation: () => ipcRenderer.invoke('dictation:stop') as Promise<void>,
+  onDictation: (listener) =>
+    subscribe('dictation:event', (_e, teamId: string, event: TranscriberEvent) =>
+      listener(teamId, event),
+    ),
+  dictationSettings: () =>
+    ipcRenderer.invoke('blobot:dictationSettings') as Promise<UiDictationSettings>,
+  setDictation: (patch: DictationPatch) =>
+    ipcRenderer.invoke('blobot:setDictation', patch) as Promise<UiDictationSettings>,
+  checkSpeechReadiness: () =>
+    ipcRenderer.invoke('blobot:checkSpeechReadiness') as Promise<UiDictationSettings>,
+  downloadSpeech: (target: UiSpeechTarget) =>
+    ipcRenderer.invoke('blobot:downloadSpeech', target) as Promise<UiDictationSettings>,
+  cancelSpeechDownload: (target: UiSpeechTarget) =>
+    ipcRenderer.invoke('blobot:cancelSpeechDownload', target) as Promise<UiDictationSettings>,
+  removeSpeech: (target: UiSpeechTarget) =>
+    ipcRenderer.invoke('blobot:removeSpeech', target) as Promise<UiDictationSettings>,
+  removeAllSpeech: () => ipcRenderer.invoke('blobot:removeAllSpeech') as Promise<UiDictationSettings>,
+  startSpeechTryout: () => ipcRenderer.invoke('dictation:tryout') as Promise<UiDictationStart>,
+  onSpeechFile: (listener) =>
+    subscribe('dictation:file', (_e, target: UiSpeechTarget, state: UiSpeechFileState) =>
+      listener(target, state),
+    ),
+  onSpeechMeasured: (listener) =>
+    subscribe('dictation:measured', (_e, measurement: UiSpeechMeasurement) => listener(measurement)),
+  // The key goes out once, to main, which validates it against its provider and keeps it. It
+  // never comes back: the section learns a state and a form, never the key.
+  saveSpeechKey: (providerId: string, key: string) =>
+    ipcRenderer.invoke('blobot:saveSpeechKey', providerId, key) as Promise<
+      UiDictationSettings & { readonly rejected?: string }
+    >,
+  removeSpeechKey: (providerId: string) =>
+    ipcRenderer.invoke('blobot:removeSpeechKey', providerId) as Promise<UiDictationSettings>,
 };
 
 function subscribe(

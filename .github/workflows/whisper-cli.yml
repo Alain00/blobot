@@ -1,0 +1,112 @@
+# blobot builds `whisper-cli` for every OS it runs on, from one pinned whisper.cpp tag, and
+# publishes the binaries as a GitHub release under blobot's own tag (`.scratch/dictation/`,
+# ticket 09). Core pins one URL and one sha256 per OS/arch (`packages/core/src/speech/catalog.ts`)
+# and the app fetches the binary like a weight — no npm dependency, no native module, nothing
+# in `allowBuilds`.
+#
+# Upstream publishes Linux and Windows CPU builds and no macOS executable. They are not used
+# at runtime even though they exist: one provenance, one URL pattern, one checksum flow.
+#
+# Run it by hand (`workflow_dispatch`) or by pushing the release tag. After it runs, copy the
+# sha256 of each asset from `SHA256SUMS` into `ENGINE_BUILDS` in the catalog: a build without a
+# pinned hash is not fetched.
+name: whisper-cli
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'whisper-b*'
+
+env:
+  WHISPER_TAG: b4938
+  RELEASE_TAG: whisper-b4938-1
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Metal, embedded in the binary: nothing else to install on a Mac.
+          - os: macos-14
+            asset: whisper-cli-darwin-arm64
+            cmake: -DGGML_METAL=ON -DGGML_METAL_EMBED_LIBRARY=ON
+          # CPU. `GGML_NATIVE=OFF` so the binary is not tuned to the runner's own CPU; AVX2 is
+          # every x64 machine of the last decade. No Linux GPU: the CPU binary reaches turbo.
+          - os: ubuntu-22.04
+            asset: whisper-cli-linux-x64
+            cmake: -DGGML_NATIVE=OFF -DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON
+          - os: ubuntu-22.04-arm
+            asset: whisper-cli-linux-arm64
+            cmake: -DGGML_NATIVE=OFF
+          - os: windows-2022
+            asset: whisper-cli-win32-x64.exe
+            cmake: -DGGML_NATIVE=OFF -DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Fetch whisper.cpp at the pinned tag
+        shell: bash
+        run: |
+          git clone --depth 1 --branch "$WHISPER_TAG" https://github.com/ggml-org/whisper.cpp.git whisper
+      - name: Configure
+        shell: bash
+        working-directory: whisper
+        # One static binary per OS: shared libraries would be four files to download and hash.
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=OFF \
+            -DWHISPER_BUILD_EXAMPLES=ON \
+            -DWHISPER_BUILD_TESTS=OFF \
+            -DWHISPER_SDL2=OFF \
+            ${{ matrix.cmake }}
+      - name: Build
+        shell: bash
+        working-directory: whisper
+        run: cmake --build build --config Release --target whisper-cli -j 4
+      - name: Collect
+        shell: bash
+        working-directory: whisper
+        run: |
+          mkdir -p ../out
+          if [ -f build/bin/Release/whisper-cli.exe ]; then
+            cp build/bin/Release/whisper-cli.exe "../out/${{ matrix.asset }}"
+          else
+            cp build/bin/whisper-cli "../out/${{ matrix.asset }}"
+          fi
+          "../out/${{ matrix.asset }}" --help >/dev/null 2>&1 || true
+          ls -la ../out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: out/${{ matrix.asset }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+      - name: Checksums
+        shell: bash
+        working-directory: assets
+        run: |
+          sha256sum whisper-cli-* > SHA256SUMS
+          cat SHA256SUMS
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: whisper-cli ${{ env.WHISPER_TAG }}
+          body: |
+            `whisper-cli` from whisper.cpp `${{ env.WHISPER_TAG }}` (MIT), built by blobot's own CI
+            for macOS arm64 (Metal), Linux x64/arm64 (CPU) and Windows x64 (CPU). blobot pins the
+            sha256 of each asset in `packages/core/src/speech/catalog.ts` and fetches it in-app.
+          files: |
+            assets/whisper-cli-*
+            assets/SHA256SUMS

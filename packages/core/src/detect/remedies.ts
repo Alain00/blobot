@@ -55,6 +55,9 @@ const INSTALL_SCRIPTS: Readonly<Record<string, string>> = {
   // extracts a single binary to `~/.local/bin/fx`, and appends a `PATH` line to the login
   // shell's rc file only when that directory is not already on `PATH`.
   fx: 'curl -fsSL https://fx.sh/setup.sh | bash',
+  // The vendor's published command, verbatim — the URL returns the installer that drops both
+  // `cursor-agent` and `agent` into `~/.local/bin` (measured on this machine, 2026-08-31).
+  cursor: 'curl https://cursor.com/install -fsS | bash',
 };
 
 /**
@@ -81,6 +84,10 @@ const SIGN_IN_ARGS: Readonly<Record<string, readonly string[]>> = {
   // written to their config. That is the flow of the three that comes closest to blobot
   // touching a credential, and the no-credential-storage rule is kept by not offering it.
   fx: ['login'],
+  // Bare `cursor-agent login` is Cursor's own browser flow. `--api-key` / `--auth-token` read
+  // a credential this PTY would carry, so they are absent by construction, the same way
+  // Codex's `--with-api-key` is — and this table is the only place argv is built.
+  cursor: ['login'],
 };
 
 /**

@@ -1,3 +1,4 @@
+import { childEnvironment } from './child-env.js';
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
@@ -61,14 +62,12 @@ export function spawnNpmBridge(
 ): LineTransport {
   const child = spawn(process.execPath, [bridgeEntryPathOf(spec)], {
     cwd: options.cwd,
-    env: {
-      ...process.env,
-      ...options.env,
+    env: childEnvironment(options.env, {
       [spec.executableEnv]: resolveBridgeExecutable(spec, options.executable),
       // `process.execPath` is Electron in the desktop app, and Electron only behaves like
       // node when told to. Harmless under plain node, which ignores it.
       ELECTRON_RUN_AS_NODE: '1',
-    },
+    }),
     stdio: ['pipe', 'pipe', 'pipe'],
   });
   return childTransport(child, options.onStderr);

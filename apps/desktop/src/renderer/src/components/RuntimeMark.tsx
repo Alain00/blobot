@@ -4,13 +4,14 @@
  * This is the **one exception to the Lucide-only rule**, and it is the team icon's rule applied
  * to a second place: a vendor's logo is allowed on screen greyed, never coloured, and never in
  * place of the name. A runtime is a product with a face people already know, and `Claude Code`
- * and `OpenCode` are two words that begin the same way in a list that is now four long. The
+ * and `OpenCode` are two words that begin the same way in a list that is now five long. The
  * mark is what the eye lands on before it reads either. The label always stays beside it —
  * the mark is a second channel onto the same fact, never the only one, because a logo nobody
  * recognises is a smudge and there is no reason to make a person learn ours.
  *
- * All four are taken from the vendor's own origin (`claude.ai/favicon.svg`, `sst/opencode`'s
- * brand folder, `developers.openai.com/favicon.svg`, `fx.sh/icon.svg`), stripped to one `currentColor` and
+ * All five are taken from the vendor's own origin (`claude.ai/favicon.svg`, `sst/opencode`'s
+ * brand folder, `developers.openai.com/favicon.svg`, `fx.sh/icon.svg`,
+ * Cursor's brand-assets Cube), stripped to one `currentColor` and
  * normalised so they carry the same optical weight beside each other and beside a Lucide glyph.
  * Nothing here is blobot's to license: these are the vendors' marks, used to name the product we
  * speak to, which is why they are also never restyled beyond the greying and never stand in for
@@ -112,11 +113,31 @@ function FxMark(): React.JSX.Element {
   );
 }
 
+/**
+ * Cursor's mark: the Cube, from the vendor's own brand-assets package
+ * (`cursor-brand-assets/General Logos/Cube/SVG/CUBE_2D_DARK.svg`, supplied by the author,
+ * 2026-09-01).
+ *
+ * The 2D variant is the one drawn: a single path, so stripping the vendor's `#edecec` to
+ * `currentColor` is the whole of the reduction, the same one every mark above went through.
+ * The 2.5D and 3D variants ship as shaded plates and would grey into a smudge at 15px. An
+ * earlier version of this file traced the pointer from `cursor.com/favicon.svg` — that is the
+ * app icon, and the brand package says the Cube is the logo, so the Cube it is.
+ */
+function CursorMark(): React.JSX.Element {
+  return (
+    <svg viewBox="0 0 466.73 532.09" width="100%" height="100%" fill="currentColor" aria-hidden>
+      <path d="M457.43,125.94L244.42,2.96c-6.84-3.95-15.28-3.95-22.12,0L9.3,125.94c-5.75,3.32-9.3,9.46-9.3,16.11v247.99c0,6.65,3.55,12.79,9.3,16.11l213.01,122.98c6.84,3.95,15.28,3.95,22.12,0l213.01-122.98c5.75-3.32,9.3-9.46,9.3-16.11v-247.99c0-6.65-3.55-12.79-9.3-16.11h-.01ZM444.05,151.99l-205.63,356.16c-1.39,2.4-5.06,1.42-5.06-1.36v-233.21c0-4.66-2.49-8.97-6.53-11.31L24.87,145.67c-2.4-1.39-1.42-5.06,1.36-5.06h411.26c5.84,0,9.49,6.33,6.57,11.39h-.01Z" />
+    </svg>
+  );
+}
+
 const MARKS: Readonly<Record<string, () => React.JSX.Element>> = {
   'claude-code': ClaudeMark,
   opencode: OpenCodeMark,
   codex: CodexMark,
   fx: FxMark,
+  cursor: CursorMark,
 };
 
 export function RuntimeMark({

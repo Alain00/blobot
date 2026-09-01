@@ -265,7 +265,24 @@ export {
 export { fxPersonaBlocks } from './adapters/fx/persona.js';
 export { resolveFxExecutable, spawnFx, VERIFIED_FX_VERSION } from './adapters/fx/stdio.js';
 
-export { detectRuntimes, parseOpencodeAuthList, parseVersion, stripAnsi } from './detect/runtimes.js';
+// The Cursor adapter. First-party ACP again: `cursor-agent acp` is the user's own binary.
+export { CursorAgentRuntime } from './adapters/cursor/cursor-agent-runtime.js';
+export type { CursorAgentRuntimeOptions } from './adapters/cursor/cursor-agent-runtime.js';
+export {
+  CURSOR_APPROVAL_MODE,
+  CURSOR_SESSION_MODE,
+  CURSOR_TRUST_LEVELS,
+  cursorCliConfig,
+} from './adapters/cursor/permissions.js';
+export { cursorPersonaBlocks } from './adapters/cursor/persona.js';
+export { defaultCursorConfigDir, writeCursorConfig } from './adapters/cursor/config.js';
+export {
+  resolveCursorExecutable,
+  spawnCursor,
+  VERIFIED_CURSOR_VERSION,
+} from './adapters/cursor/stdio.js';
+
+export { detectRuntimes, parseCursorStatus, parseOpencodeAuthList, parseVersion, stripAnsi } from './detect/runtimes.js';
 export type {
   CommandResult,
   CommandRunner,
@@ -284,8 +301,10 @@ export type {
   AgentProfileRecord,
   AgentRecord,
   ContextCeilingRecord,
+  DictationRecord,
   SessionRecord,
 } from './store/sqlite-store.js';
+export { DEFAULT_DICTATION } from './store/sqlite-store.js';
 export { SqliteRecorder } from './store/recorder.js';
 
 // Handbooks: what an Agent knows about this team's work. See `.scratch/handbooks/`.
@@ -311,3 +330,57 @@ export {
 export { FIRING_TOLERANCE_MS, Scheduler } from './routines/scheduler.js';
 export { checkProposalText, parseProposedSchedule } from './routines/proposal.js';
 export type { Due } from './routines/scheduler.js';
+
+// Dictation (`.scratch/dictation/`): the Transcriber vocabulary, the mock that plays the ugly
+// cases, the recording ceiling and the hint. Engines and providers arrive beside them.
+export type {
+  SpeechHint,
+  Transcriber,
+  TranscriberEvent,
+  TranscriberFailure,
+  TranscriberId,
+} from './speech/domain.js';
+export { PCM_16K_MONO_INT16, PCM_BYTES_PER_SECOND, describeTranscriberFailure } from './speech/domain.js';
+export { composeSpeechHint, identifiersIn } from './speech/hint.js';
+export { withRecordingCeiling } from './speech/ceiling.js';
+export { MockTranscriber, speechScenarios } from './speech/mock-transcriber.js';
+export type {
+  MockTranscriberOptions,
+  SpeechScenario,
+  SpeechScenarioName,
+  SpeechStep,
+} from './speech/mock-transcriber.js';
+export {
+  DICTATION_RECORDING_LIMIT_MS,
+  SPEECH_DISK_MARGIN,
+  SPEECH_FIT_RTF,
+  SPEECH_HINT_CHARS,
+  SPEECH_HINT_TERMS,
+  SPEECH_RAM_FLOORS_GB,
+} from './orchestrator/bounds.js';
+export {
+  ENGINE_BUILDS,
+  SPEECH_MODELS,
+  WHISPER_RELEASE_TAG,
+  WHISPER_SOURCE_TAG,
+  engineBuildFor,
+  speechModel,
+} from './speech/catalog.js';
+export type { EngineBuild, SpeechModel, SpeechModelId } from './speech/catalog.js';
+export { describeRtf, measuredReadiness, staticReadiness } from './speech/readiness.js';
+export type { MachineFacts, SpeechReadiness, StaticReadiness } from './speech/readiness.js';
+export { CHECKSUM_MISMATCH, downloadVerified } from './speech/download.js';
+export type { DownloadOutcome, DownloadRequest } from './speech/download.js';
+export { WhisperTranscriber, parseTranscription, wavHeader } from './speech/whisper.js';
+export type { WhisperTranscriberOptions } from './speech/whisper.js';
+export { SPEECH_PROVIDERS, authorizationFor, speechProvider, validateSpeechKey } from './speech/providers.js';
+export type { KeyValidation, SpeechProviderId, SpeechProviderSpec } from './speech/providers.js';
+export { BLOBOT_KEY_VARIABLE, childEnvironment } from './adapters/acp/child-env.js';
+export { OPENAI_LIVE_MODEL, OPENAI_REALTIME_URL, OpenAiTranscriber, localeLanguage } from './speech/openai.js';
+export type { OpenAiTranscriberOptions } from './speech/openai.js';
+export { DEEPGRAM_LISTEN_URL, DeepgramTranscriber, deepgramQuery } from './speech/deepgram.js';
+export type { DeepgramTranscriberOptions } from './speech/deepgram.js';
+export { MISTRAL_MODEL, MISTRAL_TRANSCRIPTIONS_URL, MistralTranscriber } from './speech/mistral.js';
+export type { MistralTranscriberOptions } from './speech/mistral.js';
+export { nodeSocket, resample16to24 } from './speech/socket.js';
+export type { SocketFactory, SocketLike } from './speech/socket.js';

@@ -23,6 +23,7 @@ import {
   agents,
   attachments,
   contextCeilings,
+  dictation,
   events,
   handbookEntries,
   messageAttachments,
@@ -83,6 +84,32 @@ export interface ContextCeilingRecord {
   readonly tokens: number;
   readonly at: number;
 }
+
+/**
+ * Dictation's one row (ticket 10). `transcriber: ''` is *nothing chosen*; `measuredRtf` is
+ * absent until *say something* has run, and `measuredModelId` says which model it measured, so
+ * a size change returns the word to `untested` without a second table.
+ */
+export interface DictationRecord {
+  readonly enabled: boolean;
+  readonly transcriber: '' | 'local' | 'remote';
+  readonly modelId: string;
+  readonly providerId: string;
+  readonly readiness: '' | 'unfit' | 'untested' | 'fit' | 'slow';
+  readonly measuredRtf?: number;
+  readonly measuredModelId: string;
+  readonly at: number;
+}
+
+export const DEFAULT_DICTATION: DictationRecord = {
+  enabled: false,
+  transcriber: '',
+  modelId: '',
+  providerId: '',
+  readiness: '',
+  measuredModelId: '',
+  at: 0,
+};
 
 export interface SessionRecord {
   readonly id: string;
@@ -1468,6 +1495,42 @@ export class SqliteStore implements MessageStore, AttachmentStore {
     this.#db
       .delete(contextCeilings)
       .where(and(eq(contextCeilings.runtimeId, runtimeId), eq(contextCeilings.model, model ?? '')))
+      .run();
+  }
+
+  /** Dictation's row, or the default when nothing has ever been saved. Read whole. */
+  dictationSettings(): DictationRecord {
+    const row = this.#db.select().from(dictation).where(eq(dictation.id, 1)).get();
+    if (row === undefined) return DEFAULT_DICTATION;
+    return {
+      enabled: row.enabled,
+      transcriber: row.transcriber,
+      modelId: row.modelId,
+      providerId: row.providerId,
+      readiness: row.readiness,
+      ...(row.measuredRtf === null ? {} : { measuredRtf: row.measuredRtf }),
+      measuredModelId: row.measuredModelId,
+      at: row.at,
+    };
+  }
+
+  /** Written whole: the row is the whole of what dictation is set to, never a partial patch. */
+  saveDictationSettings(record: DictationRecord): void {
+    const values = {
+      id: 1,
+      enabled: record.enabled,
+      transcriber: record.transcriber,
+      modelId: record.modelId,
+      providerId: record.providerId,
+      readiness: record.readiness,
+      measuredRtf: record.measuredRtf ?? null,
+      measuredModelId: record.measuredModelId,
+      at: record.at,
+    };
+    this.#db
+      .insert(dictation)
+      .values(values)
+      .onConflictDoUpdate({ target: dictation.id, set: values })
       .run();
   }
 }

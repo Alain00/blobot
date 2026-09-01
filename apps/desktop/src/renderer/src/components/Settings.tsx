@@ -5,6 +5,7 @@ import { READINESS_WORD } from './readiness.js';
 import { RuntimeMark } from './RuntimeMark.js';
 import { RuntimeSetup } from './RuntimeSetup.js';
 import { ContextCeilings } from './ContextCeilings.js';
+import { Dictation } from './Dictation.js';
 import { useSoundSettings } from '../sound/useSound.js';
 
 /**
@@ -21,19 +22,28 @@ import { useSoundSettings } from '../sound/useSound.js';
  * was behind a decision about an agent the user had not decided to hire.
  *
  * A **working** surface with a list of sections down its left edge, the same shape *your agents*
- * and *routines* take on the right of it. Three sections, all of them about the machine rather
- * than about a screen: which runtimes it has, how much room each model is worth, and whether it
- * makes a sound. A section gets added here when there is something true to configure, never to
- * fill the column out — which is the test **Sound** had to pass, and the reason it is here rather
- * than behind a lid over the other two doors. *2026-08-31, `.scratch/sound/issues/06`.*
+ * and *routines* take on the right of it. Four sections, all of them about the machine rather
+ * than about a screen: which runtimes it has, how much room each model is worth, whether it
+ * makes a sound, and how it turns speech into text. A section gets added here when there is
+ * something true to configure, never to fill the column out — which is the test **Sound** had
+ * to pass, and the reason it is here rather than behind a lid over the other two doors.
+ * *2026-08-31, `.scratch/sound/issues/06`.*
  */
-type Section = 'runtimes' | 'context' | 'sound';
+export type Section = 'runtimes' | 'context' | 'sound' | 'dictation';
 
 const SECTIONS: readonly { readonly id: Section; readonly label: string }[] = [
   { id: 'runtimes', label: 'Runtimes' },
   { id: 'context', label: 'Context' },
   { id: 'sound', label: 'Sound' },
+  { id: 'dictation', label: 'Dictation' },
 ];
+
+/** `--screen=settings:<section>`, for a screenshot, or nothing. */
+export function settingsSectionOf(screen: string | undefined): Section | undefined {
+  if (screen === undefined || !screen.startsWith('settings:')) return undefined;
+  const asked = screen.slice('settings:'.length);
+  return SECTIONS.some((entry) => entry.id === asked) ? (asked as Section) : undefined;
+}
 
 export function Settings({
   onClose,
@@ -160,6 +170,8 @@ export function Settings({
           {section === 'context' && <ContextCeilings />}
 
           {section === 'sound' && <SoundSection />}
+
+          {section === 'dictation' && <Dictation />}
         </div>
       </div>
 

@@ -39,6 +39,12 @@ Consequences you will keep bumping into:
   answers concretely — in tool lines and text arriving — rather than as an abstraction printed
   over them. The count a fold carried ("2 working") went with the word, since it was qualifying
   it. It survives as the `aria-label`, so nothing is lost to a reader not reading the shape.*
+- **A download is the one thing on screen that knows its end.** *2026-09-01, `.scratch/dictation/`
+  ticket 09.* The size is in the response before the first byte, so `downloading · 412 MB of
+  574 MB` states a fact where a bar toward a finish would claim one. It is a figure in the mono
+  voice beside the word, and still not a bar: nothing fills, nothing sweeps, and the in-flight
+  hairline applies as it does to any in-flight word. The same figure says `paused · 412 MB of
+  574 MB` after a quit, because the number is what was true when it stopped.
 - **A blobatar is seeded by the agent's *name*, never by a row id.** The library derives the
   whole face from that string, so a surface that seeds it with an id draws a different creature
   for the same agent. That is exactly what happened: the rail seeded by Agent id, the roster
@@ -531,7 +537,7 @@ set, no inline SVG paths pasted into components, no emoji in the interface.
 to hold a vendor path. It is the team icon's rule applied a second time — a logo may be on
 screen **greyed, never coloured, and never in place of the name**. A runtime is a product whose
 face people already know, and `Claude Code` and `OpenCode` are two labels that begin the same
-way in a list that grows to four; the mark is what the eye lands on before it reads either. The
+way in a list that is five long now; the mark is what the eye lands on before it reads either. The
 label always stays beside it, so the mark is a second channel onto one fact and never the only
 one. An id with no mark draws nothing: there is no placeholder, exactly as a team without an
 icon is not a team missing one. Marks come from the vendor's own origin at one `currentColor`,
@@ -578,6 +584,17 @@ anywhere is a design decision, and almost always the wrong one.
   where something is happening, still for `idle`, grayscale and still for `failed`. Plus the
   face's own poses, which are a separate channel and stay (`thinking`'s two-dot eye loader,
   `sleepy` while starting, `surprised` while waiting).
+- **The dictation wave moves, and it is not ambient either.** *2026-09-01, `.scratch/dictation/`
+  ticket 07.* The one thing on screen that moves and is not a blobatar. It starts on the user's
+  gesture, stops on it, and is driven by nothing but the level of their own voice, so when they
+  stop talking it stops: it answers to the second budget, like the gaze. Four 2px bars in
+  `--ink` at the head of the pill beside the stop, `transform` only, no keyframe, no red dot
+  (`:463` spends the one saturated thing elsewhere); under `prefers-reduced-motion` they hold
+  still and the mono word above the pill — `listening · 0:07` — carries the state alone. It says
+  one thing the composer says nowhere else, *this is reaching me*, so it repeats no word. The
+  microphone itself is at the head with `+`, because it is the same kind of door — one that
+  adds to the message — and at the tail it would read as a lesser send; its glyph swaps, `Mic`
+  to `Square`, with nothing between, because `:527` stands and a morph is not an icon set.
 - **A face can follow the pointer, and that is not ambient.** *2026-08-31.* The gaze layer is
   the one thing on a blobatar that moves because the user's hand moved, so it answers to the
   second budget and not the first: with a still pointer it is a still face, and the driver stands

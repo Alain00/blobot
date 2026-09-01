@@ -60,6 +60,7 @@ describe('a snapshot', () => {
     answers: [{ id: 'a1', agentId: 'bob', text: 'on it', at: 20 }],
     turnsThisPrompt: 0,
     demoMode: false,
+    dictation: 'off' as const,
     permissions: [],
   };
 
@@ -499,6 +500,7 @@ describe('a permission block', () => {
         permissions: [request],
         turnsThisPrompt: 0,
         demoMode: false,
+        dictation: 'off' as const,
       },
     });
     expect(state.items).toMatchObject([{ kind: 'permission', id: 'perm_1' }]);
@@ -740,6 +742,7 @@ describe('the context gauge', () => {
         permissions: [],
         turnsThisPrompt: 0,
         demoMode: false,
+        dictation: 'off' as const,
       },
     });
     expect(state.usage).toEqual({ alice: { used: 37_000, size: 1_000_000 } });
@@ -807,6 +810,7 @@ describe('the activity column, after a team switch', () => {
         permissions: [],
         turnsThisPrompt: 0,
         demoMode: false,
+        dictation: 'off' as const,
       },
     });
 
@@ -1031,6 +1035,7 @@ describe('a restored transcript', () => {
         permissions: [],
         turnsThisPrompt: 0,
         demoMode: false,
+        dictation: 'off' as const,
       },
     });
 
@@ -1119,6 +1124,7 @@ it('brings back a call that was in flight when the snapshot was read, and lets i
       permissions: [],
       turnsThisPrompt: 0,
       demoMode: false,
+      dictation: 'off' as const,
     },
   });
   expect(after.items).toMatchObject([
@@ -1276,6 +1282,7 @@ describe('a session blobot replaced', () => {
         permissions: [],
         turnsThisPrompt: 0,
         demoMode: false,
+        dictation: 'off' as const,
         log: {
           running: [],
           tools: [],
@@ -1319,6 +1326,7 @@ describe('a turn a clock started', () => {
     answers: [],
     turnsThisPrompt: 0,
     demoMode: false,
+    dictation: 'off' as const,
     permissions: [],
   };
 
@@ -1422,6 +1430,7 @@ describe('an agent that put itself on a schedule', () => {
     answers: [],
     turnsThisPrompt: 0,
     demoMode: false,
+    dictation: 'off' as const,
     permissions: [],
   };
 

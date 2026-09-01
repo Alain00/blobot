@@ -1,7 +1,7 @@
 # blobot
 
 A local-first desktop application that lets a user assemble **teams** out of the coding
-agents they already have installed — Claude Code, Codex, Gemini CLI, OpenCode — and watch
+agents they already have installed — Claude Code, Codex, Cursor, Gemini CLI, OpenCode — and watch
 them work together on a repository.
 
 This repository is a monorepo.
@@ -13,9 +13,11 @@ and raise it rather than working around it.
 
 - **Local-first.** No cloud dependencies. No hosted service is required for the app to run.
 - **No hosted inference.** The app never provides LLM inference and never proxies provider
-  API credentials. Agents use the user's existing local authentication.
+  API credentials. Agents use the user's existing local authentication. One conscious
+  exception, dictation's remote Transcriber, on ADR-0005; it does not extend.
 - **No credential storage.** We do not build a credentials database and we do not persist
-  API keys. The underlying CLI owns its own login.
+  API keys. The underlying CLI owns its own login. One conscious exception, the key for that
+  same Transcriber, on ADR-0005; it does not extend.
 - **ACP preferred.** The Agent Client Protocol is the primary integration path. CLI
   adapters are a fallback, not a default.
 - **Providers live behind `AgentRuntime`.** Every provider-specific quirk is owned by its
@@ -484,6 +486,34 @@ up. Read it before starting work.
   `attachment:` uri as *project instructions*, asking for an absolute local path, which is the
   thing ADR-0004 refuses, while reading the content block regardless.
 
+- **The Cursor adapter** (`.scratch/cursor-runtime/`, eight tickets, ticket 01 measured live) in
+  `packages/core/src/adapters/cursor`: `cursor-agent acp` first-party over stdio, the fifth
+  runtime and the second built entirely on `adapters/acp/`'s shared half. The published docs say
+  ACP takes MCP servers only from `.cursor/mcp.json`; **measured, `session/new` accepts
+  client-supplied `mcpServers`** with per-server headers and no approval step, so the loopback
+  rides the standard door — and because the door contradicts the docs, a live canary asserts it
+  stays open. `CURSOR_CONFIG_DIR` per agent carries exactly two things (`cli-config.json`, the
+  posture, enforced; `acp-sessions/`, resume state) and the login survives outside it. Ticket
+  14's posture is `approvalMode: allowlist` with the allow list widening across all three
+  attended trust words — the second runtime after Claude to express the gradation — and
+  **`permissions.deny` stays empty**: a deny is a silent hard block whose `tool_call` reports
+  `completed`, so the nine dangerous verbs are *unlisted*, which measured as a prompt. The
+  persona rides the prompt every turn (the config-dir rules channel measured unread; `AGENTS.md`
+  is the committable file ticket 14 refuses); `Mcp(blobot:*)` is vouched at every level so a
+  peer message never waits on a human; the sandbox is `enabled` with network as a constant, not
+  a dial. The two blocking extension methods are answered — `ask_question` refused in-channel,
+  `create_plan` rejected, an unknown method errors — and the user's own MCP servers, skills and
+  User Rules stay loaded, because the operator added them (ADR-0003; per-agent restriction is a
+  future cross-runtime effort). Detection probes **only `cursor-agent`**, never the
+  collision-prone bare `agent`; `status --format json` requires the vendor's own
+  `isAuthenticated: true`; `CURSOR_API_KEY` / `CURSOR_AUTH_TOKEN` are stripped and the
+  in-protocol `authenticate` is never used. `accepts` is `{images: true, textFiles: false}`,
+  the exact mirror of fx. `--live-cursor=<dir>` and `--live-cursor-mixed=<dir>` join the roster
+  shortcuts; `BLOBOT_LIVE_CURSOR=1` runs the live done-when suite (canary,
+  sandbox-versus-loopback, the git verb-split syntax, the live edit title). PR #1 was the
+  quarry, never the base: `extensions.ts` and `palette.ts` survive with credit, its
+  `config.ts` mechanism and `ALWAYS_DENY` are refuted by measurement.
+
 - **Handbooks are built, and nothing has been run live.** `.scratch/handbooks/`, ten tickets, all
   resolved, frontier empty. A **Handbook** is what an Agent knows about *this team's* work, held at
   `<team>/<agent>` — the identity the AgentWorkspace branch is named for and a Routine belongs to,
@@ -525,6 +555,30 @@ pane a Handbook is a **figure and never a body**, the opposite of `WORKSPACE`'s 
 problem, because four Handbooks do not fold into one the way four statuses fold into a
 `StatusWord`. `.scratch/handbooks/build.md` has what was decided while building and what bit.
 
+- **Dictation — speak into the composer, get text there.** `.scratch/dictation/`, twelve
+  tickets, eleven resolved and the twelfth built; `build.md` has what was decided while
+  building. Voice becomes text and text becomes the ordinary prompt: no runtime takes audio, so
+  this is a **composer input method** and not a fourth attachment kind. **ADR-0005, *The one
+  hosted service, and the one key*** — the conscious exception to two permanent rules, drawn
+  narrowly: transcription only, a service blobot calls and never an agent, a closed provider
+  list chosen by criteria (OpenAI, Deepgram, Mistral), one key per provider in
+  `dictation-keys.json` (`safeStorage` where the OS can, plain **and stated** where it cannot,
+  `basic_text` never) or in `BLOBOT_<PROVIDER>_API_KEY`, which always wins and is **stripped
+  from every runtime's environment** by `adapters/acp/child-env.ts`. **Local first**: a
+  readiness scan from RAM, arch and disk (four words, `unfit` / `untested` / `fit` / `slow`, the
+  last two measured by a real sentence in *say something*), three whisper.cpp weights and a
+  `whisper-cli` blobot builds in its own CI (the repo's first workflow) fetched to
+  `~/.local/share/blobot/speech/` with a streaming sha256 and `Range` resume — a figure that
+  knows its end, `downloading · 412 MB of 574 MB`, and still not a bar (DESIGN.md). One
+  `Transcriber` interface for both classes, four events (`partial`, `committed`, `ended`,
+  `failed` by cause), the level never crossing IPC; the renderer opens the microphone through
+  an AudioWorklet at 16 kHz, cuts segments from the level it measures and never sends silence,
+  and main holds the one recording. In the composer: the mic at the head beside `+`, a glyph
+  swap to a square, four ink bars from the voice, `LISTENING · 0:05` in the mono line, a ghost
+  after the caret for a partial, committed text inserted at the caret. `MockTranscriber` plays
+  three ugly scenarios in demo mode with the microphone genuinely open. Nothing has met a real
+  provider yet; the whisper adapter has (1.8 s on `base` for a 10 s clip, identifiers intact).
+
 - **blobot makes a sound now, and it is a fourth channel spent the way the other three were.**
   `.scratch/sound/`, ten tickets, all resolved, built, and `DESIGN.md` has a **Sound** section
   beside Motion. Raised from Velvet UI, and the author's own framing is what the effort is built
@@ -557,7 +611,10 @@ problem, because four Handbooks do not fold into one the way four statuses fold 
   app deliberately does not offer, and a twenty five second session at real cadence that is the
   only honest way to argue about frequency.
 
-Next: **brief a real agent**, which is the only thing left in that effort and what every
+Next: **the dictation done-when by hand** — a Spanish sentence with identifiers into a real
+agent, locally and through one provider (the `whisper-cli` workflow ran and its hashes are
+pinned; the engine's release URL is private for now, on `build.md`). Then **brief a real
+agent**, which is the only thing left in that effort and what every
 provisional number in it is waiting on: measure the Handbook a real interview produces, watch
 whether ticket 04's empty-state block actually opens the conversation, and do it on OpenCode as
 well, since it is the runtime that confabulated. Then surfacing whether an agent resumed or

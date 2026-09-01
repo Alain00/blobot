@@ -15,6 +15,8 @@ import { initialState, itemsFor, paneAfterSnapshot, reduce, type Pane } from './
 import { useFeedVisible } from './useFeedVisible.js';
 import { useWorkspaces } from './useWorkspaces.js';
 import { useRailWidth } from './useRailWidth.js';
+import { useDictation } from './useDictation.js';
+import { settingsSectionOf } from './components/Settings.js';
 import { useComposerRoom } from './useComposerRoom.js';
 import { usePlaySound } from './sound/useSound.js';
 
@@ -47,13 +49,11 @@ export function App(): React.JSX.Element {
   const [browsingRoutines, setBrowsingRoutines] = useState(
     opened.get('screen') === 'routines' || opened.get('screen') === 'new-routine',
   );
-  /**
-   * *Settings*, the third door. `--screen=settings`, or `settings:context` or `settings:sound`,
-   * for a screenshot.
-   */
+  /** *Settings*, the third door. `--screen=settings`, or `settings:<section>`, for a screenshot. */
   const [inSettings, setInSettings] = useState(
     (opened.get('screen') ?? '').startsWith('settings'),
   );
+  const settingsSection = settingsSectionOf(opened.get('screen') ?? undefined);
   /** The navigator, on ctrl+k. `--screen=find` opens it for a screenshot. */
   const [finding, setFinding] = useState(opened.get('screen') === 'find');
   /** The team a modal is about, and which one. Never the team on screen by implication. */
@@ -298,6 +298,16 @@ export function App(): React.JSX.Element {
         : window.blobot.publishPlan(openTeamId, agentId, options),
     [openTeamId],
   );
+  /**
+   * Dictation, when Settings says it is ready. `--screen=dictation` starts a recording on
+   * arrival with a simulated level, so the composer's listening state is reviewable through
+   * `--screenshot` with nobody at the microphone (`.scratch/dictation/`, ticket 07).
+   */
+  const dictation = useDictation({
+    state: state.snapshot?.dictation ?? 'off',
+    teamId: state.snapshot?.team?.id,
+    simulate: opened.get('screen') === 'dictation',
+  });
   const snapshot = state.snapshot;
   if (snapshot === undefined) return <div className="app" />;
   // Looked up rather than copied into state: a team that has just been deleted must not stay
@@ -486,6 +496,7 @@ export function App(): React.JSX.Element {
                answer is N of them, and it is drawn in the activity column instead. Passed as a
                node, so the composer still knows nothing about branches. */
             {...(suggest === undefined ? {} : { suggest })}
+            {...(dictation === undefined ? {} : { dictation })}
             {...(pane.kind !== 'agent'
               ? {}
               : {
@@ -574,11 +585,7 @@ export function App(): React.JSX.Element {
         {inSettings && (
           <Settings
             onClose={() => setInSettings(false)}
-            {...(opened.get('screen') === 'settings:context'
-              ? { section: 'context' as const }
-              : opened.get('screen') === 'settings:sound'
-                ? { section: 'sound' as const }
-                : {})}
+            {...(settingsSection === undefined ? {} : { section: settingsSection })}
           />
         )}
         {deletingTeam !== undefined && (

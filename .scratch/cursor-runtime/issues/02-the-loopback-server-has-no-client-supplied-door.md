@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 01
 
 # The loopback server has no client-supplied door
@@ -45,3 +45,25 @@ they cost:
 
 Whatever the answer, it is a decision about what a team member *is*, so it belongs in the same
 place ADR-0001 does rather than only in this file.
+
+## Answer
+
+The premise measured false, on the cheapest step the ticket itself ordered first. **`session/new`
+accepts client-supplied `mcpServers`** — shape `{name, type: "http", url, headers: [{name,
+value}]}` — and a server passed only there was handshaken with its own `Authorization` header,
+its tool offered and called, **with no approval step**: client-supplied servers bypass
+`mcp-approvals.json` entirely (measured 2026-08-31, ticket 01, turn 1). The docs' "ACP supports
+MCP servers defined in a project-level or user-level `.cursor/mcp.json`" describes the
+configuration path, not a rejection of the parameter, exactly as this ticket suspected.
+
+So the loopback is the same standard ACP door the other three runtimes use: one server per
+agent on `session/new`, the per-agent bearer token in the header, no file on disk anywhere, no
+stale token to name, nothing to delete. None of the fallback ladder is needed.
+
+Decided by the author, 2026-08-31: resolved this way, **plus a live canary** under
+`BLOBOT_LIVE_CURSOR=1` asserting that a `session/new`-supplied server's tool is offered —
+because the door contradicts the published docs, and a Cursor release that "fixes" it must
+fail by name instead of shipping a team member that silently cannot address a teammate.
+
+No ADR: the ticket said the answer belongs beside ADR-0001 only if it changed what a team
+member *is*. It did not — no trade-off was made, the ordinary mechanism simply exists.
