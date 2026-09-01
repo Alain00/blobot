@@ -75,7 +75,6 @@ export async function downloadVerified(request: DownloadRequest): Promise<Downlo
   // A server that ignores `Range` answers 200 with the whole file; start over in that case.
   let append = received > 0 && response.status === 206;
   if (received > 0 && response.status === 200) {
-    hash.copy?.();
     received = 0;
     append = false;
   }

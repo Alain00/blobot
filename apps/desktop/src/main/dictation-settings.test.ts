@@ -51,6 +51,17 @@ describe('choosing a model', () => {
     expect(settings.state()).toBe('ready');
   });
 
+  it('never steals a remote choice: a chosen provider holds the model download to installed', async () => {
+    const { settings } = await host();
+    await settings.set({ enabled: true, providerId: 'openai' });
+    await settings.download('engine');
+    await settings.download('turbo');
+    await settle();
+    const view = await settings.view();
+    expect(view.transcriber).toBe('remote');
+    expect(view.modelId).toBe('');
+  });
+
   it('never steals a choice already made', async () => {
     const { settings } = await host();
     await settings.set({ enabled: true });

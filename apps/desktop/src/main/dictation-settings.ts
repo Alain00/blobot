@@ -237,9 +237,11 @@ export class DictationSettingsHost {
       // A model that just landed becomes the Transcriber **when nothing was chosen yet**:
       // pressing *download* on a size is already the choice, and the first real user stood in
       // front of an installed model, no tick, and no microphone. Never when something is
-      // chosen — the user's choice is not overridden by a second download.
+      // chosen — the user's choice is not overridden by a second download, and a chosen
+      // remote provider holds `modelId` empty, so the transcriber word is checked too.
       if (
         target !== 'engine' &&
+        row.transcriber === '' &&
         row.modelId === '' &&
         this.#states[target]?.state === 'installed'
       ) {

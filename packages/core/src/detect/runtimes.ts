@@ -1,6 +1,7 @@
 import { execFile, type ExecFileException } from 'node:child_process';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { childEnvironment } from '../adapters/acp/child-env.js';
 
 /**
  * Ticket 11: what the user already has, observed rather than asked for.
@@ -363,10 +364,13 @@ const execRunner: CommandRunner = (command, args, options) =>
     };
     const timeout = options?.timeoutMs ?? 10_000;
     // `command -v` is a shell builtin, so layer one runs through a shell; everything else is
-    // a path we have already resolved and is spawned directly.
+    // a path we have already resolved and is spawned directly. Both get the adapters' own
+    // environment: a probe runs the runtime's binary, and ADR-0005 clause 2 keeps blobot's
+    // key doors out of every spawned runtime, this one included.
+    const env = childEnvironment();
     const child =
       command === 'command'
-        ? execFile('/bin/sh', ['-c', `command -v ${args[1] ?? ''}`], { timeout }, done)
-        : execFile(command, [...args], { timeout }, done);
+        ? execFile('/bin/sh', ['-c', `command -v ${args[1] ?? ''}`], { timeout, env }, done)
+        : execFile(command, [...args], { timeout, env }, done);
     child.on('error', () => resolve({ code: 127, stdout: '', stderr: '' }));
   });

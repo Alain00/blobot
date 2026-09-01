@@ -105,6 +105,15 @@ three tested against fake sockets and a fake fetch; none has met its provider ye
 - **The Deepgram socket cannot tell a rejected key from a dead network** at the upgrade — the
   WHATWG `WebSocket` exposes no status — so a failure there is `network`, and the paste-time
   probe is where a key is refused by name. A close reason naming payment is `no_credit`.
+- **A landed model becomes the Transcriber only when nothing was chosen at all** — no model
+  *and* no transcriber word. Pressing *download* on a size is the choice when the row is empty;
+  a chosen provider holds `modelId` empty with `transcriber: 'remote'`, and the first cut of
+  this rule checked only `modelId`, so a finishing download stole the remote choice. Caught in
+  the pre-merge review, 2026-09-01, guard and test on both words now.
+- **ADR-0005's strip reaches every spawn, not just the four transports** — the same review:
+  the remedy PTY (`runtime-step.ts`) handed `claude auth login` the whole of `process.env`,
+  and the detection probes and `whisper-cli` inherited it too. All three now go through the
+  one regex `child-env.ts` owns, which desktop no longer duplicates.
 
 ## What bit
 
@@ -145,3 +154,15 @@ three tested against fake sockets and a fake fetch; none has met its provider ye
   401 body; Deepgram's `dg-error` on a bad key; Mistral's `Bearer` on batch and its code-switching.
 - Q15 vocabulary into `CONTEXT.md`, once confirmed.
 - The PR to Alain for the Ubuntu pass, with the Linux items from *Not yet specified*.
+- **The ceiling counts audio fed, not the microphone open** (pre-merge review, 2026-09-01):
+  `withRecordingCeiling` sums what reaches `feed`, and in `segments` mode the renderer never
+  sends silence — so a quiet open microphone listens past ticket 06's five minutes. What has a
+  ceiling is *listening on*; the honest fix is a wall clock on the recording in main, which
+  holds the one recording and the injected `Clock`.
+- **Two sentences ticket 10 asked for are not on screen yet**: the off row prices models and
+  the engine but does not say the keys stay too, and a saved key shadowed by
+  `BLOBOT_<PROVIDER>_API_KEY` is not noted on the provider's line (`describe()` answers
+  `environment` alone).
+- **A binary change does not return the measured word to `untested`**: `#scanWith` keys the
+  measurement on `modelId` only, so a blobot update that swaps the engine build keeps a
+  measurement that was of the other binary. Ticket 08 says it should not.

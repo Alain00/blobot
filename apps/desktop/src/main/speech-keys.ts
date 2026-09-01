@@ -39,9 +39,6 @@ export function keyVariableFor(providerId: string): string {
   return `BLOBOT_${providerId.toUpperCase().replace(/[^A-Z0-9]/g, '_')}_API_KEY`;
 }
 
-/** Whether a variable name is one of blobot's own key doors, for the adapters to strip. */
-export const BLOBOT_KEY_VARIABLE = /^BLOBOT_[A-Z0-9_]+_API_KEY$/;
-
 export class SpeechKeys {
   readonly #file: string;
   readonly #crypto: KeyCrypto;

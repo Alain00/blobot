@@ -2,7 +2,8 @@ import { mkdtempSync, readFileSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { BLOBOT_KEY_VARIABLE, SpeechKeys, keyVariableFor, type KeyCrypto } from './speech-keys.js';
+import { BLOBOT_KEY_VARIABLE } from '@blobot/core';
+import { SpeechKeys, keyVariableFor, type KeyCrypto } from './speech-keys.js';
 
 /** A keyring that reverses strings: enough to tell encrypted from plain in a file. */
 const keyring = (available: boolean): KeyCrypto => ({

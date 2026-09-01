@@ -1,5 +1,6 @@
 import { spawn as nodeSpawn, type ChildProcess } from 'node:child_process';
 import { cpus } from 'node:os';
+import { childEnvironment } from '../adapters/acp/child-env.js';
 import { AsyncQueue } from '../mock/async-queue.js';
 import { PCM_16K_MONO_INT16, PCM_BYTES_PER_SECOND, type SpeechHint, type Transcriber, type TranscriberEvent } from './domain.js';
 
@@ -112,7 +113,8 @@ export class WhisperTranscriber implements Transcriber {
     return new Promise((resolve) => {
       let child: ChildProcess;
       try {
-        child = spawn(this.#options.binary, args, { stdio: ['pipe', 'pipe', 'pipe'] });
+        // The engine decodes locally and has no business seeing a remote provider's key door.
+        child = spawn(this.#options.binary, args, { stdio: ['pipe', 'pipe', 'pipe'], env: childEnvironment() });
       } catch {
         resolve({ kind: 'died' });
         return;

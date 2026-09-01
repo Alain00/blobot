@@ -1,6 +1,6 @@
 import { homedir } from 'node:os';
 import { spawn as spawnPty, type IPty } from 'node-pty';
-import type { RuntimeRemedy } from '@blobot/core';
+import { BLOBOT_KEY_VARIABLE, type RuntimeRemedy } from '@blobot/core';
 
 /**
  * A remedy, running on a real terminal, watched.
@@ -75,12 +75,14 @@ export function startStep(id: string, remedy: RuntimeRemedy, handlers: RuntimeSt
 /**
  * The app's environment, minus the two things that are true of *this* process and would be
  * lies about the child: the flag that makes an Electron binary behave like node, and the
- * bridge override that names a file this command has no business loading.
+ * bridge override that names a file this command has no business loading. Minus, too, blobot's
+ * own key doors — a remedy runs the runtime's own login or installer, and ADR-0005 clause 2
+ * strips `BLOBOT_<PROVIDER>_API_KEY` from every spawned runtime, this one included.
  */
 function terminalEnv(): Record<string, string> {
   const env: Record<string, string> = {};
   for (const [key, value] of Object.entries(process.env)) {
-    if (value !== undefined) env[key] = value;
+    if (value !== undefined && !BLOBOT_KEY_VARIABLE.test(key)) env[key] = value;
   }
   delete env['ELECTRON_RUN_AS_NODE'];
   delete env['BLOBOT_CLAUDE_BRIDGE'];
