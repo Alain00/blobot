@@ -39,6 +39,12 @@ Consequences you will keep bumping into:
   answers concretely — in tool lines and text arriving — rather than as an abstraction printed
   over them. The count a fold carried ("2 working") went with the word, since it was qualifying
   it. It survives as the `aria-label`, so nothing is lost to a reader not reading the shape.*
+- **A download is the one thing on screen that knows its end.** *2026-09-01, `.scratch/dictation/`
+  ticket 09.* The size is in the response before the first byte, so `downloading · 412 MB of
+  574 MB` states a fact where a bar toward a finish would claim one. It is a figure in the mono
+  voice beside the word, and still not a bar: nothing fills, nothing sweeps, and the in-flight
+  hairline applies as it does to any in-flight word. The same figure says `paused · 412 MB of
+  574 MB` after a quit, because the number is what was true when it stopped.
 - **A blobatar is seeded by the agent's *name*, never by a row id.** The library derives the
   whole face from that string, so a surface that seeds it with an id draws a different creature
   for the same agent. That is exactly what happened: the rail seeded by Agent id, the roster

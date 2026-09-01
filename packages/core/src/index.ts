@@ -301,8 +301,10 @@ export type {
   AgentProfileRecord,
   AgentRecord,
   ContextCeilingRecord,
+  DictationRecord,
   SessionRecord,
 } from './store/sqlite-store.js';
+export { DEFAULT_DICTATION } from './store/sqlite-store.js';
 export { SqliteRecorder } from './store/recorder.js';
 
 // Handbooks: what an Agent knows about this team's work. See `.scratch/handbooks/`.
@@ -356,3 +358,29 @@ export {
   SPEECH_HINT_TERMS,
   SPEECH_RAM_FLOORS_GB,
 } from './orchestrator/bounds.js';
+export {
+  ENGINE_BUILDS,
+  SPEECH_MODELS,
+  WHISPER_RELEASE_TAG,
+  WHISPER_SOURCE_TAG,
+  engineBuildFor,
+  speechModel,
+} from './speech/catalog.js';
+export type { EngineBuild, SpeechModel, SpeechModelId } from './speech/catalog.js';
+export { describeRtf, measuredReadiness, staticReadiness } from './speech/readiness.js';
+export type { MachineFacts, SpeechReadiness, StaticReadiness } from './speech/readiness.js';
+export { CHECKSUM_MISMATCH, downloadVerified } from './speech/download.js';
+export type { DownloadOutcome, DownloadRequest } from './speech/download.js';
+export { WhisperTranscriber, parseTranscription, wavHeader } from './speech/whisper.js';
+export type { WhisperTranscriberOptions } from './speech/whisper.js';
+export { SPEECH_PROVIDERS, authorizationFor, speechProvider, validateSpeechKey } from './speech/providers.js';
+export type { KeyValidation, SpeechProviderId, SpeechProviderSpec } from './speech/providers.js';
+export { BLOBOT_KEY_VARIABLE, childEnvironment } from './adapters/acp/child-env.js';
+export { OPENAI_LIVE_MODEL, OPENAI_REALTIME_URL, OpenAiTranscriber, localeLanguage } from './speech/openai.js';
+export type { OpenAiTranscriberOptions } from './speech/openai.js';
+export { DEEPGRAM_LISTEN_URL, DeepgramTranscriber, deepgramQuery } from './speech/deepgram.js';
+export type { DeepgramTranscriberOptions } from './speech/deepgram.js';
+export { MISTRAL_MODEL, MISTRAL_TRANSCRIPTIONS_URL, MistralTranscriber } from './speech/mistral.js';
+export type { MistralTranscriberOptions } from './speech/mistral.js';
+export { nodeSocket, resample16to24 } from './speech/socket.js';
+export type { SocketFactory, SocketLike } from './speech/socket.js';

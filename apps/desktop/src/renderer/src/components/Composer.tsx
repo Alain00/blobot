@@ -709,7 +709,7 @@ function clock(seconds: number): string {
  * the recording stops they are gone. Under `prefers-reduced-motion` the bars do not move at
  * all; the word above the pill carries the state alone.
  */
-function Wave({ read }: { read: () => number }): React.JSX.Element {
+export function Wave({ read }: { read: () => number }): React.JSX.Element {
   const spread = [0.55, 1, 0.75, 0.4];
   const bars = useRef<(HTMLElement | null)[]>([]);
   // The bars are driven straight from the level on each frame, with no state between: a level

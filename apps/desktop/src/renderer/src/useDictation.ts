@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { DICTATION_RECORDING_LIMIT_MS, describeTranscriberFailure } from '@blobot/core/domain';
 import type { UiDictationState } from '../../shared/api.js';
 import type { DictationView } from './components/Composer.js';
-import { MicrophoneRefused, openMicrophone, type Microphone } from './dictation/capture.js';
-import { Segmenter, chunkEnergy } from './dictation/segmenter.js';
+import { MicrophoneRefused } from './dictation/capture.js';
+import { simulatedLevel, startRecording, type Recording } from './dictation/recording.js';
 
 /**
  * Dictation, from the composer's side (`.scratch/dictation/`, tickets 06, 07, 11).
@@ -19,13 +19,11 @@ import { Segmenter, chunkEnergy } from './dictation/segmenter.js';
  */
 interface Live {
   readonly teamId: string;
-  readonly segmenter: Segmenter;
   readonly began: number;
-  mic?: Microphone;
+  recording?: Recording;
   level: () => number;
   lastDrop: number;
   ticker: number;
-  frame: number;
 }
 
 interface View {
@@ -79,19 +77,13 @@ export function useDictation({
     if (it === undefined) return undefined;
     live.current = undefined;
     window.clearInterval(it.ticker);
-    cancelAnimationFrame(it.frame);
-    await it.mic?.stop();
+    await it.recording?.stop();
     return it;
   }, []);
 
   const stop = useCallback(async (): Promise<void> => {
     const it = await closeCapture();
     if (it === undefined) return;
-    // What was held goes, and an open segment is closed, so the last words are not lost.
-    for (const action of it.segmenter.flush()) {
-      if (action.kind === 'mark') window.blobot.markDictation();
-      else void window.blobot.feedDictation(action.chunk);
-    }
     await window.blobot.stopDictation();
   }, [closeCapture]);
 
@@ -101,39 +93,21 @@ export function useDictation({
     setView((held) => ({ ...held, partial: undefined }));
     const started = await window.blobot.startDictation(teamId);
     if (!started.ok) return note(`stopped · ${started.error}`);
-    const entry: Live = {
-      teamId,
-      segmenter: new Segmenter({ takes: started.takes }),
-      began: performance.now(),
-      level: () => 0,
-      lastDrop: 0,
-      ticker: 0,
-      frame: 0,
-    };
+    const entry: Live = { teamId, began: performance.now(), level: () => 0, lastDrop: 0, ticker: 0 };
     live.current = entry;
     if (simulate) {
-      entry.level = () => {
-        const t = (performance.now() - entry.began) / 1000;
-        // Syllables at ~4 Hz under a phrase that swells and falls every 2.4 s, with a pause.
-        const phrase = Math.max(0, Math.sin((t / 2.4) * Math.PI));
-        return phrase * (0.55 + 0.45 * Math.abs(Math.sin(t * Math.PI * 4))) * 0.08;
-      };
+      entry.level = simulatedLevel(entry.began);
     } else {
       try {
-        const mic = await openMicrophone((pcm) => {
-          if (live.current !== entry) return;
-          const chunk = new Uint8Array(pcm.buffer, pcm.byteOffset, pcm.byteLength);
-          for (const action of entry.segmenter.push(chunk, chunkEnergy(pcm))) {
-            if (action.kind === 'mark') window.blobot.markDictation();
-            else
-              void window.blobot.feedDictation(action.chunk).then((answer) => {
-                if (answer === 'dropped') entry.lastDrop = performance.now();
-              });
-          }
+        const recording = await startRecording({
+          takes: started.takes,
+          onDrop: () => {
+            entry.lastDrop = performance.now();
+          },
         });
-        if (live.current !== entry) return void mic.stop();
-        entry.mic = mic;
-        entry.level = mic.level;
+        if (live.current !== entry) return void recording.stop();
+        entry.recording = recording;
+        entry.level = recording.level;
       } catch (error) {
         live.current = undefined;
         await window.blobot.stopDictation();

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MockTranscriber, VirtualClock, speechScenarios, type TranscriberEvent } from '@blobot/core';
-import { DictationHost } from './dictation.js';
+import { DictationHost, TRYOUT_TEAM } from './dictation.js';
 
 function host(clock: VirtualClock) {
   const sent: [string, ...unknown[]][] = [];
@@ -68,5 +68,29 @@ describe('the recording in main', () => {
       hintFor: () => ({ terms: [] }),
     });
     expect(await dictation.start('team_1')).toEqual({ ok: false, error: 'nothing chosen' });
+  });
+});
+
+describe('the measured stage', () => {
+  it('times the first committed segment of a tryout against the audio it held', async () => {
+    const clock = new VirtualClock();
+    let at = 0;
+    const measured: { text: string; rtf: number }[] = [];
+    const dictation = new DictationHost({
+      send: () => undefined,
+      transcriberFor: () => new MockTranscriber({ scenario: speechScenarios.dies, clock }),
+      hintFor: () => ({ terms: [] }),
+      onMeasured: (m) => measured.push(m),
+      now: () => at,
+    });
+    await dictation.start(TRYOUT_TEAM);
+    // Two seconds of audio, marked, and the sentence arrives 400 ms later.
+    for (let i = 0; i < 20; i += 1) dictation.feed(new Uint8Array(3_200));
+    at = 1_000;
+    dictation.mark();
+    at = 1_400;
+    await clock.advance(1_000);
+    expect(measured).toEqual([{ text: 'Alice, el session/new del adapter', rtf: 0.2 }]);
+    await dictation.stop();
   });
 });

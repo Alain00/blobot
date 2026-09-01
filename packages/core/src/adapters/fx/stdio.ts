@@ -1,3 +1,4 @@
+import { childEnvironment } from '../acp/child-env.js';
 import { spawn } from 'node:child_process';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -46,9 +47,7 @@ export type SpawnFx = (options: SpawnFxOptions) => LineTransport;
 export const spawnFx: SpawnFx = (options) => {
   const child = spawn(resolveFxExecutable(options.fxExecutable), ['acp'], {
     cwd: options.cwd,
-    env: {
-      ...process.env,
-      ...options.env,
+    env: childEnvironment(options.env, {
       // The posture reaches the process here, in its environment, and dies with it. Nothing is
       // written into the AgentWorkspace, which is a checkout of the user's repository.
       ...fxPermissionEnv(options.trust),
@@ -59,7 +58,7 @@ export const spawnFx: SpawnFx = (options) => {
       FX_NO_OPEN_BROWSER: '1',
       // stderr is diagnostics and the only channel that would carry colour; stdout is protocol.
       NO_COLOR: '1',
-    },
+    }),
     stdio: ['pipe', 'pipe', 'pipe'],
   });
   return childTransport(child, options.onStderr);

@@ -1,4 +1,4 @@
-import { blob, index, integer, primaryKey, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
+import { blob, index, integer, primaryKey, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
 /**
  * Ticket 13's eight tables. Drizzle is used as a **typed query builder, not an ORM**, and it
@@ -604,3 +604,31 @@ export const handbookEntries = sqliteTable(
   },
   (table) => [index('handbook_entries_agent').on(table.teamId, table.agentName)],
 );
+
+/**
+ * Dictation's one row (`.scratch/dictation/` ticket 10): whether it is on, which kind of
+ * Transcriber, which speech model or which provider, and what the readiness scan said.
+ *
+ * Named columns that are the whole of what the thing is — `context_ceilings`' own allowance —
+ * and never a key-value bag. **The key is not here** (ADR-0005 clause 5): durable-and-not-secret
+ * is the database's, secret is `dictation-keys.json`'s, and this schema's first rule is that no
+ * credential column exists anywhere.
+ */
+export const dictation = sqliteTable('dictation', {
+  /** Always 1. One row, read whole, written whole. */
+  id: integer('id').primaryKey(),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(false),
+  /** `''` while nothing has been chosen. */
+  transcriber: text('transcriber', { enum: ['', 'local', 'remote'] }).notNull().default(''),
+  /** The speech model's catalog id, or `''`. */
+  modelId: text('model_id').notNull().default(''),
+  /** The provider's id from core's table, or `''`. */
+  providerId: text('provider_id').notNull().default(''),
+  /** The static scan's word, or `''` before it ran. */
+  readiness: text('readiness', { enum: ['', 'unfit', 'untested', 'fit', 'slow'] }).notNull().default(''),
+  /** Real-time factor from *say something*, per model: NULL until measured. */
+  measuredRtf: real('measured_rtf'),
+  /** Which model that measurement was of, so a size change returns to `untested`. */
+  measuredModelId: text('measured_model_id').notNull().default(''),
+  at: integer('at').notNull().default(0),
+});

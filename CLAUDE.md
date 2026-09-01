@@ -555,7 +555,33 @@ pane a Handbook is a **figure and never a body**, the opposite of `WORKSPACE`'s 
 problem, because four Handbooks do not fold into one the way four statuses fold into a
 `StatusWord`. `.scratch/handbooks/build.md` has what was decided while building and what bit.
 
-Next: **brief a real agent**, which is the only thing left in that effort and what every
+- **Dictation — speak into the composer, get text there.** `.scratch/dictation/`, twelve
+  tickets, eleven resolved and the twelfth built; `build.md` has what was decided while
+  building. Voice becomes text and text becomes the ordinary prompt: no runtime takes audio, so
+  this is a **composer input method** and not a fourth attachment kind. **ADR-0005, *The one
+  hosted service, and the one key*** — the conscious exception to two permanent rules, drawn
+  narrowly: transcription only, a service blobot calls and never an agent, a closed provider
+  list chosen by criteria (OpenAI, Deepgram, Mistral), one key per provider in
+  `dictation-keys.json` (`safeStorage` where the OS can, plain **and stated** where it cannot,
+  `basic_text` never) or in `BLOBOT_<PROVIDER>_API_KEY`, which always wins and is **stripped
+  from every runtime's environment** by `adapters/acp/child-env.ts`. **Local first**: a
+  readiness scan from RAM, arch and disk (four words, `unfit` / `untested` / `fit` / `slow`, the
+  last two measured by a real sentence in *say something*), three whisper.cpp weights and a
+  `whisper-cli` blobot builds in its own CI (the repo's first workflow) fetched to
+  `~/.local/share/blobot/speech/` with a streaming sha256 and `Range` resume — a figure that
+  knows its end, `downloading · 412 MB of 574 MB`, and still not a bar (DESIGN.md). One
+  `Transcriber` interface for both classes, four events (`partial`, `committed`, `ended`,
+  `failed` by cause), the level never crossing IPC; the renderer opens the microphone through
+  an AudioWorklet at 16 kHz, cuts segments from the level it measures and never sends silence,
+  and main holds the one recording. In the composer: the mic at the head beside `+`, a glyph
+  swap to a square, four ink bars from the voice, `LISTENING · 0:05` in the mono line, a ghost
+  after the caret for a partial, committed text inserted at the caret. `MockTranscriber` plays
+  three ugly scenarios in demo mode with the microphone genuinely open. Nothing has met a real
+  provider yet; the whisper adapter has (1.8 s on `base` for a 10 s clip, identifiers intact).
+
+Next: **run the `whisper-cli` workflow and pin its hashes**, then the dictation done-when by
+hand — a Spanish sentence with identifiers into a real agent, locally and through one provider.
+Then **brief a real agent**, which is the only thing left in that effort and what every
 provisional number in it is waiting on: measure the Handbook a real interview produces, watch
 whether ticket 04's empty-state block actually opens the conversation, and do it on OpenCode as
 well, since it is the runtime that confabulated. Then surfacing whether an agent resumed or

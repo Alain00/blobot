@@ -16,6 +16,7 @@ import { useFeedVisible } from './useFeedVisible.js';
 import { useWorkspaces } from './useWorkspaces.js';
 import { useRailWidth } from './useRailWidth.js';
 import { useDictation } from './useDictation.js';
+import { settingsSectionOf } from './components/Settings.js';
 import { useComposerRoom } from './useComposerRoom.js';
 
 export function App(): React.JSX.Element {
@@ -40,10 +41,11 @@ export function App(): React.JSX.Element {
   const [browsingRoutines, setBrowsingRoutines] = useState(
     opened.get('screen') === 'routines' || opened.get('screen') === 'new-routine',
   );
-  /** *Settings*, the third door. `--screen=settings`, or `settings:context`, for a screenshot. */
+  /** *Settings*, the third door. `--screen=settings`, or `settings:<section>`, for a screenshot. */
   const [inSettings, setInSettings] = useState(
     (opened.get('screen') ?? '').startsWith('settings'),
   );
+  const settingsSection = settingsSectionOf(opened.get('screen') ?? undefined);
   /** The navigator, on ctrl+k. `--screen=find` opens it for a screenshot. */
   const [finding, setFinding] = useState(opened.get('screen') === 'find');
   /** The team a modal is about, and which one. Never the team on screen by implication. */
@@ -545,7 +547,7 @@ export function App(): React.JSX.Element {
         {inSettings && (
           <Settings
             onClose={() => setInSettings(false)}
-            {...(opened.get('screen') === 'settings:context' ? { section: 'context' as const } : {})}
+            {...(settingsSection === undefined ? {} : { section: settingsSection })}
           />
         )}
         {deletingTeam !== undefined && (

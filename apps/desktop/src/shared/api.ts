@@ -11,6 +11,8 @@ import type {
   TrustLevel,
   VerbosityLevel,
   TranscriberEvent,
+  SpeechModelId,
+  SpeechReadiness,
 } from '@blobot/core/domain';
 
 /**
@@ -999,6 +1001,86 @@ export interface EditAgentResult {
   readonly runtimeChanged?: boolean;
 }
 
+
+/** One downloadable thing's state, for the Settings row: a model or the engine. */
+export type UiSpeechFileState =
+  | { readonly state: 'absent' }
+  | { readonly state: 'downloading'; readonly received: number; readonly total?: number }
+  | { readonly state: 'paused'; readonly received: number; readonly total?: number }
+  | { readonly state: 'failed'; readonly received: number; readonly error: string }
+  | { readonly state: 'installed'; readonly bytes: number }
+  | { readonly state: 'unavailable'; readonly reason: string };
+
+export type UiSpeechTarget = SpeechModelId | 'engine';
+
+/** A remote provider, as the section draws it: a name, a retention sentence, and whether a key is held. */
+export interface UiSpeechProvider {
+  readonly id: string;
+  readonly label: string;
+  /** The provider's own retention sentence, from core's table (ADR-0005 clause 3). */
+  readonly retention: string;
+  readonly key:
+    | { readonly state: 'none' }
+    /** Saved by blobot, and in which form — the honest sentence depends on it. */
+    | { readonly state: 'saved'; readonly form: 'encrypted' | 'plain' }
+    /** From the environment: named, and not blobot's to remove. */
+    | { readonly state: 'environment'; readonly variable: string };
+}
+
+/**
+ * The Dictation section, whole (ticket 10). Read whole and replaced whole after every action,
+ * the way the runtimes list is: there are a handful of rows and each depends on the others.
+ */
+export interface UiDictationSettings {
+  readonly enabled: boolean;
+  readonly transcriber: '' | 'local' | 'remote';
+  readonly modelId: string;
+  readonly providerId: string;
+  readonly readiness: {
+    /** `''` before the static scan has run. */
+    readonly word: '' | SpeechReadiness;
+    readonly figure: string;
+    readonly reason?: string;
+    readonly recommended?: SpeechModelId;
+    readonly measuredRtf?: number;
+    readonly measuredModelId?: string;
+  };
+  readonly models: readonly {
+    readonly id: SpeechModelId;
+    readonly label: string;
+    readonly bytes: number;
+    readonly state: UiSpeechFileState;
+  }[];
+  readonly engine: UiSpeechFileState;
+  /** What is on disk, priced, for the switch row and *remove all*. */
+  readonly footprint: { readonly models: number; readonly engine: boolean; readonly bytes: number };
+  readonly providers: readonly UiSpeechProvider[];
+  /** The composer's word, derived from all of the above. */
+  readonly state: UiDictationState;
+}
+
+/** What Settings may change. Everything else is derived. */
+export interface DictationPatch {
+  readonly enabled?: boolean;
+  readonly transcriber?: '' | 'local' | 'remote';
+  readonly modelId?: string;
+  readonly providerId?: string;
+}
+
+/** What *say something* measured: the sentence it heard and how fast, so the row can show both. */
+export interface UiSpeechMeasurement {
+  readonly text: string;
+  readonly rtf: number;
+  readonly word: 'fit' | 'slow';
+}
+
+/**
+ * The place a *say something* recording is started on: not a team. Events for it come back on
+ * `onDictation` with this as the team id, and the composer ignores them because it is not the
+ * team on screen.
+ */
+export const SPEECH_TRYOUT_PLACE = 'settings:say-something';
+
 /** The composer's word for dictation. Three states, one of which has a button. */
 export type UiDictationState = 'off' | 'unconfigured' | 'ready';
 
@@ -1320,6 +1402,28 @@ export interface BlobotApi {
   markDictation(): void;
   stopDictation(): Promise<void>;
   onDictation(listener: (teamId: string, event: TranscriberEvent) => void): () => void;
+  /** The Dictation section (ticket 10). Every action answers with the whole section again. */
+  dictationSettings(): Promise<UiDictationSettings>;
+  setDictation(patch: DictationPatch): Promise<UiDictationSettings>;
+  /** The static readiness stage, asked again by hand. */
+  checkSpeechReadiness(): Promise<UiDictationSettings>;
+  downloadSpeech(target: UiSpeechTarget): Promise<UiDictationSettings>;
+  cancelSpeechDownload(target: UiSpeechTarget): Promise<UiDictationSettings>;
+  removeSpeech(target: UiSpeechTarget): Promise<UiDictationSettings>;
+  /** Every model, every part, the engine. Priced first by `footprint`. */
+  removeAllSpeech(): Promise<UiDictationSettings>;
+  /**
+   * *Say something*: a recording against the local Transcriber with no team behind it, whose
+   * first committed segment is timed. Audio travels on the same `feedDictation`; the sentence
+   * and the figure come back on `onSpeechMeasured`.
+   */
+  startSpeechTryout(): Promise<UiDictationStart>;
+  /** A model or the engine changed state on disk: downloading, installed, gone. */
+  onSpeechFile(listener: (target: UiSpeechTarget, state: UiSpeechFileState) => void): () => void;
+  onSpeechMeasured(listener: (measurement: UiSpeechMeasurement) => void): () => void;
+  /** The key for one provider, pasted. Validated with a zero-spend request before it is kept. */
+  saveSpeechKey(providerId: string, key: string): Promise<UiDictationSettings & { readonly rejected?: string }>;
+  removeSpeechKey(providerId: string): Promise<UiDictationSettings>;
 }
 
 declare global {

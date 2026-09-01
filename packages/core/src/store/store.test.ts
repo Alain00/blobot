@@ -1156,3 +1156,42 @@ describe('a Handbook', () => {
     expect(store.handbooksOfTeam(team.id)).toHaveLength(1);
   });
 });
+
+describe('dictation settings', () => {
+  it('is the default until saved, and comes back whole', () => {
+    const store = new SqliteStore(opened.db);
+    expect(store.dictationSettings()).toEqual({
+      enabled: false,
+      transcriber: '',
+      modelId: '',
+      providerId: '',
+      readiness: '',
+      measuredModelId: '',
+      at: 0,
+    });
+    store.saveDictationSettings({
+      enabled: true,
+      transcriber: 'local',
+      modelId: 'turbo',
+      providerId: '',
+      readiness: 'fit',
+      measuredRtf: 0.12,
+      measuredModelId: 'turbo',
+      at: 5,
+    });
+    expect(store.dictationSettings()).toEqual({
+      enabled: true,
+      transcriber: 'local',
+      modelId: 'turbo',
+      providerId: '',
+      readiness: 'fit',
+      measuredRtf: 0.12,
+      measuredModelId: 'turbo',
+      at: 5,
+    });
+    // One row: a second save replaces it rather than adding a second.
+    store.saveDictationSettings({ ...store.dictationSettings(), enabled: false, at: 6 });
+    expect(store.dictationSettings().enabled).toBe(false);
+    expect(store.dictationSettings().measuredRtf).toBe(0.12);
+  });
+});

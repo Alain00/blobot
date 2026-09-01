@@ -5,6 +5,7 @@ import { READINESS_WORD } from './readiness.js';
 import { RuntimeMark } from './RuntimeMark.js';
 import { RuntimeSetup } from './RuntimeSetup.js';
 import { ContextCeilings } from './ContextCeilings.js';
+import { Dictation } from './Dictation.js';
 
 /**
  * Settings: the third door at the foot of the rail, and a screen with a column of its own.
@@ -24,12 +25,20 @@ import { ContextCeilings } from './ContextCeilings.js';
  * than about a screen: which runtimes it has, and how much room each model is worth. A section
  * gets added here when there is something true to configure, never to fill the column out.
  */
-type Section = 'runtimes' | 'context';
+export type Section = 'runtimes' | 'context' | 'dictation';
 
 const SECTIONS: readonly { readonly id: Section; readonly label: string }[] = [
   { id: 'runtimes', label: 'Runtimes' },
   { id: 'context', label: 'Context' },
+  { id: 'dictation', label: 'Dictation' },
 ];
+
+/** `--screen=settings:<section>`, for a screenshot, or nothing. */
+export function settingsSectionOf(screen: string | undefined): Section | undefined {
+  if (screen === undefined || !screen.startsWith('settings:')) return undefined;
+  const asked = screen.slice('settings:'.length);
+  return SECTIONS.some((entry) => entry.id === asked) ? (asked as Section) : undefined;
+}
 
 export function Settings({
   onClose,
@@ -154,6 +163,7 @@ export function Settings({
           )}
 
           {section === 'context' && <ContextCeilings />}
+          {section === 'dictation' && <Dictation />}
         </div>
       </div>
 

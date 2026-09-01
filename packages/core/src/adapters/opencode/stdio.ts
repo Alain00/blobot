@@ -1,3 +1,4 @@
+import { childEnvironment } from '../acp/child-env.js';
 import { spawn } from 'node:child_process';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -44,16 +45,14 @@ export type SpawnOpencode = (options: SpawnOpencodeOptions) => LineTransport;
 export const spawnOpencode: SpawnOpencode = (options) => {
   const child = spawn(resolveOpencodeExecutable(options.opencodeExecutable), ['acp'], {
     cwd: options.cwd,
-    env: {
-      ...process.env,
-      ...options.env,
+    env: childEnvironment(options.env, {
       ...(options.configContent === undefined
         ? {}
         : { OPENCODE_CONFIG_CONTENT: options.configContent }),
       // stderr is diagnostics, and it is the only channel that would carry colour. stdout is
       // protocol and was observed clean from byte 0 either way.
       NO_COLOR: '1',
-    },
+    }),
     stdio: ['pipe', 'pipe', 'pipe'],
   });
   return childTransport(child, options.onStderr);

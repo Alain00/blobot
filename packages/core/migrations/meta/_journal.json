@@ -141,6 +141,13 @@
       "when": 1788198854409,
       "tag": "0019_strange_scream",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1788267481965,
+      "tag": "0020_regular_blazing_skull",
+      "breakpoints": true
     }
   ]
 }

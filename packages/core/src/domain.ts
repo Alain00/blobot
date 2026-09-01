@@ -107,3 +107,6 @@ export {
   DICTATION_SILENCE_MS,
   DICTATION_SILENCE_RMS,
 } from './orchestrator/bounds.js';
+export type { SpeechModelId } from './speech/catalog.js';
+export type { SpeechReadiness } from './speech/readiness.js';
+export { describeRtf } from './speech/readiness.js';

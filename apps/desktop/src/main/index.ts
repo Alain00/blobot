@@ -1,10 +1,14 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, session, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, session, shell } from 'electron';
 import { writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   MESSAGE_AGENT_TOOL,
+  DeepgramTranscriber,
+  MistralTranscriber,
   MockTranscriber,
+  OpenAiTranscriber,
   PROPOSE_ROUTINE_TOOL,
   SqliteStore,
   SystemClock,
@@ -15,6 +19,7 @@ import {
   remedyFor,
   speechScenarios,
   uuidv7,
+  measuredReadiness,
   type AgentStatus,
   type SpeechScenarioName,
   type OpenedDatabase,
@@ -67,7 +72,10 @@ import { knownRuntime, knownRuntimes, refreshKnownRuntimes } from './known-runti
 import { resizeStep, startStep, stopStep, writeStep } from './runtime-step.js';
 import { isWorking, type RunningTeam } from './running-team.js';
 import { TeamPool } from './team-pool.js';
-import { DictationHost } from './dictation.js';
+import { DictationHost, TRYOUT_TEAM } from './dictation.js';
+import { DictationSettingsHost } from './dictation-settings.js';
+import { SpeechFiles, type SpeechTarget } from './speech-files.js';
+import { SpeechKeys } from './speech-keys.js';
 import { installWebPermissions, ownOriginsFor } from './web-permissions.js';
 import { RoutineRunner } from './routine-runner.js';
 import {
@@ -99,6 +107,7 @@ import type {
   UiRuntimeChoice,
   UiRuntimeOptions,
   UiDictationState,
+  DictationPatch,
   RuntimeStepOutcome,
   TeamOpenResult,
   UiEarlier,
@@ -721,13 +730,62 @@ const send = (channel: string, ...args: unknown[]): void => {
 };
 
 /**
+ * What blobot downloaded for a local Transcriber: `~/.local/share/blobot/speech/`, beside the
+ * worktrees and the handoffs, never userData and never a workspace (ticket 09).
+ */
+function speechRoot(): string {
+  const xdg = process.env['XDG_DATA_HOME'];
+  const base = xdg !== undefined && xdg.length > 0 ? xdg : join(homedir(), '.local', 'share');
+  return join(base, 'blobot', 'speech');
+}
+
+const speechFiles = new SpeechFiles({
+  root: speechRoot(),
+  onChange: (target, state) => {
+    dictationSettings.noteFile(target, state);
+    send('dictation:file', target, state);
+  },
+});
+
+/**
+ * The one key, in the one file (ADR-0005). Beside `runtime-options.json`; `safeStorage` where
+ * the OS can encrypt, plain and stated where it cannot. `rememberIn` is called once `userData`
+ * is known, like the options cache.
+ */
+const speechKeys = new SpeechKeys({ file: join(app.getPath('userData'), 'dictation-keys.json'), crypto: safeStorage });
+
+const dictationSettings = new DictationSettingsHost({
+  // The demo team's own in-memory store when there is no database, so the section works in
+  // `--demo` for a screenshot and forgets everything on quit, which is the demo's whole claim.
+  store: () => store ?? demo?.store,
+  files: speechFiles,
+  keys: speechKeys,
+  now: () => clock.now(),
+  // The composer reads its word off the snapshot, so a change here is a snapshot push.
+  onChange: () => send('blobot:team'),
+  onStderr: (line) => process.stderr.write(`whisper: ${line}\n`),
+  // The remote Transcriber for the chosen provider, with its key — the one place a key is
+  // handed to anything, and it goes to that provider only (ADR-0005 clause 4).
+  remoteFor: (provider, key) => {
+    switch (provider.id) {
+      case 'openai':
+        return new OpenAiTranscriber({ key, locale: app.getLocale() });
+      case 'deepgram':
+        return new DeepgramTranscriber({ key });
+      case 'mistral':
+        return new MistralTranscriber({ key });
+    }
+  },
+});
+
+/**
  * Whether the composer draws a microphone (ticket 10). In demo mode it is `ready` with the mock
  * Transcriber behind it — real audio in, scripted text out — so the mic works without a model
- * or a key. Outside the demo it is the Settings row's answer, and until that row exists it is
- * `off`, which is also the honest default.
+ * or a key. Outside the demo it is the Settings row's answer: `off`, `unconfigured`, or `ready`
+ * when the chosen Transcriber is actually there.
  */
 function dictationState(): UiDictationState {
-  return demoMode ? 'ready' : 'off';
+  return demoMode ? 'ready' : dictationSettings.state();
 }
 
 /**
@@ -738,7 +796,13 @@ const dictation = new DictationHost({
   send,
   transcriberFor: () => {
     if (demoMode) return new MockTranscriber({ scenario: speechScenarios[demoSpeechName], clock });
-    return { error: 'Dictation is not set up. Choose a speech model or a provider in Settings.' };
+    return dictationSettings.transcriberFor();
+  },
+  // Ticket 08's measured stage: the first sentence of *say something*, timed, kept against the
+  // model it measured, and shown with the words it heard.
+  onMeasured: ({ text, rtf }) => {
+    dictationSettings.recordMeasurement(rtf);
+    send('dictation:measured', { text, rtf, word: measuredReadiness(rtf) });
   },
   hintFor: (teamId) => {
     const team = current();
@@ -1016,6 +1080,9 @@ void app.whenReady().then(async () => {
     // Beside the database, and for the same reason: what a runtime offers is worth knowing
     // before the CLI has been spawned, so the hire dialog draws its picker instead of waiting.
     rememberRuntimeOptionsIn(join(app.getPath('userData'), 'runtime-options.json'));
+    // The key file beside it (ADR-0005). A plain value on a machine that can now encrypt is
+    // re-encrypted here, and never the reverse.
+    speechKeys.migrate();
     store = new SqliteStore(opened.db);
     routines = new RoutineRunner({
       store,
@@ -1747,6 +1814,30 @@ void app.whenReady().then(async () => {
   ipcMain.handle('dictation:feed', (_event, pcm: Uint8Array) => dictation.feed(pcm));
   ipcMain.on('dictation:mark', () => dictation.mark());
   ipcMain.handle('dictation:stop', () => dictation.stop());
+  // *Say something*: the local Transcriber with no team behind it, timed on its first sentence.
+  ipcMain.handle('dictation:tryout', () => {
+    const made = demoMode
+      ? new MockTranscriber({ scenario: speechScenarios[demoSpeechName], clock })
+      : dictationSettings.tryoutTranscriber();
+    return 'error' in made ? Promise.resolve({ ok: false as const, error: made.error }) : dictation.start(TRYOUT_TEAM, made);
+  });
+
+  // The Dictation section (ticket 10). Every action answers with the whole section.
+  ipcMain.handle('blobot:dictationSettings', () => dictationSettings.view());
+  ipcMain.handle('blobot:setDictation', (_event, patch: DictationPatch) => dictationSettings.set(patch));
+  ipcMain.handle('blobot:checkSpeechReadiness', () => dictationSettings.checkReadiness());
+  ipcMain.handle('blobot:downloadSpeech', (_event, target: SpeechTarget) => dictationSettings.download(target));
+  ipcMain.handle('blobot:cancelSpeechDownload', (_event, target: SpeechTarget) =>
+    dictationSettings.cancelDownload(target),
+  );
+  ipcMain.handle('blobot:removeSpeech', (_event, target: SpeechTarget) => dictationSettings.remove(target));
+  ipcMain.handle('blobot:removeAllSpeech', () => dictationSettings.removeAll());
+  // The key arrives once and is validated against its provider before it is kept. It is not
+  // logged, not echoed and not returned: the answer is the section, plus why not.
+  ipcMain.handle('blobot:saveSpeechKey', (_event, providerId: string, key: string) =>
+    dictationSettings.saveKey(providerId, key),
+  );
+  ipcMain.handle('blobot:removeSpeechKey', (_event, providerId: string) => dictationSettings.removeKey(providerId));
 
   ipcMain.handle('blobot:selectTeam', async (_event, teamId: string): Promise<TeamOpenResult> => {
     const team = store?.teamById(teamId);
@@ -1754,6 +1845,12 @@ void app.whenReady().then(async () => {
     if (team.id === current()?.team.id) return { ok: true };
     return switchTo(team);
   });
+
+  // What is on disk for dictation, read once so the first snapshot's word is right.
+  await dictationSettings.refresh();
+  // `--demo-dictation=on` switches the section on in the demo's throwaway store, so the rows
+  // past the switch — readiness, the models, the providers — are reviewable by a screenshot.
+  if (demoMode && process.argv.includes('--demo-dictation=on')) await dictationSettings.set({ enabled: true });
 
   await createWindow();
 

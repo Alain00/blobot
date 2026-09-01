@@ -67,3 +67,18 @@ Everything below is decided on its ticket; this is the checklist, not the reason
   could not — Mistral's code-switching, Deepgram's `mip_opt_out` on the socket, OpenAI's
   `gpt-live-transcribe` at 24 kHz resampled from 16 — and the author judges the audio and the
   visual by hand.
+
+## Progress (2026-09-01)
+
+Built in one session, `.scratch/dictation/build.md` has the detail: the permission allowlist,
+the Transcriber vocabulary and mock, the microphone through an AudioWorklet and the renderer's
+segmenter, the composer's mic/wave/ghost/caret insertion, the `dictation` table, readiness, the
+verified downloader, the CI workflow, `dictation-keys.json` with `safeStorage`, the env var and
+its stripping from every adapter, the closed provider table with the retention sentences, the
+Settings section as the flow with *say something*, and four Transcribers — whisper (measured
+live against the research's binary and clip), OpenAI live, Deepgram, Mistral. Typecheck, tests
+and build pass. DESIGN.md carries both sentences.
+
+Still open on the done-when: the engine's hashes (the workflow has not run), the live sentence
+into a real agent, the remote lane live with a key from the file and from the environment, the
+vocabulary in `CONTEXT.md`, and the PR to Alain.

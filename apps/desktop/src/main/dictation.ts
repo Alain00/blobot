@@ -1,5 +1,5 @@
-import { withRecordingCeiling, type SpeechHint, type Transcriber } from '@blobot/core';
-import type { UiDictationStart } from '../shared/api.js';
+import { PCM_BYTES_PER_SECOND, withRecordingCeiling, type SpeechHint, type Transcriber } from '@blobot/core';
+import { SPEECH_TRYOUT_PLACE, type UiDictationStart } from '../shared/api.js';
 
 /**
  * The one recording, in main.
@@ -16,13 +16,24 @@ export interface DictationHostOptions {
   readonly transcriberFor: () => Transcriber | { readonly error: string };
   /** The vocabulary hint for this team, composed from what the store already holds. */
   readonly hintFor: (teamId: string) => SpeechHint;
+  /**
+   * Ticket 08's measured stage: the first committed segment of a *say something* recording,
+   * timed from its mark to its text, as a real-time factor. Told once per such recording.
+   */
+  readonly onMeasured?: (measurement: { readonly text: string; readonly rtf: number }) => void;
+  readonly now?: () => number;
 }
+
+/** The team id a *say something* recording is started on: a place, not a team. */
+export const TRYOUT_TEAM = SPEECH_TRYOUT_PLACE;
 
 interface Live {
   readonly teamId: string;
   readonly transcriber: Transcriber;
   /** The event loop; settled when the stream closes, by a stop or by a failure. */
   readonly done: Promise<void>;
+  /** Timing for the measured stage, kept only on a tryout. */
+  measure?: { segmentBytes: number; markedAt?: number; segmentMs?: number; reported: boolean };
 }
 
 export class DictationHost {
@@ -37,35 +48,72 @@ export class DictationHost {
     return this.#live !== undefined;
   }
 
-  async start(teamId: string): Promise<UiDictationStart> {
+  async start(teamId: string, transcriber?: Transcriber): Promise<UiDictationStart> {
     await this.stop();
-    const made = this.#options.transcriberFor();
+    const made = transcriber ?? this.#options.transcriberFor();
     if ('error' in made) return { ok: false, error: made.error };
-    const transcriber = withRecordingCeiling(made);
+    const bounded = withRecordingCeiling(made);
+    const now = this.#options.now ?? (() => Date.now());
+    const live: Live = {
+      teamId,
+      transcriber: bounded,
+      done: Promise.resolve(),
+      ...(teamId === TRYOUT_TEAM ? { measure: { segmentBytes: 0, reported: false } } : {}),
+    };
     const done = (async () => {
-      for await (const event of transcriber.events) this.#options.send('dictation:event', teamId, event);
+      for await (const event of bounded.events) {
+        this.#options.send('dictation:event', teamId, event);
+        // The first sentence of a tryout, timed: audio in the segment against the wait for its
+        // text. Only the first, because the engine's warm-up is inside it and that is the run
+        // a person is watching.
+        const measure = live.measure;
+        if (
+          event.type === 'committed' &&
+          measure !== undefined &&
+          !measure.reported &&
+          measure.markedAt !== undefined &&
+          measure.segmentMs !== undefined &&
+          measure.segmentMs > 0
+        ) {
+          measure.reported = true;
+          this.#options.onMeasured?.({ text: event.text, rtf: (now() - measure.markedAt) / measure.segmentMs });
+        }
+      }
     })();
+    (live as { done: Promise<void> }).done = done;
     try {
-      await transcriber.start(this.#options.hintFor(teamId));
+      await bounded.start(teamId === TRYOUT_TEAM ? { terms: [] } : this.#options.hintFor(teamId));
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : String(error) };
     }
-    const live: Live = { teamId, transcriber, done };
     this.#live = live;
     // A failure closes the stream from the far side; the slot is freed so the next press
     // starts clean rather than stopping a corpse first.
     void done.then(() => {
       if (this.#live === live) this.#live = undefined;
     });
-    return { ok: true, partials: transcriber.partials, takes: transcriber.takes };
+    return { ok: true, partials: bounded.partials, takes: bounded.takes };
   }
 
   feed(pcm: Uint8Array): 'taken' | 'dropped' {
-    return this.#live?.transcriber.feed(pcm) ?? 'dropped';
+    const live = this.#live;
+    if (live === undefined) return 'dropped';
+    const answer = live.transcriber.feed(pcm);
+    if (live.measure !== undefined && answer === 'taken' && live.measure.markedAt === undefined) {
+      live.measure.segmentBytes += pcm.byteLength;
+    }
+    return answer;
   }
 
   mark(): void {
-    this.#live?.transcriber.mark();
+    const live = this.#live;
+    if (live === undefined) return;
+    live.transcriber.mark();
+    const measure = live.measure;
+    if (measure !== undefined && measure.markedAt === undefined && measure.segmentBytes > 0) {
+      measure.markedAt = (this.#options.now ?? (() => Date.now()))();
+      measure.segmentMs = (measure.segmentBytes / PCM_BYTES_PER_SECOND) * 1000;
+    }
   }
 
   async stop(): Promise<void> {

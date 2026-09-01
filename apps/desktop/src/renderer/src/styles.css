@@ -1845,3 +1845,20 @@ button.listrow:not(.pick):hover{outline:1px solid var(--line);outline-offset:-1p
 .hbnbtn{background:var(--raised);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:6px 13px;font:inherit;font-size:12.5px;cursor:pointer}
 .hbnbtn:hover:not([disabled]){border-color:var(--muted)}
 .hbnbtn[disabled]{opacity:.4;cursor:not-allowed}
+
+/* Dictation (Settings' third section, `.scratch/dictation/` ticket 10). The rows are the list
+   row everything else uses; what is this section's own is the switch, the key field's cluster,
+   and the sentence *say something* heard, drawn in the transcript's face because it is words a
+   person said and not a status. */
+.switch{position:relative;width:34px;height:20px;border-radius:999px;border:1px solid var(--line);background:transparent;padding:0;flex:0 0 auto;transition:background 140ms var(--ease-out),border-color 140ms var(--ease-out)}
+.switch i{position:absolute;top:3px;left:3px;width:12px;height:12px;border-radius:50%;background:var(--muted);transition:transform 160ms var(--ease-out),background 140ms var(--ease-out)}
+.switch.on{background:var(--ink);border-color:var(--ink)}
+.switch.on i{background:var(--ground);transform:translateX(14px)}
+.dictation .subhead.sm{margin-top:10px}
+.dictation .listrow[aria-disabled="true"]{cursor:default}
+.dictation .listrow[aria-disabled="true"] .tick{opacity:.4}
+.dictation .keyfield{display:inline-flex;align-items:center;gap:6px}
+.dictation .keyfield .field.narrow{width:220px}
+.dictation .heard{display:block;margin-top:6px;font-size:13px;color:var(--ink)}
+.dictation .saysomething .wave{margin-right:6px;vertical-align:middle}
+.dictation .disclosure{margin-top:14px}

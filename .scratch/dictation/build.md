@@ -26,6 +26,31 @@ hook), `main/dictation.ts` (`DictationHost`: one recording, events back on `dict
 leading with the team id). The prototype's simulation in `App.tsx` is gone; `--screen=dictation`
 now starts a real recording against the mock with a simulated level and no microphone.
 
+**Tramo 4 — readiness (08) and download (09).** `speech/catalog.ts` (three weights pinned with
+HF's sha256; four engine builds under blobot's own release tag, **hashes unpinned until the
+release exists**), `speech/readiness.ts` (the static stage and the measured word, pure),
+`speech/download.ts` (`.part`, streaming sha256, `Range` resume, rename on match, tested against
+a local HTTP server that drops the connection), `main/speech-files.ts` (the data dir, states,
+footprint, machine facts), the `dictation` table (migration 0020, one row, named columns), and
+`.github/workflows/whisper-cli.yml`, the repo's first workflow.
+
+**Tramo 5 — Settings (10) and the key (ADR-0005).** `main/speech-keys.ts` (`dictation-keys.json`
+at `0600`, `safeStorage` or plain-and-stated, env var wins, plain re-encrypted at launch),
+`adapters/acp/child-env.ts` (`BLOBOT_*_API_KEY` stripped from every adapter's child, tested
+beside Cursor's own stripping), `speech/providers.ts` (the closed list with each retention
+sentence and the zero-spend probe), `main/dictation-settings.ts` (the section composed, the
+composer's word derived), `components/Dictation.tsx` (the section as the flow, the *say
+something* row). DESIGN.md's download-figure sentence is in place beside the progress-bar rule.
+
+**Tramo 6 — the Transcribers.** `speech/whisper.ts` (one `whisper-cli` per segment, WAV on
+stdin, JSON on stdout, `--prompt` from the hint; **measured live** against the research's
+binary and clip: 1,849 ms on `base` for 10 s of audio, every identifier intact —
+`BLOBOT_LIVE_WHISPER=1`), `speech/openai.ts` (Realtime socket, `gpt-live-transcribe`, 24 kHz
+resampled from 16, `turn_detection: null` with `mark()` as the commit), `speech/deepgram.ts`
+(Nova-3, `language=multi`, `endpointing=100`, **`mip_opt_out=true` on every request**, `keyterm`,
+KeepAlive), `speech/mistral.ts` (Voxtral batch, one request per segment, `context_bias`). All
+three tested against fake sockets and a fake fetch; none has met its provider yet.
+
 ## Decided while building
 
 - **`Transcriber.takes: 'segments' | 'stream'`.** Ticket 06 assigned two feeding policies (whole
@@ -57,6 +82,30 @@ now starts a real recording against the mock with a simulated level and no micro
 - **The demo says `ready`; everything else says `off`** until the Settings row exists (tramo 5).
   `installWebPermissions` gates the microphone on the same word.
 
+- **Memory is GiB.** `os.totalmem()` on the 24 GB machine is 25.77e9 bytes, and dividing by
+  10⁹ drew `26 GB` on the readiness row. RAM is sold and spoken of in GiB; disk in GB. The
+  floors are GiB too.
+- **The engine's hash cannot be pinned before the release exists**, so `ENGINE_BUILDS` carries
+  `sha256?: string` and an unpinned build is a *refusal on screen* (`the engine for this machine
+  is not pinned yet`), never a fetch. Running the workflow and pasting the four hashes from
+  `SHA256SUMS` into the catalog is the step that turns local dictation on for everybody.
+- **Mistral takes segments, one request each**, rather than ticket 06's "one committed at
+  stop": the same batch endpoint, called per segment as the local engine is, so text lands as
+  the pauses come and the bill is the same audio-minutes either way. The renderer never sends
+  it silence.
+- **`DictationSettingsHost` derives the composer's word and stores nothing derived.** `ready` is
+  the row saying *on* and the chosen Transcriber actually being there — a model beside an
+  engine on disk, or a provider whose key is held — read from a cache of the disk that main
+  refreshes on every file change, because `snapshot()` is synchronous.
+- **The measured stage is timed in main**, generically: `DictationHost` on a tryout remembers
+  the audio fed before the first `mark()` and the moment of it, and the first `committed` gives
+  the real-time factor. No timing crosses the `Transcriber` interface.
+- **`--demo-dictation=on`** switches the section on in the demo's throwaway store, so the rows
+  past the switch are reviewable by a screenshot; the demo's *say something* runs the mock.
+- **The Deepgram socket cannot tell a rejected key from a dead network** at the upgrade — the
+  WHATWG `WebSocket` exposes no status — so a failure there is `network`, and the paste-time
+  probe is where a key is refused by name. A close reason naming payment is `no_credit`.
+
 ## What bit
 
 - **The screenshot harness steals focus.** A stray `y s` appeared in the composer on the first
@@ -67,11 +116,20 @@ now starts a real recording against the mock with a simulated level and no micro
 - `exactOptionalPropertyTypes`: a state object with `partial?: string` cannot be set to
   `undefined` with a spread; the hook's `View` says `| undefined` explicitly.
 
+- **Async iterators are a few microtasks behind a resolved promise.** A test that awaited
+  `stop()` and then read the collected events saw none; every such test now yields a macrotask
+  first (`settle()`).
+- **A 30 ms server drop in the download test** — the test server has to flush the partial body
+  before destroying the socket, or the client sees a reset before any byte and no `.part` exists.
+
 ## Left
 
-- Tramo 4: readiness (08) and download (09) — the `dictation` table, the fetcher, the CI
-  workflow, the catalog.
-- Tramo 5: the Settings section (10), `dictation-keys.json`, the env var and its stripping.
-- Tramo 6: the whisper Transcriber, the three remote ones, the live done-when.
-- DESIGN.md's download-figure sentence (ticket 09), beside `:32-36`.
+- **Run the workflow** (push the tag or dispatch it), then pin the four hashes from
+  `SHA256SUMS` into `ENGINE_BUILDS`. Until then the Settings row refuses the engine by name.
+- **The live done-when, by hand**: enable, download, *say something*, the Spanish sentence with
+  identifiers into a real agent; the same through one provider with a key from the file and one
+  from the environment. The author judges the audio and the visual.
+- **The remote adapters' first live session** (research 03 §10): OpenAI's session shape and
+  401 body; Deepgram's `dg-error` on a bad key; Mistral's `Bearer` on batch and its code-switching.
 - Q15 vocabulary into `CONTEXT.md`, once confirmed.
+- The PR to Alain for the Ubuntu pass, with the Linux items from *Not yet specified*.

@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { childEnvironment } from '../acp/child-env.js';
 import { childTransport, isExecutable, searchPath } from '../acp/child-transport.js';
 import type { LineTransport } from '../acp/jsonrpc.js';
 
@@ -85,12 +86,12 @@ export function cursorArgv(cwd: string): readonly string[] {
  * and survives the relocation — measured, ticket 01.
  */
 export function childEnv(options: SpawnCursorOptions): NodeJS.ProcessEnv {
-  const env: NodeJS.ProcessEnv = {
-    ...process.env,
-    ...options.env,
+  // `childEnvironment` strips blobot's own speech-key doors (ADR-0005) before this strips
+  // Cursor's: two credentials that must not travel, two places that say so.
+  const env: NodeJS.ProcessEnv = childEnvironment(options.env, {
     // stderr is diagnostics and the only channel that would carry colour; stdout is protocol.
     NO_COLOR: '1',
-  };
+  });
   delete env['CURSOR_API_KEY'];
   delete env['CURSOR_AUTH_TOKEN'];
   env['CURSOR_CONFIG_DIR'] = options.configDir;
