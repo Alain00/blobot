@@ -1857,6 +1857,7 @@ button.listrow:not(.pick):hover{outline:1px solid var(--line);outline-offset:-1p
 .dictation .subhead.sm{margin-top:10px}
 .dictation .listrow[aria-disabled="true"]{cursor:default}
 .dictation .listrow[aria-disabled="true"] .tick{opacity:.4}
+.dictation .nm .mono{white-space:nowrap}
 .dictation .keyfield{display:inline-flex;align-items:center;gap:6px}
 .dictation .keyfield .field.narrow{width:220px}
 .dictation .heard{display:block;margin-top:6px;font-size:13px;color:var(--ink)}

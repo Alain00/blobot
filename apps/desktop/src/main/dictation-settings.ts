@@ -178,7 +178,9 @@ export class DictationSettingsHost {
     if (patch.modelId !== undefined && patch.modelId !== '') next = { ...next, transcriber: 'local' };
     if (patch.providerId !== undefined && patch.providerId !== '') next = { ...next, transcriber: 'remote' };
     // The static scan runs when the switch goes on, and never on its own after that.
-    if (next.enabled && !before.enabled) next = { ...next, ...(await this.#scan(next)) };
+    if (next.enabled && !before.enabled) {
+      next = { ...next, ...this.#scanWith(await this.#options.files.machineFacts(), next) };
+    }
     store.saveDictationSettings(next);
     this.#options.onChange?.();
     return this.view();
@@ -188,8 +190,12 @@ export class DictationSettingsHost {
   async checkReadiness(): Promise<UiDictationSettings> {
     const store = this.#options.store();
     if (store === undefined) return this.view();
+    // The facts before the row, and no await between reading the row and saving it: two of
+    // these can run beside each other (a download landing while *check again* is pressed),
+    // and a row read across an await is a row somebody else has since written.
+    const facts = await this.#options.files.machineFacts();
     const row = store.dictationSettings();
-    store.saveDictationSettings({ ...row, ...(await this.#scan(row)), at: this.#options.now() });
+    store.saveDictationSettings({ ...row, ...this.#scanWith(facts, row), at: this.#options.now() });
     this.#options.onChange?.();
     return this.view();
   }
@@ -219,11 +225,27 @@ export class DictationSettingsHost {
   async #afterDownload(target: SpeechTarget): Promise<void> {
     await this.refresh();
     const store = this.#options.store();
+    const facts = store === undefined ? undefined : await this.#options.files.machineFacts();
+    // The row is read after every await and saved with none in between: the engine and a model
+    // finish downloading beside each other, and the one that read the row first must not put
+    // it back over the one that wrote it second.
     const row = store?.dictationSettings();
     // After every download the static stage runs again (ticket 08), and a size change returns
     // the measured word to `untested` because the measurement was of the other model.
-    if (store !== undefined && row !== undefined && row.enabled) {
-      store.saveDictationSettings({ ...row, ...(await this.#scan(row)), at: this.#options.now() });
+    if (store !== undefined && row !== undefined && facts !== undefined && row.enabled) {
+      let next = { ...row, ...this.#scanWith(facts, row), at: this.#options.now() };
+      // A model that just landed becomes the Transcriber **when nothing was chosen yet**:
+      // pressing *download* on a size is already the choice, and the first real user stood in
+      // front of an installed model, no tick, and no microphone. Never when something is
+      // chosen — the user's choice is not overridden by a second download.
+      if (
+        target !== 'engine' &&
+        row.modelId === '' &&
+        this.#states[target]?.state === 'installed'
+      ) {
+        next = { ...next, modelId: target, transcriber: 'local' };
+      }
+      store.saveDictationSettings(next);
     }
     this.#options.onChange?.();
   }
@@ -276,8 +298,11 @@ export class DictationSettingsHost {
     return this.view();
   }
 
-  async #scan(row: DictationRecord): Promise<Pick<DictationRecord, 'readiness' | 'measuredRtf' | 'measuredModelId'>> {
-    const scan = staticReadiness(await this.#options.files.machineFacts());
+  #scanWith(
+    facts: Awaited<ReturnType<SpeechFiles['machineFacts']>>,
+    row: DictationRecord,
+  ): Pick<DictationRecord, 'readiness' | 'measuredRtf' | 'measuredModelId'> {
+    const scan = staticReadiness(facts);
     const measured = row.measuredRtf !== undefined && row.measuredModelId === row.modelId && row.modelId !== '';
     // The measurement wins over the static word, while it is of the model that is chosen.
     if (scan.word === 'untested' && measured && row.measuredRtf !== undefined) {
