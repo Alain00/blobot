@@ -505,8 +505,9 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .composer .wave{flex:0 0 auto;align-self:center;display:inline-flex;align-items:center;gap:3px;height:16px;margin:0 2px 0 -4px}
 .composer .wave i{display:block;width:2px;height:16px;border-radius:1px;background:var(--ink);transform-origin:center;transition:transform 60ms linear}
 @media (prefers-reduced-motion:reduce){.composer .wave i{transform:scaleY(.35)!important;transition:none}}
-/* The word above the pill: `listening · 0:07`, mono like every status word. */
-.stranded.listening{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
+/* The word above the pill: `listening · 0:07` while it is on, `stopped · 5 min` after — mono
+   like every status word, and the one line the composer has for speaking about the field. */
+.stranded.speech{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
 /* The partial, in the mirror and never in the field: muted ink, the text the Transcriber is
    not yet sure of, replaced in place until its committed form lands in the draft. */
 .hl .ghost{color:var(--muted)}

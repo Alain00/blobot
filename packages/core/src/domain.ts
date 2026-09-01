@@ -82,3 +82,28 @@ export {
   nextOccurrenceAfter,
   occurrencesBetween,
 } from './routines/schedule.js';
+
+// Dictation (`.scratch/dictation/`). The composer draws a Transcriber's events and never learns
+// which Transcriber; the vocabulary is pure and here, the implementations are in `speech/` and
+// exported from the full entry point only, because they open sockets and spawn a process.
+export type {
+  SpeechHint,
+  Transcriber,
+  TranscriberEvent,
+  TranscriberFailure,
+  TranscriberId,
+} from './speech/domain.js';
+export { PCM_16K_MONO_INT16, PCM_BYTES_PER_SECOND, describeTranscriberFailure } from './speech/domain.js';
+/**
+ * The renderer cuts local segments from the level it measures (ticket 06), so the numbers it
+ * cuts with are core's and named provisional there, not constants in a component.
+ */
+export {
+  DICTATION_CUT_LOOKBACK_MS,
+  DICTATION_PREROLL_MS,
+  DICTATION_RECORDING_LIMIT_MS,
+  DICTATION_SEGMENT_MAX_MS,
+  DICTATION_SEGMENT_MIN_MS,
+  DICTATION_SILENCE_MS,
+  DICTATION_SILENCE_RMS,
+} from './orchestrator/bounds.js';

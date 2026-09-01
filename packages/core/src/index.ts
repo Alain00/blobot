@@ -328,3 +328,31 @@ export {
 export { FIRING_TOLERANCE_MS, Scheduler } from './routines/scheduler.js';
 export { checkProposalText, parseProposedSchedule } from './routines/proposal.js';
 export type { Due } from './routines/scheduler.js';
+
+// Dictation (`.scratch/dictation/`): the Transcriber vocabulary, the mock that plays the ugly
+// cases, the recording ceiling and the hint. Engines and providers arrive beside them.
+export type {
+  SpeechHint,
+  Transcriber,
+  TranscriberEvent,
+  TranscriberFailure,
+  TranscriberId,
+} from './speech/domain.js';
+export { PCM_16K_MONO_INT16, PCM_BYTES_PER_SECOND, describeTranscriberFailure } from './speech/domain.js';
+export { composeSpeechHint, identifiersIn } from './speech/hint.js';
+export { withRecordingCeiling } from './speech/ceiling.js';
+export { MockTranscriber, speechScenarios } from './speech/mock-transcriber.js';
+export type {
+  MockTranscriberOptions,
+  SpeechScenario,
+  SpeechScenarioName,
+  SpeechStep,
+} from './speech/mock-transcriber.js';
+export {
+  DICTATION_RECORDING_LIMIT_MS,
+  SPEECH_DISK_MARGIN,
+  SPEECH_FIT_RTF,
+  SPEECH_HINT_CHARS,
+  SPEECH_HINT_TERMS,
+  SPEECH_RAM_FLOORS_GB,
+} from './orchestrator/bounds.js';

@@ -295,3 +295,55 @@ export function alreadyRecordedThisTurn(): string {
     'learned in one call.'
   );
 }
+
+// ---------------------------------------------------------------------------------------------
+// Dictation (`.scratch/dictation/`). Not context an agent receives — the text that lands in the
+// composer is the user's own prompt — but the same posture: every number here is a ceiling or
+// a threshold blobot chose, named in one place, and **every one of them is provisional**,
+// waiting on the first real use. Move one with a measurement and say so on the ticket.
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * How long one recording may listen, in milliseconds. Nothing is ever truncated — segments land
+ * as they come — so what has a ceiling is *listening on*; at it the recording stops itself and
+ * the line under the composer says `stopped · 5 min`, and the text stays (ticket 06).
+ */
+export const DICTATION_RECORDING_LIMIT_MS = 5 * 60_000;
+
+/**
+ * The renderer cuts a local segment from the microphone level it already measures: this much
+ * silence closes one, a segment is never shorter than the minimum and never longer than
+ * Whisper's window, and a segment of pure silence is never sent, because Whisper hallucinates
+ * on silence (ticket 06). RMS in the renderer measured 0.04–0.07 at speaking level (ticket 04).
+ */
+export const DICTATION_SILENCE_MS = 600;
+export const DICTATION_SEGMENT_MIN_MS = 1_000;
+export const DICTATION_SEGMENT_MAX_MS = 30_000;
+/** Below this RMS (0..1) a chunk counts as silence. */
+export const DICTATION_SILENCE_RMS = 0.012;
+/**
+ * When a segment reaches the ceiling it is cut at the quietest 100 ms of this much of its tail
+ * rather than at the ceiling itself, so the cut falls between words when it can.
+ */
+export const DICTATION_CUT_LOOKBACK_MS = 3_000;
+/** Silence kept in front of a segment's first voiced chunk, so the first word is not clipped. */
+export const DICTATION_PREROLL_MS = 300;
+
+/**
+ * The vocabulary hint: roster names, the team's name, and identifier-shaped tokens from the
+ * user's last few messages. Forty terms, about two hundred tokens — the narrowest of whisper's
+ * `--prompt`, OpenAI's `keywords[]`, Deepgram's `keyterm` and Mistral's fifty — **trimmed
+ * rather than refused**, because it is an aid and not content (ticket 06).
+ */
+export const SPEECH_HINT_TERMS = 40;
+export const SPEECH_HINT_CHARS = 800;
+export const SPEECH_HINT_MESSAGES = 10;
+
+/**
+ * Readiness for a local Transcriber (ticket 08): the RAM floors that pick the largest speech
+ * model the static stage will offer, the disk margin, and the real-time factor below which a
+ * measured machine is `fit`.
+ */
+export const SPEECH_RAM_FLOORS_GB = { turbo: 8, small: 4, base: 2 } as const;
+export const SPEECH_DISK_MARGIN = 2;
+export const SPEECH_FIT_RTF = 0.3;

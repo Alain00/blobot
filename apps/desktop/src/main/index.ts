@@ -1,18 +1,22 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, session, shell } from 'electron';
 import { writeFile } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   MESSAGE_AGENT_TOOL,
+  MockTranscriber,
   PROPOSE_ROUTINE_TOOL,
   SqliteStore,
   SystemClock,
   WorkspaceError,
+  composeSpeechHint,
   openDatabase,
   remediesFor,
   remedyFor,
+  speechScenarios,
   uuidv7,
   type AgentStatus,
+  type SpeechScenarioName,
   type OpenedDatabase,
   type PendingPermission,
   type RemedyKind,
@@ -63,6 +67,8 @@ import { knownRuntime, knownRuntimes, refreshKnownRuntimes } from './known-runti
 import { resizeStep, startStep, stopStep, writeStep } from './runtime-step.js';
 import { isWorking, type RunningTeam } from './running-team.js';
 import { TeamPool } from './team-pool.js';
+import { DictationHost } from './dictation.js';
+import { installWebPermissions, ownOriginsFor } from './web-permissions.js';
 import { RoutineRunner } from './routine-runner.js';
 import {
   routineOrigins,
@@ -92,6 +98,7 @@ import type {
   UiContextCeiling,
   UiRuntimeChoice,
   UiRuntimeOptions,
+  UiDictationState,
   RuntimeStepOutcome,
   TeamOpenResult,
   UiEarlier,
@@ -126,6 +133,17 @@ const autoplay =
 
 /** `--demo` is the scripted team on mock runtimes; it is not the first-run default. */
 const demoMode = process.argv.includes('--demo');
+/**
+ * `--demo-speech=<name>` picks which of the mock Transcriber's scenarios a demo recording plays
+ * (`.scratch/dictation/`, ticket 11): `rewrites` by default, `stalls`, `dies`. The microphone
+ * is genuinely open in demo mode; only the words are scripted.
+ */
+const demoSpeechName: SpeechScenarioName = ((): SpeechScenarioName => {
+  const asked = process.argv.find((arg) => arg.startsWith('--demo-speech='))?.slice('--demo-speech='.length);
+  if (asked !== undefined && asked in speechScenarios) return asked as SpeechScenarioName;
+  if (asked !== undefined) process.stderr.write(`no demo speech scenario '${asked}'\n`);
+  return 'rewrites';
+})();
 
 /**
  * `--demo-scenario=<name>` picks which run the demo team plays. A name rather than a scenario
@@ -494,6 +512,7 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
     permissions: [],
     turnsThisPrompt: 0,
     demoMode: false,
+    dictation: dictationState(),
     opening: true,
   };
 }
@@ -614,6 +633,7 @@ function snapshot(): UiSnapshot {
       unread: unreadAgents(),
       turnsThisPrompt: 0,
       demoMode: false,
+      dictation: dictationState(),
       ...(openError === undefined ? {} : { openError }),
     };
   }
@@ -692,12 +712,48 @@ function snapshot(): UiSnapshot {
     unread: unreadAgents(),
     turnsThisPrompt: team.orchestrator.turnsThisPrompt,
     demoMode: team.demoMode,
+    dictation: dictationState(),
   };
 }
 
 const send = (channel: string, ...args: unknown[]): void => {
   if (window !== undefined && !window.isDestroyed()) window.webContents.send(channel, ...args);
 };
+
+/**
+ * Whether the composer draws a microphone (ticket 10). In demo mode it is `ready` with the mock
+ * Transcriber behind it — real audio in, scripted text out — so the mic works without a model
+ * or a key. Outside the demo it is the Settings row's answer, and until that row exists it is
+ * `off`, which is also the honest default.
+ */
+function dictationState(): UiDictationState {
+  return demoMode ? 'ready' : 'off';
+}
+
+/**
+ * The one recording. Main chooses the Transcriber and composes the hint; the renderer sends
+ * bytes and draws events, and never learns which Transcriber it has.
+ */
+const dictation = new DictationHost({
+  send,
+  transcriberFor: () => {
+    if (demoMode) return new MockTranscriber({ scenario: speechScenarios[demoSpeechName], clock });
+    return { error: 'Dictation is not set up. Choose a speech model or a provider in Settings.' };
+  },
+  hintFor: (teamId) => {
+    const team = current();
+    if (team === undefined || team.team.id !== teamId) return { terms: [] };
+    const spoken = team.store
+      .transcriptOfTeam(teamId)
+      .messages.filter((message) => message.fromAgentId === null)
+      .map((message) => message.body);
+    return composeSpeechHint(
+      team.agents.map((agent) => agent.name),
+      team.team.name,
+      spoken,
+    );
+  },
+});
 
 /**
  * Wire one running team's streams to the renderer. Once per team, when it starts — not on
@@ -841,6 +897,15 @@ async function createWindow(): Promise<void> {
       sandbox: false,
     },
   });
+
+  // Before anything can ask. Electron grants every permission to every origin when no handler
+  // is installed, and blobot had none (ticket 04). The microphone is the one thing allowed, from
+  // blobot's own renderer, while dictation is switched on; the camera and the rest are refused.
+  installWebPermissions(
+    session.defaultSession,
+    ownOriginsFor(process.env['ELECTRON_RENDERER_URL']),
+    () => dictationState() !== 'off',
+  );
 
   // Devtools, on the keys everybody already presses. They came free with Electron's default
   // menu strip and went when that strip did — the menu was four menus of things this app does
@@ -1675,6 +1740,14 @@ void app.whenReady().then(async () => {
     waiting.orchestrator.answerPermission(requestId, optionId ?? null);
   });
 
+  // Dictation. Audio arrives as bytes on `dictation:feed` and nothing else crosses: the
+  // renderer never names a device or a path. `feed` is an invoke rather than a send because its
+  // answer is the backpressure signal the composer draws as `paused`.
+  ipcMain.handle('dictation:start', (_event, teamId: string) => dictation.start(teamId));
+  ipcMain.handle('dictation:feed', (_event, pcm: Uint8Array) => dictation.feed(pcm));
+  ipcMain.on('dictation:mark', () => dictation.mark());
+  ipcMain.handle('dictation:stop', () => dictation.stop());
+
   ipcMain.handle('blobot:selectTeam', async (_event, teamId: string): Promise<TeamOpenResult> => {
     const team = store?.teamById(teamId);
     if (team === undefined) return { ok: false, error: 'That team is no longer in the database.' };
@@ -1789,6 +1862,7 @@ app.on('window-all-closed', () => {
   // And a tick with no window to fire into is the background daemon issue 02 refused.
   routines?.stop();
   void pool.closeAll();
+  void dictation.stop();
   void demo?.close();
   opened?.close();
   if (process.platform !== 'darwin') app.quit();

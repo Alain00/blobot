@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
-import type { AgentEvent, AgentStatus, Message } from '@blobot/core/domain';
+import type { AgentEvent, AgentStatus, Message, TranscriberEvent } from '@blobot/core/domain';
 import type {
   BlobotApi,
   EditAgentResult,
@@ -37,6 +37,7 @@ import type {
   UiPublishResult,
   UiSwitchResult,
   UiRuntimeOptions,
+  UiDictationStart,
 } from '../shared/api.js';
 
 /**
@@ -235,6 +236,16 @@ const api: BlobotApi = {
         listener(teamId, requestId, outcome),
     ),
   onTeamChanged: (listener) => subscribe('blobot:team', () => listener()),
+  // Dictation. The audio goes out as bytes and nothing else: no device, no path, no file.
+  startDictation: (teamId) =>
+    ipcRenderer.invoke('dictation:start', teamId) as Promise<UiDictationStart>,
+  feedDictation: (pcm) => ipcRenderer.invoke('dictation:feed', pcm) as Promise<'taken' | 'dropped'>,
+  markDictation: () => ipcRenderer.send('dictation:mark'),
+  stopDictation: () => ipcRenderer.invoke('dictation:stop') as Promise<void>,
+  onDictation: (listener) =>
+    subscribe('dictation:event', (_e, teamId: string, event: TranscriberEvent) =>
+      listener(teamId, event),
+    ),
 };
 
 function subscribe(

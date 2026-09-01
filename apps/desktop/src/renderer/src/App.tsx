@@ -15,6 +15,7 @@ import { initialState, itemsFor, paneAfterSnapshot, reduce, type Pane } from './
 import { useFeedVisible } from './useFeedVisible.js';
 import { useWorkspaces } from './useWorkspaces.js';
 import { useRailWidth } from './useRailWidth.js';
+import { useDictation } from './useDictation.js';
 import { useComposerRoom } from './useComposerRoom.js';
 
 export function App(): React.JSX.Element {
@@ -45,35 +46,6 @@ export function App(): React.JSX.Element {
   );
   /** The navigator, on ctrl+k. `--screen=find` opens it for a screenshot. */
   const [finding, setFinding] = useState(opened.get('screen') === 'find');
-  /**
-   * Ticket 07's prototype (`.scratch/dictation/`): `--screen=dictation` puts the composer in
-   * the *listening* state with a simulated voice level, so the mic, the wave, the word and the
-   * ghost partial can be reviewed through `--screenshot` with no microphone behind them. The
-   * level is a spoken-sentence envelope and not noise, because bars jittering on white noise
-   * look like a visualiser and bars breathing with syllables look like being heard.
-   */
-  const dictationProto = opened.get('screen') === 'dictation';
-  const [dictation, setDictation] = useState<{ level: number; seconds: number } | undefined>(
-    dictationProto ? { level: 0, seconds: 0 } : undefined,
-  );
-  useEffect(() => {
-    if (!dictationProto) return;
-    const began = performance.now();
-    let frame = 0;
-    const tick = (): void => {
-      const t = (performance.now() - began) / 1000;
-      // Syllables at ~4 Hz under a phrase that swells and falls every 2.4 s, with a pause.
-      const phrase = Math.max(0, Math.sin((t / 2.4) * Math.PI));
-      const syllable = 0.55 + 0.45 * Math.abs(Math.sin(t * Math.PI * 4));
-      setDictation({ level: phrase * syllable, seconds: t });
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [dictationProto]);
-  useEffect(() => {
-    if (dictationProto) setSuggest({ text: 'Hola @alice, revisa el session/new del', at: 1 });
-  }, [dictationProto]);
   /** The team a modal is about, and which one. Never the team on screen by implication. */
   const [editing, setEditing] = useState<string | undefined>(undefined);
   const [deleting, setDeleting] = useState<string | undefined>(undefined);
@@ -304,6 +276,16 @@ export function App(): React.JSX.Element {
         : window.blobot.publishPlan(openTeamId, agentId, options),
     [openTeamId],
   );
+  /**
+   * Dictation, when Settings says it is ready. `--screen=dictation` starts a recording on
+   * arrival with a simulated level, so the composer's listening state is reviewable through
+   * `--screenshot` with nobody at the microphone (`.scratch/dictation/`, ticket 07).
+   */
+  const dictation = useDictation({
+    state: state.snapshot?.dictation ?? 'off',
+    teamId: state.snapshot?.team?.id,
+    simulate: opened.get('screen') === 'dictation',
+  });
   const snapshot = state.snapshot;
   if (snapshot === undefined) return <div className="app" />;
   // Looked up rather than copied into state: a team that has just been deleted must not stay
@@ -474,17 +456,7 @@ export function App(): React.JSX.Element {
                answer is N of them, and it is drawn in the activity column instead. Passed as a
                node, so the composer still knows nothing about branches. */
             {...(suggest === undefined ? {} : { suggest })}
-            {...(dictation === undefined
-              ? {}
-              : {
-                  dictation: {
-                    state: 'listening' as const,
-                    level: dictation.level,
-                    seconds: dictation.seconds,
-                    partial: 'adapter de Cursor y dime si',
-                    onToggle: () => setDictation(undefined),
-                  },
-                })}
+            {...(dictation === undefined ? {} : { dictation })}
             {...(pane.kind !== 'agent'
               ? {}
               : {

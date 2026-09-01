@@ -151,6 +151,14 @@ export function Composer({
   const [refused, setRefused] = useState<string | undefined>(undefined);
   /** A file is over the field. Drawn, because a drop target nobody can see is not one. */
   const [over, setOver] = useState(false);
+  /**
+   * Where the caret is. Tracked because two things are drawn relative to it and neither is in
+   * the textarea: the dictation ghost sits after it in the mirror, and committed text is
+   * inserted at it rather than appended (ticket 06).
+   */
+  const [caret, setCaret] = useState(0);
+  /** Where the caret should go once a programmatic insertion has rendered. */
+  const caretAfter = useRef<number | undefined>(undefined);
   const roster = agents as unknown as readonly Agent[];
 
   // Arriving somewhere puts the cursor where the arrival was for. Not on every render — only
@@ -169,6 +177,37 @@ export function Composer({
     // The offer is identified by its moment, so the same words twice are two offers.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [suggest?.at]);
+
+  // Committed dictation lands **at the caret**, spaced as needed, caret after it — so typing
+  // while dictating needs no rule of its own (ticket 06). Not `suggest`'s rule: that appends a
+  // line for the user to finish, and a spoken sentence continues the one being written.
+  useEffect(() => {
+    const committed = dictation?.committed;
+    if (committed === undefined) return;
+    const at = field.current?.selectionStart ?? caret;
+    setDraft((held) => {
+      const pos = Math.min(at, held.length);
+      const before = held.slice(0, pos);
+      const after = held.slice(pos);
+      const lead = before !== '' && !/\s$/.test(before) ? ' ' : '';
+      const trail = after !== '' && !/^\s/.test(after) ? ' ' : '';
+      const text = `${lead}${committed.text}${trail}`;
+      caretAfter.current = pos + text.length;
+      return before + text + after;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dictation?.committed?.at]);
+
+  // The caret follows an insertion once the draft has rendered, which is one render later.
+  useEffect(() => {
+    const want = caretAfter.current;
+    if (want === undefined) return;
+    caretAfter.current = undefined;
+    const element = field.current;
+    if (element === null) return;
+    element.setSelectionRange(want, want);
+    setCaret(want);
+  }, [draft]);
 
   const addressed = addressedBy(draft, roster);
   const implicit = pane.kind === 'agent' ? pane.agentId : lead;
@@ -313,6 +352,12 @@ export function Composer({
    */
   const stranded = pane.kind === 'team' && recipients.length === 0 && draft.trim() !== '' && !open;
 
+  /** The ghost, if there is one: where it goes and what it says, spaced against its neighbours. */
+  const ghost =
+    dictation?.state === 'listening' && dictation.partial !== undefined
+      ? spacedGhost(draft, ghostPosition(draft, caret), dictation.partial)
+      : undefined;
+
   /**
    * A drop, from the OS. Electron 44 removed `File.path` (gone since 32), so a path comes from
    * the preload's `webUtils` or it does not come at all — and the renderer never reads a file
@@ -391,9 +436,18 @@ export function Composer({
           field, mono like every status word, with the clock beside it because a recording has a
           ceiling and the figure is what says how far from it you are. */}
       {dictation?.state === 'listening' && (
-        <div className="stranded listening">
+        <div className="stranded speech">
           listening · {clock(dictation.seconds)}
+          {/* Backpressure: the engine is behind and audio is being dropped rather than queued
+              (ticket 04). Said, because a gap in the text with no cause reads as the user's
+              fault. */}
+          {dictation.paused ? ' · paused' : ''}
         </div>
+      )}
+      {/* After a recording: why it stopped, when the reason was not the user. `stopped · 5 min`
+          at the ceiling, or the failure by cause — never by provider. */}
+      {dictation?.state === 'ready' && dictation.note !== undefined && (
+        <div className="stranded speech">{dictation.note}</div>
       )}
       <div className="pill">
       {/* The discoverable door. Paste is the one that gets used and a drop is nearly free, but
@@ -431,7 +485,7 @@ export function Composer({
           className={`mic${dictation.state === 'listening' ? ' on' : ''}`}
           disabled={opening}
           onClick={dictation.onToggle}
-          title={dictation.state === 'listening' ? 'Stop listening' : 'Dictate'}
+          title={dictation.state === 'listening' ? `Stop listening · ${SHORTCUT}` : `Dictate · ${SHORTCUT}`}
           aria-label={dictation.state === 'listening' ? 'Stop listening' : 'Dictate'}
           aria-pressed={dictation.state === 'listening'}
         >
@@ -445,7 +499,7 @@ export function Composer({
       {/* The wave: four bars driven by the level of the user's own voice, present only between
           their two gestures. `transform` only, monochrome, and it means one thing — *this is
           reaching me* — which no word in the composer says, so it repeats nothing. */}
-      {dictation?.state === 'listening' && <Wave level={dictation.level} />}
+      {dictation?.state === 'listening' && <Wave read={dictation.level} />}
       <Command
         className="mentionwrap"
         label="Teammates and commands"
@@ -491,17 +545,18 @@ export function Composer({
         <div className="scroll">
         <div className="mirror">
         <div className="hl" aria-hidden>
-          {draft === '' ? (
-            <span className="ph">{placeholder}</span>
-          ) : (
-            highlight(draft, roster)
-          )}
           {/* The partial: what the Transcriber thinks you are saying, until it is sure. Ghost
               ink after the caret, replaced in place on each revision, gone when its committed
               text lands in the field. It lives in the mirror and never in the textarea, which
               is what keeps the caret and the draft the user's. */}
-          {dictation?.state === 'listening' && dictation.partial !== undefined && (
-            <span className="ghost">{(draft === '' ? '' : ' ') + dictation.partial}</span>
+          {draft === '' ? (
+            ghost === undefined ? (
+              <span className="ph">{placeholder}</span>
+            ) : (
+              <span className="ghost">{ghost.text}</span>
+            )
+          ) : (
+            highlight(draft, roster, ghost)
           )}
           {/* A line ending in a newline has no line box of its own to be tall. This gives it
               one, so the caret on the empty last line is over text and not over the border. */}
@@ -512,10 +567,12 @@ export function Composer({
           draft={draft}
           open={open}
           onPaste={paste}
-          onChange={(text) => {
+          onChange={(text, at) => {
             setDraft(text);
+            setCaret(at);
             setDismissed(false);
           }}
+          onSelect={setCaret}
           onKeyDown={(event) => {
             // cmdk's root handles keys on the way up, and skips the event if it is already
             // default-prevented — so preventing here is how the input claims a key from it.
@@ -592,13 +649,52 @@ export function Composer({
 /** What the composer is told about dictation. A view, not the Transcriber. */
 export interface DictationView {
   readonly state: 'ready' | 'listening';
-  /** Microphone level, 0..1. Meaningful only while listening. */
-  readonly level: number;
+  /**
+   * Microphone level, 0..1, read rather than passed: it changes sixty times a second and the
+   * wave is the only thing that wants it, so it never becomes a render of the whole composer.
+   */
+  readonly level: () => number;
   /** Seconds since listening began. */
   readonly seconds: number;
+  /** Audio is being dropped because the engine is behind (ticket 04's backpressure). */
+  readonly paused?: boolean;
   /** Text that may still be revised. */
   readonly partial?: string;
+  /**
+   * Text that will not be revised, and the moment it arrived. The moment is what makes it
+   * fire, as with `suggest`: the same words twice are two sentences.
+   */
+  readonly committed?: { readonly text: string; readonly at: number };
+  /** Why the last recording ended, when the reason was not the user. Drawn once it is over. */
+  readonly note?: string;
   onToggle: () => void;
+}
+
+/** The keyboard gesture, said the way the platform says it. */
+const SHORTCUT = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘⇧M' : 'ctrl+shift+M';
+
+/**
+ * Where the ghost goes: at the caret, except that a caret inside an `@mention` puts it after
+ * the mention, because half a name underlined is not a thing.
+ */
+function ghostPosition(draft: string, caret: number): number {
+  const at = Math.min(caret, draft.length);
+  for (const match of draft.matchAll(/@[\w-]+/g)) {
+    const start = match.index;
+    const end = start + match[0].length;
+    if (at > start && at < end) return end;
+  }
+  return at;
+}
+
+/**
+ * The ghost with the spaces it needs: one before it when the text before the caret does not
+ * end in one, one after it when the text after the caret does not start with one.
+ */
+function spacedGhost(draft: string, at: number, text: string): { at: number; text: string } {
+  const lead = at > 0 && !/\s$/.test(draft.slice(0, at)) ? ' ' : '';
+  const trail = at < draft.length && !/^\s/.test(draft.slice(at)) ? ' ' : '';
+  return { at, text: `${lead}${text}${trail}` };
 }
 
 function clock(seconds: number): string {
@@ -613,12 +709,36 @@ function clock(seconds: number): string {
  * the recording stops they are gone. Under `prefers-reduced-motion` the bars do not move at
  * all; the word above the pill carries the state alone.
  */
-function Wave({ level }: { level: number }): React.JSX.Element {
+function Wave({ read }: { read: () => number }): React.JSX.Element {
   const spread = [0.55, 1, 0.75, 0.4];
+  const bars = useRef<(HTMLElement | null)[]>([]);
+  // The bars are driven straight from the level on each frame, with no state between: a level
+  // is not something the composer needs to re-render for. Speaking measures 0.04–0.07 RMS
+  // (ticket 04), so the gain brings a normal voice to full height.
+  useEffect(() => {
+    let frame = 0;
+    const tick = (): void => {
+      const level = read();
+      bars.current.forEach((bar, i) => {
+        if (bar !== null)
+          bar.style.transform = `scaleY(${Math.max(0.12, Math.min(1, level * 16 * (spread[i] ?? 1)))})`;
+      });
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [read]);
   return (
     <span className="wave" aria-hidden>
-      {spread.map((k, i) => (
-        <i key={i} style={{ transform: `scaleY(${Math.max(0.12, Math.min(1, level * k * 1.6))})` }} />
+      {spread.map((_k, i) => (
+        <i
+          key={i}
+          ref={(element) => {
+            bars.current[i] = element;
+          }}
+          style={{ transform: 'scaleY(0.12)' }}
+        />
       ))}
     </span>
   );
@@ -641,13 +761,17 @@ function MentionInput({
   draft,
   open,
   onChange,
+  onSelect,
   onKeyDown,
   onPaste,
   ref,
 }: {
   draft: string;
   open: boolean;
-  onChange: (text: string) => void;
+  /** The text, and where the caret is after the change. */
+  onChange: (text: string, caret: number) => void;
+  /** The caret moved without the text changing: a click, an arrow, a shift-select. */
+  onSelect: (caret: number) => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onPaste: (event: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   /** The field itself, for the one caller that has to put the cursor in it. */
@@ -659,7 +783,8 @@ function MentionInput({
       ref={ref}
       rows={1}
       value={draft}
-      onChange={(event) => onChange(event.target.value)}
+      onChange={(event) => onChange(event.target.value, event.target.selectionStart)}
+      onSelect={(event) => onSelect(event.currentTarget.selectionStart)}
       onKeyDown={onKeyDown}
       onPaste={onPaste}
       role="combobox"
@@ -675,19 +800,41 @@ function MentionInput({
  * **unresolved** (muted). The underline is the message's To: line, so it must not appear over
  * `ask @bob about @alice's branch`'s second name, which nothing is being sent to.
  */
-function highlight(draft: string, roster: readonly Agent[]): React.JSX.Element[] {
+function highlight(
+  draft: string,
+  roster: readonly Agent[],
+  ghost?: { readonly at: number; readonly text: string },
+): React.JSX.Element[] {
   const parts = draft.split(/(@[\w-]+)/g);
   let offset = 0;
-  return parts.map((part, index) => {
+  let placed = false;
+  return parts.flatMap((part, index) => {
     const at = offset;
     offset += part.length;
-    if (!part.startsWith('@')) return <span key={index}>{part}</span>;
-    const resolved = findAgentByName(roster, part.slice(1)) !== undefined;
-    const className = !resolved ? 'm bad' : isAddressing(draft, at) ? 'm' : 'm ref';
-    return (
+    const mention = part.startsWith('@');
+    const resolved = mention && findAgentByName(roster, part.slice(1)) !== undefined;
+    const className = !mention ? undefined : !resolved ? 'm bad' : isAddressing(draft, at) ? 'm' : 'm ref';
+    // The ghost goes inside the first part that reaches its position, which `ghostPosition`
+    // has already kept out of the middle of a mention.
+    if (ghost !== undefined && !placed && ghost.at <= at + part.length) {
+      placed = true;
+      const cut = Math.max(0, ghost.at - at);
+      return [
+        <span key={`${index}a`} className={className}>
+          {part.slice(0, cut)}
+        </span>,
+        <span key={`${index}g`} className="ghost">
+          {ghost.text}
+        </span>,
+        <span key={`${index}b`} className={className}>
+          {part.slice(cut)}
+        </span>,
+      ];
+    }
+    return [
       <span key={index} className={className}>
         {part}
-      </span>
-    );
+      </span>,
+    ];
   });
 }

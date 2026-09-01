@@ -10,6 +10,7 @@ import type {
   StopReason,
   TrustLevel,
   VerbosityLevel,
+  TranscriberEvent,
 } from '@blobot/core/domain';
 
 /**
@@ -549,6 +550,12 @@ export interface UiSnapshot {
   /** Named so nobody mistakes the demo for real agents. */
   readonly demoMode: boolean;
   /**
+   * Whether the composer draws a microphone (`.scratch/dictation/`, ticket 10). `off` is the
+   * switch; `unconfigured` is on with no Transcriber chosen or none installed; `ready` is the
+   * only state with a button. The renderer learns a word and never which Transcriber.
+   */
+  readonly dictation: UiDictationState;
+  /**
    * This team is being started and is not answering yet: its workspaces are being reconciled
    * and a process is being spawned per agent, which on a cold start is seconds.
    *
@@ -992,6 +999,18 @@ export interface EditAgentResult {
   readonly runtimeChanged?: boolean;
 }
 
+/** The composer's word for dictation. Three states, one of which has a button. */
+export type UiDictationState = 'off' | 'unconfigured' | 'ready';
+
+/**
+ * What main answers when a recording starts: two capabilities of the Transcriber it chose, and
+ * never its name. `partials` says whether a ghost will ever be drawn; `takes` says what to send
+ * — whole segments with the silence cut out, or the stream with the silence in it.
+ */
+export type UiDictationStart =
+  | { readonly ok: true; readonly partials: boolean; readonly takes: 'segments' | 'stream' }
+  | { readonly ok: false; readonly error: string };
+
 export interface BlobotApi {
   snapshot(): Promise<UiSnapshot>;
   /**
@@ -1290,6 +1309,17 @@ export interface BlobotApi {
   ): () => void;
   /** The active team changed under the renderer: created, switched, or started at launch. */
   onTeamChanged(listener: () => void): () => void;
+  /**
+   * Dictation (`.scratch/dictation/`). The renderer opens the microphone and sends audio; main
+   * holds the Transcriber. One recording at a time, for the team on screen.
+   */
+  startDictation(teamId: string): Promise<UiDictationStart>;
+  /** One 100 ms chunk of 16 kHz mono Int16 PCM. `dropped` is backpressure, shown as `paused`. */
+  feedDictation(pcm: Uint8Array): Promise<'taken' | 'dropped'>;
+  /** A segment boundary the renderer found in the level. */
+  markDictation(): void;
+  stopDictation(): Promise<void>;
+  onDictation(listener: (teamId: string, event: TranscriberEvent) => void): () => void;
 }
 
 declare global {
