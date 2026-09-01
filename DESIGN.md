@@ -578,6 +578,17 @@ anywhere is a design decision, and almost always the wrong one.
   where something is happening, still for `idle`, grayscale and still for `failed`. Plus the
   face's own poses, which are a separate channel and stay (`thinking`'s two-dot eye loader,
   `sleepy` while starting, `surprised` while waiting).
+- **The dictation wave moves, and it is not ambient either.** *2026-09-01, `.scratch/dictation/`
+  ticket 07.* The one thing on screen that moves and is not a blobatar. It starts on the user's
+  gesture, stops on it, and is driven by nothing but the level of their own voice, so when they
+  stop talking it stops: it answers to the second budget, like the gaze. Four 2px bars in
+  `--ink` at the head of the pill beside the stop, `transform` only, no keyframe, no red dot
+  (`:463` spends the one saturated thing elsewhere); under `prefers-reduced-motion` they hold
+  still and the mono word above the pill — `listening · 0:07` — carries the state alone. It says
+  one thing the composer says nowhere else, *this is reaching me*, so it repeats no word. The
+  microphone itself is at the head with `+`, because it is the same kind of door — one that
+  adds to the message — and at the tail it would read as a lesser send; its glyph swaps, `Mic`
+  to `Square`, with nothing between, because `:527` stands and a morph is not an icon set.
 - **A face can follow the pointer, and that is not ambient.** *2026-08-31.* The gaze layer is
   the one thing on a blobatar that moves because the user's hand moved, so it answers to the
   second budget and not the first: with a still pointer it is a still face, and the driver stands

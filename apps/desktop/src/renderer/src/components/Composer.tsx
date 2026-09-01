@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Command, useCommandState } from 'cmdk';
-import { ArrowUp, Plus } from 'lucide-react';
+import { ArrowUp, Mic, Plus, Square } from 'lucide-react';
 import { findAgentByName } from '@blobot/core/domain';
 import type { Agent } from '@blobot/core/domain';
 import type { UiAgent, UiAttachment, UiCommand, UiUsage } from '../../../shared/api.js';
@@ -64,6 +64,7 @@ export function Composer({
   suggest,
   opening = false,
   place,
+  dictation,
 }: {
   agents: readonly UiAgent[];
   /** Each agent's own slash menu. Per session, so two teammates can offer different ones. */
@@ -115,6 +116,16 @@ export function Composer({
    * worth more than the wait. The draft is still here when the team arrives.
    */
   opening?: boolean;
+  /**
+   * Dictation, when it is enabled and configured — absent otherwise, and then nothing of it is
+   * drawn (`.scratch/dictation/`, ticket 07's prototype). The composer knows a state, a level
+   * and a partial; it knows nothing about which Transcriber is behind them.
+   *
+   * `level` is the microphone's RMS, 0..1, measured in the renderer and never crossing IPC.
+   * `partial` is text that may still change: it is drawn as a ghost after the caret and never
+   * enters the field's value (ticket 06). `committed` text arrives through `suggest`.
+   */
+  dictation?: DictationView;
   /**
    * A place, named. Whenever it changes the field takes focus, because arriving at a team or at
    * an agent is arriving somewhere you came to say something: the composer is what you are
@@ -376,6 +387,14 @@ export function Composer({
       {stranded && (
         <div className="stranded">say who with @ · or give this team a lead</div>
       )}
+      {/* The word. Above the pill in the line the composer already uses to speak about the
+          field, mono like every status word, with the clock beside it because a recording has a
+          ceiling and the figure is what says how far from it you are. */}
+      {dictation?.state === 'listening' && (
+        <div className="stranded listening">
+          listening · {clock(dictation.seconds)}
+        </div>
+      )}
       <div className="pill">
       {/* The discoverable door. Paste is the one that gets used and a drop is nearly free, but
           neither is visible, and a feature nobody can find is not one.
@@ -403,6 +422,30 @@ export function Composer({
       >
         <Plus size={18} aria-hidden />
       </button>
+      {/* The microphone, at the head beside `+`, because it is the same kind of thing: a door
+          that adds to the message. At the tail it would share a corner with send and read as a
+          lesser send — *send my voice* — which it is not; nothing here sends. The glyph swaps,
+          `Mic` to `Square`, with nothing between (no morph: DESIGN.md `:527` stands). */}
+      {dictation !== undefined && (
+        <button
+          className={`mic${dictation.state === 'listening' ? ' on' : ''}`}
+          disabled={opening}
+          onClick={dictation.onToggle}
+          title={dictation.state === 'listening' ? 'Stop listening' : 'Dictate'}
+          aria-label={dictation.state === 'listening' ? 'Stop listening' : 'Dictate'}
+          aria-pressed={dictation.state === 'listening'}
+        >
+          {dictation.state === 'listening' ? (
+            <Square size={13} fill="currentColor" aria-hidden />
+          ) : (
+            <Mic size={17} aria-hidden />
+          )}
+        </button>
+      )}
+      {/* The wave: four bars driven by the level of the user's own voice, present only between
+          their two gestures. `transform` only, monochrome, and it means one thing — *this is
+          reaching me* — which no word in the composer says, so it repeats nothing. */}
+      {dictation?.state === 'listening' && <Wave level={dictation.level} />}
       <Command
         className="mentionwrap"
         label="Teammates and commands"
@@ -452,6 +495,13 @@ export function Composer({
             <span className="ph">{placeholder}</span>
           ) : (
             highlight(draft, roster)
+          )}
+          {/* The partial: what the Transcriber thinks you are saying, until it is sure. Ghost
+              ink after the caret, replaced in place on each revision, gone when its committed
+              text lands in the field. It lives in the mirror and never in the textarea, which
+              is what keeps the caret and the draft the user's. */}
+          {dictation?.state === 'listening' && dictation.partial !== undefined && (
+            <span className="ghost">{(draft === '' ? '' : ' ') + dictation.partial}</span>
           )}
           {/* A line ending in a newline has no line box of its own to be tall. This gives it
               one, so the caret on the empty last line is over text and not over the border. */}
@@ -536,6 +586,41 @@ export function Composer({
       </div>
       {footer}
     </div>
+  );
+}
+
+/** What the composer is told about dictation. A view, not the Transcriber. */
+export interface DictationView {
+  readonly state: 'ready' | 'listening';
+  /** Microphone level, 0..1. Meaningful only while listening. */
+  readonly level: number;
+  /** Seconds since listening began. */
+  readonly seconds: number;
+  /** Text that may still be revised. */
+  readonly partial?: string;
+  onToggle: () => void;
+}
+
+function clock(seconds: number): string {
+  const whole = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Four bars, each a fraction of the level so a single figure reads as a shape. The bar's
+ * `transform` is the only thing that changes, and it is set from the level on every frame the
+ * level changes — there is no keyframe loop, so when the voice stops the bars stop, and when
+ * the recording stops they are gone. Under `prefers-reduced-motion` the bars do not move at
+ * all; the word above the pill carries the state alone.
+ */
+function Wave({ level }: { level: number }): React.JSX.Element {
+  const spread = [0.55, 1, 0.75, 0.4];
+  return (
+    <span className="wave" aria-hidden>
+      {spread.map((k, i) => (
+        <i key={i} style={{ transform: `scaleY(${Math.max(0.12, Math.min(1, level * k * 1.6))})` }} />
+      ))}
+    </span>
   );
 }
 

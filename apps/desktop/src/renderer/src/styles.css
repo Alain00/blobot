@@ -491,6 +491,25 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .composer .clip:active:not([disabled]){scale:.97}
 .composer .clip:hover:not([disabled]){color:var(--ink)}
 .composer .clip[disabled]{opacity:.35;cursor:not-allowed}
+/* Dictation (ticket 07's prototype). The microphone is `.clip`'s twin at the head of the pill:
+   same size, same rest colour, because it is the same kind of door. Listening it goes to ink
+   and the glyph is a filled square — a stop is a state the eye must find without reading. */
+.composer .mic{flex:0 0 auto;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border:0;background:none;color:var(--muted);border-radius:50%;scale:1;transition:scale 160ms var(--ease-out),color 140ms var(--ease-out)}
+.composer .mic:active:not([disabled]){scale:.97}
+.composer .mic:hover:not([disabled]),.composer .mic.on{color:var(--ink)}
+.composer .mic[disabled]{opacity:.35;cursor:not-allowed}
+/* The wave: four bars at the head, beside the stop. Each bar's height is the level through
+   `transform:scaleY`, nothing else changes, and there is no keyframe: it moves exactly as much
+   as the voice does and is gone with the recording. Ink, not muted, because it is the one thing
+   in the pill that is live. The bars are 2px so at rest they read as a hairline, not a shape. */
+.composer .wave{flex:0 0 auto;align-self:center;display:inline-flex;align-items:center;gap:3px;height:16px;margin:0 2px 0 -4px}
+.composer .wave i{display:block;width:2px;height:16px;border-radius:1px;background:var(--ink);transform-origin:center;transition:transform 60ms linear}
+@media (prefers-reduced-motion:reduce){.composer .wave i{transform:scaleY(.35)!important;transition:none}}
+/* The word above the pill: `listening · 0:07`, mono like every status word. */
+.stranded.listening{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
+/* The partial, in the mirror and never in the field: muted ink, the text the Transcriber is
+   not yet sure of, replaced in place until its committed form lands in the draft. */
+.hl .ghost{color:var(--muted)}
 /* The context ring: how full the window this message is going into is, where the paperclip was.
    A dial and not a bar, because a bar at the end of a field is a progress indicator and this is
    not a process — and it is monochrome for the governing rule: `--ink` for what is used against

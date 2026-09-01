@@ -13,9 +13,11 @@ and raise it rather than working around it.
 
 - **Local-first.** No cloud dependencies. No hosted service is required for the app to run.
 - **No hosted inference.** The app never provides LLM inference and never proxies provider
-  API credentials. Agents use the user's existing local authentication.
+  API credentials. Agents use the user's existing local authentication. One conscious
+  exception, dictation's remote Transcriber, on ADR-0005; it does not extend.
 - **No credential storage.** We do not build a credentials database and we do not persist
-  API keys. The underlying CLI owns its own login.
+  API keys. The underlying CLI owns its own login. One conscious exception, the key for that
+  same Transcriber, on ADR-0005; it does not extend.
 - **ACP preferred.** The Agent Client Protocol is the primary integration path. CLI
   adapters are a fallback, not a default.
 - **Providers live behind `AgentRuntime`.** Every provider-specific quirk is owned by its
