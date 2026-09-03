@@ -54,7 +54,8 @@ them against the code. Reopen here, not by drifting.
   (`git`, `nested`, `plain`), inspected as today. A **generalist** has an anchor blobot makes,
   a `plain` folder under `~/.local/share/blobot/agents/<agent>/`, persistent, its own, holding
   what the runtime reads as project scope and what the Agent accumulates; deleted with the
-  Agent. Not a fourth kind: a different owner of the folder.
+  Agent. Not a fourth kind: a different owner of the folder. *Amended by ticket 02: a
+  repository, not a plain folder, worked in place, and visible at `~/blobot/agents/<slug>/`.*
 - The **purpose** (generalist, a project, code and repositories, research, day-to-day
   operations) is a small closed set, chosen in the chat, and changes exactly two things: the
   anchor and the opening frame of the Persona. It does not change access.
@@ -103,6 +104,16 @@ them against the code. Reopen here, not by drifting.
   AgentWorkspace, the path handed by the Envelope; a **missing** anchor refuses turns and offers
   to re-anchor. Anchors are **chosen** or **made**; *a project* and *code and repositories*
   choose. The runtime never changes. Ticket 19 opened.
+- [The anchor, and the AgentWorkspace under the new grain](issues/02-the-anchor-and-the-agentworkspace.md):
+  a **made anchor is a repository** with one empty commit, worked **in place** (no worktree, one
+  tree in every Chat), **visible at `~/blobot/agents/<agent slug>/`**; *make one for me* survives
+  for a project and yields a **chosen** anchor under `~/blobot/<name>`. Three deletions: an Agent
+  (priced full clean, plus *keep its folder* for a made anchor), a group chat (priced), a Member
+  off a roster (safe `remove`). Reconcile per Member on opening a Chat, reported in that Chat.
+  Re-anchoring provisions every Member afresh, restarts Sessions, keeps the Handbook, never
+  deletes what it cannot read. Scope is part of the anchor; slugs are `refSlug` at creation. The
+  permanent *Git-aware* rule is redrafted there for ticket 18 to apply. First-demo ticket 10
+  amended.
 
 - [What fx loads from a folder, and what it can be denied](issues/12-access-channels-fx.md):
   project scope is the cwd exactly, never an ancestor; a project file can deny nothing but

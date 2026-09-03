@@ -45,3 +45,11 @@ there is a shared directory. Decide how each runtime is made to prompt or refuse
 the Member's own AgentWorkspace, or say honestly which cannot. **Agent-to-agent** beyond the
 roster has moved to its own ticket, **19**, blocked by this one; the bullet above is answered by
 01 as *the roster is the Members of a Chat*.
+
+## From ticket 02, 2026-09-03
+
+A made anchor is a **git root** at `~/blobot/agents/<slug>/`. That seals OpenCode's upward config
+walk (the `plain`-anchor hazard from research 11 no longer applies) and does nothing for Claude's
+project walk, which still reads `~/CLAUDE.md`, `~/.mcp.json` and `~/.claude/rules` from anywhere
+under `~`. Cursor and fx read ancestors regardless. The committable-file question is different for
+a made anchor: nothing blobot writes there can be committed *home*, because home is here.

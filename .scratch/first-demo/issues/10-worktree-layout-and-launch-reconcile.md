@@ -196,3 +196,22 @@ Only two things now, and neither is "this is not a repository":
   from. Unchanged.
 - A `nested` workspace where the user unticked every repository *and* there are no loose files —
   an empty workspace is not a workspace.
+
+## Amendment — the Workspace is the Agent's, 2026-09-03
+
+`.scratch/agents-and-chats/issues/02-the-anchor-and-the-agentworkspace.md`, on
+`docs/adr/0006-the-agent-is-the-unit.md`. The Team is retired; the Workspace is an Agent's
+**anchor**, and an AgentWorkspace is per **Member** (an Agent in a Chat). What changes here:
+
+- The branch is `blobot/<agent slug>/<chat slug>` and the directory
+  `worktrees/<agent slug>/<chat slug>/`, on slugs fixed at creation, so Agents and Chats can be
+  renamed without moving anything. Agent first, because the repository is the Agent's now.
+- A **made** anchor — the folder blobot makes for an Agent with no folder of its own — is a
+  repository with one empty commit at `~/blobot/agents/<agent slug>/`, worked **in place** with no
+  worktree, the same tree in every Chat, safe because an Agent takes one Turn at a time.
+- The reconcile is per Member, runs when a Chat opens, and reports in that Chat's transcript.
+- `remove` and `purge` are unchanged in mechanism; who calls them is: deleting an Agent, deleting
+  a group chat, or removing a Member from a roster.
+
+Everything else above stands: outside the user's repository, branched from `HEAD`, the `-d`
+versus `-D` rule, the three kinds and their providers.

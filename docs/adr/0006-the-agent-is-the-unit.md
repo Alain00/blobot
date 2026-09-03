@@ -110,7 +110,8 @@ already keeps two Chats from writing it at once.
 
 - The mechanism of the anchor and the AgentWorkspace under this grain, including whether a made
   anchor should be a git repository for the sake of history, and the wording of the permanent
-  *Git-aware* rule (ticket 02).
+  *Git-aware* rule (ticket 02). **Answered the same day by ticket 02:** a made anchor is a
+  repository with one empty commit, worked in place, visible under `~/blobot/agents/`.
 - The Handbook's and the Routine's mechanics under the new grain (tickets 03 and 04).
 - What an Agent may say about itself and how (ticket 05), the cards (06), and access (14).
 - Whether an Agent may address an Agent it shares no Chat with (ticket 19, after 14).

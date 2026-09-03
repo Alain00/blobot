@@ -37,9 +37,9 @@ synonyms.
   and never stored. In a group chat the lead is chosen or absent, receives what names nobody, and
   mediates nothing: the user and every Member can address anyone on the roster directly.
 - **Anchor** — where an Agent works: its Workspace, the Agent's own and never a Chat's. Either
-  **chosen** — a folder of the user's, of any of the three kinds — or **made** — a folder blobot
-  makes for this Agent, `plain`, persistent, its own, and deleted with it. Which of the two is
-  decided by the purpose. Agents in a Chat **never see another Agent's anchor**; a peer Message
+  **chosen** — a folder of the user's, of any of the three kinds, whether they picked it or asked
+  blobot to make one for them — or **made** — a repository blobot makes for this Agent alone,
+  visible, persistent, its own, and deleted with it. Which of the two is decided by the purpose. Agents in a Chat **never see another Agent's anchor**; a peer Message
   is the only bridge between two anchors. An anchor whose folder has gone is **missing**: the
   Agent stays, every turn it would take is refused by name, and its DM offers to re-anchor it.
 - **Purpose** — why the Agent exists, from a closed set: *generalist*, *a project*, *code and
@@ -50,11 +50,12 @@ synonyms.
   a repository** — a folder of documents is a valid Workspace. It is one of three *kinds*, decided
   by looking at it and stored on the Agent, because the kind chooses the mechanism: `git` (a
   repository), `nested` (not a repository, but it contains some), `plain` (no repository
-  anywhere). A made anchor is always `plain`.
+  anywhere). A made anchor is always `git`.
 - **AgentWorkspace** — a Member's own isolated copy of the anchor. On a chosen anchor, one per
   Member: a worktree on a `blobot/<agent slug>/<chat slug>` branch, a mirrored tree of worktrees
-  for the repositories in **scope**, or a plain copy. On a made anchor it is the folder itself,
-  the same one in every Chat, which is safe only because an Agent takes one Turn at a time. The
+  for the repositories in **scope**, or a plain copy. On a made anchor it is the repository itself,
+  worked **in place**, the same tree in every Chat, which is safe only because an Agent takes one
+  Turn at a time. The
   name deliberately promises neither git nor Docker; the isolation is the same in every case and
   the *guarantees* are not: a copy has no branch, no diff and no recovery. Two Members of one
   Chat on the **same** anchor may **read** each other's AgentWorkspace, handed the path by the

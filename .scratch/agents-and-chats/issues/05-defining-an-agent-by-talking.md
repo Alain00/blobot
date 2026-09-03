@@ -48,3 +48,10 @@ free), and **the runtime never changes**. Decide here whether the *name* is amon
 may say about itself; 01 left it out of the bounded set (role, standing instructions, purpose,
 anchor if asked). The purpose-to-anchor rule is fixed: *a project* and *code and repositories*
 choose a folder, the other three get a made anchor; the five opening sentences are still yours.
+
+## From ticket 02, 2026-09-03
+
+Re-anchoring's mechanics are fixed there (fresh AgentWorkspaces per Member, Sessions start over,
+Handbook kept, old workspaces removed or left and named). What is yours: whether an Agent may ask
+to move its anchor at all beyond the confirm-in-a-card rule, and what it is told about the cost
+(every Session of its restarts).

@@ -44,3 +44,9 @@ Two cards the model now needs, to be enumerated with the rest: the **re-anchor**
 when the anchor is **missing** (choose another folder, or let blobot make one), and the sentence
 on the **creation** card that the runtime cannot be changed afterwards. The Avoid list in
 `CONTEXT.md` now names *artifact* with *card* as the word.
+
+## From ticket 02, 2026-09-03
+
+The delete-Agent dialog carries two ticks: the priced full clean (as today) and **keep its
+folder** for a made anchor, with the folder's size beside it. The delete-group-chat dialog carries
+the first. Whether these are cards in the DM or dialogs over it is ticket 15's call on the word.

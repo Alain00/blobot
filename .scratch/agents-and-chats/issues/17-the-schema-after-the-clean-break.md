@@ -43,3 +43,10 @@ mutable; anchor path and kind; purpose), `chats` (with `slug` and `kind` DM/grou
 lead, turn budget), **`members`** (`agent_id`, `chat_id`, AgentWorkspace path, branch, joined,
 left; copies nothing), and sessions, messages, turns, events keyed on the Member or the Chat; the
 Handbook on `agent_id`, the Routine on the Member. No `team_id` anywhere.
+
+## From ticket 02, 2026-09-03
+
+On the Agent: anchor path, kind (`git`/`nested`/`plain`), origin (`chosen`/`made`), scope (JSON,
+`nested` only), and the missing state derived at launch, not stored. On the Member: AgentWorkspace
+path and branch (NULL in place and on a copy). No `copies/` versus `worktrees/` distinction in the
+schema; the provider decides from the kind.
