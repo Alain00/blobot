@@ -153,3 +153,20 @@ usually is not asked to: the UI names the decision, and no component knows what 
 makes of it.
 
 Migration `0008`, one nullable column on each of the two tables.
+
+## Amendment, 2026-09-03: the name may change; the runtime still may not
+
+`docs/adr/0006-the-agent-is-the-unit.md`. This ADR kept the name fixed because the branch was
+under it and the Handbook was keyed on it. Neither is true under the new grain: a branch is
+`blobot/<agent slug>/<chat slug>` on a slug fixed at creation, the made anchor is under the same
+slug, and the Handbook and the Routine are keyed on the id. So **an Agent can be renamed**, in the
+author's words *"lo importante es el id, el nombre solo cambia temas visuales"*: `@mention` and
+the rail resolve the current name, a transcript shows `@alice` as it was typed, and the Persona
+carries the new name from the next Session. Names stay unique across the app.
+
+**The runtime stays fixed** — *"runtime no se toca"*. A Session belongs to the runtime that
+opened it and its resume state is the runtime's, so changing it is deleting the Agent and making
+another, and the definition says so.
+
+What an Agent may change about *itself* by talking, and the shape of that edit, is
+`.scratch/agents-and-chats/issues/05`'s, which amends this ADR again.

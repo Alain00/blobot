@@ -35,3 +35,11 @@ precisely):
 
 The answer is the schema file's content, in the ticket, plus the one-paragraph note for
 `build.md` on the clean break.
+
+## From ticket 01, 2026-09-03
+
+Fixed by the glossary: `agents` is the definition (with `slug`, unique, immutable; `name`, unique,
+mutable; anchor path and kind; purpose), `chats` (with `slug` and `kind` DM/group, description,
+lead, turn budget), **`members`** (`agent_id`, `chat_id`, AgentWorkspace path, branch, joined,
+left; copies nothing), and sessions, messages, turns, events keyed on the Member or the Chat; the
+Handbook on `agent_id`, the Routine on the Member. No `team_id` anywhere.

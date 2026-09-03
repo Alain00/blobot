@@ -66,10 +66,13 @@ them against the code. Reopen here, not by drifting.
   word and as a thing.
 - One Agent, many Chats: **one AgentWorkspace per Chat** for an anchored Agent, branch
   `blobot/<chat>/<agent>`, because two chats writing one tree are two agents sharing a
-  directory. A generalist's folder is one and its own; nothing there to isolate.
+  directory. A generalist's folder is one and its own; nothing there to isolate. *Amended by
+  ticket 01: the branch is `blobot/<agent slug>/<chat slug>`, and the one folder is safe because
+  an Agent takes one Turn at a time across all its Chats.*
 - Agents in a Chat **never see each other's anchor**; the compact peer message through the
   orchestrator is the only bridge. The user and every agent can address anyone in the Chat; the
-  lead is defined and mediates nothing.
+  lead is defined and mediates nothing. *Amended by ticket 01: never another anchor; on the same
+  anchor, a colleague's AgentWorkspace may be read, the path handed by the Envelope.*
 - The **Handbook belongs to the Agent**, not to a Chat: the work is the anchor now, and the
   anchor is the Agent's. Standing instructions and Handbook stay two things with today's
   precedence. The group chat's **description** enters the Persona beside the roster, before the
@@ -90,6 +93,16 @@ them against the code. Reopen here, not by drifting.
 ## Decisions so far
 
 <!-- one line per resolved ticket: gist, then the link that holds the reasoning -->
+
+- [The model, written down and stress-tested: Agent, Chat, anchor](issues/01-the-model-written-down.md):
+  the model holds; `CONTEXT.md` is rewritten and `docs/adr/0006` written. The instance word is
+  **Member**. Four settled lines amended by scenario: **an Agent takes one Turn at a time across
+  all its Chats** (the Mailbox is per Member); branches and folders are named by **slugs** fixed
+  at creation, `blobot/<agent slug>/<chat slug>`, so Agents and group chats can be **renamed**;
+  Agents never see *another* anchor but Members on the **same** anchor may read each other's
+  AgentWorkspace, the path handed by the Envelope; a **missing** anchor refuses turns and offers
+  to re-anchor. Anchors are **chosen** or **made**; *a project* and *code and repositories*
+  choose. The runtime never changes. Ticket 19 opened.
 
 - [What fx loads from a folder, and what it can be denied](issues/12-access-channels-fx.md):
   project scope is the cwd exactly, never an ancestor; a project file can deny nothing but
@@ -158,9 +171,6 @@ them against the code. Reopen here, not by drifting.
 
 - **Environments per agent.** The author named "definir environments" as part of access and
   deferred what the word means (env vars, a container, the runtime). Graduates after ticket 14.
-- **Access beyond the roster.** "A qué agent puede acceder": whether an Agent can address anyone
-  outside its Chat. Today the answer is *no* by construction. Graduates after ticket 01 says
-  what a Chat's roster is.
 - **Grouping agents and chats** in the rail, the way Grok folders them. Waits on the Grok
   reference at ticket 15.
 - **Resetting a DM**: whether a person can clear an Agent's DM history without deleting the

@@ -69,3 +69,17 @@ agent is already on. Today a profile is hired and retired, nothing in between.
 *your agents* screen: an edit restates the whole definition, a team the agent is on takes the
 role, the standing instructions and the face at its next start, and the name and the runtime stay
 as they were because a branch is under the one and a session belongs to the other.
+
+## Amendment, 2026-09-03: kept, and extended — agents work independently of teams too
+
+`docs/adr/0006-the-agent-is-the-unit.md` keeps this decision and takes it one step further. The
+grain was right: the reusable half of an agent is its definition, and what a group gives it (a
+workspace copy, a session, a mailbox, a status) cannot be shared. What changes is *which half the
+folder is in*. The Workspace moves from the Team onto the Agent as its **anchor**, so an agent
+exists *and works* on its own, before any group and without one; the Team is retired for the
+**Chat**, and the row this ADR called an *Agent* — the instance — is a **Member**.
+
+Two consequences here are reversed by that ADR, and it says why: a Member no longer copies the
+name and the role (the Session records what it was told, and a rename is now allowed on a slug
+that never changes), and the AgentProfile is no longer a word — the definition is simply the
+Agent.

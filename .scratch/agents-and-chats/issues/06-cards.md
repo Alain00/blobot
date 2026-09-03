@@ -37,3 +37,10 @@ Decide, with the author:
 
 The answer is the enumerated set with each card's fields and outcome, and the glossary entry.
 Look, not yet: ticket 16 draws them.
+
+## From ticket 01, 2026-09-03
+
+Two cards the model now needs, to be enumerated with the rest: the **re-anchor** card a DM shows
+when the anchor is **missing** (choose another folder, or let blobot make one), and the sentence
+on the **creation** card that the runtime cannot be changed afterwards. The Avoid list in
+`CONTEXT.md` now names *artifact* with *card* as the word.

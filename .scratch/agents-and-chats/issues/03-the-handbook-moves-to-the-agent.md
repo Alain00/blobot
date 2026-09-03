@@ -36,3 +36,9 @@ Decide, with the author:
 
 The answer amends `.scratch/handbooks/` by name (which tickets, and what each now says) and
 the Handbook paragraph of `CONTEXT.md`.
+
+## From ticket 01, 2026-09-03
+
+The Handbook is keyed on the **Agent's id**, not its name: an Agent can be renamed now, so the
+name-keyed `handbook_entries` and its "safe only because ADR-0002 forbids renaming" note are
+both gone. It is read and edited from the DM. Leaving a group chat does not touch it.

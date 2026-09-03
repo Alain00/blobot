@@ -38,3 +38,15 @@ Decide, with the author:
   by AgentWorkspace... Never a shared directory"* so it is true of a generalist with one folder.
 
 The answer amends first-demo ticket 10 by name and writes the new rule text for `CLAUDE.md`.
+
+## From ticket 01, 2026-09-03
+
+Settled there, so no longer open here: **an Agent takes one Turn at a time across all its
+Chats**, which is what makes a made anchor's single folder safe (the first bullet's question);
+the branch is **`blobot/<agent slug>/<chat slug>`** with slugs fixed at creation, and a DM's slug
+is `dm` (the `WORKSPACE` bullet's question); a chosen anchor is one of the three kinds and a made
+anchor is `plain`, made for *generalist*, *research* and *day-to-day operations*. Still this
+ticket's: whether a made anchor should be a git repository for the sake of history; where the
+one-turn rule lives in the orchestrator; the **re-anchoring** flow for a **missing** anchor
+(choose another folder, or become a made one) and what that does to existing AgentWorkspaces and
+branches; and the slug's shape (kebab of the name at creation, unique, never shown).

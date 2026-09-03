@@ -36,3 +36,12 @@ Decide, with the author, reading the five research files first:
 - **ADR-0003 amendment**, and whether this needs its own ADR.
 
 The answer is the mechanism, the words, and the ADR text.
+
+## From ticket 01, 2026-09-03
+
+Two things this ticket now owes. **Read-only across AgentWorkspaces:** two Members of one Chat on
+the same anchor may read each other's AgentWorkspace (the Envelope hands over the path); writing
+there is a shared directory. Decide how each runtime is made to prompt or refuse an edit outside
+the Member's own AgentWorkspace, or say honestly which cannot. **Agent-to-agent** beyond the
+roster has moved to its own ticket, **19**, blocked by this one; the bullet above is answered by
+01 as *the roster is the Members of a Chat*.

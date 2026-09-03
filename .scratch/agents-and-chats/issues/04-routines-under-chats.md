@@ -33,3 +33,10 @@ Decide, with the author:
   case. What the row says when the Chat is the Routine's own.
 
 The answer amends `.scratch/routines/` by name and the Routine paragraph of `CONTEXT.md`.
+
+## From ticket 01, 2026-09-03
+
+The word for `<chat>/<agent>` is **Member**, and a Routine belongs to one. A DM's slug is `dm`
+and a Chat's slug never changes, so a Routine's own Chat needs a slug of its own too. Skipped
+reasons gained *the Member is gone* and *the anchor is missing* in place of *no agent on the
+roster* and *a Workspace that is gone*.

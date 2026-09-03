@@ -40,3 +40,11 @@ Decide, with the author:
   call and blobot answers its own tool's permission itself; confirm that covers this tool.
 
 The answer is the tool's contract, the card's content, and the ADR-0002 amendment.
+
+## From ticket 01, 2026-09-03
+
+ADR-0002 already carries a 2026-09-03 amendment: **a person may rename an Agent** (slugs make it
+free), and **the runtime never changes**. Decide here whether the *name* is among what an Agent
+may say about itself; 01 left it out of the bounded set (role, standing instructions, purpose,
+anchor if asked). The purpose-to-anchor rule is fixed: *a project* and *code and repositories*
+choose a folder, the other three get a made anchor; the five opening sentences are still yours.
