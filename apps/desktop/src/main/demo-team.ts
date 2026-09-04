@@ -97,10 +97,14 @@ export const demoScripts = {
   },
   /**
    * The same team, with the handoff that never happens. Bob is named by the user and never
-   * woken, so this run is one turn long and ends on the system line rather than on a question.
+   * woken, so this run is one turn long and ends on a promise nobody kept.
+   *
+   * blobot no longer draws a line under it. The observation is still core's — it is what the
+   * routing-turn exemption keys on — but the caption it used to put in the transcript said the
+   * same thing on every one of these turns and was removed by the author, 2026-09-04.
    */
   'forgotten-handoff': {
-    summary: 'Alice says she will ask Bob and never does, and blobot says so under the turn',
+    summary: 'Alice says she will ask Bob and never does',
     prompt:
       'The checkout page double-charges on a double click. Fix the UI side and get Bob onto the API side.',
     alice: scenarios['promises-bob-and-forgets'],

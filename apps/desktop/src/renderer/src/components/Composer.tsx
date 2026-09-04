@@ -304,15 +304,21 @@ export function Composer({
 
   /**
    * Who the empty field is about to write to. In an agent's pane the pane already says it, so
-   * this is the plain sentence it always was; in the team pane it names the lead and says the
-   * mention still overrides, because the recipient there is one the user did not type.
+   * this is the plain sentence it always was; in the team pane it says only that the mention
+   * overrides, because the recipient there is one the user did not type.
+   *
+   * It named the lead too, and does not any more (the author, 2026-09-04): the send control ten
+   * pixels to the right carries that name and keeps carrying it after the first keystroke, so
+   * the placeholder was the weaker of two copies of one fact. What the reopen demands is that
+   * the composer *say* who it resolved to, which the control does. A team with no lead is
+   * untouched: nothing else on screen answers it, so the field still asks for a name.
    */
   const placeholder =
     pane.kind === 'agent'
       ? `Message ${recipient?.name ?? ''}`
       : recipient === undefined
         ? 'Message the team. Start with @ to say who'
-        : `Message ${recipient.name}. @ to say who else`;
+        : '@ to say who else';
 
   /**
    * The recipients, short enough for a button. Two names and a count past that: a list that
@@ -338,19 +344,6 @@ export function Composer({
     setRefused(undefined);
   };
 
-  /**
-   * Words in the field and nowhere to send them.
-   *
-   * The team pane says who it resolved to in the placeholder, and the placeholder is gone by the
-   * second keystroke — so a team with no lead used to answer a typed message with a disabled
-   * arrow and a tooltip, which reads as broken rather than as unaddressed. Found by the author
-   * on the first real team, which had no lead because it predates them.
-   *
-   * It names both exits, and neither of them is blobot choosing a recipient: address it, or give
-   * the team a lead. Suppressed while the mention menu is up, because that is the user already
-   * doing the first one.
-   */
-  const stranded = pane.kind === 'team' && recipients.length === 0 && draft.trim() !== '' && !open;
 
   /** The ghost, if there is one: where it goes and what it says, spaced against its neighbours. */
   const ghost =
@@ -429,9 +422,6 @@ export function Composer({
           </span>
         </div>
       )}
-      {stranded && (
-        <div className="stranded">say who with @ · or give this team a lead</div>
-      )}
       {/* The word. Above the pill in the line the composer already uses to speak about the
           field, mono like every status word, with the clock beside it because a recording has a
           ceiling and the figure is what says how far from it you are. */}
@@ -476,30 +466,6 @@ export function Composer({
       >
         <Plus size={18} aria-hidden />
       </button>
-      {/* The microphone, at the head beside `+`, because it is the same kind of thing: a door
-          that adds to the message. At the tail it would share a corner with send and read as a
-          lesser send — *send my voice* — which it is not; nothing here sends. The glyph swaps,
-          `Mic` to `Square`, with nothing between (no morph: DESIGN.md `:527` stands). */}
-      {dictation !== undefined && (
-        <button
-          className={`mic${dictation.state === 'listening' ? ' on' : ''}`}
-          disabled={opening}
-          onClick={dictation.onToggle}
-          title={dictation.state === 'listening' ? `Stop listening · ${SHORTCUT}` : `Dictate · ${SHORTCUT}`}
-          aria-label={dictation.state === 'listening' ? 'Stop listening' : 'Dictate'}
-          aria-pressed={dictation.state === 'listening'}
-        >
-          {dictation.state === 'listening' ? (
-            <Square size={13} fill="currentColor" aria-hidden />
-          ) : (
-            <Mic size={17} aria-hidden />
-          )}
-        </button>
-      )}
-      {/* The wave: four bars driven by the level of the user's own voice, present only between
-          their two gestures. `transform` only, monochrome, and it means one thing — *this is
-          reaching me* — which no word in the composer says, so it repeats nothing. */}
-      {dictation?.state === 'listening' && <Wave read={dictation.level} />}
       <Command
         className="mentionwrap"
         label="Teammates and commands"
@@ -617,6 +583,32 @@ export function Composer({
       {/* Where the paperclip was, and it is the reading rather than a control: what stands
           beside send is what the message is about to cost the window it is going into. */}
       <ContextRing recipients={recipients} usage={usage} />
+      {/* **The microphone is at the tail, immediately left of send.** *Moved 2026-09-04, at the
+          author's direction, reversing `.scratch/dictation/issues/07`'s answer 1 and the
+          DESIGN.md sentence built on it.* The argument for the head was that dictating adds to
+          the message the way `+` does, and that a round button beside send reads as a lesser
+          send. Seen in the app it lost to a plainer fact: the microphone is the last thing you
+          touch before you send, and the hand that is about to press send is already there. The
+          wave stays outboard of it, so a recording never pushes the microphone away from the
+          button it sits beside. The glyph still swaps, `Mic` to `Square`, with nothing between
+          (no morph: DESIGN.md `:527` stands). */}
+      {dictation?.state === 'listening' && <Wave read={dictation.level} />}
+      {dictation !== undefined && (
+        <button
+          className={`mic${dictation.state === 'listening' ? ' on' : ''}`}
+          disabled={opening}
+          onClick={dictation.onToggle}
+          title={dictation.state === 'listening' ? `Stop listening · ${SHORTCUT}` : `Dictate · ${SHORTCUT}`}
+          aria-label={dictation.state === 'listening' ? 'Stop listening' : 'Dictate'}
+          aria-pressed={dictation.state === 'listening'}
+        >
+          {dictation.state === 'listening' ? (
+            <Square size={13} fill="currentColor" aria-hidden />
+          ) : (
+            <Mic size={17} aria-hidden />
+          )}
+        </button>
+      )}
       <button
         className={`send${pane.kind === 'team' && recipient !== undefined ? ' named' : ''}`}
         disabled={opening || recipients.length === 0 || draft.trim() === ''}
@@ -625,7 +617,7 @@ export function Composer({
           opening
             ? 'The team is still starting'
             : recipient === undefined
-              ? 'Say who with @'
+              ? 'Say who with @, or give this team a lead'
               : `Send to ${addressSentence}`
         }
         aria-label={recipient === undefined ? 'Send' : `Send to ${addressSentence}`}

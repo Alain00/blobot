@@ -113,6 +113,23 @@ Routine proposal and on `.openerror` and was wrong there too. If a closed shape 
 something about itself, it says it **in words, or by where it sits** — never with an edge, and
 never with colour.
 
+**A hairline is a last resort, not the default enclosure.** *2026-09-04, by the author, and it
+narrows `--line` rather than removing it.* A shape that already sits on its own ground —
+`--raised` on `--ground`, `--recessed` beside `--ground`, the tray under the composer — is
+already enclosed, and a border around it is the same statement drawn twice. Two plane steps and
+a stroke is how an interface starts looking like a form. What went, in one pass: the row above
+the transcript and its rule (the controls float over the ground now), the rail's and the
+activity column's edges against the transcript, the rule over the rail's three doors, the
+composer's pill, the user's bubble, and the Handbook notice above the composer with its button.
+Nothing moved and nothing changed plane; only the strokes went.
+
+What a hairline is still for: **separating two things on the same plane**, where nothing else
+can say they are apart — the folded blocks' left rule inside a turn, a blockquote, the rule
+above a routine's run list. The test before you draw one is *is there a plane step here
+already?* If there is, the border is decoration. If a shape needs a state to be visible — a drag
+target, a picker row that is not chosen — spend an **inset shadow** rather than a border, so the
+shape does not resize when the state arrives.
+
 ## Type
 
 - **Surfaces, and the ramp they sit on.** `--ground` is the page, `--raised` is anything lifted
@@ -461,6 +478,20 @@ Every control descends from the composer. If you are adding one, start there.
   send. It is a **plus**, not a paperclip: the glyph names the gesture — *add something to this
   message* — rather than the file type, while the label and the tooltip still say attach a file,
   which is all it does today.
+- **Every control in the pill stands at its foot, and the microphone stands beside send.**
+  *2026-09-04, and it reverses two things written above.* The pill was briefly given a `.pillhead`
+  group pinned to the **first** line, on the argument that a grown field otherwise carries `+`
+  and the microphone 57px under the words they belong to; **seen in the app, the author reversed
+  it the same day** and it is recorded here rather than deleted, because the argument was sound
+  and still lost. A pill whose controls sit on two different lines is two rows of chrome around
+  one field, and the indent it was meant to fix is the smaller cost. `flex-end` for everything.
+  And the **microphone moved from the head to the tail, immediately left of send**, which
+  reverses `:623` below and `.scratch/dictation/issues/07`'s answer 1: the case for the head was
+  that dictating adds to the message the way `+` does and that a round button beside send reads
+  as a *lesser send*. What beat it is plainer and only visible in use — the microphone is the last
+  thing you touch before you send, and the hand about to press send is already there. The wave
+  stays **outboard** of it, between the ring and the microphone, so a recording never pushes the
+  microphone away from the button it was moved to sit beside.
 - **The context ring stands where the paperclip was, and it is a reading, not a control.** How
   full the window this message is going into is, as a dial, next to send: the person about to
   paste a stack trace into an agent at 94% should not have to look at another column to learn
@@ -588,13 +619,14 @@ anywhere is a design decision, and almost always the wrong one.
   ticket 07.* The one thing on screen that moves and is not a blobatar. It starts on the user's
   gesture, stops on it, and is driven by nothing but the level of their own voice, so when they
   stop talking it stops: it answers to the second budget, like the gaze. Four 2px bars in
-  `--ink` at the head of the pill beside the stop, `transform` only, no keyframe, no red dot
+  `--ink` in the pill beside the stop, `transform` only, no keyframe, no red dot
   (`:463` spends the one saturated thing elsewhere); under `prefers-reduced-motion` they hold
   still and the mono word above the pill — `listening · 0:07` — carries the state alone. It says
   one thing the composer says nowhere else, *this is reaching me*, so it repeats no word. The
-  microphone itself is at the head with `+`, because it is the same kind of door — one that
-  adds to the message — and at the tail it would read as a lesser send; its glyph swaps, `Mic`
-  to `Square`, with nothing between, because `:527` stands and a morph is not an icon set.
+  microphone itself sits at the tail, immediately left of send — *moved there 2026-09-04; it
+  was at the head with `+`, as the same kind of door, on the argument that beside send it would
+  read as a lesser send, and the entry above records what beat that* — and its glyph swaps,
+  `Mic` to `Square`, with nothing between, because `:527` stands and a morph is not an icon set.
 - **A face can follow the pointer, and that is not ambient.** *2026-08-31.* The gaze layer is
   the one thing on a blobatar that moves because the user's hand moved, so it answers to the
   second budget and not the first: with a still pointer it is a still face, and the driver stands

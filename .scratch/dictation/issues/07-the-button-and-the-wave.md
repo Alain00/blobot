@@ -1,5 +1,5 @@
 Type: prototype
-Status: resolved
+Status: resolved (answer 1 amended 2026-09-04)
 
 # The button and the wave
 
@@ -54,3 +54,28 @@ is reaching me*, said nowhere else). `:527` unchanged: `Mic` and `Square` are Lu
 For ticket 12: `Wave` takes the renderer's RMS (ticket 04), the ghost takes ticket 06's
 `partial`, `suggest` takes its `committed` — but at the caret rather than appended, which is the
 one change to `suggest`'s rule that ticket 06 decided and this prototype did not build.
+
+## Amendment (2026-09-04) — answer 1 reversed: the mic is at the tail
+
+**The microphone moved from the head of the pill to the tail, immediately left of send**, at the
+author's direction, after living at the head in the real app. Answer 1's reasoning is not
+withdrawn and is why this is written down rather than edited over: at the tail the microphone
+*does* share a corner with send, and the *send my voice* reading it warned about is real. What
+outweighed it is a fact only use produces — **the microphone is the last thing you touch before
+you send**, so the hand already on send does not travel the width of the field to reach it, and
+`+` is left alone at the head as the one door that genuinely interrupts writing to add something.
+
+Two consequences, both built:
+
+- **The wave is outboard of the microphone**, between the context ring and the button, not
+  between the button and the field. Inboard it would push the microphone away from send exactly
+  while a recording is running, which is the moment the pair most needs to read as one thing.
+- **A `.pillhead` group pinned to the first line was tried the same day and reverted.** It came
+  out of the same session: with the microphone still at the head, a field grown to four lines put
+  both doors on its *last* line, 57px under the words, and every line of text indented past the
+  empty corner. Pinning them to the first line fixed that and cost more than it saved — a pill
+  whose controls sit on two lines is two rows of chrome around one field. Everything is `flex-end`.
+
+`DESIGN.md` carries both reversals with their reasons, at the composer entry and at the ambient
+motion entry that also said *head*. Nothing else in this ticket changes: the glyph swap, the
+word above the pill, the ghost after the caret and the wave's own bounds all stand.

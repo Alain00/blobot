@@ -183,7 +183,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* A column in two parts: the list, which scrolls, and the doors at its foot, which do not.
    The rail itself stopped being the scroll container when the doors moved down here — a place
    that is not about any team must not be at the far end of every team. */
-.vA .rail{border-right:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column}
+.vA .rail{overflow:hidden;display:flex;flex-direction:column}
 .railscroll{flex:1;min-height:0;overflow:auto;padding:10px 0}
 /* Drag to resize the rail. Out of flow so it does not become a fourth grid column, and wider
    than the hairline it sits on because a 1px target is a target nobody hits. */
@@ -381,18 +381,17 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .raillabel{padding:12px 14px 6px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .badge{font-family:var(--mono);font-size:10px;border:1px solid var(--ink);padding:0 4px;line-height:14px}
 .vA .conv{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
-/* One row of the facts the rail does not carry. It was a two-line block with a blobatar,
-   a bold name, a role and a status word, all of which the selected rail row is already saying
-   larger and to the left of it.
+/* The window's controls, floating over the transcript's top right.
 
-   The whole row was mono, which made `3 agents · a workspace each` and a role and a runtime's
-   name into values. Only the path and the branch are quoted from outside this window, so only
-   they keep the family — a `.mono` span inside a sans row, which is the shape the workspace
-   tray already had. */
-.convhead{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:6px 16px 6px 20px;min-height:37px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--muted);min-width:0}
-.convhead .where{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* The window's controls, at the end of the only row of chrome above the transcript. */
-.convhead .chrome{margin-left:auto;display:flex;align-items:center;gap:14px;flex:0 0 auto}
+   The row this was is gone, and with it the last hairline across the top of the window. It is
+   positioned rather than docked for the same reason the composer is: two controls do not earn a
+   rule across the pane, and the ground under them is the reading surface, which stays whole.
+
+   No plane of its own and no blur. The composer's pill is a thing you put words into and has to
+   read as a surface; this is two muted controls the eye finds when it goes looking for them, and
+   a panel behind them would be a second header drawn to avoid drawing a header. */
+.floatchrome{position:absolute;top:10px;right:16px;z-index:3;display:flex;align-items:center;gap:14px;font-size:11.5px;color:var(--muted)}
+
 /* The bottom padding is the room the floating composer takes, measured by `useComposerRoom`
    and written onto `.conv` as `--composerroom`. It is padding on the scroll container rather
    than a spacer element, because stick-to-bottom scrolls to `scrollHeight` and this is the one
@@ -430,8 +429,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    of them. Enough ground to keep the placeholder legible, enough blur that what passes under
    it is unreadable — a half-legible sentence sliding behind the field is worse than either.
    No tint and no saturation: `--raised` is the ground it always had, only thinner. */
-.pill{position:relative;z-index:1;width:100%;max-width:900px;display:flex;gap:10px;align-items:flex-end;background:color-mix(in srgb, var(--raised) 78%, transparent);backdrop-filter:blur(16px) saturate(.9);-webkit-backdrop-filter:blur(16px) saturate(.9);border:1px solid var(--line);border-radius:22px;padding:8px}
-.pill:focus-within{border-color:var(--muted)}
+.pill{position:relative;z-index:1;width:100%;max-width:900px;display:flex;gap:10px;align-items:flex-end;background:color-mix(in srgb, var(--raised) 78%, transparent);backdrop-filter:blur(16px) saturate(.9);-webkit-backdrop-filter:blur(16px) saturate(.9);border-radius:22px;padding:9px}
 .send{border:1px solid var(--line);padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px}
 .send[disabled]{opacity:.35;cursor:not-allowed}
 /* Send is the page's primary action and it shared the grey of every secondary button. Once it
@@ -480,7 +478,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    `transform:scaleY`, nothing else changes, and there is no keyframe: it moves exactly as much
    as the voice does and is gone with the recording. Ink, not muted, because it is the one thing
    in the pill that is live. The bars are 2px so at rest they read as a hairline, not a shape. */
-.composer .wave{flex:0 0 auto;align-self:center;display:inline-flex;align-items:center;gap:3px;height:16px;margin:0 2px 0 -4px}
+.composer .wave{flex:0 0 auto;align-self:center;display:inline-flex;align-items:center;gap:3px;height:16px;margin:0 -6px 0 -2px}
 .composer .wave i{display:block;width:2px;height:16px;border-radius:1px;background:var(--ink);transform-origin:center;transition:transform 60ms linear}
 @media (prefers-reduced-motion:reduce){.composer .wave i{transform:scaleY(.35)!important;transition:none}}
 /* The word above the pill: `listening · 0:07` while it is on, `stopped · 5 min` after — mono
@@ -524,7 +522,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* A drop target nobody can see is not one. The border it already has, moved to `--muted`:
    the same change focus makes, because it means the same thing — this field is about to take
    what you are doing. */
-.composer.over .pill{border-color:var(--muted)}
+.composer.over .pill{box-shadow:inset 0 0 0 1px var(--muted)}
 
 /* What is going with the message, above the field, in the same 900px column. */
 .attached{width:100%;max-width:900px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
@@ -579,7 +577,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .suggest [cmdk-item][data-selected='true']{background:var(--ground)}
 .suggest .r{color:var(--muted);font-size:12px;margin-left:auto}
 .hint{font-family:var(--mono);font-size:10.5px;color:var(--muted);white-space:nowrap}
-.vA .feed{border-left:1px solid var(--line);overflow:auto;padding:0 0 14px}
+.vA .feed{overflow:auto;padding:0 0 14px}
 /* The column's head stays put while the log scrolls under it. Opaque on the column's own
    ground, no radius, no shadow and no translucency: it is chrome the log passes beneath, not
    a card floating on top of it, which is the distinction between this and the pinned rail
@@ -679,7 +677,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    Solid against the peer enclosure's dashed border is deliberate and unchanged: a peer message
    still has to read as the lower-authority one of the two things someone sent this agent. */
 .msg.user{flex-direction:column;align-items:flex-end;gap:4px;align-self:flex-end;max-width:min(560px,78%)}
-.msg.user .bubble{background:var(--raised);border:1px solid var(--line);border-radius:14px;padding:7px 13px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.user .bubble{background:var(--raised);border-radius:14px;padding:8px 14px;white-space:pre-wrap;overflow-wrap:anywhere}
 .msg.user .tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 /* from the agent: no container at all — it is the default voice of the pane */
 /* From a peer: one dashed edge, inset, and a single line naming the far end. Never a bubble and
@@ -714,7 +712,6 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    is prose the agent wrote, and the mono box it used to sit in read as a payload. */
 .peer .ctx{font-size:12.5px;color:var(--muted);margin-bottom:8px}
 .peer .txt{white-space:pre-wrap}
-.peer .foot{margin-top:8px;font-family:var(--mono);font-size:10px;color:var(--muted)}
 /* Something landed and an answer is coming. Muted, small, and gone the moment there is text
    to watch instead. */
 .msg.pending .dots{height:21px}
@@ -786,7 +783,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    across the column, and a divider you can open reads as a section rather than as a line.
    The note itself is the agent's own words, so it sets at the folded caption's size like
    `.ran .said` does, and the path under it is a filesystem fact and therefore mono. */
-.handoff{display:flex;flex-direction:column;padding:2px 0}
+.handoff{display:flex;flex-direction:column;margin-left:40px;padding:2px 0}
 .handoff .route{display:flex;align-items:center;gap:7px;text-align:left;color:var(--muted)}
 .handoff .route:hover .lbl{color:var(--ink)}
 .handoff .route svg{flex:0 0 auto;transition:rotate 180ms var(--ease-out)}
@@ -803,7 +800,10 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    `record_entry` takes a list and the turn produced one act.
    Its own prefix rather than reusing `.handoff`: the two are one grammar today and a class named
    after a compaction, restyled for a Handbook, is the `.preview` grenade again. */
-.hbwrite{display:flex;flex-direction:column;padding:2px 0}
+/* Indented to the gutter `.ran` and the agent's own words share: these captions are all the
+   same voice about the same turn, and one starting a blobatar's width to their left reads as a
+   different register than it is. */
+.hbwrite{display:flex;flex-direction:column;margin-left:40px;padding:2px 0}
 .hbwrite .route{display:flex;align-items:center;gap:7px;text-align:left;color:var(--muted)}
 .hbwrite .route:hover .lbl{color:var(--ink)}
 .hbwrite .route svg{flex:0 0 auto;transition:rotate 180ms var(--ease-out)}
@@ -1281,11 +1281,15 @@ textarea.field{resize:vertical;line-height:1.5}
 /* The doors at the foot of the rail: agents, routines, settings. They were `.railsection`,
    two mono headings above TEAMS, and they read as a second list stacked on the first.
 
-   A hairline over the group, because it is the one place in this column where the thing below
-   is not more of the thing above. No raised ground: `Search` at the top of the rail is raised
-   because it stands in for a field, and these stand in for nothing — they are the quietest
-   rows here at rest and take ink on hover, like every other row in the column. */
-.railfoot{flex:0 0 auto;border-top:1px solid var(--line);padding:6px 0 8px}
+   No rule over the group, and no raised ground. It had a hairline, on the argument that this is
+   the one place in the column where the thing below is not more of the thing above — and the
+   gap does that on its own (the author, 2026-09-04), in a window that no longer draws a line
+   between the rail and the transcript or between the transcript and the activity column. A
+   border earning its place here while those two do not is the inconsistency, not the fix.
+   `Search` at the top of the rail is raised because it stands in for a field, and these stand
+   in for nothing — they are the quietest rows here at rest and take ink on hover, like every
+   other row in the column. */
+.railfoot{flex:0 0 auto;padding:14px 0 8px}
 .raildoor{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:7px 14px;color:var(--muted);font-size:13px}
 .raildoor:hover{color:var(--ink)}
 
@@ -1461,10 +1465,12 @@ button.listrow:not(.pick):hover{outline:1px solid var(--line);outline-offset:-1p
    **The top padding is not free space, and that is what got this wrong.** 18px of this bar is
    behind the pill — `.composer`'s 7px gap minus `.wsline`'s 25px lift — so the padding has to
    spend 18 before a single pixel of it is visible. At 29/6 the row measured 14px of air above
-   the ink and 12 below, which is the bar reading bottom-heavy. 28/7 puts the ink's centre on the
-   visible strip's centre, counting the bottom border, which is a stroke the top edge does not
-   have. Measured, not reasoned: `google-chrome --headless --screenshot` against this sheet. */
-.wstray{margin:0 22px;background:color-mix(in srgb, var(--tray) 78%, transparent);backdrop-filter:blur(16px) saturate(.9);-webkit-backdrop-filter:blur(16px) saturate(.9);border:1px solid var(--line);border-top:0;border-radius:0 0 14px 14px;padding:28px 14px 7px;display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--muted);min-width:0}
+   the ink and 12 below, which is the bar reading bottom-heavy. 28/7 put the ink's centre on the
+   visible strip's centre when the tray still had a bottom border; the border went (2026-09-04,
+   under DESIGN.md's *a hairline is a last resort*, the tray's own ground being the enclosure)
+   and the pixel it drew came back as padding, so it is 28/8. Measured, not reasoned:
+   `google-chrome --headless --screenshot` against this sheet. */
+.wstray{margin:0 22px;background:color-mix(in srgb, var(--tray) 78%, transparent);backdrop-filter:blur(16px) saturate(.9);-webkit-backdrop-filter:blur(16px) saturate(.9);border-radius:0 0 14px 14px;padding:28px 15px 8px;display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--muted);min-width:0}
 /* Left is what is in the folder and the commit that would take it, right is where it goes. Read
    at different moments and in that order, so they are pushed apart rather than centred: a centred
    row makes the two halves one sentence. */
@@ -1806,12 +1812,14 @@ button.listrow:not(.pick):hover{outline:1px solid var(--line);outline-offset:-1p
    which already centres its children at 900px, so it takes no horizontal margin of its own. Any
    inset would say it is a separate thing on the page, and it is the composer's own notice.
 
-   `.openerror`'s shape, which the app already owns: `--raised` ground, a `--line` hairline, a
-   12px radius, and the control pushed right. Two shapes invented for this both lost to it. No
-   ink edge, under DESIGN.md's ban on an ink edge on a closed shape, and no icon: every icon at
-   rest is `--muted`, so a muted glyph in that slot would have to mean something, and not yet
-   briefed is the ordinary condition of a new hire rather than a kind of thing. */
-.hbnotice{width:100%;max-width:900px;box-sizing:border-box;display:flex;align-items:center;gap:14px;padding:10px 12px 10px 15px;border:1px solid var(--line);border-radius:12px;background:var(--raised)}
+   `.openerror`'s shape, which the app already owns: `--raised` ground, a 12px radius, and the
+   control pushed right. Two shapes invented for this both lost to it. It had a `--line` hairline
+   too, and does not any more (2026-09-04, and DESIGN.md's *a hairline is a last resort*): the
+   raised ground is already the enclosure, and the border was a second one drawn around it. No
+   ink edge, under the ban on an ink edge on a closed shape, and no icon: every icon at rest is
+   `--muted`, so a muted glyph in that slot would have to mean something, and not yet briefed is
+   the ordinary condition of a new hire rather than a kind of thing. */
+.hbnotice{width:100%;max-width:900px;box-sizing:border-box;display:flex;align-items:center;gap:14px;padding:11px 13px 11px 16px;border-radius:12px;background:var(--raised)}
 .hbnbody{flex:1;min-width:0}
 .hbnt{font-size:13px;color:var(--ink);margin-bottom:2px}
 .hbnd{font-size:12px;color:var(--muted);line-height:1.5}
@@ -1820,8 +1828,8 @@ button.listrow:not(.pick):hover{outline:1px solid var(--line);outline-offset:-1p
 .hbnact{flex:0 0 auto}
 /* The quiet button, not the loud one. The loud one grants authority; this offers a turn, and
    the whole charting decision was that ignoring it should cost nothing. */
-.hbnbtn{background:var(--raised);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:6px 13px;font:inherit;font-size:12.5px;cursor:pointer}
-.hbnbtn:hover:not([disabled]){border-color:var(--muted)}
+.hbnbtn{background:color-mix(in srgb, var(--ink) 10%, transparent);color:var(--ink);border:0;border-radius:999px;padding:7px 14px;font:inherit;font-size:12.5px;cursor:pointer}
+.hbnbtn:hover:not([disabled]){background:color-mix(in srgb, var(--ink) 16%, transparent)}
 .hbnbtn[disabled]{opacity:.4;cursor:not-allowed}
 
 /* Dictation (Settings' fourth section, `.scratch/dictation/` ticket 10). The rows are the list

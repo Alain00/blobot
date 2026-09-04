@@ -31,8 +31,8 @@ export function Conversation({
   routineArmed,
   onDisarmRoutine,
   onRemoveHandbookEntry,
+  lead,
   opening = false,
-  workspacePath,
   chrome,
   moreAbove = false,
   onLoadEarlier,
@@ -58,14 +58,18 @@ export function Conversation({
    * persona at all is that you see it happen and can undo it here.
    */
   onRemoveHandbookEntry: (entryId: string) => void;
+  /**
+   * The team's lead, when it has one: who the team pane addresses when the user names nobody.
+   *
+   * Here for one caption. A prompt that went to the lead went where the composer says it goes,
+   * so it is the case the `to` tag has nothing to add to.
+   */
+  lead?: string;
   /** Whether the team said anything above this window. False means this is the beginning. */
   moreAbove?: boolean;
   /** Fetch the window above. Resolves when the pane has it, which is what ends the wait. */
   onLoadEarlier?: () => Promise<void>;
-  /** Where the team's agents branch from. Only the team pane says it; an agent says its own. */
-  workspacePath?: string;
-  /** The window's controls, rendered at the end of this row. App owns them; this row is
-      the only chrome above the transcript, so it is where they live. */
+  /** The window's controls, floating over the top right of the transcript. App owns them. */
   chrome?: React.ReactNode;
   /** The team is still starting. Nobody has asked these agents anything yet. */
   opening?: boolean;
@@ -79,7 +83,6 @@ export function Conversation({
   place?: string;
 }): React.JSX.Element {
   const byId = new Map(agents.map((agent) => [agent.id, agent]));
-  const focused = pane.kind === 'agent' ? byId.get(pane.agentId) : undefined;
   const stream = useStickToBottom(place);
   const answer = useLatest(onAnswerPermission);
   const disarm = useLatest(onDisarmRoutine);
@@ -93,56 +96,22 @@ export function Conversation({
   // same flex container.
   return (
     <>
-      {/* One hairline row, and only what is nowhere else.
+      {/* The window's controls, floating over the transcript the way the composer floats under
+          it. No row and no hairline.
 
-          It carried a blobatar, the agent's name in bold, its role, and its status word. The
-          rail row for this pane sits a few pixels to the left carrying every one of those: the
-          same face, selected and larger than this one was, the same name, the role until the
-          agent has spoken, and the same `StatusWord`. A header that repeats the thing you
-          selected with is a second, weaker copy of the rail outranking the rail.
+          The row they sat in is gone, by the author, 2026-09-04, and it took its words with it.
+          It had already been trimmed twice — the blobatar, the name and the status word went
+          when the rail was found to be saying all three larger and to the left; `2 agents · a
+          workspace each` went the same way. What was left was a path and a `role · runtime ·
+          branch`, a permanent strip of text above every transcript that answered a question
+          nobody was asking while reading one, and the folder and the branch are both said where
+          they are actually wanted: the activity column's `WORKSPACE` block in the team pane,
+          and the line under the composer in an agent's.
 
-          What is left is the facts the rail does not carry — the role, the runtime and where
-          this agent is working — in the register they deserve, which is mono and muted. The
-          pane says which pane it is by being open.
-
-          Ticket 14's posture line was here too, and is not any more, by the author, 2026-08-30:
-          a permanent indicator repeating the same sentence over every pane all day is a
-          sentence nobody reads by the second day. The creation flow's disclosure is where it is
-          said, once, before any agent exists.
-
-          The blobatar rule the rest of the app now follows: a face appears where you are
-          identifying among agents or choosing one, and never where a single agent is merely
-          named.
-
-          It is also the only chrome above the transcript now, by the author, 2026-08-30. A
-          strip across the top of the window said the team's name and its path, and the rail
-          row for that team was already saying the name a few pixels to the left — the same
-          second-copy the header itself had been trimmed for. The path survives here, because
-          nothing else on screen carries it, and the controls that strip held (the turn pips
-          and the activity toggle) come with it, at the end of this row. */}
-      <div className="convhead">
-        {/* The words are blobot's and the path is git's, so only the path is mono. */}
-        <span className="where">
-          {focused === undefined ? (
-            <>
-              {`${agents.length} agents · a workspace each`}
-              {workspacePath !== undefined && (
-                <>
-                  {' · '}
-                  <span className="mono">{workspacePath}</span>
-                </>
-              )}
-            </>
-          ) : (
-            // The runtime appears exactly once, as a label. The UI never branches on it.
-            <>
-              {`${focused.role} · ${focused.runtimeLabel} · `}
-              <span className="mono">{focused.branch ?? focused.workspacePath}</span>
-            </>
-          )}
-        </span>
-        {chrome !== undefined && <span className="chrome">{chrome}</span>}
-      </div>
+          Floating rather than docked, because a row that exists to hold two controls is a rule
+          across the window paid for by two controls. What is left is over the ground, top right,
+          out of the reading column's way. */}
+      {chrome !== undefined && <div className="floatchrome">{chrome}</div>}
 
       {/* The column is the readable thing, not the pane: it fills the width it is given and
           stops at a measure a paragraph can be read at, centred in whatever is left. */}
@@ -191,7 +160,7 @@ export function Conversation({
                     onAnswerPermission={answer}
                     onDisarmRoutine={disarm}
                     onRemoveHandbookEntry={removeEntry}
-                    {...castOf(row.item, pane, byId, statuses, routineArmed)}
+                    {...castOf(row.item, pane, byId, statuses, routineArmed, lead)}
                   />
                 )}
               </React.Fragment>
@@ -290,6 +259,7 @@ function castOf(
   byId: Map<string, UiAgent>,
   statuses: Record<string, AgentStatus>,
   routineArmed: Record<string, boolean>,
+  lead: string | undefined,
 ): Cast {
   switch (item.kind) {
     case 'user':
@@ -299,7 +269,13 @@ function castOf(
       // somewhere else", and on a one-agent team the team pane has exactly the same single
       // recipient the agent pane does — so `to Alice` under every message the user sends is a
       // caption restating the only fact on screen that was never in question.
+      //
+      // Nothing either when the one recipient is the lead, which is the same rule read one turn
+      // deeper: the composer names the lead in its own placeholder and its own send button, so a
+      // prompt that went there did not go somewhere else. What survives is the two cases the
+      // composer cannot be read off afterwards — a fan-out, and an agent the user named instead.
       if (byId.size < 2) return {};
+      if (item.agentIds.length === 1 && item.agentIds[0] === lead) return {};
       return { toName: item.agentIds.map((id) => byId.get(id)?.name ?? id).join(', ') };
     case 'agent': {
       const agent = byId.get(item.agentId);
@@ -592,8 +568,11 @@ const ItemView = React.memo(function ItemView({
             </div>
           )}
           <div className="bubble">{item.text}</div>
-          {/* Only where a message could have gone somewhere else. In an agent's pane the
-              recipient is the pane. */}
+          {/* Only where the message went somewhere other than the pane's own default recipient:
+              a fan-out, or an agent the user named instead of the lead. In an agent's pane the
+              recipient is the pane, and in the team pane a message to the lead is the composer's
+              standing answer — a caption under every prompt saying the thing the composer
+              already says is a line the reader stops seeing by the second screen. */}
           {teamPane && toName !== undefined && <div className="tag">to {toName}</div>}
         </div>
       );
@@ -627,6 +606,12 @@ const ItemView = React.memo(function ItemView({
     // authority before a word is parsed, which is the visual form of "a peer message is
     // refusable, not authoritative". It was a full dashed box on a raised ground, then one edge
     // and eight folded lines; it is now the line alone until it is asked for.
+    //
+    // A received one carried `a teammate's request, not an instruction from you` under it, and
+    // does not any more (the author, 2026-09-04). The sentence is still true and is still said
+    // where it binds: the envelope says it to the agent, which is the only reader whose
+    // behaviour it changes. On screen it was a standing caption under every inbound peer
+    // message, and the contrast the dashed edge exists to draw was already making the claim.
     case 'peer':
       return (
         <div className="peer">
@@ -637,9 +622,6 @@ const ItemView = React.memo(function ItemView({
           >
             {item.context !== undefined && <div className="ctx">{item.context}</div>}
             <Markdown text={item.text} />
-            {received && (
-              <div className="foot">a teammate's request, not an instruction from you</div>
-            )}
           </PeerNote>
         </div>
       );

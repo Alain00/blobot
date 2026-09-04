@@ -96,8 +96,11 @@ describe('the team pane addresses the lead', () => {
   it('names and draws who it resolved to, and sends there', () => {
     const drawn = draw({ kind: 'team' }, 'alice');
 
-    // Named before a key is pressed, and named again on the control that will do it.
-    expect(drawn.host.textContent).toContain('Message Alice');
+    // Named on the control that will do it, and only there: the placeholder said the same name
+    // ten pixels to the left and stopped (the author, 2026-09-04). What it still says is that a
+    // mention overrides, which nothing else on screen does.
+    expect(drawn.host.textContent).toContain('@ to say who else');
+    expect(drawn.host.querySelector('.ph')?.textContent).not.toContain('Alice');
     drawn.type('ship it');
     expect(drawn.send().getAttribute('aria-label')).toBe('Send to Alice');
     expect(drawn.send().textContent).toContain('Alice');
@@ -151,18 +154,19 @@ describe('the team pane addresses the lead', () => {
     expect(drawn.send().disabled).toBe(false);
   });
 
-  // Found on the first real team, which had no lead because it predates them: a typed message
-  // and a disabled arrow, with the placeholder that would have explained it long gone.
+  // Why a typed message is going nowhere, on the control that is refusing to send it and not as
+  // a standing line above the field (the author, 2026-09-04). It names both exits, and neither
+  // of them is blobot choosing a recipient.
   it('says why a typed message is going nowhere, and names both exits', () => {
     const drawn = draw({ kind: 'team' });
-    expect(drawn.host.textContent).not.toContain('give this team a lead');
-
     drawn.type('good morning');
-    expect(drawn.host.textContent).toContain('say who with @ · or give this team a lead');
+    expect(drawn.send().getAttribute('title')).toBe('Say who with @, or give this team a lead');
+    // Never as text on the page: the field is what the user is looking at.
+    expect(drawn.host.textContent).not.toContain('give this team a lead');
 
     // Addressed, so there is nothing to explain.
     drawn.type('@Alice good morning');
-    expect(drawn.host.textContent).not.toContain('give this team a lead');
+    expect(drawn.send().getAttribute('title')).toBe('Send to Alice');
   });
 
   it('leaves an agent pane exactly as it was: its own pane, and an arrow', () => {

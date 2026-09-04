@@ -1445,11 +1445,20 @@ blobatars working off it.
 leads, so its `lead_agent_id` is NULL — which is the decided behaviour — and typing into its team
 pane produced a disabled arrow and nothing else. The state announced itself only in the
 placeholder, which is gone by the second keystroke, and in a tooltip nobody hovers. The composer
-now says `say who with @ · or give this team a lead` whenever the field has words in it and
-nowhere to send them, suppressed while the mention menu is up. It names both exits and promotes
-nobody, which is the whole rule this feature turns on. The general lesson for the next state like
-it: **a placeholder is not where a condition lives, because a placeholder is gone exactly when the
-condition starts to matter.**
+said `say who with @ · or give this team a lead` above the field whenever it had words in it and
+nowhere to send them. It names both exits and promotes nobody, which is the whole rule this
+feature turns on. The general lesson for the next state like it: **a placeholder is not where a
+condition lives, because a placeholder is gone exactly when the condition starts to matter.**
+
+**Moved onto the control, 2026-09-04, by the author**, in the pass that took the header and the
+standing captions out of the pane: the sentence is the disabled arrow's tooltip now, both exits
+intact, and nothing is drawn above the field. It is a real narrowing of the line above — a
+tooltip is a thing nobody hovers, which is what this note said when it rejected one — and it is
+taken knowingly: this state only exists on a team with no lead, the composer is already saying
+`Message the team. Start with @ to say who` in the placeholder before the first keystroke, and
+a permanent line above the field on every keystroke of every such team was paying for a rare
+state at the cost of the common one. If a leadless team turns up again looking broken, the
+answer is a lead on the team, not the line back.
 
 ### The rail's two rows are one column, 2026-08-30
 

@@ -80,7 +80,13 @@ for the idea and the reason this effort exists rather than a rejection note.
 - `04-a-coordinator-cannot-see-who-is-free.md` — **closed with 02: the ack is the answer.**
 - `05-mock-a-coordinator-that-forgets-to-route.md` — the observed trap, per ticket 08's thesis.
   **Reframed and resolved 2026-08-30**: the trap is a peer's and exists today. The scenario is
-  checked in and blobot says `named Bob · no message sent` under the turn, never repairing it.
+  checked in and blobot said `named Bob · no message sent` under the turn, never repairing it.
+  **Narrowed 2026-09-04, by the author:** the line is gone from the transcript. The detection is
+  unchanged and still core's — issue 02's routing-turn exemption keys on it — but the caption
+  drew on every turn of this shape, said nothing the reader could act on, and the transcript was
+  carrying more standing text than it earned. What is lost is stated rather than optimised away:
+  a user whose lead promises a handoff and forgets it now finds out by the teammate never
+  answering. If that turns out to matter, it comes back as a mark on the turn and not as a line.
 
 Order: 01 shipped alone. 02 answered and closed 03 and 04 with it; 05 shipped last.
 **The effort is finished.**

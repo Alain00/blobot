@@ -222,9 +222,6 @@ export function App(): React.JSX.Element {
       window.blobot.onHandbookWrite((teamId, write) => {
         if (mine(teamId)) dispatch({ type: 'handbookWrite', write });
       }),
-      window.blobot.onSilentHandoff((teamId, agentId, named, at) => {
-        if (mine(teamId)) dispatch({ type: 'silentHandoff', agentId, named, at });
-      }),
       // A backgrounded team can be blocked on the user too. It is not drawn into this
       // transcript — that is what the team filter is for — and the rail says `waiting` on it
       // the moment it is opened, because status comes with the snapshot.
@@ -405,7 +402,9 @@ export function App(): React.JSX.Element {
             statuses={state.statuses}
             items={items}
             opening={snapshot.opening === true}
-            workspacePath={snapshot.team.workspacePath}
+            {...(snapshot.team.leadAgentId === undefined
+              ? {}
+              : { lead: snapshot.team.leadAgentId })}
             moreAbove={state.moreAbove}
             onLoadEarlier={loadEarlier}
             onAnswerPermission={(requestId, choice) => {

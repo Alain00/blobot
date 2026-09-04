@@ -1375,14 +1375,6 @@ export interface BlobotApi {
   onHandbookWrite(
     listener: (teamId: string, write: UiHandbookWrite) => void,
   ): () => void;
-  /**
-   * An agent named a teammate you named, and wrote to nobody. An observation, never a repair:
-   * there is no channel back and no button, because the message she did not send is not ours
-   * to compose.
-   */
-  onSilentHandoff(
-    listener: (teamId: string, agentId: string, named: readonly string[], at: number) => void,
-  ): () => void;
   onTurns(listener: (teamId: string, turnsThisPrompt: number) => void): () => void;
   /** An agent is blocked on you. Ticket 14's block, drawn where the turn stopped. */
   onPermission(listener: (teamId: string, request: UiPermissionRequest) => void): () => void;

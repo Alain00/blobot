@@ -175,6 +175,37 @@ describe('the voices, after the roster stopped being passed down', () => {
     expect(draw(items, { kind: 'agent', agentId: 'b' })).not.toContain('to Bob');
   });
 
+  // The composer names the lead in its own placeholder and on its own button, so a prompt that
+  // went there did not go anywhere the reader has to be told about. A fan-out still is.
+  it('says nothing when the message went where the composer says it goes', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const render = (agentIds: readonly string[]): string => {
+      act(() => {
+        root.render(
+          React.createElement(Conversation, {
+            pane: { kind: 'team' } as Pane,
+            agents: AGENTS,
+            statuses: { a: 'idle', b: 'idle' },
+            items: [{ kind: 'user', id: 'u', at, agentIds: [...agentIds], text: 'have a look' }],
+            lead: 'a',
+            onAnswerPermission: () => {},
+            routineArmed: {},
+            onDisarmRoutine: () => {},
+            onRemoveHandbookEntry: () => {},
+          }),
+        );
+      });
+      return host.querySelector('.col')?.textContent ?? '';
+    };
+    expect(render(['a'])).not.toContain('to Alice');
+    expect(render(['b'])).toContain('to Bob');
+    expect(render(['a', 'b'])).toContain('to Alice, Bob');
+    act(() => root.unmount());
+    host.remove();
+  });
+
   // An agent that put itself on a schedule. The block is the price of issue 05's amendment, so
   // it has to draw: who, what, the shape, what the shape costs, and one control.
   it('draws the block an agent scheduling itself opens', () => {
@@ -257,8 +288,9 @@ describe('the voices, after the roster stopped being passed down', () => {
     expect(draw(items, { kind: 'agent', agentId: 'b' }, undefined, open)).toContain(
       'could you check this',
     );
-    // The trust framing is on the received side only, and it opens with the message it frames.
-    expect(draw(items, { kind: 'agent', agentId: 'b' }, undefined, open)).toContain(
+    // The trust framing is gone from the block (the author, 2026-09-04): it is said in the
+    // envelope, to the agent, which is the only reader it binds. Neither side draws it.
+    expect(draw(items, { kind: 'agent', agentId: 'b' }, undefined, open)).not.toContain(
       "a teammate's request",
     );
     expect(draw(items, { kind: 'team' }, undefined, open)).not.toContain("a teammate's request");

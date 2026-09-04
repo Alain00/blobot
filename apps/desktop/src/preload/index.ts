@@ -222,12 +222,6 @@ const api: BlobotApi = {
     subscribe('blobot:handbook-write', (_e, teamId: string, write: UiHandbookWrite) =>
       listener(teamId, write),
     ),
-  onSilentHandoff: (listener) =>
-    subscribe(
-      'blobot:silent-handoff',
-      (_e, teamId: string, agentId: string, named: string[], at: number) =>
-        listener(teamId, agentId, named, at),
-    ),
   onTurns: (listener) =>
     subscribe('blobot:turns', (_e, teamId: string, turns: number) => listener(teamId, turns)),
   onPermission: (listener) =>

@@ -913,9 +913,6 @@ function attach(team: RunningTeam): void {
   // A proposal is the one thing an agent can put in front of the user without saying anything,
   // so the screens that draw Routines are told rather than left to notice on the next open.
   orchestrator.onRoutinesChanged(() => send('blobot:team'));
-  orchestrator.onSilentHandoff((observed) =>
-    send('blobot:silent-handoff', teamId, observed.agentId, observed.named, observed.at),
-  );
 }
 
 /**

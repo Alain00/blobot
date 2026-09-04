@@ -659,40 +659,6 @@ describe('the composer\'s slash menu', () => {
   });
 });
 
-describe('a handoff that was named and never sent', () => {
-  const observed = (named: readonly string[]): AppState =>
-    reduce(initialState, { type: 'silentHandoff', agentId: 'alice', named, at: 40 });
-
-  it('states the two facts and offers nothing', () => {
-    const [item] = observed(['Bob']).items;
-    expect(item).toMatchObject({
-      kind: 'system',
-      agentId: 'alice',
-      text: 'named Bob · no message sent',
-    });
-  });
-
-  it('reads as a sentence when there are several', () => {
-    expect(observed(['Bob', 'Carol']).items[0]).toMatchObject({
-      text: 'named Bob and Carol · no message sent',
-    });
-    expect(observed(['Bob', 'Carol', 'Dave']).items[0]).toMatchObject({
-      text: 'named Bob, Carol and Dave · no message sent',
-    });
-  });
-
-  it('lands once, however many times the observation arrives', () => {
-    const once = observed(['Bob']);
-    const twice = reduce(once, {
-      type: 'silentHandoff',
-      agentId: 'alice',
-      named: ['Bob'],
-      at: 40,
-    });
-    expect(twice.items).toHaveLength(1);
-  });
-});
-
 describe('the context gauge', () => {
   const usage = (used: number, size = 200_000, at = 10): AgentEvent => ({
     type: 'usage_updated',

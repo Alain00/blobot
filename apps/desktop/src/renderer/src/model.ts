@@ -320,7 +320,6 @@ export type Action =
   /** An entry was taken out, from the block or from the pane. The block stays; the control goes. */
   | { type: 'handbookRemoved'; entryId: string }
   | { type: 'budget'; used: number; budget: number }
-  | { type: 'silentHandoff'; agentId: string; named: readonly string[]; at: number }
   | { type: 'turns'; turnsThisPrompt: number }
   | { type: 'permission'; request: UiPermissionRequest; at: number }
   | { type: 'permissionSettled'; id: string; outcome: UiPermissionOutcome };
@@ -583,27 +582,6 @@ export function reduce(state: AppState, action: Action): AppState {
       return { ...state, commands: { ...state.commands, [action.agentId]: action.commands } };
     case 'budget':
       return { ...state, budget: { used: action.used, budget: action.budget } };
-    case 'silentHandoff': {
-      // A transcript line rather than a banner, because it is about one turn and it belongs
-      // where that turn ended. It states two facts and offers nothing: no button sends the
-      // message for her, because composing the message she did not send is inference, and the
-      // wording is an observation rather than an accusation.
-      const id = `${action.agentId}:${action.at}:silent-handoff`;
-      if (state.items.some((item) => item.id === id)) return state;
-      return {
-        ...state,
-        items: [
-          ...state.items,
-          {
-            kind: 'system',
-            id,
-            at: action.at,
-            agentId: action.agentId,
-            text: `named ${listNames(action.named)} · no message sent`,
-          },
-        ],
-      };
-    }
     case 'permission': {
       if (state.items.some((item) => item.id === action.request.id)) return state;
       return {
@@ -768,12 +746,6 @@ function scheduledItem(one: UiScheduledRoutine): Item {
     schedule: one.schedule,
     frequency: one.frequency,
   };
-}
-
-/** `Bob`, `Bob and Carol`, `Bob, Carol and Dave`. Prose, because the line is read as a sentence. */
-function listNames(names: readonly string[]): string {
-  if (names.length <= 1) return names[0] ?? '';
-  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1] as string}`;
 }
 
 function applyMessage(state: AppState, message: Message, routineName?: string): AppState {
