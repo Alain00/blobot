@@ -56,7 +56,7 @@ That is the whole opportunity, and it does not generalise to anything else.
 ## What this effort is not
 
 - **Not a fourth trust level, and not `auto`.** `first-demo/14` is reopened on the ceiling and
-  `.scratch/sandboxing/04` is where that gets answered. Nothing here depends on it. Claude's
+  `.scratch/machines/10` is where that gets answered. Nothing here depends on it. Claude's
   `auto` mode stays refused on its own terms: it is availability-gated (*"only when the model
   supports it"*), no other runtime has a classifier, and it hands the decision to an inference
   call blobot does not control on behalf of an unattended agent. Measured on the author's own

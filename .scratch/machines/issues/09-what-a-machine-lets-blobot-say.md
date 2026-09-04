@@ -1,6 +1,6 @@
 Type: grilling
 Status: open
-Blocked by: 02
+Blocked by: 04
 
 # What a sandbox lets blobot say
 
@@ -39,3 +39,21 @@ Ticket 14: blobot claims the thing that is true on both runtimes. If the fence i
 and absent on OpenCode, the claim is still *prompting*, and the sandbox is an unadvertised
 improvement rather than a feature. That is an unsatisfying answer and it may well be the right
 one.
+
+## Amendment, 2026-09-04 — absorbed, and there is a second sentence to get right
+
+This was `.scratch/sandboxing/03`. The disclosure problem is unchanged and the analysis above
+still holds word for word. What the wider destination adds is a **second** claim that has to be
+true at the same time, and it is louder than the first: *this agent is running on another
+computer.*
+
+Everything the app says today is built on an unstated premise that the agent is here — the
+`WORKSPACE` line's branch and diff, the folder the user picked, the pty that runs
+`claude auth login` and opens a browser, the attachment whose bytes were embedded rather than
+linked. None of those sentences is false off-machine, but several of them stop being *the whole
+truth*, and the copy has never had to say where anything is.
+
+Add to what is decided here: whether the machine is named on screen at all, and where. The
+governing rule cuts both ways — a machine is not a blobatar and gets no colour, but an agent
+executing somewhere the user cannot see is exactly the kind of fact `DESIGN.md` says must not be
+carried by a single channel.

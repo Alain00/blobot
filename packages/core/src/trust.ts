@@ -43,7 +43,7 @@
  *   positions are real on it, and the agent form draws only those.
  *
  * There is no fifth position. `bypassPermissions`, `acceptEdits`, `dontAsk` and OpenCode's
- * `'*': allow` remain unoffered, and `.scratch/sandboxing/04` is where that would be reopened.
+ * `'*': allow` remain unoffered, and `.scratch/machines/10` is where that would be reopened.
  */
 export type TrustLevel = 'careful' | 'normal' | 'trusting' | 'unattended';
 

@@ -10,7 +10,7 @@ Status: open
 user-facing surface** (`research/01` §4). Claude and Codex both have one. Establish whether
 OpenCode does.
 
-This is unblocked and cheap, and it is the ticket that decides whether `02`'s inside option is
+This is unblocked and cheap, and it is the ticket that decides whether `04`'s inside option is
 symmetric or is the asymmetric guarantee ticket 14 spent a section refusing.
 
 ## What to establish
@@ -31,8 +31,26 @@ symmetric or is the asymmetric guarantee ticket 14 spent a section refusing.
 
 ## Why the answer matters more than it looks
 
-If OpenCode has no sandbox, `02`'s inside option gives blobot a real boundary on two runtimes
+If OpenCode has no sandbox, `04`'s inside option gives blobot a real boundary on two runtimes
 out of three and nothing on the third, and ticket 14's *"a guarantee that holds for Alice and
-not for Bob is worse than no guarantee"* applies directly. The outer fence of `01` does not have
+not for Bob is worse than no guarantee"* applies directly. The outer fence of `02` does not have
 that problem — it is the same fence whatever is behind it — which is the strongest argument for
-the outside option, and it only holds if `01` comes back yes.
+the outside option, and it only holds if `02` comes back yes.
+
+## Amendment, 2026-09-04 — absorbed, and now about five runtimes
+
+This was `.scratch/sandboxing/05`, retitled from *Does OpenCode have a sandbox* because the
+question outgrew its subject. It was written when blobot had three runtimes. It has **five**, and
+two of them arrived with answers already:
+
+- **Cursor**: `adapters/cursor` already sets `sandbox` to `enabled` with network as a constant
+  rather than a dial. That is a shipped sandbox blobot configures today, and nobody has asked
+  what it is worth or what it actually confines. Start here, because it is the only one where
+  the answer is already in production.
+- **fx**: unexamined. `FX_PERMISSION_MODE` is the posture lever and the effort that built the
+  adapter never asked whether a boundary exists beside it.
+
+So the question is: **for each of the five, is there a sandbox of its own, what does it confine,
+and can blobot reach it without writing a file into the AgentWorkspace?** The asymmetry argument
+below is unchanged and gets sharper with five: a guarantee that holds for three runtimes and not
+the other two is the same refusal ticket 14 made, at greater cost.

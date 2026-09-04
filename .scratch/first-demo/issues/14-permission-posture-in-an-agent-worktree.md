@@ -631,7 +631,7 @@ permission block and the `waiting` status mean on an agent that can no longer pr
 Left open for the author. The `gh` fix above removes the complaint that surfaced it, which is
 the right order: the wide decision should not be made under the pressure of a narrow bug.
 
-**Update, same day:** the question moved rather than closed. `.scratch/sandboxing/` was opened
+**Update, same day:** the question moved rather than closed. `.scratch/sandboxing/` was opened (absorbed 2026-09-04 into `.scratch/machines/`)
 on the observation that most of the case against a fourth level is a case against
 `bypassPermissions` **outside a sandbox** — `rm`, `sudo` and `chmod` are unrecoverable because
 there is an outside for them to reach, and Claude's own help recommends bypass *"only for
@@ -674,7 +674,7 @@ withdrawn, in that file, with the reason on it.
 `bypassPermissions` and OpenCode's `'*': allow`: nothing asks, nothing decides, and the
 disclosure becomes false with no one to notice. `unattended` is a different position on the same
 axis. Claude's `auto` hands each request blobot has not already vouched for to the *provider's*
-classifier, which approves or denies it. Something still decides. `.scratch/sandboxing/04` remains
+classifier, which approves or denies it. Something still decides. `.scratch/machines/10` remains
 the place the fifth position would be argued, and remains unanswered.
 
 Four things answer this ticket's four objections, one each.

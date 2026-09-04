@@ -1,6 +1,6 @@
 Type: grilling
 Status: open
-Blocked by: 02, 03
+Blocked by: 04, 09
 
 # Does a sandbox answer the fourth trust level
 
@@ -27,8 +27,8 @@ unprompted: bypass is *"recommended only for sandboxes with no internet access."
   level is stored on the profile and taken at next start. A sandbox can fail to engage — no
   `bwrap`, a kernel without userns, a platform srt does not cover. An agent whose posture is
   *bypass, because it is fenced* must not start unfenced. That is the same fatal-assert shape
-  as `03`.
-- **Whether it is one control or two.** See `02`. If the fence is a separate control, then the
+  as `09`.
+- **Whether it is one control or two.** See `04`. If the fence is a separate control, then the
   fourth level is *conditional on it*, and a form that offers a position the user cannot select
   without the other is a form that needs to say why.
 
@@ -38,3 +38,18 @@ That a fence makes the loosest level *defensible* is not the same as it being *w
 argument that shipped for three levels was that a default made choosable is not a permissions
 system. Four levels where the fourth is only valid in one configuration is closer to a
 permissions system than three ever was, and this ticket should say so if it concludes yes.
+
+## Amendment, 2026-09-04 — absorbed
+
+This was `.scratch/sandboxing/04`, and it is the ticket four places in the codebase point at:
+`packages/core/src/trust.ts:46`, `packages/core/src/adapters/claude/permissions.ts:162`,
+`.scratch/mcp-permissions/spec.md`, and ticket 14 of `first-demo`. Those pointers have been
+updated to `.scratch/machines/10`; the question is unchanged.
+
+One addition from the wider destination. The argument above is that inside a fence, three of the
+four unrecoverable operations stop being unrecoverable *because there is no outside they can
+reach*. On a **machine that is not the user's own** — a container, a VM, a box kept for this —
+that argument gets stronger still, and for a plainer reason: the blast radius is a thing the user
+provisioned for exactly this and can destroy. But it also acquires a cost the fence does not
+have, because the work is over there too. Establish whether the fourth level is conditional on a
+*kind* of Machine rather than on a fence being engaged.

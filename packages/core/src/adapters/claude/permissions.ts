@@ -159,7 +159,7 @@ export function vouchedTools(trust: TrustLevel): readonly string[] {
  *
  * `acceptEdits`, `dontAsk`, `plan` and `bypassPermissions` stay unoffered. The first three are
  * decisions blobot has already made and the fourth is the one ticket 14 refuses, which
- * `.scratch/sandboxing/04` is the place to reopen.
+ * `.scratch/machines/10` is the place to reopen.
  */
 export type ClaudeMode = 'default' | 'auto';
 

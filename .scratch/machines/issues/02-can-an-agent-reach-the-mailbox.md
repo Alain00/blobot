@@ -40,5 +40,36 @@ options fail in different places, which is why this ticket exists rather than a 
 
 ## Not this ticket
 
-Where the boundary goes, what blobot may then claim, and whether OpenCode can be given one.
-`02`, `03` and `05`.
+Where the boundary goes, what blobot may then claim, and which runtimes have one of their own.
+`04`, `09` and `03`.
+
+## Amendment, 2026-09-04 — absorbed, and widened past the fence
+
+This was `.scratch/sandboxing/01`. That effort is now a region of `.scratch/machines/`, whose
+destination is **the Machine**: the place an agent executes, of which a sandbox is one kind and
+another computer is another. Renumbered `01` to `02`; the question above is unchanged and still
+the frontier for the same reason.
+
+What the wider destination adds is that **srt is no longer the only way loopback stops being
+loopback**. If a Machine can be a remote box, then `127.0.0.1` is not merely proxied away, it is
+*a different computer*, and ticket 15's three design constants are all repriced at once:
+
+- **Stateless, because neither runtime re-handshakes.** Still true, and now load-bearing in a new
+  way: a stateless endpoint survives a dropped network where a session would not.
+- **The bearer token *is* the caller's identity.** On loopback that is sound because the only
+  thing that can dial it is a process on this machine. Across a network it is a bearer token in
+  the clear, and the token is the whole of the authorisation. Establish what it costs to keep
+  this shape honest off-machine, or what replaces it.
+- **The agent dials blobot.** Over ssh the direction is available both ways — a remote forward
+  puts blobot's port on the far side, which keeps the loopback shape intact for the agent and
+  moves the whole problem into the transport. Price that against the alternatives rather than
+  assuming it.
+
+Also widened: the runtime count. This was written against three runtimes and there are **five**
+(Claude, Codex, OpenCode, fx, Cursor). Cursor already runs with `sandbox: enabled` set by
+blobot's own adapter, and its loopback mailbox works today, which is a measured data point this
+ticket did not have.
+
+**Note the collision with what already ships**: `adapters/cursor` sets a sandbox *and* keeps the
+mailbox, on the same machine. Whatever this ticket concludes has to explain that case rather
+than contradict it.
