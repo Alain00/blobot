@@ -1,6 +1,6 @@
 Type: grilling
 Status: open
-Blocked by: 01
+Blocked by: 01, 13
 
 # Detection, and its remedies, when the runtime is not on this computer
 
@@ -43,3 +43,7 @@ Every one of those sentences is about the wrong computer once a Machine is not t
 travel and the command is looked up on the far side, argv is core's and never the renderer's,
 nothing concludes from an exit code, and the screen ends on detection asked again in the same
 four words. All four survive the move in principle. Check each one rather than inheriting it.
+
+## Amendment, 2026-09-04 — conditional on `13`
+
+This ticket largely dissolves if `13` answers *instance*: a server answers about itself with the code that already exists, and the vendor's own `auth login` opens a browser in front of the person who owns that box. What survives is staleness, caching, and the fifth state — *we could not ask* — which an unreachable server has too.

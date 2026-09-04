@@ -73,3 +73,19 @@ ticket did not have.
 **Note the collision with what already ships**: `adapters/cursor` sets a sandbox *and* keeps the
 mailbox, on the same machine. Whatever this ticket concludes has to explain that case rather
 than contradict it.
+
+## Amendment, 2026-09-04 — the off-machine half now waits on `13`
+
+This ticket has two halves and they became independent when `13` was raised.
+
+**The fence half is unconditional and still the frontier.** Whether an agent inside srt on *this*
+machine can reach a loopback service is a fact about a library, `04` needs it under every model,
+and `adapters/cursor` already runs a sandbox and keeps the mailbox, which is the shipped case any
+answer has to explain.
+
+**The off-machine half is conditional.** If `13` answers *instance*, the orchestrator lives on the
+server, agents on one server talk over that server's own loopback, and ticket 15's design
+constants survive with nothing to reprice. The question then shrinks to a single residue — a team
+whose members are on two different servers — which is probably answered by refusing it rather than
+by solving it. Do the fence half now; do not spend the token cost on the off-machine half until
+`13` is in.

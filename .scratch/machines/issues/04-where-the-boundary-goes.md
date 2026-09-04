@@ -25,8 +25,8 @@ Decide which, or in what order, or both.
 ## What makes this hard
 
 - **The delivery route on Claude is not obvious.** The sandbox is a *settings* surface, and
-  ticket 14 refused seeding `<workspace>/.claude/settings.local.json` because an AgentWorkspace
-  is a checkout that can be committed home. The lever that unlocked ticket 14's 2026-08-30
+  `first-demo` ticket 14 refused seeding `<workspace>/.claude/settings.local.json` because an AgentWorkspace
+  is a checkout that can be committed home. The lever that unlocked `first-demo` ticket 14's 2026-08-30
   amendment was discovering the bridge passes `allowedTools` through `_meta.claudeCode.options`
   untouched. **Establish whether it passes a `sandbox` object the same way.** If it does this is
   cheap; if it does not, the honest options are an env var, user-scope settings, or nothing.
@@ -40,7 +40,7 @@ Decide which, or in what order, or both.
 
 ## The prior this must not quietly break
 
-*"A guarantee that holds for Alice and not for Bob is worse than no guarantee"* — ticket 14, on
+*"A guarantee that holds for Alice and not for Bob is worse than no guarantee"* — `first-demo` ticket 14, on
 refusing to hard-block on OpenCode where it could. That is exactly the trade the inside option
 offers, and it is the same argument turned up one level, because a sandbox is a much bigger
 claim than a `deny` rule. Either answer it or overturn it explicitly.

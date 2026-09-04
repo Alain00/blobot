@@ -4,18 +4,21 @@ Label: wayfinder:map
 
 ## Destination
 
-A locked set of decisions for **the Machine** — the place an agent executes. Today that is always
-*this computer, in a git worktree of the team's folder*, and it is a given rather than a choice:
+A locked set of decisions for **the Machine** — the place an agent executes, and everything that
+place decides for it. Today that is always *this computer, in a git worktree of the team's folder,
+loading whatever the operator installed*, and all of it is a given rather than a choice:
 nothing in the app names it, and every screen, rule and refusal was written on top of it.
 
-The map is done when three things are decided together, because they are one thing:
+**Reframed 2026-09-04, after charting**, into three axes that had been tangled into one noun:
 
-- **the object** — what a Machine is, what grain it hangs at, and whether an AgentProfile gets a
-  home of its own;
-- **the kinds** — local, a fence on this machine, and a box that is not this one, and what each
-  costs in mailbox, workspace, detection, disclosure and trust;
-- **the channel** — whether an agent can be addressed outside a team at all, and what a turn
-  there is.
+| axis | question | tickets |
+| --- | --- | --- |
+| **location** | which computer an agent runs on | `13`, then `01`, `05`, `08`, `11` |
+| **reach** | what that process can touch | `03`, `04`, `09`, `10` |
+| **composition** | what that agent **loads** — config, MCP servers, skills | `14` |
+
+And, cutting across all three, **the channel**: whether an agent can be addressed outside a team
+at all, and what a turn there is (`06`, `07`, `12`).
 
 It plans; it does not build. The map is done when nothing is left to *decide* before someone
 writes that code.
@@ -70,6 +73,12 @@ against real tools on this machine on 2026-08-31, including the one result that 
 obvious approach. `absorbed-sandboxing.md` is the framing of the effort this map absorbed and
 carries the constraints anything here must hold.
 
+**A number collision, read carefully.** This effort has a ticket `14` and so does `first-demo`,
+and `first-demo`'s is the one this repo cites constantly — the permission posture, the trust
+ceiling, *a guarantee that holds for Alice and not for Bob*. Everywhere in this effort that one is
+written **`first-demo` ticket 14**, in full. A bare `14` is this map's per-agent composition root.
+The one exception is a sentence quoting a source comment verbatim, in `14` itself.
+
 **Absorbed, 2026-09-04:** `.scratch/sandboxing/` no longer exists. Its five tickets are `02`,
 `03`, `04`, `09` and `10` here, each carrying an `## Amendment` recording what the wider
 destination changed; its research and spec moved with them. The four places in the codebase and
@@ -87,6 +96,11 @@ author and agreed, or follows from a permanent rule:
 - **The user brings the box.** blobot never provides, hosts, provisions or pays for
   infrastructure. This rules the whole hosted-sandbox category out on the rules rather than on
   the merits, and it is recorded so it is not re-asked (`research/01` §1).
+- **The three axes are separate and were tangled.** Location, reach and composition all appeared
+  at once because they all show up when you ask *what if the agent is not here*, and they answer
+  to different objects. Recorded because collapsing them again is the most likely way this map
+  goes wrong — and because conflating **composition** with **reach** is specifically how `09`'s
+  third and worst overstatement gets made.
 - **A DM is wanted enough to be worth deciding.** `map.md` exists to serve it: the author's
   proposal is a profile that knows it has more projects, which only means anything if the profile
   can be spoken to.
@@ -96,8 +110,14 @@ author and agreed, or follows from a permanent rule:
 
 ## Decisions so far
 
-Nothing yet. The frontier is `01`, `02` and `03` — one grilling and two research, all takeable
-now.
+Nothing yet. **The frontier is `13`, `14`, `02` and `03`** — note that it is not `01`, which was
+the frontier as charted and is now blocked by `13`. Numbers here are identity, not order.
+
+- `13` and `14` are the two axes raised after charting, both unblocked, and `14` does not wait on
+  `13` because composition is per agent under either model.
+- `02` is unblocked for its fence half only; its off-machine half waits on `13`. See its
+  amendment.
+- `03` is unblocked, cheap, and the only one that is pure measurement.
 
 ## Not yet specified
 
@@ -119,7 +139,12 @@ In scope, not yet sharp enough to ticket. Graduates as the frontier advances.
   the bytes cross a network rather than a pipe.
 - **Two agents on one Machine.** If a Machine is per profile or per team, two agents share a
   place. Whether that reintroduces what ticket 10 refused — *never a shared directory* — depends
-  on whether the sharing is of a directory or only of a host, and that reads `01`.
+  on whether the sharing is of a directory or only of a host, and that reads `01`. Under `13`'s
+  instance model this is the normal case rather than the edge one, and `14` is most of the answer.
+- **What a client does when no server is attached.** Under `13`'s instance model the client is a
+  window onto boxes that may be off. Everything the app draws assumes what it draws is true now:
+  the status fold, the rail's folded `StatusWord`, the context gauge, `WORKSPACE`. A stale view
+  and an empty one are different, and neither is `waiting`.
 - **A Machine whose OS is not this one.** Path shapes, the mono figures in `WORKSPACE`, and
   whether a Windows box is a kind or a variant.
 - **Whether a Machine has an identity on screen.** A Team has an icon detected from its Workspace

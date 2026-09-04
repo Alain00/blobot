@@ -1,5 +1,6 @@
 Type: grilling
 Status: open
+Blocked by: 13
 
 # What a Machine is, and what grain it hangs at
 
@@ -53,3 +54,26 @@ different answers, and the ADR was written about the second.
 
 Where a Workspace lives when the Machine is not this one (`05`). What is in the home (`06`).
 What may be done in a DM (`07`). Those all read this answer.
+
+## Amendment, 2026-09-04 — this ticket no longer owns the location question
+
+Two tickets were added after this one was written and they take half of it away.
+
+**`13` owns the location question.** Whether remoteness is *a place blobot executes into* or *a
+blobot instance the client attaches to* is a fork this ticket assumed away, and it decides what
+the unit even is before anyone can ask what grain it hangs at. If `13` answers **instance**, then
+the candidates below are the wrong three: the question becomes what a **server** owns, the store
+split is the whole of it, and "per profile / per pair / per team" is asked about a server's
+contents rather than about a Machine. Read `13`'s answer first and re-read the three candidates
+against it.
+
+**`14` owns the composition question.** Per-agent config, MCP servers and skills is a third axis
+that is per agent under **both** of `13`'s models, so it does not belong here and does not wait
+on either. It also has the easiest grain answer on the map, and that is a warning rather than a
+comfort: it is easy because it sits where the AgentWorkspace, the Handbook and the Routine
+already sit, and the temptation is to let it decide this ticket by resemblance.
+
+**What is left here is the part neither of them takes**: the noun, whether a *home* and an
+*execution location* are one object or two, and **whether an AgentProfile gets one at all** —
+which is what `06` and `07` are waiting on and the only reason those two tickets exist. If the
+answer to the third is no, both collapse and this map is materially smaller.

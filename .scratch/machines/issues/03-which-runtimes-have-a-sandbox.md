@@ -11,7 +11,7 @@ user-facing surface** (`research/01` §4). Claude and Codex both have one. Estab
 OpenCode does.
 
 This is unblocked and cheap, and it is the ticket that decides whether `04`'s inside option is
-symmetric or is the asymmetric guarantee ticket 14 spent a section refusing.
+symmetric or is the asymmetric guarantee `first-demo` ticket 14 spent a section refusing.
 
 ## What to establish
 
@@ -32,7 +32,7 @@ symmetric or is the asymmetric guarantee ticket 14 spent a section refusing.
 ## Why the answer matters more than it looks
 
 If OpenCode has no sandbox, `04`'s inside option gives blobot a real boundary on two runtimes
-out of three and nothing on the third, and ticket 14's *"a guarantee that holds for Alice and
+out of three and nothing on the third, and `first-demo` ticket 14's *"a guarantee that holds for Alice and
 not for Bob is worse than no guarantee"* applies directly. The outer fence of `02` does not have
 that problem — it is the same fence whatever is behind it — which is the strongest argument for
 the outside option, and it only holds if `02` comes back yes.
@@ -53,4 +53,4 @@ two of them arrived with answers already:
 So the question is: **for each of the five, is there a sandbox of its own, what does it confine,
 and can blobot reach it without writing a file into the AgentWorkspace?** The asymmetry argument
 below is unchanged and gets sharper with five: a guarantee that holds for three runtimes and not
-the other two is the same refusal ticket 14 made, at greater cost.
+the other two is the same refusal `first-demo` ticket 14 made, at greater cost.

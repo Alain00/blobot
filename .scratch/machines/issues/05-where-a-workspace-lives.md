@@ -1,6 +1,6 @@
 Type: grilling
 Status: open
-Blocked by: 01
+Blocked by: 01, 13
 
 # Where a Workspace lives when the Machine is not this one
 
@@ -46,3 +46,7 @@ The work product is a **branch in the user's repository**, and that is the whole
 grain is the team rather than the bot. A Machine design that makes the branch hard to get back is
 a Machine design that has traded away the product to gain the ergonomics. If none of the three
 answers is acceptable for a kind, that kind does not ship — which is an answer.
+
+## Amendment, 2026-09-04 — conditional on `13`
+
+This ticket largely dissolves if `13` answers *instance*: the repository is on the server, so worktrees, `git worktree list`, the ahead-count, publish, purge and `measure` all run local to it exactly as today. What survives is that the client no longer has the files, which nobody has priced.

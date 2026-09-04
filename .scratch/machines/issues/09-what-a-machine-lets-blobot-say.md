@@ -18,7 +18,7 @@ answers that are not in yet.
 
 - **The disclosure.** It has been rewritten twice for overstating — once for naming commands
   blobot could not name, once for promising freedom an agent did not have. A sandbox invites the
-  third and worst version: overstating *protection*, which is the failure ticket 14 named first
+  third and worst version: overstating *protection*, which is the failure `first-demo` ticket 14 named first
   and the one users cannot detect. srt says of itself that domain filtering does not inspect
   traffic, that a broad allow is an exfiltration route, and that it is not a boundary against
   inherited descriptors. Whatever is claimed has to survive being read next to that.

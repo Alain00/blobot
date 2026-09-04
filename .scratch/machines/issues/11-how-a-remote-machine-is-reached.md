@@ -1,6 +1,6 @@
 Type: grilling
 Status: open
-Blocked by: 01
+Blocked by: 01, 13
 
 # How a remote Machine is reached, without blobot holding a credential
 
@@ -38,3 +38,7 @@ and keys do the work.** blobot holds a hostname, which is not a credential.
 blobot never provides infrastructure. The user brings the box, the same way the user brings the
 CLI and the login. If a design here starts to require blobot to run, host, provision or pay for
 anything, it has left the product.
+
+## Amendment, 2026-09-04 — conditional on `13`
+
+This ticket survives `13` in either direction, and its answer is the one that makes the instance model affordable: the server **binds loopback only** and the client reaches it over the user's own ssh tunnel, so blobot stores a hostname and holds no credential. Without that move an instance model must invent auth between client and server, which is a credential blobot itself owns and a far larger ADR-0005 exception than a hostname.
