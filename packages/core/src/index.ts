@@ -217,6 +217,18 @@ export {
 } from './workspace/branches.js';
 export { readChurn, type Churn } from './workspace/churn.js';
 export {
+  readChanges,
+  type ChangedFile,
+  type WorkspaceChanges,
+} from './workspace/changes.js';
+export {
+  readWorkspaceTree,
+  type DirectoryReading,
+  type TreeEntry,
+  type TreeMark,
+  type WorkspaceTree,
+} from './workspace/tree.js';
+export {
   commitPlan,
   commitWorktree,
   type CommitOutcome,

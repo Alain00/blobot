@@ -232,22 +232,58 @@ const BEAT_MAX = 4_000;
 const REST_IN = 4;
 
 /**
+ * The widest turn between one glance and the next, in radians.
+ *
+ * The driver decides for itself whether a new target is pursued or jumped to, and it decides on
+ * the angle: `step` compares the new aim against where the eyes are, both unit vectors, so the
+ * distance between them is `2 sin(turn / 2)` and `SNAP` at 1.6 is a turn of 106 degrees. Past
+ * that the driver takes the smoothing off and the eyes arrive in one frame, which is right for
+ * the thing `SNAP` was written for -- a pointer that was replaced by a scroll or by re-entering
+ * the window -- and wrong for this. A wander is a creature looking around a room, and a room
+ * does not teleport.
+ *
+ * A free angle every beat put roughly two in five glances past the threshold, so the same
+ * behaviour drew as a glide most of the time and as a snap the rest, at random, every few
+ * seconds. That is not a channel saying two things; it is one channel that looks broken.
+ *
+ * So the turn is bounded here rather than `snap` being raised on the driver. Raising `snap`
+ * would disarm the saccade for `waiting` too, which is the one aim in the app where a target
+ * really is replaced rather than moved. Ninety degrees leaves a distance of 1.41 against the
+ * threshold's 1.6, which is margin enough that no rounding in the projection can reach it, and
+ * a walk of quarter turns still reaches every direction within a beat or two -- what it can no
+ * longer do is cross the room in one.
+ */
+const TURN_MAX = Math.PI / 2;
+
+/**
  * Somewhere in the room, from this face's own box.
  *
- * A uniform angle and a distance in `[REACH_MIN, REACH_MAX)`. It is client coordinates because
- * that is the only thing the driver takes, and off the live box rather than off a remembered
- * one because the rail scrolls.
+ * A distance in `[REACH_MIN, REACH_MAX)`, and an angle that is a bounded turn from the last one
+ * -- see `TURN_MAX`. It is client coordinates because that is the only thing the driver takes,
+ * and off the live box rather than off a remembered one because the rail scrolls.
  *
- * Pure, and `roll` is injected, which is what makes it the part of this that a test can hold
- * still. Everything around it is a timer and a driver and neither has anything assertable in
- * jsdom, where there is no layout and no `getBBox`.
+ * `from` is the angle this face last glanced along, and `null` means there is nothing to turn
+ * from: the first glance of a face, and the one after a beat spent at rest. Both are free
+ * choices rather than exceptions, because the eyes are at the centre in both cases and the
+ * distance from the centre to any aim is at most 1, which is under the threshold whatever the
+ * angle. A rest is where the walk gets to start over, and it costs nothing to let it.
+ *
+ * The angle comes back with the point because it is the state the next call needs and this
+ * function owns no state. Pure, and `roll` is injected, which is what makes it the part of this
+ * that a test can hold still. Everything around it is a timer and a driver and neither has
+ * anything assertable in jsdom, where there is no layout and no `getBBox`.
  */
-export function wanderPoint(face: DOMRect, roll: () => number): { x: number; y: number } {
-  const angle = roll() * 2 * Math.PI;
+export function wanderPoint(
+  face: DOMRect,
+  roll: () => number,
+  from: number | null = null,
+): { x: number; y: number; angle: number } {
+  const angle = from === null ? roll() * 2 * Math.PI : from + (roll() * 2 - 1) * TURN_MAX;
   const reach = REACH_MIN + roll() * (REACH_MAX - REACH_MIN);
   return {
     x: face.left + face.width / 2 + Math.cos(angle) * reach,
     y: face.top + face.height / 2 + Math.sin(angle) * reach,
+    angle,
   };
 }
 
@@ -267,10 +303,16 @@ export function wanderPoint(face: DOMRect, roll: () => number): { x: number; y: 
  * head however far it is asked to look. `SEEN` is the excursion the rail already passes, and it
  * was chosen for exactly this — a head turning to follow you.
  *
- * **It is aimed, not eased.** `SNAP` is a threshold on how far the target moved in one frame,
- * and a point across the room is always past it, so the driver saccades rather than pursuing.
- * That is the correct oculomotor answer and the reason this does not read as floating eyeballs:
- * a glance is ballistic, and the smoothing exists for a target that is genuinely being followed.
+ * **It glides, and that took bounding the turn rather than retuning the driver.** `SNAP` is a
+ * threshold on how far the *aim* moved, so the driver's own answer to a new target is smooth
+ * pursuit below 106 degrees of turn and a saccade above it. A freely chosen angle straddles
+ * that, which is why this used to snap on some beats and glide on others with nothing to tell
+ * them apart. `TURN_MAX` keeps every glance on the pursuit side; `snap` is left at the
+ * library's default, because `waiting`'s pointer is a target that really does get replaced.
+ *
+ * `from` is that walk's one piece of state and it lives here, in the closure the timer already
+ * needs, rather than in a ref: nothing renders on it and a face that remounts is a face
+ * starting over, which is the honest answer anyway.
  *
  * `active` is false whenever anything else is aiming the face, which today is `waiting` claiming
  * the pointer. Two systems writing one pair of eyes is the failure `--mo-track-hold` exists to
@@ -293,13 +335,23 @@ function useWander(
 
     const still = matchMedia('(prefers-reduced-motion: reduce)');
     let timer: ReturnType<typeof setTimeout> | undefined;
+    /** The angle of the last glance, and `null` for eyes that are home. See `wanderPoint`. */
+    let from: number | null = null;
 
     const beat = (): void => {
       const box = face.current?.getBoundingClientRect();
       // A face with no box is one that has not been laid out, or is scrolled out of the rail's
-      // own overflow. Nothing to look out of, and nothing to measure a direction from.
+      // own overflow. Nothing to look out of, and nothing to measure a direction from. The walk
+      // keeps its angle across a skipped beat, since the eyes kept theirs.
       if (box !== undefined && box.width > 0) {
-        lookAt(Math.random() < 1 / REST_IN ? 'rest' : wanderPoint(box, Math.random));
+        if (Math.random() < 1 / REST_IN) {
+          lookAt('rest');
+          from = null;
+        } else {
+          const point = wanderPoint(box, Math.random, from);
+          from = point.angle;
+          lookAt(point);
+        }
       }
       timer = setTimeout(beat, BEAT_MIN + Math.random() * (BEAT_MAX - BEAT_MIN));
     };
@@ -307,6 +359,7 @@ function useWander(
     const sync = (): void => {
       clearTimeout(timer);
       timer = undefined;
+      from = null;
       if (still.matches) {
         lookAt(null);
         return;

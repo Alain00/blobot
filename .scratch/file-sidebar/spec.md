@@ -2,6 +2,9 @@ Label: ready-for-agent
 
 # The file sidebar: a file tree of an AgentWorkspace
 
+**Built 2026-09-05.** What was decided at the keyboard, what bit, and what is left over are in
+[`build.md`](build.md) beside this file.
+
 The build spec for `.scratch/file-sidebar/`, whose map reached the destination on 2026-09-05 with
 seven tickets resolved and the frontier empty. Every decision below is a ticket's, and the ticket
 carries the reasoning. **Read the map's *Decisions so far* before starting, and the ticket for

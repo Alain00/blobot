@@ -671,6 +671,25 @@ problem, because four Handbooks do not fold into one the way four statuses fold 
   order**, because the case that matters is calls finishing out of order and nothing serial can
   spring that trap.
 
+  **And the block stands for the turn, not for the call, 2026-09-05.** It existed only while a
+  call was open, so between two batches an agent's steps folded, the block came off the screen,
+  and the pending bubble reappeared at the foot grouped under the fold and therefore faceless:
+  three dots in a gutter for as long as the agent reasons, which on a reasoning runtime is most
+  of a turn. `rowsOf` emits the live row while the principal is in flight and the run is the last
+  one, open call or not; **an empty block is the point**, the face carries it, and a block with no
+  steps keeps its blobatar however it is grouped, because grouped means the face is already on
+  screen a line up and a fold header has no face. The **reasoning itself is not drawn**: it was
+  built that way first (`agent_thought_delta` as a sans step) and refused on sight by the author,
+  *"i don't need the thinking tokens, only the thinking state"* — which is `StatusWord`'s own
+  standing rule, that which kind of busy is answered by tool lines and text arriving rather than
+  as an abstraction over them. The tokens stay dropped in the reducer and the store's `thought`
+  rows stay unread. And **a folded step stays folded**, the author's second rule: `liveRunIn`'s
+  batch walk reaches backwards over contiguous calls to keep an open batch together and cannot
+  tell three opened at once from two that merely had nothing said between them, so every new call
+  hauled the settled, folded run back onto the screen — and reasoning is not narration, which is
+  what made that corner case the common one. The model states the rule and the renderer keeps the
+  memory, the way a reply's news already worked.
+
 - **The third column is gone, and its head is a popover.** 2026-09-05, at the author's direction.
   The activity column carried a log of finished tool calls and ended turns under a pinned head of
   `CONTEXT` and `WORKSPACE`. The log lost its reason the day before, when a settled call stopped
@@ -682,9 +701,78 @@ problem, because four Handbooks do not fold into one the way four statuses fold 
   the column's own toggle stood, on a press rather than the ring's hover, taking `.wspop`'s shape
   and the column's 288px. `--screen=details` opens it at launch, because it is now a surface a
   screenshot cannot click to. What is **not** removed is the model's `feed`: nothing draws it, and
-  `useWorkspaces` still reads local git off its length whenever something settles, which is the
+  `useWorkspaces` still reads local git whenever something settles, which is the
   cheapest honest signal that a worktree may have changed. DESIGN.md's activity-column entry is
   rewritten rather than deleted, and the flanks rule now has one subject instead of two.
+  *Both halves of that last sentence were overtaken the same day by the file sidebar below: the
+  signal was `state.feed.length`, which saturates, and the rule has two subjects again.*
+
+- **The folder the agent is working in, on screen.** `.scratch/file-sidebar/`, seven tickets, all
+  resolved and built. A resizable right panel holding a **file tree of one AgentWorkspace**,
+  decorated with what git says has changed in it. It exists because blobot's whole claim is that
+  **an agent's real state is a git worktree, not a conversation**, and every surface built so far
+  reads that worktree as a *figure* — `+412 −7 · 9 files`, a branch, a percent — while **not one
+  of them can say which nine files**. It restores the third column that came off the day it was
+  raised, and it is not the activity column in a new costume: that column drew what the transcript
+  was already drawing, and this draws what the transcript cannot, which is now the **test a future
+  flank has to pass** in `DESIGN.md`'s own text (*is this the only rendering of this fact?*). It
+  **draws the pane's agent, full stop** — no selection of its own, because a tree quietly showing a
+  different checkout than the diff line above it is the `STOPPED`-on-every-rail-row failure again —
+  and in the team pane the **empty state is the chooser**, the members' faces with no line over
+  them, clicking one being the same act as its rail row. The head is the face and the name, never
+  the branch, which the tray forty pixels away already says, and **pressing it is the way back to
+  the team**: the face took you in, so the panel must not be one-way.
+  **A window onto the work, never an editor.** Read-only in every direction, a click opens the file
+  in the user's own editor, and no runtime is told any of it. Three cheap reads and **no walk
+  anywhere**: one `git status --porcelain=v2 -unormal` per refresh for the whole worktree (3 ms,
+  and flat in what is on disk, because git does not descend into an ignored directory), a `readdir`
+  per expansion (0.06 ms, against 535 ms and 123,021 entries to walk the same folder), and one
+  batched `check-ignore` per directory as it opens — which **cannot be derived away**, since an
+  ignored directory and an *empty untracked* one are both absent from `ls-files` and `status`.
+  The roll-up on a collapsed folder is free at every level and nothing walks to get it. It follows
+  the work off `useWorkspaces`' own signal and on **no timer**, and while it is a second behind it
+  **says nothing**: a timestamp or a dimming would be a second moving thing in a flank, which is
+  what the activity column died of. `targetOf` is refused too, and it is the interesting one —
+  blobot knows the path of every tool call, and using it would draw a mark from *the announcement
+  of an edit rather than from the filesystem*, so a cancelled or permission-refused call would
+  leave a file marked when nothing moved.
+  **The row is chevron, mark, name, and a status column parked at the panel's right edge** carrying
+  `M`, `?` and a count in mono. **Decoration is weight and a mono mark, never hue, and the two say
+  different things** — ticket 01's amendment, made the day it shipped, from the author reporting
+  that the folders had no marks. They did not, and the panel was right: measured on the worktree in
+  the screenshot, `git status` returned one line and the branch was three commits ahead, so every
+  folder really was clean. The **measure** was wrong, inherited from ticket 03's *the tree reports
+  what git measured*. blobot has a commit control in the tray, so an agent committing is the
+  **ordinary** case, and a tree that empties the moment it does fails this effort's own sentence.
+  So a fourth read joins the three — `git diff --name-only <base>...HEAD`, against the base `ahead`
+  is already counted from — and the two facts split across the two channels the row already had:
+  the **weight** is *part of what this agent did on this branch*, committed or not, and the **mark**
+  is unchanged, *and it is not committed yet*. A committed file lifts with nothing in the column,
+  a collapsed directory counts the union, and **no third letter was invented**, so 01's vocabulary
+  stays closed — what changed is that weight stopped being a restatement of the mark. An ignored
+  row dims and is shown rather than hidden, because it is in the folder the agent can see. Colour splits on authorship — blobot drew the tree, so the tree is monochrome. The mark
+  is **Material Icon Theme greyed to one `currentColor`**, `DESIGN.md`'s Icons rule taking its
+  second and last exception, because Lucide cannot do per-extension (`.ts`, `.tsx`, `.js`, `.mjs`
+  and `.css` all collapse onto `file-code`, so `Blob.tsx` and `styles.css` draw identically). It
+  ships as a **generated subset** — 81 glyphs, +5.5% of the renderer bundle, bundled and never
+  fetched — from an allowlist that grows from what people open, and a miss is the generic page,
+  which is the set's resting state rather than a new failure.
+  **It never draws an absence it did not verify.** On a copy the status column is **absent, not
+  empty**, because an empty column reads as *nothing changed*, and the head says `a copy`. In a
+  `nested` Workspace the loose files beside the repositories are a copy too, so the marks stop —
+  and the seam needed one fix ticket 05 did not foresee: the root of a nested Workspace is in no
+  repository, so every row there is silent until each repository's own changed set is read for its
+  root. After that the prediction holds and the seam needs no device, because the rows carrying a
+  count are exactly the repositories. `folder not found` and `no folder` are the short form; core's
+  full sentence stays at the launch refusal, where the fix is. It never draws nothing, which is
+  indistinguishable from a panel that has not finished reading.
+  The IPC takes **many directories at once**, because the status is per worktree and a refresh
+  re-reads every open folder; the open handler takes a **relative** path and refuses anything that
+  escapes the workspace, which is `blobot:openLink`'s guard pointed at a folder instead of a
+  scheme. And the build fixed **a shipped defect the map found**: `pushFeed` caps the feed at 200,
+  so `state.feed.length` saturated and local git was never re-read again for the rest of a session
+  once a team had settled its two hundredth tool call. `AppState.settled` is a counter now.
+  `.scratch/file-sidebar/build.md` has what was decided at the keyboard.
 
 Next: **the dictation done-when by hand** — a Spanish sentence with identifiers into a real
 agent, locally and through one provider (the `whisper-cli` workflow ran and its hashes are
@@ -745,30 +833,6 @@ voice where it cannot borrow blobot's credibility: the file's name, the dimensio
 it was written during this turn or was already there**, which is the fact that turns a screenshot
 of a stale build from an unfalsifiable claim into a weighable one. The branch is refused there, and
 the two sources draw differently on purpose.
-
-**Also charted, not built:** `.scratch/file-sidebar/` — **a resizable right sidebar holding a file
-tree of an AgentWorkspace**, seven tickets, all resolved, frontier empty. Raised 2026-09-05 and
-narrowed in charting to one panel, read-only in every direction: the tabbed viewer behind it and
-editing a file inside blobot are both out of scope, on the map and with reasons. It exists because
-every surface built so far reads a worktree as a *figure* — `+412 −7 · 9 files`, a branch, a
-percent — and **not one of them can say which nine files**. The grain is `<team>/<agent>`, as it is
-for a Handbook, a Routine and a branch; the map chartered a chooser for the team pane and **04 found
-there isn't one** — the sidebar draws the pane's agent, full stop, and in the team pane the empty
-state *is* the chooser. It restores the third column that came off the day it was raised, so
-`DESIGN.md`'s flanks rule takes an amendment carrying the test a future flank must pass (06): **is
-this the only rendering of this fact?** — where the activity column drew what the transcript was
-already drawing. Colour splits on authorship: blobot drew the tree, so the tree is monochrome and
-the coloured file-type badges of the reference are refused; the user wrote the file, so a viewer
-would highlight in colour, which is the thumbnail yield's own sentence. The liveness answer is
-`useWorkspaces`' answer — settle-driven, no timer, plus the manual refresh — measured by 02 at
-**3 ms** for a `git status` against **535 ms** for a recursive walk, which is why the tree is lazy
-and a watcher is refused. **Two rules are amended by the build, both worded on their tickets**: the
-flanks rule (06) and `DESIGN.md`'s Icons, because Lucide cannot do per-extension and 07 takes
-Material Icon Theme (MIT) **greyed to one `currentColor`** as a generated subset — the vendor-mark
-exception reaching further, not a second yield of the governing rule. And the build inherits one
-shipped defect the map found: `pushFeed` caps the feed at 200, so `state.feed.length` saturates and
-local git is never re-read again. A file leaving the tree into the composer, on ADR-0004's embedded
-path, is deliberately in the fog and not in the map.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that
 reproduces every observed trap on purpose — ragged deltas, a cancelled tool reporting

@@ -127,7 +127,7 @@ Consequences you will keep bumping into:
 
 | Token | Value | What it is |
 |---|---|---|
-| `--recessed` | `#060608` | The flank: the rail. Below the page, never `#000`. *The activity column was the other one until 2026-09-05.* |
+| `--recessed` | `#060608` | The flanks: the rail, and the file sidebar. Below the page, never `#000`. *The activity column was the second one until 2026-09-05; the sidebar is now.* |
 | `--ground` | `#0a0a0b` | The reading surface: the transcript, and nothing else. |
 | `--tray` | `#0e0e10` | The bar tucked under the composer. |
 | `--raised` | `#131315` | Anything lifted: a bubble, a field, a menu, a selected row. |
@@ -167,10 +167,18 @@ went, and the buttons took a fill in exchange (see **Controls**).
 
 **What still has one, and it is a list rather than an oversight:** `.field` and the composer's
 own `.wstitle`, because a thing you type into has to invite typing and its focus state is the
-border moving to `--muted`; the floating layers — `.modal`, `.suggest`, `.selectmenu`, `.ctxpop`,
+border moving to `--muted`; the floating layers — `.suggest`, `.selectmenu`, `.ctxpop`,
 `.wspop`, `.navsheet` — which sit over arbitrary content rather than on a ground of their own,
 where the hairline is the edge of the sheet and not a second enclosure; and `.md`'s tables and
 code blocks, which are quoting somebody else's structure.
+
+**`.modal` left that list on 2026-09-05, at the author's direction.** The reason the floating
+layers keep a hairline is that they sit over arbitrary content, and a dialog does not: it is the
+only thing over a full-strength scrim, with a 90px shadow behind it. The scrim says where the
+sheet ends and the shadow says it is above, so the line was the same edge drawn a third time —
+and on a dialog the size of a form it reads as a box around the whole screen's worth of content
+rather than as the rim of a small sheet. The popovers and the suggest list stay as they are: they
+have no scrim, so nothing else there is doing the work.
 
 What a hairline is still for: **separating two things on the same plane**, where nothing else
 can say they are apart — the folded blocks' left rule inside a turn, a blockquote, the rule
@@ -195,6 +203,14 @@ shape does not resize when the state arrives.
   toned with the rail on the argument that dressing one side of a **three**-column window reads
   as an accident. That column came off, the window has two columns, and the argument's premise
   went with it — the rule is unchanged and now has one subject.
+  *Amended again, 2026-09-05: two, and here is the test.* The **file sidebar** restores the
+  third column, on `--recessed` beside the rail. What separates it from the flank that was
+  removed the same day is one line: **the activity column drew what the transcript was already
+  drawing; this draws what the transcript cannot** — which files an agent has touched, a fact
+  no other surface in the app carries. That is the test a future flank has to pass — **is this
+  the only rendering of this fact?** — and it is written here rather than left on the effort's
+  map, because a rule amended without it would admit the next flank on the strength of this
+  one.
 - **Down, not up, and the reason is the faces.** A lifted flank was built first and was wrong
   twice. It fights what the shape already says — a sidebar is the wall of the room, not
   something hovering over it — and it spends the tone in the direction that costs the blobatars
@@ -402,15 +418,22 @@ Other transcript rules:
   buy a shorter block by claiming a call had ended when it had not, and an overflow line saying
   otherwise is a second thing to read about work you cannot see.
 
-  **What decides whether a line is at the top level or inside the block is the same rule in both
-  halves: a line is public when you are the only one who can act on it.** For prose that means it
-  was addressed to you; for everything else it means nobody else in the run can answer it — a
-  permission nobody has answered, a refusal, a failure that ended a teammate's turn. Everything
-  else the turn had to arrange is internal, and folds. The addressed set is what the code reads,
-  because for prose the two coincide and it is already computed; it is the proxy, not the rule.
-  A teammate is therefore not a second live block standing beside the principal's — its work is
-  inside the run it was caused by, live or settled, and it changes altitude for no reason the
-  reader caused.
+  **A step leaves the block once.** That is the same sentence read backwards, and it needs saying
+  because the block's batch rule reaches backwards over contiguous calls to keep an open batch
+  together, and cannot tell three calls opened at once from two that merely had nothing said
+  between them. So a step that has been inside a fold never comes back out of one, whatever the
+  batch rule would prefer. What the reader watched being filed away stays filed.
+
+  **The block stands for as long as the turn does, and an empty one is saying something.** It used
+  to exist only while a call was open, so between two batches an agent's steps folded, the block
+  came off the screen and the pending bubble reappeared at the foot of the column — grouped under
+  the fold and therefore faceless, which is three dots in a gutter for as long as the agent
+  reasons. The face is what carries it, the dots are the device they already are, and a block with
+  no steps keeps its blobatar however it is grouped: grouped means *the face is already on screen
+  a line up*, which is true of a caption and false of a fold header. **What the agent is reasoning
+  about is not drawn.** Every runtime sends it and blobot keeps dropping it: it is neither a tool
+  line nor text arriving, it would be the largest thing in the block, and the status channel has
+  already ruled twice that in flight the dots say it and the word says nothing.
 
   A call carries a **verb** from the four kinds core already has off both runtimes — `read`,
   `edit`, `run`, and nothing for an MCP tool, whose name is its server's and not ours to
@@ -734,6 +757,17 @@ label always stays beside it, so the mark is a second channel onto one fact and 
 one. An id with no mark draws nothing: there is no placeholder, exactly as a team without an
 icon is not a team missing one. Marks come from the vendor's own origin at one `currentColor`,
 normalised to a 24-unit box so they weigh the same as each other and as a Lucide glyph.
+
+**A second exception: the file tree's marks.** Lucide cannot do per-extension — `.ts`, `.tsx`,
+`.js`, `.mjs` and `.css` all collapse onto `file-code` — so the file sidebar takes Material Icon
+Theme (MIT), greyed to one `currentColor` and normalised to a 15px box, in the one generated
+module allowed to hold those paths. It is the vendor-mark rule reaching further rather than a new
+one: most of these marks are somebody's logo, and the same three words hold — **greyed, never
+coloured, never in place of the name.** The extension stays in the name beside the mark. Bundled
+as a generated subset, never fetched; an extension with no bundled icon draws the generic page,
+which is what a quarter of all files draw anyway. It stops at the file tree: nowhere else in the
+app may a second icon set appear, and a glyph beside the word it denotes is still the same claim
+twice everywhere else.
 
 ## Primitives
 
@@ -1209,6 +1243,76 @@ One flat file, one flat namespace, no build step between it and the DOM.
   because blobot will **not** — the remedy is a person removing an entry, and the number they
   act on stands in the panel beside the entries they would remove. Two rows in one block, quiet
   for opposite reasons, both right.
+- **The file sidebar** — a resizable right panel holding a file tree of **one AgentWorkspace**,
+  beside the details glyph in the same chrome. It is the third column, and it passes the flanks
+  rule's own test above: every other surface reads a worktree as a *figure* — `+412 −7 · 9
+  files`, a branch, a percent — and **not one of them can say which nine files**. Recessed like
+  the rail, because `--ground` is the transcript and nothing else.
+  **It draws the pane's agent, full stop.** No selection of its own: a tree quietly showing a
+  different checkout than the diff line above it is the `STOPPED`-on-every-rail-row failure
+  again, and the pane already answers *what does it default to*, *does it follow* and *is it
+  remembered*. In the team pane the **empty state is the chooser** — the members' faces, no line
+  over them, and clicking one opens that agent's pane, the same act as its rail row. The head is
+  the **face and the name, never the branch**, which the tray forty pixels away already says — and
+  **pressing that head is the way back to the team**, because the face took you in and the panel
+  must not be one-way.
+  **The row is four columns, three of them fixed**: chevron, mark, name, and a status column
+  **parked at the panel's right edge**, carrying `M`, `?` and a collapsed directory's roll-up
+  count in mono — a value, which is what mono is for, and a fixed edge is what makes *which files
+  changed* a glance down one edge rather than a read of every row. Its cost is **accepted, not
+  overlooked**: at 320px a name and its `M` sit 200px apart, and the column at a measured offset
+  is on the shelf if that reads badly in use. **Decoration is weight and a mono mark, never hue,
+  and the two say different things.** *Amended 2026-09-05 from the built thing:* the **weight** is
+  *this file is part of what this agent did on this branch*, committed or not, read from the
+  branch's own diff against the base; the **mark** is *and it is not committed yet*. The tree
+  decorated from `git status` alone at first, so an agent that committed its work emptied it —
+  which is the ordinary case, because the tray has a commit control — and a panel that goes blank
+  then fails the very sentence it exists for. A committed file lifts with **nothing in the status
+  column**, and no third letter was invented: `M` and `?` still separate modified from untracked,
+  and weight stopped being a restatement of them. An ignored row dims and is **shown rather than
+  hidden**, because it is in the folder the agent can see. Colour splits on authorship: blobot drew the
+  tree, so the tree is monochrome and the reference's coloured file-type badges are refused; the
+  user wrote the file, so a viewer would highlight in colour, which is the thumbnail yield's own
+  sentence.
+  **Amended 2026-09-05 by the author: the mark wears git's hue.** *Never hue* held for the row —
+  the name, the icon and the weight are still monochrome, and the file-type badges are still
+  refused — but the status column is the diff counts one file at a time, and `:455`'s amendment
+  already settled that: the two tests are that the hue reinforce something legible without it and
+  that the chroma stay under a blobatar's. `?` and `M` pass both, since the letter says which it
+  is and the row is already lifted. `--modified` is the ramp's **orange rather than its yellow**,
+  because `M` is the mark most rows carry and the commonest state must not be the brightest thing
+  in the flank. A directory's roll-up **count takes the fold of what is under it** — `M` the moment
+  anything in there is a change to a tracked file, `?` where everything uncommitted in there is
+  new, and **muted where the folder's work is all committed**, which is the same silence a
+  committed file's own column keeps. It stood muted for an hour on the argument that a folder
+  holding both kinds would have to be drawn as one of them; the author's answer is that the union
+  has a rule, and that a fold has to *choose* rather than lose. Nothing gains a hue that did not
+  already have a letter, so the vocabulary is still closed, and the count is still not colour
+  alone — a folder with work in it is already lifted, and the hue only says which kind.
+  **It never draws an absence it did not verify.** On a `plain` copy the status column is
+  **absent, not empty** — an empty column reads as *nothing changed* — and the head says `a
+  copy`. In a `nested` Workspace the loose files beside the repositories are a copy too, so the
+  marks stop; the seam needs no device of its own, because a repository root is the only row in
+  an untracked listing that can carry a count. A folder that has moved says `folder not found`
+  and demo mode says `no folder`, both **short**: core's full sentence has a fix in it and
+  belongs where the fix is. And it **never draws nothing**, which is indistinguishable from a
+  panel that has not finished reading.
+  **A window onto the work, never an editor.** Read-only in every direction, a click opens the
+  file in the user's own editor, and no runtime is told any of it. Lazy: `readdir` per expansion
+  and no walk anywhere, because walking a real AgentWorkspace is 535 ms and 123,021 entries
+  against 3 ms for the `git status` that decorates it. It follows the work off the signal
+  `useWorkspaces` already uses and on **no timer**, and while it is a second behind it **says
+  nothing** — no timestamp and no dimming, because a second moving thing in a flank is what the
+  activity column died of.
+  **Motion**: open and close on the interaction budget, ~200ms, `--ease-out`, in flow. **A drag
+  animates nothing** and tracks the pointer exactly, because an animated drag is a panel that
+  lags your hand and reads as the app being slow; the **snap shut** below the 220px floor is the
+  one animated part of a drag, since that is the app acting rather than the hand, and the
+  transcript re-centres continuously rather than on release. The ceiling is **`window − rail −
+  900`, not half the window** — at 1440px a half-window sidebar leaves the transcript 488px. The
+  transcript keeps its measure; the sidebar gives. One global remembered width, closed by
+  default, and the toggle is a **second glyph beside the details one**: two is not a row of
+  switches, a third would be, and that is the standing limit for this chrome.
 - **A Handbook, under the composer, in the agent's pane only.** What an Agent knows about *this
   team's* work, held at `<team>/<agent>`. Two shapes, and which one you get is a fact about the
   agent rather than a preference; they are **never both present**.

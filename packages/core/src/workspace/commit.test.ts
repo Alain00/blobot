@@ -66,4 +66,61 @@ describe('commitWorktree', () => {
     );
     expect(outcome).toEqual({ ok: false, error: 'unable to auto-detect email address' });
   });
+
+  it('takes a selection with a pathspec and never touches the index', async () => {
+    const ran: string[] = [];
+    const outcome = await commitWorktree(
+      { path: '/w', message: 'one', paths: ['src/a.ts', 'src/b.ts'] },
+      async (command, args) => {
+        ran.push([command, ...args].join(' '));
+        return { code: 0, stdout: 'ab12cd3\n', stderr: '' };
+      },
+    );
+    // No `add` at all: a partial commit reads the worktree for those paths and leaves the index
+    // as it was, which is what lets the ticks be blobot's own and not git's.
+    expect(ran[0]).toBe('git commit -m one -- src/a.ts src/b.ts');
+    expect(outcome).toEqual({ ok: true, sha: 'ab12cd3' });
+  });
+
+  it('adds the new files in a selection, because a pathspec cannot name them', async () => {
+    const ran: string[] = [];
+    await commitWorktree(
+      { path: '/w', message: 'one', paths: ['src/a.ts', 'src/new.ts'], untracked: ['src/new.ts'] },
+      async (command, args) => {
+        ran.push([command, ...args].join(' '));
+        return { code: 0, stdout: 'ab12cd3\n', stderr: '' };
+      },
+    );
+    expect(ran[0]).toBe('git add -- src/new.ts');
+    expect(ran[1]).toBe('git commit -m one -- src/a.ts src/new.ts');
+  });
+
+  it('takes that add back when the commit is refused', async () => {
+    // The add is the one thing here that outlives a failure. A refused commit that left a file
+    // staged would leave the worktree in a state the user never chose and cannot see.
+    const ran: string[] = [];
+    const outcome = await commitWorktree(
+      { path: '/w', message: 'one', paths: ['src/new.ts'], untracked: ['src/new.ts'] },
+      async (command, args) => {
+        const key = [command, ...args].join(' ');
+        ran.push(key);
+        if (key.startsWith('git commit')) {
+          return { code: 128, stdout: '', stderr: 'fatal: unable to auto-detect email address\n' };
+        }
+        return { code: 0, stdout: '', stderr: '' };
+      },
+    );
+    expect(ran).toContain('git reset -q -- src/new.ts');
+    expect(outcome).toEqual({ ok: false, error: 'unable to auto-detect email address' });
+  });
+
+  it('refuses a selection of nothing rather than committing everything', async () => {
+    let ran = false;
+    const outcome = await commitWorktree({ path: '/w', message: 'one', paths: [] }, async () => {
+      ran = true;
+      return { code: 0, stdout: '', stderr: '' };
+    });
+    expect(ran).toBe(false);
+    expect(outcome).toEqual({ ok: false, error: 'nothing is ticked' });
+  });
 });

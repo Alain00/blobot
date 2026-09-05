@@ -25,7 +25,7 @@ describe('readChurn', () => {
   it('adds the tracked lines up, in both directions', async () => {
     const churn = await readChurn(
       '/w',
-      runner({ 'git diff --numstat HEAD': { stdout: '12\t3\tsrc/a.ts\n0\t7\tsrc/b.ts\n' } }),
+      runner({ 'git diff --numstat -z HEAD': { stdout: '12\t3\tsrc/a.ts\x000\t7\tsrc/b.ts\x00' } }),
     );
     expect(churn).toEqual({ added: 12, removed: 10, files: 2 });
   });
@@ -34,10 +34,10 @@ describe('readChurn', () => {
     const churn = await readChurn(
       '/w',
       runner({
-        'git diff --numstat HEAD': { stdout: '1\t1\tsrc/a.ts\n' },
-        'git ls-files --others': { stdout: 'src/new.ts\n' },
+        'git diff --numstat -z HEAD': { stdout: '1\t1\tsrc/a.ts\x00' },
+        'git ls-files --others': { stdout: 'src/new.ts\x00' },
         // `--no-index` exits 1 whenever the two differ, which is every time here.
-        'git diff --no-index': { code: 1, stdout: '40\t0\tsrc/new.ts\n' },
+        'git diff --no-index': { code: 1, stdout: '40\t0\tsrc/new.ts\x00' },
       }),
     );
     expect(churn).toEqual({ added: 41, removed: 1, files: 2 });
@@ -46,20 +46,20 @@ describe('readChurn', () => {
   it('counts a binary file once as a file and never as a line', async () => {
     const churn = await readChurn(
       '/w',
-      runner({ 'git diff --numstat HEAD': { stdout: '-\t-\tlogo.png\n' } }),
+      runner({ 'git diff --numstat -z HEAD': { stdout: '-\t-\tlogo.png\x00' } }),
     );
     expect(churn).toEqual({ added: 0, removed: 0, files: 1 });
   });
 
   it('stops counting untracked files past the ceiling, and says the number is a floor', async () => {
-    const many = Array.from({ length: 140 }, (_index, at) => `f${at}.ts`).join('\n');
+    const many = Array.from({ length: 140 }, (_index, at) => `f${at}.ts`).join('\x00');
     let diffs = 0;
     const churn = await readChurn('/w', async (_command, args) => {
       const key = args.join(' ');
-      if (key.startsWith('diff --numstat HEAD')) return { code: 0, stdout: '', stderr: '' };
+      if (key.startsWith('diff --numstat -z HEAD')) return { code: 0, stdout: '', stderr: '' };
       if (key.startsWith('ls-files')) return { code: 0, stdout: many, stderr: '' };
       diffs += 1;
-      return { code: 1, stdout: '1\t0\tf.ts\n', stderr: '' };
+      return { code: 1, stdout: '1\t0\tf.ts\x00', stderr: '' };
     });
     expect(diffs).toBe(100);
     expect(churn?.partial).toBe(true);
@@ -68,6 +68,6 @@ describe('readChurn', () => {
   it('is undefined rather than zero where git will not answer', async () => {
     // Zero would be a claim that nothing has changed, which is a different thing from not
     // knowing, and the tray must not draw the second as the first.
-    expect(await readChurn('/w', runner({ 'git diff --numstat HEAD': { code: 128 } }))).toBeUndefined();
+    expect(await readChurn('/w', runner({ 'git diff --numstat -z HEAD': { code: 128 } }))).toBeUndefined();
   });
 });

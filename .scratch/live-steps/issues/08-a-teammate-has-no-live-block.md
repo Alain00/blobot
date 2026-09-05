@@ -190,3 +190,38 @@ Worth knowing about the demo rather than the rule: `many-steps` gives Alice no p
 window a reply is visible in is short there. `MockAgentRuntime` also replays a scenario on every
 wake, which is why Bob said the same sentence twice — the duplicate was two real replies, not one
 drawn twice.
+
+## Amendment, 2026-09-05 — a folded step stays folded
+
+The author's rule, given in one line: *"any folded step, should stay folded"*. It lands here
+because the thing that breaks it is this ticket's own batch walk.
+
+`liveRunIn` bounds a batch by narration: it starts at the earliest still-open call and extends
+**backwards** over contiguous calls until it meets something the principal said. The reason is on
+the ticket and still holds — without it, one call of an open batch returning drops out of the
+block into a loose unattributed line and the agent's face draws twice.
+
+What it cannot do is tell those two cases apart:
+
+- three calls opened together, one returns — the walk keeps it in the block, which is right, and
+  it never left the block to begin with;
+- one call ran and finished, then later another opens with nothing said between — the walk
+  reaches back over work that had already settled, already folded and already been counted, and
+  hauls it back onto the screen.
+
+Nothing on a call records *when* it settled, only that it has, so the two are identical in the
+items. And `build.md` already named this: *"the one shape this gets wrong is a turn of many calls
+with no prose at all between any of them, which none of the four runtimes produces"*. That was
+measured against narration and it is wrong about **reasoning** — an agent that works quietly
+through a list narrates nothing at all, which is the same turn the amendment on ticket 01 is
+about. The corner case is the common one.
+
+It is the second thing in this effort that only the renderer can see, after a reply's news, and it
+takes the same answer: the model states the rule (`NOTHING_FOLDED` in `model.ts`, a set `rowsOf`
+takes and `liveRunIn` filters by) and the renderer keeps the memory (`useFolded`, a ref rather
+than state, because the set is both an input to the rows and read off them — as state it would
+cost a second render pass, and the frame in between is exactly the frame being fixed).
+
+**A step leaves the block once.** That is ticket 04's *"a step leaves the block for exactly one
+reason, it finished"* said in the other direction, and it costs the batch walk nothing: the calls
+the walk exists for never entered a fold.

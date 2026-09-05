@@ -58,7 +58,7 @@ function line(status: UiWorkspaceStatus | undefined): HTMLElement {
         teamId="t1"
         busy={false}
         onSwitched={() => undefined}
-        onCommitted={() => undefined}
+        onOpenChanges={() => undefined}
         onPublish={async () => ({ ok: false, step: 'create', error: 'not in this test' })}
         onPlan={async () => []}
       />,
@@ -139,7 +139,7 @@ async function picker(
         onSwitched={() => {
           state.refreshed += 1;
         }}
-        onCommitted={() => undefined}
+        onOpenChanges={() => undefined}
         onPublish={async () => ({ ok: false, step: 'create', error: 'not in this test' })}
         onPlan={async () => []}
       />,
@@ -230,7 +230,7 @@ describe('the tray under an agent’s composer', () => {
     expect(line(ALICE).textContent).not.toContain('Alice');
   });
 
-  it('refuses to commit while the agent is working, and says so rather than vanishing', () => {
+  it('still opens while the agent is working, because opening a panel is not committing', () => {
     const host = document.createElement('div');
     document.body.append(host);
     act(() => {
@@ -240,36 +240,31 @@ describe('the tray under an agent’s composer', () => {
           teamId="t1"
           busy
           onSwitched={() => undefined}
-          onCommitted={() => undefined}
+          onOpenChanges={() => undefined}
           onPublish={async () => ({ ok: false, step: 'create', error: 'not in this test' })}
           onPlan={async () => []}
         />,
       );
     });
     // A commit taken mid-turn captures a file the agent is halfway through writing, which is a
-    // state nothing was ever in. Disabled rather than absent: a control that disappears while an
-    // agent happens to be thinking reads as a bug.
+    // state nothing was ever in — and that refusal moved to the panel with the act itself, where
+    // it is a disabled button that says `this agent is working` rather than a missing one. The
+    // door is not the act, so it stays a door.
     const commit = [...host.querySelectorAll('.wsflat')].find((button) =>
       button.textContent?.includes('commit'),
     ) as HTMLButtonElement | undefined;
-    expect(commit?.disabled).toBe(true);
+    expect(commit).toBeDefined();
+    expect(commit?.disabled).toBe(false);
   });
 });
 
-describe('the commit', () => {
-  /** The tray with a stubbed main process, opened on the commit popover. */
-  async function commitTray(
-    result: UiCommitResult = { ok: true, sha: 'ab12cd3' },
-  ): Promise<{ host: HTMLElement; sent: unknown[][]; committed: () => number }> {
-    const sent: unknown[][] = [];
-    const state = { committed: 0 };
-    (globalThis as unknown as { window: { blobot: unknown } }).window.blobot = {
-      commitPlan: vi.fn(async () => ['git add -A', 'git commit -m "one"']),
-      commitWork: vi.fn(async (...args: unknown[]) => {
-        sent.push(args);
-        return result;
-      }),
-    };
+describe('the commit door', () => {
+  // The tray had a commit popover of its own until the sidebar grew a panel that can commit a
+  // *subset*. Two surfaces for one act, one of them able to do less, is the duplication
+  // `DESIGN.md` has refused three times, so what is left here is the door: the figure stays,
+  // because a figure is a fact about the workspace and the tray is the line of facts.
+  it('opens the git panel rather than committing here', async () => {
+    let opened = 0;
     const host = document.createElement('div');
     document.body.append(host);
     const root = createRoot(host);
@@ -281,8 +276,8 @@ describe('the commit', () => {
           teamId="t1"
           busy={false}
           onSwitched={() => undefined}
-          onCommitted={() => {
-            state.committed += 1;
+          onOpenChanges={() => {
+            opened += 1;
           }}
           onPublish={async () => ({ ok: false, step: 'create', error: 'not in this test' })}
           onPlan={async () => []}
@@ -294,79 +289,9 @@ describe('the commit', () => {
         button.textContent?.includes('commit'),
       ) as HTMLButtonElement).click();
     });
-    return { host, sent, committed: () => state.committed };
-  }
-
-  function armed(): HTMLButtonElement | undefined {
-    return [...document.querySelectorAll('.wsactions .btn.primary')].at(0) as
-      | HTMLButtonElement
-      | undefined;
-  }
-
-  it('shows the two commands it is about to run', async () => {
-    await commitTray();
-    expect(document.querySelector('.wsplan')?.textContent).toContain('git add -A');
-  });
-
-  it('is not armed until there is a message, because nothing writes one for the user', async () => {
-    await commitTray();
-    expect(armed()?.disabled).toBe(true);
-  });
-
-  it('commits the typed message and tells the caller the folder changed', async () => {
-    const tray = await commitTray();
-    await act(async () => {
-      typeInto('.wstitle', 'fix the retry loop');
-    });
-    await act(async () => {
-      armed()?.click();
-    });
-    expect(tray.sent[0]).toEqual(['t1', 'alice', 'fix the retry loop']);
-    expect(tray.committed()).toBe(1);
-  });
-
-  it('carries the count at its head, and never in the width of the button', async () => {
-    await commitTray();
-    // The panel says what it would take; the button says what it does. A label that grows by a
-    // word per file is a live number setting the width of a control.
-    expect(document.querySelector('.wshead')?.textContent).toContain('2 files');
-    expect(document.querySelector('.wshead .wsadd')?.textContent).toBe('+4');
-    expect(armed()?.textContent?.trim()).toBe('commit');
-  });
-
-  it('commits on enter, because nothing else in the popover takes a keystroke', async () => {
-    const tray = await commitTray();
-    await act(async () => {
-      typeInto('.wstitle', 'fix the retry loop');
-    });
-    await act(async () => {
-      document
-        .querySelector('.wstitle')
-        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    });
-    expect(tray.sent[0]).toEqual(['t1', 'alice', 'fix the retry loop']);
-  });
-
-  it('takes no enter while it is unarmed, so an empty message cannot commit', async () => {
-    const tray = await commitTray();
-    await act(async () => {
-      document
-        .querySelector('.wstitle')
-        ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    });
-    expect(tray.sent).toEqual([]);
-  });
-
-  it('says git’s own refusal and stays open', async () => {
-    const tray = await commitTray({ ok: false, error: 'unable to auto-detect email address' });
-    await act(async () => {
-      typeInto('.wstitle', 'one');
-    });
-    await act(async () => {
-      armed()?.click();
-    });
-    expect(document.querySelector('.wsfailed')?.textContent).toContain('auto-detect email');
-    expect(tray.committed()).toBe(0);
+    expect(opened).toBe(1);
+    // Nothing was typed and nothing ran: the act itself is somewhere else now.
+    expect(host.querySelector('.wstitle')).toBeNull();
   });
 });
 

@@ -64,7 +64,7 @@ function footer(
         teamId="team"
         busy={false}
         onSwitched={() => {}}
-        onCommitted={() => {}}
+        onOpenChanges={() => {}}
         onPublish={async () => ({ ok: false, step: 'create', error: 'not in this test' })}
         onPlan={async () => []}
         {...(options.startOpen === true ? { startOpen: true } : {})}

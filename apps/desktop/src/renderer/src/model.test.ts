@@ -531,10 +531,15 @@ describe('the live half of a run', () => {
       ],
       inFlight,
     );
-    expect(rows.map((row) => row.kind)).toEqual(['item', 'steps']);
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'steps', 'live']);
     expect(folds(rows)[0]?.agentId).toBe('alice');
     expect(folds(rows)[0]?.items.map((item) => item.id)).toEqual(['a1', 'm', 'b1']);
-    expect(live(rows)).toHaveLength(0);
+    // One block, Alice's, and empty: Bob's open call is in her fold and never under his own
+    // face. Hers stands because her turn is still hers -- she is waiting on the mail she sent --
+    // which is the second amendment on 01, and the block's emptiness is what it is saying.
+    expect(live(rows)).toHaveLength(1);
+    expect(live(rows)[0]?.agentId).toBe('alice');
+    expect(live(rows)[0]?.items).toHaveLength(0);
   });
 
   /**

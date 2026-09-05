@@ -88,3 +88,45 @@ transcript saying which of them was doing anything. The other narrow version —
 drop the dots — leaves a face and a name with an empty body under it, below the calls it is
 supposed to be about. Both are worse than what they replace. The frontier order this map was
 written in was wrong about that, and the session that took 01 took 03 with it.
+
+## Amendment, 2026-09-05 — the block stands for the turn, not for the call
+
+Reopened by the author the same day it shipped: *"we did this, but if the agent is not executing
+a thing, it's only thinking, then nothing is shown"*.
+
+The decision above is right about the device and wrong about where it lives. It kept the dots
+*"for the case where there is nothing else to see: `starting` or `thinking` with no call open"*,
+and then that case was never drawn properly, because ticket 03's block exists only while a call
+is open. Between two batches an agent goes back to `thinking`: its calls settle, its steps fold,
+the block empties and comes off the screen, and the **pending bubble** reappears at the foot of
+the column — where `continuesAgent` groups it under the fold it is standing after and therefore
+drops the blobatar. Three dots in a gutter under a shut fold. That is what *"nothing is shown"*
+looks like, and on a runtime with extended thinking it is most of a turn.
+
+**So the block stands for as long as the turn does, and an empty block is the point rather than
+the reason to stop drawing it.** `rowsOf` emits the live row when the principal is in flight and
+the run is the last one, whether or not anything is open; the face is what carries the fact, the
+dots are the same device the rail and the pending bubble already use, and it sits at the end of
+its own run instead of after everything. And a block with no steps **keeps its face even when it
+is grouped**: grouped means *the face is already on screen a line up*, which is true of a caption
+and false of a fold header, since a fold header carries a count and a chevron and no blobatar.
+
+### What was tried first, and taken back out
+
+The first build of this drew the **reasoning itself** — `agent_thought_delta` as a step in the
+block, in `--sans`, sorted in by its first delta. It is available: every runtime sends it,
+`recorder.ts` writes it as `kind: 'thought'`, and the renderer was dropping it under a comment
+saying thinking had no pane of its own. It was built, screenshotted, and refused by the author on
+sight: *"i don't need the thinking tokens, only the thinking state"*.
+
+That is the right call and it is the same call `StatusWord` already made, in its own words:
+*which kind of busy is a question the transcript answers concretely, in tool lines and text
+arriving, rather than as an abstraction over them*. A model's reasoning is neither — it is a
+third thing, longer than either, and it would be the largest thing in the block, which is the
+altitude argument this ticket exists to make. So the tokens stay dropped in the reducer, the
+store's rows stay unread, and what is on screen is the state: an agent's face, standing, with the
+turn still open under it.
+
+A word was not the alternative either. `StatusWord` prints none in flight, on the grounds that
+`WORKING` beside three dots that already say so is the same claim twice — which is this ticket's
+own argument, and it binds here.

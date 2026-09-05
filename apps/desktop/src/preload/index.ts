@@ -32,6 +32,8 @@ import type {
   UiTeamDiskUsage,
   UiWorkspaceInspection,
   UiWorkspaceStatus,
+  UiWorkspaceChanges,
+  UiWorkspaceTree,
   UiBranches,
   UiCommitResult,
   UiPublishResult,
@@ -159,14 +161,22 @@ const api: BlobotApi = {
     ipcRenderer.invoke('blobot:workspaceStatus', teamId, forge) as Promise<
       readonly UiWorkspaceStatus[]
     >,
+  workspaceTree: (teamId, agentId, paths) =>
+    ipcRenderer.invoke('blobot:workspaceTree', teamId, agentId, paths) as Promise<UiWorkspaceTree>,
+  openInWorkspace: (teamId, agentId, path) =>
+    ipcRenderer.invoke('blobot:openInWorkspace', teamId, agentId, path) as Promise<void>,
+  workspaceChanges: (teamId, agentId, repo) =>
+    ipcRenderer.invoke('blobot:workspaceChanges', teamId, agentId, repo) as Promise<UiWorkspaceChanges>,
   listBranches: (teamId, agentId) =>
     ipcRenderer.invoke('blobot:listBranches', teamId, agentId) as Promise<UiBranches>,
   switchBranch: (teamId, agentId, branch, options) =>
     ipcRenderer.invoke('blobot:switchBranch', teamId, agentId, branch, options) as Promise<UiSwitchResult>,
-  commitPlan: (teamId, agentId, message) =>
-    ipcRenderer.invoke('blobot:commitPlan', teamId, agentId, message) as Promise<readonly string[]>,
-  commitWork: (teamId, agentId, message) =>
-    ipcRenderer.invoke('blobot:commitWork', teamId, agentId, message) as Promise<UiCommitResult>,
+  commitPlan: (teamId, agentId, message, selection) =>
+    ipcRenderer.invoke('blobot:commitPlan', teamId, agentId, message, selection) as Promise<
+      readonly string[]
+    >,
+  commitWork: (teamId, agentId, message, selection) =>
+    ipcRenderer.invoke('blobot:commitWork', teamId, agentId, message, selection) as Promise<UiCommitResult>,
   publishPlan: (teamId, agentId, options) =>
     ipcRenderer.invoke('blobot:publishPlan', teamId, agentId, options) as Promise<readonly string[]>,
   publishBranch: (teamId, agentId, options) =>

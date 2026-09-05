@@ -1,10 +1,17 @@
 import { randomBytes } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import type { CompactionSetting, TrustLevel } from '@blobot/core';
+import type {
+  UiChangedFile,
+  UiCommitSelection,
+  UiWorkspaceChanges,
+} from '../shared/api.js';
 import {
   commitPlan,
   commitWorktree,
+  readChanges,
   currentBranch,
   inspectWorkspace as inspectPath,
   listBranches,
@@ -14,6 +21,7 @@ import {
   publishBranch,
   publishPlan,
   readAgentWorkspaceStatus,
+  readWorkspaceTree,
   SqliteStore,
   workspaceProviderFor,
   WorkspaceError,
@@ -29,6 +37,7 @@ import {
   type VerbosityLevel,
   type WorkspaceInspection,
   type WorkspaceProvider,
+  type WorkspaceTree,
 } from '@blobot/core';
 
 /** Hiring an agent. It exists after this, on no team. */
@@ -625,16 +634,108 @@ function branchTarget(
   return { path: workspaces.workspaceFor(requestFor(team, record.id, record.name)).path, holders };
 }
 
-/** The two commands a commit would run, for the confirm to show before it runs them. */
+/**
+ * One agent's uncommitted work, file by file: the git panel's rows.
+ *
+ * Three shapes, and the panel draws each of them differently on purpose. A `git` Workspace is
+ * one worktree with one HEAD. A `plain` one is a copy with no git in it at all, so there is
+ * nothing to ask and nothing to offer. A `nested` one is several repositories with a HEAD each,
+ * so there is no single commit to make: it answers with the repositories and the panel takes one
+ * at a time, which is the same refusal `branchTarget` already makes for the branch menu.
+ */
+export async function readAgentChanges(
+  teamId: string,
+  agentId: string,
+  repo: string | undefined,
+  deps: CreateTeamDeps,
+): Promise<UiWorkspaceChanges> {
+  const found = treeTarget(teamId, agentId, deps);
+  const empty = { rows: [], added: 0, removed: 0 } as const;
+  if (found === undefined) return { ...empty, present: false, kind: 'git' };
+  if (!existsSync(found.path)) return { ...empty, present: false, kind: found.kind };
+  if (found.kind === 'plain') return { ...empty, present: true, kind: 'plain' };
+
+  let cwd = found.path;
+  let repos: readonly string[] | undefined;
+  if (found.kind === 'nested') {
+    const inspect = deps.inspect ?? inspectPath;
+    const seen = await inspect(found.path).catch(() => undefined);
+    repos = (seen?.repos ?? []).map((one) => one.path);
+    const chosen = repo === undefined || repo === '' ? undefined : repo;
+    if (chosen === undefined || !repos.includes(chosen)) {
+      return { ...empty, present: true, kind: 'nested', repos };
+    }
+    // The renderer sends a repository from the list it was given, and this checks it against
+    // that list rather than trusting it: the same containment rule `resolveInWorkspace` keeps.
+    cwd = resolve(found.path, chosen);
+    return { ...(await rowsAt(cwd)), present: true, kind: 'nested', repos, repo: chosen };
+  }
+  return { ...(await rowsAt(cwd)), present: true, kind: found.kind, repo: '' };
+}
+
+async function rowsAt(
+  cwd: string,
+): Promise<{ rows: readonly UiChangedFile[]; added: number; removed: number; partial?: true }> {
+  const changes = await readChanges(cwd, spawnCommand).catch(() => undefined);
+  // Undefined is *git would not answer* — a repository with no commits yet, most often. Empty
+  // rows and a zero total say the same thing a clean worktree says, which is the honest reading
+  // for a panel whose only act is a commit.
+  if (changes === undefined) return { rows: [], added: 0, removed: 0 };
+  return {
+    rows: changes.rows,
+    added: changes.added,
+    removed: changes.removed,
+    ...(changes.partial === true ? { partial: true as const } : {}),
+  };
+}
+
+/** The commands a commit would run, for the confirm to show before it runs them. */
 export function commitPlanFor(
   teamId: string,
   agentId: string,
   message: string,
   deps: CreateTeamDeps,
+  selection: UiCommitSelection = {},
 ): readonly string[] {
-  const found = branchTarget(teamId, agentId, deps);
+  const found = commitTarget(teamId, agentId, selection.repo, deps);
   if ('error' in found) return [];
-  return commitPlan({ path: found.path, message });
+  return commitPlan({ path: found.path, message, ...pathspec(selection) });
+}
+
+/**
+ * Where a commit runs, which is not where a branch menu runs.
+ *
+ * `branchTarget` refuses anything but a single git repository, because a branch menu over
+ * several of them is not one menu. A commit *is* one repository's act either way, so this takes
+ * the repository the panel picked inside a `nested` Workspace and refuses only the copy, which
+ * has no git to commit to.
+ */
+function commitTarget(
+  teamId: string,
+  agentId: string,
+  repo: string | undefined,
+  deps: CreateTeamDeps,
+): { path: string } | { error: string } {
+  const found = treeTarget(teamId, agentId, deps);
+  if (found === undefined) return { error: 'That agent is not on this team.' };
+  if (found.kind === 'plain') return { error: 'this workspace is a copy, so there is no git in it' };
+  if (found.kind !== 'nested') return { path: found.path };
+  if (repo === undefined || repo === '') return { error: 'pick a repository first' };
+  const root = resolve(found.path);
+  const target = resolve(root, repo);
+  if (target !== root && !target.startsWith(`${root}${sep}`)) return { error: 'that is not in this workspace' };
+  return { path: target };
+}
+
+/** The selection, as `commitWorktree` takes it. Absent throughout is *everything here*. */
+function pathspec(
+  selection: UiCommitSelection,
+): { paths?: readonly string[]; untracked?: readonly string[] } {
+  if (selection.paths === undefined) return {};
+  return {
+    paths: selection.paths,
+    ...(selection.untracked === undefined ? {} : { untracked: selection.untracked }),
+  };
 }
 
 /**
@@ -651,10 +752,11 @@ export async function commitAgentWork(
   agentId: string,
   message: string,
   deps: CreateTeamDeps,
+  selection: UiCommitSelection = {},
 ): Promise<CommitOutcome> {
-  const found = branchTarget(teamId, agentId, deps);
+  const found = commitTarget(teamId, agentId, selection.repo, deps);
   if ('error' in found) return { ok: false, error: found.error };
-  return commitWorktree({ path: found.path, message }, spawnCommand);
+  return commitWorktree({ path: found.path, message, ...pathspec(selection) }, spawnCommand);
 }
 
 /** What a pull request from this agent would merge into, and what `ahead` counts against. */
@@ -673,6 +775,72 @@ function requestFor(team: Team, agentId: string, agentName: string) {
     agentId,
     agentName,
     ...(team.workspaceRepos === undefined ? {} : { repos: team.workspaceRepos }),
+  };
+}
+
+/**
+ * The file tree of one agent's AgentWorkspace, for the directories the user has open.
+ *
+ * The grain is `<team>/<agent>`, as it is for a branch, a Handbook and a Routine: this layer is
+ * the one that knows which directory belongs to which agent, so the renderer is handed names
+ * and a relative path and never a path to interpret.
+ */
+export async function readAgentTree(
+  teamId: string,
+  agentId: string,
+  paths: readonly string[],
+  deps: CreateTeamDeps,
+): Promise<WorkspaceTree> {
+  const team = deps.store.teamById(teamId);
+  const found = treeTarget(teamId, agentId, deps);
+  if (team === undefined || found === undefined) return { present: false, directories: [] };
+  // The same base `ahead` is counted from, resolved once here rather than per directory: it is
+  // one answer about one repository, and it is what makes a committed file still say *this
+  // agent did this*.
+  const base = await baseBranchOf(team, deps);
+  return readWorkspaceTree(found.path, paths, {
+    kind: found.kind,
+    ...(base === undefined ? {} : { base }),
+  });
+}
+
+/**
+ * A relative path inside one agent's AgentWorkspace, resolved to somewhere on disk.
+ *
+ * **The renderer never sends an absolute path**, and this refuses anything that escapes the
+ * workspace, which is the same containment rule the loopback tool for a picture arrived at and
+ * for the same reason: blobot must not become a read primitive that goes around ticket 14's
+ * permission posture. The guard is `blobot:openLink`'s, pointed at a folder instead of a
+ * scheme.
+ */
+export function resolveInWorkspace(
+  teamId: string,
+  agentId: string,
+  relative: string,
+  deps: CreateTeamDeps,
+): string | undefined {
+  const found = treeTarget(teamId, agentId, deps);
+  if (found === undefined) return undefined;
+  if (relative.includes('\0')) return undefined;
+  const root = resolve(found.path);
+  const target = resolve(root, relative);
+  if (target !== root && !target.startsWith(`${root}${sep}`)) return undefined;
+  return existsSync(target) ? target : undefined;
+}
+
+function treeTarget(
+  teamId: string,
+  agentId: string,
+  deps: CreateTeamDeps,
+): { path: string; kind: Team['workspaceKind'] } | undefined {
+  const team = deps.store.teamById(teamId);
+  if (team === undefined) return undefined;
+  const record = deps.store.agentsOfTeam(team.id).find((agent) => agent.id === agentId);
+  if (record === undefined) return undefined;
+  const workspaces = deps.workspaces ?? workspaceProviderFor(team.workspaceKind);
+  return {
+    path: workspaces.workspaceFor(requestFor(team, record.id, record.name)).path,
+    kind: team.workspaceKind,
   };
 }
 

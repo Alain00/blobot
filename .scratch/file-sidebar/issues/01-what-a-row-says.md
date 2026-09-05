@@ -114,3 +114,99 @@ the file-icon set's own answer to the same row and comes with it rather than bei
 
 The gap at wide panel widths (B′ is the fallback), and the exact status vocabulary beyond `M` and
 `?` — renamed, deleted and conflicted have no draw yet and no reader has asked for one.
+
+## Amendment, 2026-09-05: the weight and the mark say two different things
+
+Reopened by the author from the built thing, on the same day. The complaint was *the folders which
+contain modified files do not have the mark*, and the panel was right: measured on the worktree in
+the screenshot (`~/.local/share/blobot/worktrees/blobatar/bob`), `git status --porcelain=v2
+-unormal` returned **one line** and the branch was **three commits ahead**. Every folder really was
+clean.
+
+**What was wrong is the measure, and this ticket inherited it rather than choosing it.** Ticket 03
+says *the tree reports what git measured*, and what it measured is `status` — uncommitted against
+`HEAD`, the same figure the tray's `+412 −7` uses. blobot has a commit control in the tray, so an
+agent committing is the **ordinary** case, and a tree that empties the moment it does fails the
+effort's own problem statement: *not one of them can say which nine files*.
+
+**The answer is a second channel, not a third letter.** A fourth read joins the three — `git diff
+--name-only <base>...HEAD`, one tree comparison per worktree against the base `status.ts` already
+counts `ahead` from — and the two facts split across the two channels the row already has:
+
+- **The weight** is *this file is part of what this agent did on this branch*, committed or not.
+  It is what survives the commit, and it is the fact the reader was asking for.
+- **The mark** is unchanged: `M` and `?`, *and it is not committed yet*. A committed file lifts
+  with **nothing in the status column**.
+
+So the vocabulary this ticket closed stays closed. `M` and `?` still separate modified from
+untracked and nothing else was invented. What changed is that weight stopped being a restatement
+of the mark — which is what it was, and which is why *A (weight only)* was rejected above for
+having *one channel and no vocabulary*. It has a vocabulary now; it just is not the mark's.
+
+A collapsed directory's roll-up counts the **union**, because *there is work in here* is the
+question a folder answers. Measured on that same worktree: `apps 19`, `packages 14`, `docs 1`,
+with `bun.lock M` still the only thing uncommitted. **19 ms** for the whole read, against 20 before
+the fourth command.
+
+Unchanged: no base to measure against — a detached HEAD, or a repository inside a `nested`
+Workspace whose branches are its own — collapses the weight back onto the mark rather than guessing.
+
+## Second amendment, 2026-09-05: the mark wears git's hue
+
+By the author, on sight of the built tree: *the added/modified/removed in the file tree needs
+colour*. This ticket's answer was *weight and a mono mark, **never hue***, so the change is
+recorded here rather than made quietly.
+
+**What the original rule was protecting is still protected.** The refusal was aimed at the
+reference's coloured file-type badges — a hue per extension, on every row, saying nothing about the
+work, decorating the whole flank and putting a wall of saturation beside the blobatars. None of
+that moves. The row is still monochrome: the name, the Material mark, the weight, the ignored
+dimming, a directory's roll-up count.
+
+**What changed is that the status column was already the exception's own subject.** DESIGN.md
+`:455` settled the diff counts a week earlier and its same-day amendment turned that from *one
+exception* into **two tests**: the hue must reinforce a fact that is legible without it, and the
+chroma must stay low enough that a blobatar wins the eye. `?` and `M` pass both — the letter is the
+channel and the hue rides on it, and a row carrying a mark is already lifted, so a reader who sees
+no colour at all loses nothing. And the status column *is* `+412 −7` one file at a time: colouring
+the figure and greying its per-file breakdown is the inconsistency that amendment was written
+against.
+
+Three things bound it:
+
+- `?` takes `--added` and `M` takes a new `--modified`, which is the ramp's **orange rather than
+  its yellow**. `M` is the mark most rows carry, and the commonest state must not be the brightest
+  thing in the flank.
+- A directory's **roll-up count is coloured by the fold of what is under it** — see below. It was
+  muted for an hour, on the argument that a folder holding both kinds would have to be drawn as
+  one of them.
+- **No hue without a letter.** Nothing gains a colour that did not already have a mark, so the
+  vocabulary this ticket closed is still closed and there is still no third letter. A deleted file
+  has no row to colour — it is not in the listing — which is why `--removed` is not spent here.
+
+### The folder's count, and the argument that was wrong
+
+Leaving the count muted was defended here on two grounds: that a count *names no state, so colour
+would be its only channel*, and that `19` is a **union** — modified and untracked and
+committed-on-this-branch together — so any single hue asserts one of those about a folder holding
+several.
+
+The author's answer is that the union has a rule, and Zed has been shipping it: added only is
+green, deleted only is red, **mixed is orange**. The second ground was not a fact about folders,
+it was an unexamined assumption that a fold has to lose information. It does not — it has to
+*choose*, and the choice is a decision this ticket can make.
+
+In this tree's two letters the rule collapses to one line: **`M` the moment anything under it is a
+change to a tracked file, `?` where everything uncommitted in there is new.** A change to a tracked
+file is the stronger claim, and a folder of nothing but new files is a folder nothing has been
+taken out of. The mixed case and the modified case are the same answer, which is exactly why no
+third letter is needed and the vocabulary still closes.
+
+The first ground survives intact and is what bounds this: the count is still not *only* colour.
+A folder with work in it is already **lifted**, which is the weight channel saying *there is
+something here*; the hue only ever says which kind. And a folder whose work is **all committed**
+keeps a muted count, because that is the same silence a committed file's own status column keeps —
+so the fold is `mark`'s own meaning, *and it is not committed yet*, answered for a directory.
+
+It costs nothing: `markUnder` is the prefix pass `countUnder` already makes, over the smaller of
+the two sets, and it returns on the first `M`. Nothing walks.

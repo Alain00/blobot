@@ -95,7 +95,18 @@ export function Conversation({
    * rows after it was stranded above them as exactly the unattributed mono line the block exists
    * to abolish.
    */
-  const rows = rowsOf(items, (agentId) => isInFlight(statuses[agentId] ?? 'idle'));
+  /*
+   * Every step a fold has taken, so that none of them can be taken back — the author's rule,
+   * 2026-09-05. `NOTHING_FOLDED` in the model has the whole argument; the part that belongs
+   * here is why it is a ref read during render rather than state. The set is an input to the
+   * rows and is written from the rows, so as state it would cost a second render pass, and the
+   * frame in between is the one frame in which a settled call is back on screen — which is the
+   * thing being fixed. A ref is read on the next render instead, and a step can only ever
+   * re-enter the block on a render after the one that folded it.
+   */
+  const folded = useRef<Set<string>>(new Set());
+  const rows = rowsOf(items, (agentId) => isInFlight(statuses[agentId] ?? 'idle'), folded.current);
+  useFolded(rows, folded);
   const flying = useSwallowed(rows);
   const inPane = agents.filter((agent) => pane.kind === 'team' || pane.agentId === agent.id);
   /*
@@ -249,8 +260,19 @@ function Live({
   grouped: boolean;
 }): React.JSX.Element {
   const shown = useDwell(block.items);
+  /*
+   * A block with nothing in it keeps its face, whatever it is grouped under.
+   *
+   * `.scratch/live-steps/issues/01`, second amendment, and it is the other half of the block
+   * standing between two batches. Grouped means *the face is already on screen a line up*, which
+   * is true of a caption and false of a shut fold: the fold's own header carries a count and a
+   * chevron and no blobatar. So an empty block grouped under one drew a gutter and three dots
+   * with nothing on screen saying whose turn was still running — which is the report this
+   * answers. With steps under it the grouping is right and stays.
+   */
+  const bare = shown.length === 0;
   return (
-    <div className={grouped ? 'msg live grouped' : 'msg live'}>
+    <div className={grouped && !bare ? 'msg live grouped' : 'msg live'}>
       {/* The one face in the transcript that is drawn live, and the only one that may be.
           `animated` is off on a settled message because a record of *then* must not wear a pose
           or move, and because a transcript grows all day and this switches a blobatar to a dozen
@@ -260,7 +282,7 @@ function Live({
           So it can look at the composer while the user is in it. The block never coexists with a
           live message — `isInFlight` leaves `responding` out — so the two faces an agent could
           wear are never on screen together. */}
-      {grouped ? (
+      {grouped && !bare ? (
         <div className="gutter" />
       ) : (
         <Blob
@@ -698,7 +720,7 @@ export const DWELL = 800;
  * progress. The whole of it is in the fold the moment the turn ends, so nothing is lost when it
  * goes.
  */
-export const REPLY_STANDS = 8_000;
+export const REPLY_STANDS = 4_000;
 
 /** A step caught mid-file, and the fold that is taking it. */
 interface Flight {
@@ -734,6 +756,27 @@ interface Flight {
  * already give: a window that is not painting can starve a keyframe for seconds, and a ghost
  * whose removal hung on `animationend` would sit on top of live text until it got a frame.
  */
+/**
+ * Remember every step that has been inside a fold, for as long as this pane is open.
+ *
+ * The counterpart to `NOTHING_FOLDED` in the model, and deliberately the dumbest half of it:
+ * the rule is the model's, the memory is the renderer's, because the transition a fold makes is
+ * only ever visible from one render to the next. It never forgets within a pane — a step that
+ * folded stays folded for the rest of the session — and it is per mount, so switching teams and
+ * coming back starts from a transcript that is already entirely folded anyway.
+ *
+ * A ref rather than state on purpose: nothing here should cause a render, because everything it
+ * decides is already decided by the render it is watching.
+ */
+function useFolded(rows: readonly Row[], seen: React.MutableRefObject<Set<string>>): void {
+  useEffect(() => {
+    for (const row of rows) {
+      if (row.kind !== 'steps') continue;
+      for (const item of row.items) seen.current.add(item.id);
+    }
+  }, [rows, seen]);
+}
+
 function useSwallowed(rows: readonly Row[]): readonly Flight[] {
   const loose = useRef<Map<string, Item> | undefined>(undefined);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);

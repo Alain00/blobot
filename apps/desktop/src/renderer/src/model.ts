@@ -280,6 +280,7 @@ export interface LiveBlock {
   readonly items: readonly Item[];
 }
 
+
 /**
  * Whether this agent is inside a turn right now, asked of the status record the renderer holds.
  *
@@ -295,6 +296,29 @@ export type LiveNow = (agentId: string) => boolean;
  * nothing is in flight and every row is a record of something that already happened.
  */
 const NOBODY_LIVE: LiveNow = () => false;
+
+/**
+ * Steps that have already been inside a fold, and so may never come back out of one.
+ *
+ * The author's rule, 2026-09-05: *"any folded step should stay folded"*. It is not a preference,
+ * it is the other end of the bug that put a thought on screen. {@link liveRunIn}'s batch walks
+ * **backwards** over contiguous calls until it meets the principal's own narration, so that a
+ * call finishing while its siblings run does not drop out of the block as a loose unattributed
+ * line. Two calls that ran one after the other with nothing said between them are indis-
+ * tinguishable, from the items alone, from two calls that were opened together — so the walk
+ * reached back over work that had already settled, already folded, and already been counted,
+ * and hauled it back onto the screen the instant the next call opened. Thinking makes this the
+ * common case rather than the corner one, because reasoning is not narration: an agent that
+ * works quietly through a list produces no prose at all to bound a batch with.
+ *
+ * It cannot be decided from the items, for the same reason a reply's news cannot be
+ * ({@link liveRunIn}): nothing on a call records *when* it settled, only that it has. What the
+ * renderer can see is one render following another, so it keeps the set and hands it back in —
+ * the shape `useSwallowed` and `useDwell` already have.
+ *
+ * The default is the empty set, which is a transcript nobody has watched fold anything.
+ */
+const NOTHING_FOLDED: ReadonlySet<string> = new Set();
 
 /**
  * Everyone the last thing the user said was addressed to, which is who a run may belong to.
@@ -372,6 +396,16 @@ export interface AppState {
    * every snapshot, so that signal survives a team switch the same way it always did.
    */
   feed: FeedEntry[];
+  /**
+   * How many settled entries have ever arrived. Monotonic, and never the feed's length.
+   *
+   * `useWorkspaces` re-reads local git off this. The length was the signal until 2026-09-05 and
+   * it is capped at 200, so once a team had settled its two hundredth tool call the number
+   * stopped moving and the worktree was never read again for the rest of the session: the
+   * tray's `+412 -7 - 9 files` silently froze. A counter cannot saturate. The feed's own cap
+   * stays, because the cap is about memory and this is about liveness.
+   */
+  settled: number;
   budget: { used: number; budget: number } | undefined;
   /** How full each agent's context is, by agent id. Absent means it has never reported. */
   usage: Record<string, UiUsage>;
@@ -466,6 +500,7 @@ export const initialState: AppState = {
   commands: {},
   items: [],
   feed: [],
+  settled: 0,
   budget: undefined,
   usage: {},
   injection: {},
@@ -1076,7 +1111,7 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
       return {
         ...state,
         items,
-        feed: pushFeed(state.feed, {
+        ...settle(state, {
           id: `${event.toolCallId}:done`,
           at: event.at,
           agentId: event.agentId,
@@ -1106,7 +1141,7 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
               },
             ]
           : state.items,
-        feed: pushFeed(state.feed, {
+        ...settle(state, {
           id: `${event.turnId}:${event.agentId}:${event.at}`,
           at: event.at,
           agentId: event.agentId,
@@ -1128,7 +1163,7 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
             text: event.message,
           },
         ],
-        feed: pushFeed(state.feed, {
+        ...settle(state, {
           id: `${event.agentId}:${event.at}:error`,
           at: event.at,
           agentId: event.agentId,
@@ -1159,7 +1194,7 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
       return {
         ...state,
         items: [...state.items, compactionItem(id, event)],
-        feed: pushFeed(state.feed, {
+        ...settle(state, {
           id,
           at: event.at,
           agentId: event.agentId,
@@ -1182,8 +1217,10 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
       if (state.items.some((item) => item.id === id)) return state;
       return { ...state, items: withPicture(state.items, id, event) };
     }
-    // Thinking has no pane of its own yet, and the peer message is rendered from its record
-    // rather than from this announcement.
+    // Reasoning is not drawn and is not kept. The *state* is on screen -- the live block stands
+    // with its agent's face while the turn is in flight -- and `.scratch/live-steps/issues/01`'s
+    // amendment has why the tokens themselves are not: the author's, having seen them drawn.
+    // The peer message is rendered from its record rather than from this announcement.
     case 'agent_thought_delta':
     case 'agent_message_sent':
       return state;
@@ -1423,6 +1460,20 @@ function restoreFeed(log: UiLog): FeedEntry[] {
 function pushFeed(feed: FeedEntry[], entry: FeedEntry): FeedEntry[] {
   if (feed.some((existing) => existing.id === entry.id)) return feed;
   return [entry, ...feed].slice(0, 200);
+}
+
+/**
+ * The feed and the revision, together, so they can never disagree.
+ *
+ * A re-delivered event is not a new settlement: `pushFeed` refuses it, and the counter has to
+ * refuse it too, or a reconnect would re-read every worktree for work that had already been
+ * counted.
+ */
+function settle(state: AppState, entry: FeedEntry): Pick<AppState, 'feed' | 'settled'> {
+  const feed = pushFeed(state.feed, entry);
+  return feed === state.feed
+    ? { feed, settled: state.settled }
+    : { feed, settled: state.settled + 1 };
 }
 
 function lastIndexOf(items: readonly Item[], predicate: (item: Item) => boolean): number {
@@ -1769,6 +1820,7 @@ function runFrom(
   index: number,
   addressed: ReadonlySet<string>,
   live: LiveNow,
+  folded: ReadonlySet<string>,
 ): {
   end: number;
   principal: string | undefined;
@@ -1810,7 +1862,7 @@ function runFrom(
   // below reads as though the run ended where the work still happening begins. That is what
   // keeps the caption above a running batch lifted out as a loose row for the block to group
   // under, which is what it did when an open call ended the run outright.
-  const inFlight = liveRunIn(items, index, end, principal, live);
+  const inFlight = liveRunIn(items, index, end, principal, live, folded);
   const isLive = new Set(inFlight);
 
   /*
@@ -1887,6 +1939,7 @@ function liveRunIn(
   end: number,
   principal: string | undefined,
   live: LiveNow,
+  folded: ReadonlySet<string>,
 ): number[] {
   if (principal === undefined || !live(principal)) return [];
 
@@ -1939,7 +1992,14 @@ function liveRunIn(
    */
   // In the order they happened: a reply that came back between two calls belongs between them,
   // because this is the turn as it is being lived rather than two lists stacked.
-  return [...batch, ...replies].sort((left, right) => left - right);
+  //
+  // Minus anything a fold has already taken. {@link NOTHING_FOLDED} has the reason: the
+  // backwards walk above cannot tell a batch opened together from two calls that merely had
+  // nothing said between them, and only the renderer knows which of them the reader has already
+  // watched being filed away. A step leaves the block once.
+  return [...batch, ...replies]
+    .filter((at) => !folded.has((items[at] as Item).id))
+    .sort((left, right) => left - right);
 }
 
 /** Whether the principal said anything of its own between two of its calls, which ends a batch. */
@@ -1989,7 +2049,11 @@ function partnerSpoke(run: readonly Item[], principal: string | undefined): bool
  * stored for any of this, and nothing is reordered: where a runtime narrates after its call, the
  * agent's mail out stays on its own line above its own answer and only what came back folds.
  */
-export function rowsOf(items: readonly Item[], live: LiveNow = NOBODY_LIVE): Row[] {
+export function rowsOf(
+  items: readonly Item[],
+  live: LiveNow = NOBODY_LIVE,
+  folded: ReadonlySet<string> = NOTHING_FOLDED,
+): Row[] {
   const rows: Row[] = [];
   let index = 0;
   let addressed: ReadonlySet<string> = new Set();
@@ -2001,7 +2065,7 @@ export function rowsOf(items: readonly Item[], live: LiveNow = NOBODY_LIVE): Row
     // answering the user directly and none of them is anybody's aside.
     if (start.kind === 'user') addressed = new Set(start.agentIds);
 
-    const found = runFrom(items, index, addressed, live);
+    const found = runFrom(items, index, addressed, live, folded);
     if (found !== undefined) {
       // The run with everything the principal said to you taken out of it. What is left holds
       // its own order, and so does what came out.
@@ -2045,7 +2109,23 @@ export function rowsOf(items: readonly Item[], live: LiveNow = NOBODY_LIVE): Row
         for (const item of run) rows.push({ kind: 'item', at: item.at, item });
       }
       for (const said of answer) rows.push({ kind: 'item', at: said.at, item: said });
-      if (open.length > 0) {
+      /*
+       * The block stands for as long as the turn does, and **not only while a call is open**.
+       *
+       * `.scratch/live-steps/issues/01`, second amendment. Between two batches an agent goes
+       * back to `thinking`: its calls settle, its steps fold, and the block had nothing left in
+       * it, so it came off the screen and the pending bubble reappeared at the foot of the
+       * column, grouped under the fold and therefore faceless. Three dots in a gutter under a
+       * shut fold is what *"nothing is shown"* looks like, and it is the state a reasoning model
+       * spends most of a turn in.
+       *
+       * So the emptiness is the point rather than the reason to stop drawing: the face is the
+       * carrier, standing at the end of its own run, and the dots are the same device the rail
+       * and the pending bubble already use. Only on the last run, because a turn in flight is
+       * the tail of the transcript and an earlier run by the same agent is finished history.
+       */
+      const turning = open.length > 0 || (principal !== undefined && live(principal) && found.end === items.length);
+      if (turning) {
         rows.push({
           kind: 'live',
           /*
@@ -2056,7 +2136,9 @@ export function rowsOf(items: readonly Item[], live: LiveNow = NOBODY_LIVE): Row
            * been on screen. One live block per agent at a time, because one turn is.
            */
           id: `live:${principal as string}`,
-          at: (open[0] as Item).at,
+          // Where the run ends when there is nothing open: the block is the turn continuing, so
+          // it sits after everything the turn has settled rather than at its first open call.
+          at: open[0]?.at ?? (items[found.end - 1] as Item).at,
           agentId: principal as string,
           items: open,
         });

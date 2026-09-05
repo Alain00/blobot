@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { PanelRight } from 'lucide-react';
 import { Agents } from './components/Agents.js';
 import { Composer } from './components/Composer.js';
 import { Conversation } from './components/Conversation.js';
 import { Details } from './components/Details.js';
+import { FileTree } from './components/FileTree.js';
+import { GitPanel } from './components/GitPanel.js';
 import { ComposerFooter, HandbookNotice } from './components/Handbook.js';
 import { Navigator } from './components/Navigator.js';
 import { NewTeam } from './components/NewTeam.js';
@@ -13,6 +16,8 @@ import { DeleteTeam, EditTeam } from './components/TeamEdits.js';
 import { initialState, itemsFor, paneAfterSnapshot, reduce, type Pane } from './model.js';
 import { useWorkspaces } from './useWorkspaces.js';
 import { useRailWidth } from './useRailWidth.js';
+import { useSidebarPanel } from './useSidebarPanel.js';
+import { useSidebarWidth } from './useSidebarWidth.js';
 import { useDictation } from './useDictation.js';
 import { settingsSectionOf } from './components/Settings.js';
 import { useComposerRoom } from './useComposerRoom.js';
@@ -78,6 +83,11 @@ export function App(): React.JSX.Element {
    */
   const [suggest, setSuggest] = useState<{ text: string; at: number } | undefined>(undefined);
   const rail = useRailWidth();
+  /* The file sidebar. Closed by default, and `--screen=files` opens it at launch, because it is
+     a surface a screenshot cannot click to — the same affordance `--screen=details` is. */
+  const sidebar = useSidebarWidth(rail.width, opened.get('screen') === 'files');
+  /* Which panel it is showing. One global preference, remembered beside the width. */
+  const [panel, setPanel] = useSidebarPanel();
   /** The composer floats over the transcript; this keeps the transcript's last line clear of it. */
   const convRoom = useComposerRoom();
 
@@ -280,7 +290,7 @@ export function App(): React.JSX.Element {
    * called. It takes the id as an optional and answers with nothing when there is no team.
    */
   const openTeamId = state.snapshot?.team?.id;
-  const workspaces = useWorkspaces(openTeamId, state.feed.length);
+  const workspaces = useWorkspaces(openTeamId, state.settled);
   /**
    * Take the creation bar's spec, close it, and let the rail report what happens.
    *
@@ -392,9 +402,13 @@ export function App(): React.JSX.Element {
         </div>
       )}
       <div
-        className="vA"
+        /* A drag animates nothing and tracks the pointer exactly: an animated drag is a panel
+           that lags your hand, which reads as the app being slow rather than as motion. The
+           snap shut below the floor is the one animated part of a drag, because that is the app
+           acting rather than the hand — and it lands here, once the pointer is up. */
+        className={`vA${rail.dragging || sidebar.dragging ? ' dragging' : ''}`}
         style={{
-          gridTemplateColumns: `${rail.width}px minmax(0,1fr)`,
+          gridTemplateColumns: `${rail.width}px minmax(0,1fr) ${sidebar.width}px`,
         }}
       >
         <Rail
@@ -485,6 +499,19 @@ export function App(): React.JSX.Element {
                   onPlan={plan}
                   startOpen={opened.get('screen') === 'details'}
                 />
+                {/* The second glyph in this chrome, beside the details one, where the activity
+                    column's own toggle stood. Two is not a row of switches; a third would be,
+                    and that is the standing limit for a chrome that has been pruned twice. */}
+                <button
+                  type="button"
+                  className="paneltoggle"
+                  onClick={sidebar.toggle}
+                  aria-pressed={sidebar.open}
+                  title="Files"
+                  aria-label="Files"
+                >
+                  <PanelRight size={16} aria-hidden />
+                </button>
                 {/* The budget is per prompt and the pips fill as the team spends it, so it
                     belongs above the transcript it is being spent in. */}
                 <span className="budget">
@@ -547,7 +574,12 @@ export function App(): React.JSX.Element {
                       teamId={openTeamId}
                       busy={(state.statuses[pane.agentId] ?? 'idle') !== 'idle'}
                       onSwitched={workspaces.refresh}
-                      onCommitted={workspaces.refresh}
+                      onOpenChanges={() => {
+                        // The tray's figure is a door to the panel that can act on it, and the
+                        // sidebar may be shut when it is pressed.
+                        setPanel('git');
+                        if (!sidebar.open) sidebar.toggle();
+                      }}
                       onPublish={(options) => publish(pane.agentId, options)}
                       onPlan={(options) => plan(pane.agentId, options)}
                       entries={state.handbooks[pane.agentId] ?? []}
@@ -563,6 +595,47 @@ export function App(): React.JSX.Element {
                 })}
           />
         </div>
+        {/* The third column, restored. `DESIGN.md`'s flanks rule takes an amendment for it and
+            the test in that amendment is what it passes: this is the only rendering of which
+            files an agent has touched, where the activity column drew what the transcript was
+            already drawing. Its expansion memory is per `<team>/<agent>` and lives here for as
+            long as the panel is open, which is what makes switching agents and coming back
+            cheap; closing it is a person putting it away, and it starts fresh. */}
+        {sidebar.open &&
+          (() => {
+            // Two panels, one shell, one set of props: the head, the chooser and the short true
+            // sentences about a folder are the shell's, so the panels differ only in the body.
+            const shared = {
+              teamId: openTeamId,
+              pane,
+              agents: snapshot.agents,
+              workspaces: workspaces.statuses,
+              demoMode: snapshot.demoMode === true,
+              revision: state.settled,
+              panel,
+              onPanel: setPanel,
+              onSelectAgent: (agentId: string) => openPane({ kind: 'agent', agentId }),
+              onSelectTeam: () => openPane({ kind: 'team' }),
+            };
+            return panel === 'git' ? (
+              <GitPanel
+                {...shared}
+                busy={pane.kind === 'agent' && (state.statuses[pane.agentId] ?? 'idle') !== 'idle'}
+                onCommitted={workspaces.refresh}
+              />
+            ) : (
+              <FileTree {...shared} />
+            );
+          })()}
+        {sidebar.open && (
+          <div
+            className={`sidebargrab${sidebar.dragging ? ' on' : ''}`}
+            style={{ right: sidebar.width }}
+            onPointerDown={sidebar.onPointerDown}
+            onPointerMove={sidebar.onPointerMove}
+            onPointerUp={sidebar.onPointerUp}
+          />
+        )}
         {editingTeam !== undefined && (
           <EditTeam
             team={editingTeam}

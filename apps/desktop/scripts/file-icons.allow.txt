@@ -1,0 +1,104 @@
+# The file tree's icon allowlist: Material Icon Theme names, one per line.
+#
+# `DESIGN.md`'s Icons rule takes a second exception for these, and the shape of the exception is
+# this file: widening the tree's vocabulary is adding a name here and running
+# `node scripts/generate-file-icons.mjs`. Material's own 3,000-odd mappings are theirs and are
+# never retyped; the generator prunes them to the names below.
+#
+# It starts smaller than it could. The whole set is 1,049 KB against a 2,588 KB renderer bundle
+# for 6.6x more glyphs than a real machine has ever had a file for, and a miss is the generic
+# page, which a quarter of all files draw anyway. So this grows from what people open rather
+# than from what a vendor ships.
+
+# The three the tree cannot do without.
+file
+folder
+folder-open
+
+# Code.
+typescript
+typescript-def
+react_ts
+react
+javascript
+python
+rust
+go
+go-mod
+ruby
+java
+kotlin
+swift
+c
+h
+cpp
+php
+lua
+elixir
+haskell
+dart
+vim
+console
+
+# Markup, style and data.
+markdown
+readme
+changelog
+license
+todo
+document
+html
+css
+sass
+xml
+json
+yaml
+toml
+table
+graphql
+proto
+prisma
+database
+
+# The web frameworks a worktree in this app is most often a checkout of.
+vue
+svelte
+astro
+nodejs
+npm
+pnpm
+yarn
+vite
+vitest
+eslint
+prettier
+tsconfig
+editorconfig
+jupyter
+webassembly
+
+# Media, which the tree draws as a kind and never as a preview.
+image
+svg
+video
+audio
+font
+pdf
+
+# The machinery beside the code.
+git
+diff
+docker
+terraform
+makefile
+lock
+key
+certificate
+settings
+tune
+log
+zip
+exe
+dll
+agent
+claude

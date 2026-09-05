@@ -51,8 +51,11 @@ import {
   publishPlanFor,
   commitAgentWork,
   commitPlanFor,
+  readAgentChanges,
   readAgentBranches,
+  readAgentTree,
   readTeamWorkspaces,
+  resolveInWorkspace,
   switchAgentBranch,
   editAgentProfile,
   editTeamRoster,
@@ -115,8 +118,11 @@ import type {
   UiTeamIcon,
   UiTeamDiskUsage,
   UiWorkspaceStatus,
+  UiWorkspaceTree,
   UiBranches,
   UiCommitResult,
+  UiCommitSelection,
+  UiWorkspaceChanges,
   UiPublishResult,
   UiSwitchResult,
   UiTeamSummary,
@@ -1716,6 +1722,72 @@ void app.whenReady().then(async () => {
   );
 
   /**
+   * The directories of one agent's AgentWorkspace the sidebar has open.
+   *
+   * Local reads only, and no walk: one `git status` for the worktree and a `readdir` plus a
+   * `check-ignore` per open folder. Nothing here reaches the network and no runtime is told it
+   * happened, which is what makes this observation in the same sense the context gauge is.
+   */
+  ipcMain.handle(
+    'blobot:workspaceTree',
+    async (
+      _event,
+      teamId: string,
+      agentId: string,
+      paths: readonly string[],
+    ): Promise<UiWorkspaceTree> => {
+      if (store === undefined) return { present: false, directories: [] };
+      const asked = Array.isArray(paths) ? paths.filter((path) => typeof path === 'string') : [];
+      return readAgentTree(teamId, agentId, asked, { store, clock }).catch(() => ({
+        present: false,
+        directories: [],
+      }));
+    },
+  );
+
+  /**
+   * A file from that tree, opened in whatever the user opens files with.
+   *
+   * Guarded the way `blobot:openLink` is, and for the same kind of reason. That one refuses any
+   * scheme but `http`; this one takes a **relative** path, resolves it against this agent's own
+   * workspace, and refuses anything that escapes it. blobot must not become a read primitive
+   * that goes around ticket 14's permission posture, and an absolute path from the renderer
+   * would be exactly that.
+   */
+  ipcMain.handle(
+    'blobot:openInWorkspace',
+    (_event, teamId: string, agentId: string, path: unknown) => {
+      if (store === undefined || typeof path !== 'string') return;
+      const target = resolveInWorkspace(teamId, agentId, path, { store, clock });
+      if (target === undefined) return;
+      void shell.openPath(target);
+    },
+  );
+
+  /**
+   * One agent's uncommitted work, file by file: the git panel's rows.
+   *
+   * Local reads only, and the same two commands the tray's figure already runs, kept as rows
+   * instead of summed. Nothing here reaches the network, and no runtime is told it happened.
+   */
+  ipcMain.handle(
+    'blobot:workspaceChanges',
+    async (
+      _event,
+      teamId: string,
+      agentId: string,
+      repo?: string,
+    ): Promise<UiWorkspaceChanges> => {
+      const nothing = { present: false, kind: 'git' as const, rows: [], added: 0, removed: 0 };
+      if (store === undefined) return nothing;
+      return readAgentChanges(teamId, agentId, typeof repo === 'string' ? repo : undefined, {
+        store,
+        clock,
+      }).catch(() => nothing);
+    },
+  );
+
+  /**
    * The branches an agent's worktree could be on, and the user moving it onto one.
    *
    * Local git only: the list is `for-each-ref` and the move is `git switch`, so neither reaches
@@ -1753,20 +1825,31 @@ void app.whenReady().then(async () => {
    */
   ipcMain.handle(
     'blobot:commitPlan',
-    async (_event, teamId: string, agentId: string, message: string): Promise<readonly string[]> => {
+    async (
+      _event,
+      teamId: string,
+      agentId: string,
+      message: string,
+      selection: UiCommitSelection = {},
+    ): Promise<readonly string[]> => {
       if (store === undefined) return [];
-      return commitPlanFor(teamId, agentId, message, { store, clock });
+      return commitPlanFor(teamId, agentId, message, { store, clock }, selection);
     },
   );
 
   ipcMain.handle(
     'blobot:commitWork',
-    async (_event, teamId: string, agentId: string, message: string): Promise<UiCommitResult> => {
+    async (
+      _event,
+      teamId: string,
+      agentId: string,
+      message: string,
+      selection: UiCommitSelection = {},
+    ): Promise<UiCommitResult> => {
       if (store === undefined) return { ok: false, error: 'No database is open.' };
-      return commitAgentWork(teamId, agentId, message, { store, clock }).catch((error: unknown) => ({
-        ok: false as const,
-        error: describe(error),
-      }));
+      return commitAgentWork(teamId, agentId, message, { store, clock }, selection).catch(
+        (error: unknown) => ({ ok: false as const, error: describe(error) }),
+      );
     },
   );
 

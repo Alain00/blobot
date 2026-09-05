@@ -17,10 +17,13 @@
   --ground:#1a1c1e; --raised:#282a2e; --ink:#c5c8c6; --muted:#969896; --line:#373b41;
   /* The one saturated pair that is not a blobatar, and the only two tokens in this file that
      name a colour rather than a role. DESIGN.md carries the exception and the reason: an
-     edit's line counts, where the sign already says which is which and the hue reinforces it.
+     edit's line counts, where the sign already says which is which and the hue reinforces it;
+     and the file sidebar's marks, where `?` and `M` are the same two facts one file at a time.
      Deliberately low-chroma — a blobatar at full saturation must still win the eye, or the
-     governing rule has been broken rather than bent. Nothing else may use them. */
-  --added:#b5bd68; --removed:#cc6666;
+     governing rule has been broken rather than bent. Nothing else may use them, and `--modified`
+     is the orange of the same ramp rather than its yellow, because `M` is the mark most rows
+     carry and the commonest state must not be the brightest thing in the flank. */
+  --added:#b5bd68; --removed:#cc6666; --modified:#de935f;
   /* The tray under the composer: tucked behind the pill, so it has to read as a shelf and not as
      a hole cut in the page, which is what the page's own black made of it.
      **On the ramp, not beside it.** It is the midpoint of `--ground` and `--raised` channel by
@@ -179,7 +182,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    The hairlines stay either way: the tone says *different plane*, the line says *edge*.
 
    The activity column was the other flank until 2026-09-05; the rail is the only one now. */
-.vA .rail{background:var(--recessed)}
+.vA .rail{background:var(--recessed);border-right:1px solid var(--line)}
 /* Nothing else moves, which is the other argument for going down. Every lifted surface inside the
    flank — Search at the head of the rail, a selected row — is still `--raised`, and its gap
    widened from nine levels to thirteen instead of collapsing to five. The upward version needed
@@ -1240,8 +1243,10 @@ textarea.field{resize:vertical;line-height:1.5}
 @keyframes enterscrim{from{opacity:0}}
 /* Centred with `translate`, not `transform`, so the scale below composes with it rather than
    replacing it. `transform` applies innermost, which would have scaled the -50% offset too and
-   walked the sheet a few pixels sideways on the way in. */
-.modal{position:fixed;top:50%;left:50%;translate:-50% -50%;animation:entermodal 200ms var(--ease-out);width:min(560px,calc(100vw - 48px));max-height:calc(100vh - 48px);overflow:auto;background:var(--ground);border:1px solid var(--line);border-radius:20px;padding:24px 26px 22px;display:flex;flex-direction:column;gap:22px;box-shadow:0 30px 90px rgba(0,0,0,.7);z-index:61}
+   walked the sheet a few pixels sideways on the way in. No hairline: the scrim under it and the
+   shadow behind it already say where the sheet ends, and a line around all of that is the edge
+   drawn a third time. */
+.modal{position:fixed;top:50%;left:50%;translate:-50% -50%;animation:entermodal 200ms var(--ease-out);width:min(560px,calc(100vw - 48px));max-height:calc(100vh - 48px);overflow:auto;background:var(--ground);border-radius:20px;padding:24px 26px 22px;display:flex;flex-direction:column;gap:22px;box-shadow:0 30px 90px rgba(0,0,0,.7);z-index:61}
 @keyframes entermodal{from{opacity:.3;scale:.97}}
 /* The agent form only. A dialog holding eight fields needs the room to put two or three on a
    row; the ones holding a sentence and two buttons must not get it, because a paragraph set to
@@ -2096,3 +2101,136 @@ button.listrow:not(.pick):hover{outline:1px solid var(--line);outline-offset:-1p
 .dictation .heard{display:block;margin-top:6px;font-size:13px;color:var(--ink)}
 .dictation .saysomething .wave{margin-right:6px;vertical-align:middle}
 .dictation .disclosure{margin-top:14px}
+
+/* ---------- the file sidebar: the folder the agent is working in ---------- */
+/* THE THIRD COLUMN, RESTORED.
+   The activity column came off on 2026-09-05 and the flanks rule was amended the same day with
+   *"there was a second flank and there is one now"*. This puts one back, and it earns it on the
+   rule's own test: the column drew what the transcript was already drawing, and this draws what
+   the transcript cannot — which nine files. The flank is recessed like the rail, because
+   `--ground` is the reading surface and nothing else.
+
+   The transcript keeps its measure and the sidebar gives: the ceiling is `window − rail − 900`,
+   computed in `useSidebarWidth`, so widening this never takes the transcript under 900px until
+   the window itself cannot hold both. */
+/* Open and close on the interaction budget, in flow. Both flanks resize the same grid, so the
+   transition lives on the grid and comes off for the whole of any drag. */
+@media (prefers-reduced-motion:no-preference){
+  .vA{transition:grid-template-columns 200ms var(--ease-out)}
+  .vA.dragging{transition:none}
+}
+.vA .filetree{background:var(--recessed);border-left:1px solid var(--line);overflow:hidden;display:flex;flex-direction:column;min-width:0}
+/* Out of flow so it does not become a fourth grid column, and wider than the hairline it sits
+   on because a 1px target is a target nobody hits. `useRailWidth`'s handle, mirrored. */
+.sidebargrab{position:absolute;top:0;bottom:0;width:9px;margin-right:-4px;cursor:col-resize;z-index:10}
+.sidebargrab:hover::after,.sidebargrab.on::after{content:"";position:absolute;top:0;bottom:0;right:4px;width:1px;background:var(--ink)}
+/* The face and the name, never the branch: the tray forty pixels away already says it, and
+   `DESIGN.md` has twice refused the same claim twice. The face is what makes two agents' trees
+   impossible to confuse. */
+/* And it is the way back: pressing the agent you are in returns to the team, which is where
+   the chooser is. The face took you in, the name takes you out — without it the panel is
+   one-way and the rail is the only exit. */
+/* Drawn as the rail's own head is drawn, because the two flanks face each other across one
+   window: an inset row with a rounded hover ground, and **no divider**. The rule under the head
+   was the only horizontal line in either flank — the rail separates its head from its list with
+   spacing alone — so it read as a second border a few pixels inside the panel's own. */
+.fthead{flex:0 0 auto;display:flex;align-items:center;gap:8px;width:calc(100% - 12px);margin:8px 6px 2px;text-align:left;padding:7px 9px;border:0;border-radius:9px;background:none;color:var(--ink)}
+.fthead:hover{background:var(--raised)}
+.fthead .back{flex:0 0 auto;color:var(--muted)}
+.fthead:hover .back{color:var(--ink)}
+.fthead .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.fthead .mono{font-size:10px;letter-spacing:.06em}
+.ftbody{flex:1;min-height:0;overflow:auto;padding:0 0 10px}
+/* A panel that pins something to its own foot scrolls inside itself instead. */
+.ftbody.fill{overflow:hidden;padding:0;display:flex;flex-direction:column}
+.fttree{display:flex;flex-direction:column}
+/* Four columns, three of them fixed: chevron, mark, name, and the status column parked at the
+   panel's right edge. The column at the edge is what makes *which files changed* a glance down
+   one edge rather than a read of every row; its cost is accepted — at 320px a name and its `M`
+   sit 200px apart — and the column at a measured offset is on the shelf if that reads badly. */
+.ftrow{display:flex;align-items:center;gap:6px;width:100%;text-align:left;padding:2px 10px 2px 6px;color:var(--muted);font-size:12.5px;line-height:1.6;border-radius:0;background:none;border:0}
+.ftrow:hover{background:var(--raised);color:var(--ink)}
+/* Decoration is weight and a mono mark, never hue, and the two say different things: the weight
+   is *this file is part of what this agent did on this branch*, which survives the agent
+   committing, and the mark is *and it is not committed yet*. An ignored row dims and is shown
+   rather than hidden, because it is in the folder the agent can see. */
+.ftrow.on{color:var(--ink)}
+.ftrow.dim{opacity:.45}
+.ftrow .chev{flex:0 0 auto;width:11px;height:11px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+@media (prefers-reduced-motion:no-preference){
+  .ftrow .chev svg{transition:rotate 140ms var(--ease-out)}
+}
+/* Material Icon Theme, greyed to one `currentColor`. DESIGN.md's Icons rule takes its second
+   and last exception here: greyed, never coloured, never in place of the name — the extension
+   stays in the name beside it. */
+.fileicon{flex:0 0 auto;color:var(--muted)}
+.ftrow:hover .fileicon,.ftrow.on .fileicon{color:var(--ink)}
+.ftrow .nm{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* A value, not a sentence, which is what mono is for. */
+.ftrow .st{flex:0 0 auto;font-family:var(--mono);font-size:10px;color:var(--muted)}
+.ftrow.on .st{color:var(--ink)}
+/* The mark wears git's own hue — added and modified, the two letters the vocabulary has. A
+   directory's roll-up count is left muted: it counts rows rather than naming a state, and a
+   folder holding both would have to be drawn as one of them. */
+.ftrow .st.add,.ftrow.on .st.add{color:var(--added)}
+.ftrow .st.mod,.ftrow.on .st.mod{color:var(--modified)}
+.ftmore{padding:3px 10px;font-size:10px;letter-spacing:.06em}
+/* The team pane's empty state *is* the chooser: a single tree there would be false about the
+   other members, and clicking a face is the same act as clicking that agent's row in the rail.
+   No line over them — the faces are the invitation. */
+.ftfaces{display:flex;flex-direction:column;gap:2px;padding:6px}
+.ftface{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:7px 8px;border-radius:9px;background:none;border:0;color:var(--muted);font-size:13px}
+.ftface:hover{background:var(--raised);color:var(--ink)}
+.ftface .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* The tray's own figure, at the row's right edge: the chooser is where four workspaces are on
+   screen at once, and a name alone says nothing about whether there is anything in there. */
+.ftface .wschurn{flex:none}
+/* The foot: two doors, and the reason the sidebar is a container rather than a panel. Over the
+   panel's one hairline, mirroring the rail's own foot on the other side of the window — the two
+   flanks face each other, so a door at the bottom of one belongs at the bottom of the other. */
+.ftfoot{flex:0 0 auto;display:flex;align-items:center;gap:2px;padding:5px 6px;border-top:1px solid var(--line)}
+.ftdoor{display:flex;align-items:center;justify-content:center;padding:5px 8px;border-radius:8px;background:none;border:0;color:var(--muted)}
+.ftdoor:hover{background:var(--raised);color:var(--ink)}
+/* Pressed is ink, never a fill: the flank is recessed and a filled control in it reads as a
+   surface rather than as a choice. */
+.ftdoor.on{color:var(--ink)}
+/* What has changed, and committing the part of it you mean. The rows are the tray's `+412 −7`
+   one file at a time, so they wear the same two tokens; the tick is blobot's own selection and
+   never the git index, which is why nothing here says *staged*. */
+.gitpanel{flex:1;min-height:0;display:flex;flex-direction:column}
+.gitlist{flex:1;min-height:0;overflow:auto;padding-bottom:8px}
+.githead{display:flex;align-items:center;gap:8px;padding:6px 10px 8px}
+.gitall{background:none;border:0;padding:0;font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--muted)}
+.gitall:hover{color:var(--ink)}
+.gitlabel{padding:6px 10px 3px;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.gitrow{display:flex;align-items:center;gap:7px;padding:2px 10px 2px 6px;color:var(--muted);font-size:12.5px;line-height:1.6}
+.gitrow:hover{background:var(--raised)}
+/* Ticked is the resting state, so it is the unticked row that is drawn differently: dimmed, the
+   way an ignored row in the tree is, because both mean *this is here and is not in play*. */
+.gitrow.on{color:var(--ink)}
+.gitrow:not(.on){opacity:.45}
+.gittick{flex:0 0 auto;width:12px;height:12px;border:1px solid var(--muted);border-radius:3px;background:none;padding:0}
+.gitrow.on .gittick{border-color:var(--ink);background:var(--ink)}
+.gitname{display:flex;align-items:baseline;gap:6px;min-width:0;flex:1;background:none;border:0;padding:0;text-align:left;color:inherit;font-size:12.5px}
+.gitname .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* The folder, dimmed and behind the name: the answer to *which of the four index.ts is this*,
+   which is the only thing a flat list loses against the tree. */
+.gitname .at{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;font-size:10.5px;color:var(--muted)}
+.gitrow .wschurn{flex:0 0 auto}
+.gitfoot{flex:0 0 auto;display:flex;flex-direction:column;gap:6px;padding:8px;border-top:1px solid var(--line)}
+/* The composer's own shape, one flank over: the field and the act inside one border, because a
+   message and taking it are one thing and were drawn as two. */
+.gitentry{display:flex;align-items:flex-end;gap:6px;background:var(--ground);border:1px solid var(--line);border-radius:9px;padding:6px 6px 6px 9px}
+.gitentry:focus-within{border-color:var(--muted)}
+.gitmsg{flex:1;min-width:0;resize:none;background:none;border:0;outline:none;color:var(--ink);font-family:var(--sans);font-size:12.5px;line-height:1.5}
+.gitmsg::placeholder{color:var(--muted)}
+.gitsaid{font-size:10px;letter-spacing:.06em}
+/* One word at every count, per the tray's own rule: what it takes is what is ticked, and the
+   ticks are on screen. */
+.gitcommit{flex:0 0 auto;padding:4px 10px;border-radius:7px;border:0;background:var(--raised);color:var(--ink);font-size:11.5px}
+.gitcommit:not(:disabled):hover{background:var(--line)}
+.gitcommit:disabled{opacity:.4}
+/* Never a blank panel: one drawing nothing is indistinguishable from one that has not finished
+   reading. Short, and the full sentence about a moved folder stays at the launch refusal, which
+   is where the fix is. */
+.ftnone{padding:12px;font-size:10px;letter-spacing:.06em}

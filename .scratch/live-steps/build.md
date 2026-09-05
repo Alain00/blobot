@@ -161,3 +161,56 @@ stands, and `useDwell` starts a clock the first time it sees one, `REPLY_STANDS`
 Two clocks in one hook and they are not the same thing: `DWELL` is a **floor** under something
 whose life belongs to the model (a call is on screen while it is open), and `REPLY_STANDS` is the
 **whole** life of something that has no life of its own, because it has already happened.
+
+## Round four, 2026-09-05: an empty block, and a fold that stays shut
+
+Two reports from the author, and they turned out to be one bug from both ends. The amendments are
+on tickets 01 and 08; this is what only shows from inside the code.
+
+**The first build of this drew the reasoning, and it was taken back out the same hour.**
+`agent_thought_delta` reaches the renderer on every runtime, is recorded as `kind: 'thought'`, and
+was being dropped under a comment saying thinking had no pane of its own — so it was cheap and it
+looked like the answer. It was built, screenshotted (Alice's block reading *"Fifteen files, and
+they only make sense in order."*), and refused: *"i don't need the thinking tokens, only the
+thinking state"*. Removing it took the reducer case back to `return state`, and left the two rules
+that were actually load-bearing. Recorded here rather than dropped, because the screenshot is what
+made the answer obvious in both directions.
+
+**The state was never the missing thing — the block was.** `rowsOf` emitted a live row only when
+`open.length > 0`. Between two batches that is zero, so the block came off the screen and
+`Conversation`'s pending bubble took over at the foot of the column — where `continuesAgent` saw
+the fold's last item and grouped it, which drops the blobatar. A gutter and three dots. The
+condition is now `open.length > 0 || (in flight && found.end === items.length)`, and the row's
+`at` falls back to the run's last item, because with nothing open there is no first open call to
+stand at.
+
+**`grouped` was doing two jobs and only one of them was true.** It means *the face is already on
+screen a line up*, which holds for a caption and not for a fold header — a header carries a count
+and a chevron and no face. `bare` (no steps) is the exception, and it is the whole of the fix's
+second half.
+
+**The stay-folded rule cost one filter and one ref.** `liveRunIn` filters its result by a set the
+caller passes in; `rowsOf` takes it as a third argument defaulted to empty, which is why every
+existing fold test passed unchanged. The ref is read during render and written in an effect: as
+state it would need a second render pass, and the frame in between is the one frame where a
+settled call is back on screen, which is the thing being fixed.
+
+**The proof the test is real is that it fails with one word.** Putting `true ||` in front of the
+filter fails `stays folded when the next call opens with no narration between` and nothing else.
+
+**One existing test changed its answer, and the change is the feature.** `gives a teammate no
+block of its own` now draws Alice's block, empty, under the fold holding Bob's open call. There is
+still no Bob block; Alice's stands because her turn is still hers while she waits on the mail she
+sent, and the emptiness is what it is saying.
+
+### Left over
+
+- **The dwell now holds a batch's calls for 800ms in a block that no longer disappears.** Before
+  this the block unmounted when its last call settled, so `useDwell`'s floor was moot in that
+  case; now the calls visibly linger before folding. Correct by the hook's own rule, and unlooked
+  at on a real runtime.
+- **The thought does not bound a batch.** `narratedBetween` reads items, and a thought is not one,
+  so an agent that reasons between two calls still has them counted as one batch. That is the
+  case the stay-folded rule was written to make harmless, and the two rules answer the same
+  question from different sides.
+- **Still nothing has met a real batch.** Unchanged since round one.
