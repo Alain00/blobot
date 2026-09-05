@@ -221,10 +221,14 @@ up. Read it before starting work.
 - **A screen for *your agents***, and what editing one means —
   `docs/adr/0002-editing-an-agents-definition.md`, the repo's second ADR, which answers the
   question ADR-0001 left open. An edit restates the whole definition; a team the agent is
-  already on takes the role, the standing instructions and the face at its next start, and keeps
-  its name and its runtime, because the branch is `blobot/<team>/<agent>` and a session belongs
-  to the runtime that opened it. The screen is over the working surface, reached from above TEAMS
-  in the rail, and nothing on it restarts a team.
+  already on takes the role, the standing instructions and how it answers at its next start,
+  **the face at once**, and keeps its name and its runtime, because the branch is
+  `blobot/<team>/<agent>` and a session belongs to the runtime that opened it. The screen is over
+  the working surface, reached from above TEAMS in the rail, and nothing on it restarts a team.
+  Both halves of a face are the user's to choose now — the hue and, since 2026-09-04, one of the
+  nine silhouettes, stored by name on the profile and restated onto every membership. The face
+  is the one part of an edit with nothing to restart, which is why it does not wait: it is drawn,
+  not composed into a persona, so a team holding the old one is one agent wearing two faces.
 
 - **Every rail row is its team, and says what that team is doing.** A row draws its members'
   faces and folds their status through the same `StatusWord` the open team uses, silent while
@@ -610,6 +614,37 @@ problem, because four Handbooks do not fold into one the way four statuses fold 
   `.scratch/sound/prototype.html`, which stays: three voices and thirteen per-event switches the
   app deliberately does not offer, and a twenty five second session at real cadence that is the
   only honest way to argue about frequency.
+
+- **Only the agent you asked answers you, and the rest folds.** Two fixes to one observed
+  failure, 2026-09-04. The **wake prompt** told an agent its prose was invisible to the sender
+  only on the *batch* branch, which is the branch that fires least; woken by a single peer
+  message, a real agent wrote *"Hi Alice"* into its own turn, promised to be in touch, called
+  nothing, and the sender waited for a reply that had never been posted. Both transcripts then
+  held a false statement about the other. `REPLY_RULE` in `envelope.ts` is one constant in both
+  branches, in the same position, so they cannot drift apart again. On screen, the team pane drew
+  that teammate's answer to *Alice* in the user's own column at the user's own altitude, usually
+  as the longest thing there; **the block that already folded the turn's own calls holds it now**,
+  one run of the addressed agent's steps, the mail either way and the whole turn a teammate took
+  because of it, named on the shut line with its face (`ran 2 tools · 1 message with` Bob). It
+  shipped that morning as a *second* fold, `aside`, and merged into this one the same day at the
+  author's direction: the reader wants everything the turn had to arrange demoted together, and
+  whether blobot classed a line as a call or as a message is not a distinction they asked about.
+  A run has one principal, so a fan-out never puts one agent's words under another's name; a
+  teammate's turn always folds however short, mail with nothing behind it never does; the three
+  exclusions bind the teammate too, the unanswered permission hardest, because an agent nobody
+  addressed has no other way of reaching the user. **What the principal said to you is never in the
+  block** -- all of it comes out and is drawn underneath in order, grouped into one turn -- which
+  is the fourth rule tried in one day and the author's own: trimming the end folds away your
+  agent's only words to you, cutting the run there strands the teammate's later work as a second
+  block reading `ran 1 tool` for a turn that was not theirs, and lifting only the *last* prose is
+  worse than both, because an agent that pings three teammates writes a paragraph per reply and
+  **the last one is the last increment, not a summary**. blobot provides no inference, so it
+  cannot summarise them and must not drop them. A short caption stays in, since it introduces the
+  call beneath it and means nothing away from it. The `to Alice` tag under the user's bubble went
+  with it: it was the address said twice under words that begin `@Alice`, and what it
+  was guarding against is answered where it happens. **The silent-handoff detector still cannot
+  see this**, because `#wake` passes it no `HandoffWatch` and its shape assumes an operator
+  prompt with names in it. That is a ticket, not a fix.
 
 Next: **the dictation done-when by hand** — a Spanish sentence with identifiers into a real
 agent, locally and through one provider (the `whisper-cli` workflow ran and its hashes are

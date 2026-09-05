@@ -272,6 +272,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       verbosity: profile.verbosity ?? null,
       instructions: profile.instructions ?? null,
       hue: profile.hue ?? null,
+      shape: profile.shape ?? null,
       createdAt: profile.createdAt,
       deletedAt: profile.deletedAt ?? null,
     }).run();
@@ -333,6 +334,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
         verbosity: definition.verbosity ?? null,
         instructions: definition.instructions ?? null,
         hue: definition.hue ?? null,
+        shape: definition.shape ?? null,
       })
       .where(eq(agentProfiles.id, profileId))
       .run();
@@ -353,6 +355,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       readonly role: string;
       readonly instructions?: string;
       readonly hue?: number;
+      readonly shape?: string;
       readonly runtimeOptions?: Readonly<Record<string, string>>;
       readonly trust?: TrustLevel;
       readonly compaction?: CompactionSetting;
@@ -365,6 +368,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
         role: stated.role,
         instructions: stated.instructions ?? null,
         hue: stated.hue ?? null,
+        shape: stated.shape ?? null,
         // Like the role: restated on every team, taken at that team's next start. The session
         // in flight keeps what it was launched with, because that is what it was launched with.
         runtimeOptions: encodeOptions(stated.runtimeOptions),
@@ -402,6 +406,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       role: agent.role,
       instructions: agent.instructions ?? null,
       hue: agent.hue ?? null,
+      shape: agent.shape ?? null,
       runtimeId: agent.runtimeId,
       executablePath: agent.executablePath ?? null,
       runtimeOptions: encodeOptions(agent.runtimeOptions),
@@ -1566,6 +1571,7 @@ function toProfileRecord(row: AgentProfileRow): AgentProfileRecord {
     ...(row.verbosity === null ? {} : { verbosity: verbosityLevelOf(row.verbosity) }),
     ...(row.instructions === null ? {} : { instructions: row.instructions }),
     ...(row.hue === null ? {} : { hue: row.hue }),
+    ...(row.shape === null ? {} : { shape: row.shape }),
     ...(row.deletedAt === null ? {} : { deletedAt: row.deletedAt }),
   };
 }
@@ -1617,6 +1623,7 @@ function toAgentRecord(row: AgentRow): AgentRecord {
     ...(row.profileId === null ? {} : { profileId: row.profileId }),
     ...(row.instructions === null ? {} : { instructions: row.instructions }),
     ...(row.hue === null ? {} : { hue: row.hue }),
+    ...(row.shape === null ? {} : { shape: row.shape }),
     ...(row.executablePath === null ? {} : { executablePath: row.executablePath }),
     ...optionsOf(row.runtimeOptions),
     ...(row.trust === null ? {} : { trust: trustLevelOf(row.trust) }),

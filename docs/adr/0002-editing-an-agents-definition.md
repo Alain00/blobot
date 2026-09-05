@@ -153,3 +153,46 @@ usually is not asked to: the UI names the decision, and no component knows what 
 makes of it.
 
 Migration `0008`, one nullable column on each of the two tables.
+
+## Amendment, 2026-09-04: the silhouette is choosable, and then it is stored like the hue
+
+The split above — the hue stored on the profile and restated onto every membership, the
+silhouette derived from the name — was true, and it was reported as a property of a face rather
+than as a decision. It was neither. It was a fact about which half of a face had a picker.
+
+The hire and edit dialogs now offer both, so the sentence resolves the way the rest of this ADR
+already does: **a chosen silhouette is stored beside the hue and restated onto every membership;
+an unchosen one is still the name's.** After a rename, an agent nobody reshaped still takes a new
+shape on teams formed under the new name and keeps the old one where the old name lives, exactly
+as before. An agent somebody reshaped keeps that shape everywhere, because it is now a stated
+fact about the agent rather than a consequence of the string its face was drawn under.
+
+Nothing about *why* is new. A silhouette is only identity, in the same sense a colour is:
+nothing is named after it and nothing resolves through it, so an agent wearing two silhouettes
+on two teams defeats the reason the face follows the agent at all. What changes is that the
+argument now has something to apply to.
+
+Two details the shape does not share with the hue, both in `blobatar-shapes.ts`:
+
+- **A name is stored, never the number.** The renderer feeds the library a position inside a
+  band, and those bands are the library's to retune inside a minor. Persisting a position would
+  mean every face somebody chose quietly moving under a dependency bump; `round` keeps meaning
+  round.
+- **An unknown name is the same as none.** A row written by a later version naming a silhouette
+  this one does not have falls back to all nine and lets the agent's name decide, because the
+  face a name gives is a real face, while a silhouette blobot substituted is this app deciding
+  what somebody's agent looks like.
+
+Migration `0021`, one nullable column on each of the two tables.
+
+**And the face lands at once, where the rest waits.** Found the moment the silhouette had a
+picker: the rail draws its rows out of the membership rows, which an edit restates immediately,
+while the open team's pane was drawn from the Agent the running team was launched with. So the
+same agent wore the new face on the rail and the old one in the transcript beside it, inside one
+window. The snapshot reads every face from the store now.
+
+This is not a new rule, it is the old one read properly. A role and standing instructions wait
+for the next start because they are composed into a persona and the session in flight was
+composed from the old one. A face is drawn. There is no session for it to disagree with, and
+nothing to restart in order to apply it. The dialog says so in the sentence about where an edit
+lands.

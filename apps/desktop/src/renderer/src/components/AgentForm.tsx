@@ -13,6 +13,7 @@ import type {
 } from '../../../shared/api.js';
 import { ATTENDED_TRUST_LEVELS } from '@blobot/core/domain';
 import { Blob, SEEN } from './Blob.js';
+import { SHAPE_NAMES } from '../blobatar-shapes.js';
 import { READINESS_WORD } from './readiness.js';
 import { RuntimeMark } from './RuntimeMark.js';
 import { RuntimeOptions } from './RuntimeOptions.js';
@@ -60,6 +61,8 @@ function AgentFields({
   setRuntimeId,
   hue,
   setHue,
+  shape,
+  setShape,
   runtimeOptions,
   setRuntimeOptions,
   trust,
@@ -83,6 +86,8 @@ function AgentFields({
   setRuntimeId: (value: string) => void;
   hue: number | undefined;
   setHue: (value: number | undefined) => void;
+  shape: string | undefined;
+  setShape: (value: string | undefined) => void;
   runtimeOptions: Readonly<Record<string, string>>;
   setRuntimeOptions: (value: Readonly<Record<string, string>>) => void;
   trust: TrustLevel;
@@ -126,7 +131,7 @@ function AgentFields({
 
             `animate` costs about a dozen inline SVG nodes and one gaze driver. For one face in
             a modal that is nothing; it is the transcript this was ever a question for. */}
-        <Blob name={seed} size={112} hue={hue} animated lookAt="pointer" travel={SEEN} />
+        <Blob name={seed} size={112} hue={hue} shape={shape} animated lookAt="pointer" travel={SEEN} />
         {/* A radiogroup, because that is what it is: one colour out of a fixed set, and the
             first cell is the default rather than a reset button parked to one side. */}
         <div className="swatches" role="radiogroup" aria-label="Colour">
@@ -150,6 +155,39 @@ function AgentFields({
               style={{ background: `hsl(${choice} 68% 56%)` }}
               onClick={() => setHue(choice)}
             />
+          ))}
+        </div>
+        {/* The same row again, one variable along. Every cell is a real blobatar rather than an
+            icon of one, seeded by the name being typed and wearing the hue chosen above, so the
+            only thing that differs across the row is the thing being chosen — which is what the
+            colour row does with colour, and the reason neither needs a caption. A picture of a
+            silhouette would also be a second drawing of a face to keep in step with the library.
+
+            Still faces, and the only unanimated blobatars in this dialog: ten gaze drivers under
+            the one preview that is *meant* to look back would be nine faces competing with it. */}
+        <div className="swatches shapes" role="radiogroup" aria-label="Shape">
+          <button
+            role="radio"
+            aria-checked={shape === undefined}
+            aria-label="the shape its name gives it"
+            title="the shape its name gives it"
+            className={`swatch auto${shape === undefined ? ' on' : ''}`}
+            onClick={() => setShape(undefined)}
+          >
+            <Shuffle size={12} aria-hidden />
+          </button>
+          {SHAPE_NAMES.map((choice) => (
+            <button
+              key={choice}
+              role="radio"
+              aria-checked={shape === choice}
+              aria-label={choice}
+              title={choice}
+              className={`swatch face${shape === choice ? ' on' : ''}`}
+              onClick={() => setShape(choice)}
+            >
+              <Blob name={seed} size={38} hue={hue} shape={choice} />
+            </button>
           ))}
         </div>
       </div>
@@ -316,6 +354,8 @@ export function HireAgent({
   const [runtimeId, setRuntimeId] = useState('');
   /** Undefined means the name decides, which is the default and stays the default. */
   const [hue, setHue] = useState<number | undefined>();
+  /** And the same for the silhouette, for the same reason. */
+  const [shape, setShape] = useState<string | undefined>();
   /** Empty means the runtime's own defaults, which is what storing nothing means. */
   const [runtimeOptions, setRuntimeOptions] = useState<Readonly<Record<string, string>>>({});
   /** Where an agent nobody has thought about this for starts, and where most will stay. */
@@ -335,7 +375,10 @@ export function HireAgent({
   const hire = async (): Promise<void> => {
     setBusy(true);
     const result = await window.blobot.hireAgent(
-      specOf({ name, role, instructions, hue, runtimeOptions, trust, compaction, verbosity }, selected),
+      specOf(
+        { name, role, instructions, hue, shape, runtimeOptions, trust, compaction, verbosity },
+        selected,
+      ),
     );
     setBusy(false);
     if (!result.ok || result.profileId === undefined) {
@@ -372,6 +415,8 @@ export function HireAgent({
             setRuntimeId={setRuntimeId}
             hue={hue}
             setHue={setHue}
+            shape={shape}
+            setShape={setShape}
             runtimeOptions={runtimeOptions}
             setRuntimeOptions={setRuntimeOptions}
             trust={trust}
@@ -434,6 +479,7 @@ export function EditAgent({
   const [instructions, setInstructions] = useState(agent.instructions ?? '');
   const [runtimeId, setRuntimeId] = useState(agent.runtimeId);
   const [hue, setHue] = useState<number | undefined>(agent.hue);
+  const [shape, setShape] = useState<string | undefined>(agent.shape);
   const [runtimeOptions, setRuntimeOptions] = useState<Readonly<Record<string, string>>>(
     agent.runtimeOptions ?? {},
   );
@@ -453,6 +499,7 @@ export function EditAgent({
     role.trim() !== agent.role ||
     instructions.trim() !== (agent.instructions ?? '') ||
     hue !== agent.hue ||
+    shape !== agent.shape ||
     !sameOptions(runtimeOptions, agent.runtimeOptions ?? {}) ||
     trust !== (agent.trust ?? 'normal') ||
     compaction !== (agent.compaction ?? 'auto') ||
@@ -462,7 +509,10 @@ export function EditAgent({
     setBusy(true);
     const edit = await window.blobot.editAgent(
       agent.id,
-      specOf({ name, role, instructions, hue, runtimeOptions, trust, compaction, verbosity }, runtimeId),
+      specOf(
+        { name, role, instructions, hue, shape, runtimeOptions, trust, compaction, verbosity },
+        runtimeId,
+      ),
     );
     setBusy(false);
     if (!edit.ok) {
@@ -515,6 +565,8 @@ export function EditAgent({
                 setRuntimeId={setRuntimeId}
                 hue={hue}
                 setHue={setHue}
+                shape={shape}
+                setShape={setShape}
                 runtimeOptions={runtimeOptions}
                 setRuntimeOptions={setRuntimeOptions}
                 trust={trust}
@@ -577,8 +629,9 @@ function WhereItLands({
   return (
     <div className="note">
       <span className="muted">
-        The role, the standing instructions, the face and how it answers reach <b>{on}</b> the
-        next time {teams.length === 1 ? 'it starts' : 'each starts'}.
+        The face reaches <b>{on}</b> straight away. The role, the standing instructions and how
+        it answers reach {teams.length === 1 ? 'it' : 'them'} the next time{' '}
+        {teams.length === 1 ? 'it starts' : 'each starts'}.
       </span>
       {renamedTo !== undefined && (
         <span className="muted">
@@ -691,6 +744,7 @@ function specOf(
     role: string;
     instructions: string;
     hue: number | undefined;
+    shape: string | undefined;
     runtimeOptions: Readonly<Record<string, string>>;
     trust: TrustLevel;
     compaction: CompactionSetting;
@@ -704,6 +758,7 @@ function specOf(
     runtimeId,
     ...(form.instructions.trim() === '' ? {} : { instructions: form.instructions.trim() }),
     ...(form.hue === undefined ? {} : { hue: form.hue }),
+    ...(form.shape === undefined ? {} : { shape: form.shape }),
     // Always sent, even empty: an edit restates the definition, so a picker cleared back to
     // the runtime's defaults has to be able to say so.
     runtimeOptions: form.runtimeOptions,

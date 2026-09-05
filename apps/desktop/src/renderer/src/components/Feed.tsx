@@ -167,7 +167,7 @@ function Context({
             aria-controls={`sent-${agent.id}`}
             onClick={() => setOpen(open === agent.id ? undefined : agent.id)}
           >
-            <Blob name={agent.name} size={14} hue={agent.hue} />
+            <Blob name={agent.name} size={14} hue={agent.hue} shape={agent.shape} />
             <span className="who">{agent.name}</span>
             <span className="n">
               {tokens(reading.used)}/{tokens(reading.size)}

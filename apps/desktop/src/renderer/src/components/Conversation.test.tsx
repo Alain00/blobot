@@ -17,7 +17,7 @@ import { createRoot } from 'react-dom/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentStatus } from '@blobot/core/domain';
 import type { UiAgent } from '../../../shared/api.js';
-import type { Item, Pane } from '../model.js';
+import { itemsFor, type Item, type Pane } from '../model.js';
 import { stubGazeHost } from '../test-dom.js';
 
 // React's own flag for "these updates are being driven by a test", which is what lets `act`
@@ -169,41 +169,22 @@ function draw(
 describe('the voices, after the roster stopped being passed down', () => {
   const at = 1_700_000_000_000;
 
-  it('names the recipient of your message, in the team pane only', () => {
+  // The `to Bob` caption under every prompt is gone, 2026-09-04. What it was guarding against is
+  // the reader losing which reply is whose, and the fold answers that where it happens.
+  it('says what you typed and nothing about where it went', () => {
     const items: Item[] = [{ kind: 'user', id: 'u', at, agentIds: ['b'], text: 'have a look' }];
-    expect(draw(items, { kind: 'team' })).toContain('to Bob');
+    expect(draw(items, { kind: 'team' })).toContain('have a look');
+    expect(draw(items, { kind: 'team' })).not.toContain('to Bob');
     expect(draw(items, { kind: 'agent', agentId: 'b' })).not.toContain('to Bob');
   });
 
-  // The composer names the lead in its own placeholder and on its own button, so a prompt that
-  // went there did not go anywhere the reader has to be told about. A fan-out still is.
-  it('says nothing when the message went where the composer says it goes', () => {
-    const host = document.createElement('div');
-    document.body.append(host);
-    const root = createRoot(host);
-    const render = (agentIds: readonly string[]): string => {
-      act(() => {
-        root.render(
-          React.createElement(Conversation, {
-            pane: { kind: 'team' } as Pane,
-            agents: AGENTS,
-            statuses: { a: 'idle', b: 'idle' },
-            items: [{ kind: 'user', id: 'u', at, agentIds: [...agentIds], text: 'have a look' }],
-            lead: 'a',
-            onAnswerPermission: () => {},
-            routineArmed: {},
-            onDisarmRoutine: () => {},
-            onRemoveHandbookEntry: () => {},
-          }),
-        );
-      });
-      return host.querySelector('.col')?.textContent ?? '';
-    };
-    expect(render(['a'])).not.toContain('to Alice');
-    expect(render(['b'])).toContain('to Bob');
-    expect(render(['a', 'b'])).toContain('to Alice, Bob');
-    act(() => root.unmount());
-    host.remove();
+  // A fan-out went to both, and used to say so under the bubble. The bubble's own words carry it
+  // now, because addressing is typed with an `@` and the reader is the one who typed it.
+  it('says nothing about a fan-out either', () => {
+    const items: Item[] = [
+      { kind: 'user', id: 'u', at, agentIds: ['a', 'b'], text: '@Alice @Bob have a look' },
+    ];
+    expect(draw(items, { kind: 'team' })).not.toContain('to Alice, Bob');
   });
 
   // An agent that put itself on a schedule. The block is the price of issue 05's amendment, so
@@ -255,6 +236,77 @@ describe('the voices, after the roster stopped being passed down', () => {
     host.remove();
     expect(text).toContain('have a look');
     expect(text).not.toContain('to Alice');
+  });
+
+  /*
+   * The screenshot this change came from: the user asked Alice about Bob, Alice mailed Bob, and
+   * Bob's whole answer to Alice was drawn in the user's column with nothing marking it as
+   * somebody else's mail. Shut, the pane says a teammate was involved and names them; the turn
+   * itself is one click away.
+   */
+  it('folds a teammate the prompt did not address, and names them on the line', () => {
+    const at = 1_700_000_000_000;
+    const items: Item[] = [
+      { kind: 'user', id: 'u', at, agentIds: ['a'], text: 'can you check on Bob' },
+      { kind: 'peer', id: 'p', at: at + 1000, fromId: 'a', toId: 'b', text: 'what are you on?' },
+      { kind: 'agent', id: 'm', at: at + 2000, agentId: 'b', text: 'NOTHING RUNNING MY END', live: false },
+    ];
+
+    const shut = draw(items, { kind: 'team' });
+    expect(shut).toContain('2 messages');
+    expect(shut).toContain('Bob');
+    expect(shut).not.toContain('NOTHING RUNNING MY END');
+
+    const opened = draw(items, { kind: 'team' }, { a: 'idle', b: 'idle' }, (host) =>
+      host.querySelector<HTMLButtonElement>('.ran .route')?.click(),
+    );
+    expect(opened).toContain('NOTHING RUNNING MY END');
+  });
+
+  /*
+   * Past two, the far ends are a stack of faces and nothing else: `17 messages with 3 teammates`
+   * said in words what the faces beside it were already saying, and the count of mail is the half
+   * of it a reader can do nothing with.
+   */
+  it('stacks the faces past two partners, and counts nothing in words', () => {
+    const at = 1_700_000_000_000;
+    const items: Item[] = [
+      { kind: 'user', id: 'u', at, agentIds: ['a'], text: 'can u ping the team?' },
+      { kind: 'peer', id: 'p1', at: at + 1000, fromId: 'a', toId: 'b', text: 'what are you on?' },
+      { kind: 'peer', id: 'p2', at: at + 2000, fromId: 'a', toId: 'c', text: 'what are you on?' },
+      { kind: 'peer', id: 'p3', at: at + 3000, fromId: 'a', toId: 'd', text: 'what are you on?' },
+      { kind: 'agent', id: 'mb', at: at + 4000, agentId: 'b', text: 'nothing in flight', live: false },
+      { kind: 'agent', id: 'mc', at: at + 5000, agentId: 'c', text: 'unbriefed', live: false },
+      { kind: 'agent', id: 'md', at: at + 6000, agentId: 'd', text: 'idle here', live: false },
+    ];
+
+    let faces = 0;
+    const shut = draw(items, { kind: 'team' }, { a: 'idle', b: 'idle' }, undefined, (host) => {
+      faces = host.querySelectorAll('.ran .route .stack > span').length;
+    });
+
+    expect(faces).toBe(3);
+    expect(shut).not.toContain('teammates');
+    expect(shut).not.toContain('messages with');
+  });
+
+  /*
+   * An agent's own pane holds that agent's items and the mail at either end of them, and never
+   * another agent's turn -- `itemsFor` has already taken those out, which is what App hands this
+   * component. So swallowing a teammate is a team-pane shape by arithmetic rather than by a
+   * pane check, and
+   * the filter is in this test for the same reason it is in App: without it the component would
+   * be being asked to draw a pane that cannot occur.
+   */
+  it('makes no aside in an agent own pane', () => {
+    const at = 1_700_000_000_000;
+    const items: Item[] = [
+      { kind: 'user', id: 'u', at, agentIds: ['a'], text: 'can you check on Bob' },
+      { kind: 'peer', id: 'p', at: at + 1000, fromId: 'a', toId: 'b', text: 'what are you on?' },
+      { kind: 'agent', id: 'm', at: at + 2000, agentId: 'b', text: 'nothing running', live: false },
+    ];
+    const pane: Pane = { kind: 'agent', agentId: 'a' };
+    expect(draw(itemsFor(items, pane), pane)).not.toContain('message with');
   });
 
   it('labels a turn once and drops the name from what continues it', () => {

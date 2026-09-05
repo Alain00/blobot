@@ -483,7 +483,7 @@ export function Composer({
           <Command.List className="suggest">
             {suggestions.map((agent) => (
               <Command.Item key={agent.id} value={agent.id} onSelect={() => complete(agent)}>
-                <Blob name={agent.name} size={18} hue={agent.hue} />
+                <Blob name={agent.name} size={18} hue={agent.hue} shape={agent.shape} />
                 <span>{agent.name}</span>
                 <span className="r">{agent.role}</span>
               </Command.Item>

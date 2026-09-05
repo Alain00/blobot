@@ -8,6 +8,7 @@ import {
   failuresIn,
   filesChangedIn,
   isPending,
+  messagesIn,
   notesIn,
   rowsOf,
   toolsIn,
@@ -31,7 +32,6 @@ export function Conversation({
   routineArmed,
   onDisarmRoutine,
   onRemoveHandbookEntry,
-  lead,
   opening = false,
   chrome,
   moreAbove = false,
@@ -58,13 +58,6 @@ export function Conversation({
    * persona at all is that you see it happen and can undo it here.
    */
   onRemoveHandbookEntry: (entryId: string) => void;
-  /**
-   * The team's lead, when it has one: who the team pane addresses when the user names nobody.
-   *
-   * Here for one caption. A prompt that went to the lead went where the composer says it goes,
-   * so it is the case the `to` tag has nothing to add to.
-   */
-  lead?: string;
   /** Whether the team said anything above this window. False means this is the beginning. */
   moreAbove?: boolean;
   /** Fetch the window above. Resolves when the pane has it, which is what ends the wait. */
@@ -91,6 +84,19 @@ export function Conversation({
   const earlier = useLoadEarlier(stream, onLoadEarlier);
   // Where the pending faces look, and null whenever the user is not in the composer.
   const composer = useComposerFocus();
+  // Everything a row needs that is not the row itself. Bundled rather than spread, because a
+  // block draws items of its own now -- mail, and a teammate's turn -- and would otherwise take
+  // seven props to hand straight back down. It is rebuilt on every render and that is
+  // deliberate: `ItemView` is the memoized thing, and it takes primitives.
+  const cast: RowCast = {
+    pane,
+    byId,
+    statuses,
+    routineArmed,
+    onAnswerPermission: answer,
+    onDisarmRoutine: disarm,
+    onRemoveHandbookEntry: removeEntry,
+  };
 
   // The pane's own chrome only: App owns the column, so the composer sits under this in the
   // same flex container.
@@ -140,32 +146,8 @@ export function Conversation({
               </button>
             </div>
           )}
-          {rows.map((row, index) => {
-            // A fold is *inside* a turn, so what the row after it groups against is the last
-            // item the fold swallowed, not the fold. Otherwise every block would reopen the
-            // turn under it and one answer would wear its name three times.
-            const previous = lastItemOf(rows[index - 1]);
-            const rule = timeRule(row.at, previous?.at);
-            // A rule reopens the turn: after "Yesterday" the reader needs the name again.
-            return (
-              <React.Fragment key={row.kind === 'steps' ? row.id : row.item.id}>
-                {rule !== undefined && <div className="timerule">{rule}</div>}
-                {row.kind === 'steps' ? (
-                  <Steps row={row} teamPane={pane.kind === 'team'} />
-                ) : (
-                  <ItemView
-                    item={row.item}
-                    grouped={rule === undefined && continuesSpeaker(row.item, previous)}
-                    teamPane={pane.kind === 'team'}
-                    onAnswerPermission={answer}
-                    onDisarmRoutine={disarm}
-                    onRemoveHandbookEntry={removeEntry}
-                    {...castOf(row.item, pane, byId, statuses, routineArmed, lead)}
-                  />
-                )}
-              </React.Fragment>
-            );
-          })}
+          <Rows rows={rows} cast={cast} />
+
 
           {/* Whoever is about to speak, under the last thing said. In the team pane that can be
               two agents at once, which is the claim the demo makes. */}
@@ -195,6 +177,7 @@ export function Conversation({
                   size={28}
                   status={statuses[agent.id] ?? 'idle'}
                   hue={agent.hue}
+                  shape={agent.shape}
                   animated
                   lookAt={composer}
                 />
@@ -220,6 +203,59 @@ export function Conversation({
 }
 
 /**
+ * Everything the rows need that is not a row: who is on the team, where they are being drawn,
+ * and the three things a block can do about what it is disclosing.
+ *
+ * It exists because a fold draws more than mono lines now. A block that swallows mail and a
+ * teammate's turn has to draw them as themselves, so it needs the cast the transcript has, and
+ * the alternative to one bundle is seven props threaded through two components whose only
+ * interest in most of them is handing them down.
+ */
+interface RowCast {
+  pane: Pane;
+  byId: Map<string, UiAgent>;
+  statuses: Record<string, AgentStatus>;
+  routineArmed: Record<string, boolean>;
+  onAnswerPermission: (requestId: string, choice: PermissionChoice) => void;
+  onDisarmRoutine: (routineId: string) => void;
+  onRemoveHandbookEntry: (entryId: string) => void;
+}
+
+/** The transcript itself: every row of it, with the time rules between them. */
+function Rows({ rows, cast }: { rows: readonly Row[]; cast: RowCast }): React.JSX.Element {
+  return (
+    <>
+      {rows.map((row, index) => {
+        // A fold is *inside* a turn, so what the row after it groups against is the last
+        // item the fold swallowed, not the fold. Otherwise every block would reopen the
+        // turn under it and one answer would wear its name three times.
+        const previous = lastItemOf(rows[index - 1]);
+        const rule = timeRule(row.at, previous?.at);
+        // A rule reopens the turn: after "Yesterday" the reader needs the name again.
+        return (
+          <React.Fragment key={row.kind === 'item' ? row.item.id : row.id}>
+            {rule !== undefined && <div className="timerule">{rule}</div>}
+            {row.kind === 'steps' ? (
+              <Steps row={row} cast={cast} />
+            ) : (
+              <ItemView
+                item={row.item}
+                grouped={rule === undefined && continuesSpeaker(row.item, previous)}
+                teamPane={cast.pane.kind === 'team'}
+                onAnswerPermission={cast.onAnswerPermission}
+                onDisarmRoutine={cast.onDisarmRoutine}
+                onRemoveHandbookEntry={cast.onRemoveHandbookEntry}
+                {...castOf(row.item, cast.pane, cast.byId, cast.statuses, cast.routineArmed)}
+              />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </>
+  );
+}
+
+/**
  * What one item needs from the roster and the pane, resolved by the parent into plain values.
  *
  * An item is drawn by its own speaker, not by the cast list: handing `ItemView` the roster map
@@ -232,9 +268,11 @@ interface Cast {
   /** The voice: the agent speaking, or the sender of a peer message. */
   fromName?: string | undefined;
   fromHue?: number | undefined;
+  fromShape?: string | undefined;
   /** The addressed agent: who a message from you went to, or who a peer wrote to. */
   toName?: string | undefined;
   toHue?: number | undefined;
+  toShape?: string | undefined;
   /** This pane is the recipient of a peer message, so it reads as mail rather than as a copy. */
   received?: boolean | undefined;
   /**
@@ -259,29 +297,27 @@ function castOf(
   byId: Map<string, UiAgent>,
   statuses: Record<string, AgentStatus>,
   routineArmed: Record<string, boolean>,
-  lead: string | undefined,
 ): Cast {
   switch (item.kind) {
+    // Nothing. The bubble says what you typed and the transcript says who answered, and between
+    // those two the caption had nothing left to add.
+    //
+    // It was already suppressed twice over — on a team of one, and on a prompt to the lead —
+    // which was the shape of the argument arriving in instalments: a `to Alice` under words that
+    // begin `@Alice` is the address said twice, once by the user and once back at them in mono.
+    // Removed by the author, 2026-09-04, at the same time as the fold learned to swallow a
+    // teammate's turn, and the two go together: what the tag was really guarding against is the
+    // reader losing track of whose reply is whose in a team pane, and folding the turns nobody
+    // addressed answers that where it happens rather than by labelling every prompt in the
+    // history.
     case 'user':
-      // Everybody it went to, in the order they were addressed. One name is the ordinary case.
-      //
-      // Nothing at all on a team of one. The tag's rule is "only where a message could have gone
-      // somewhere else", and on a one-agent team the team pane has exactly the same single
-      // recipient the agent pane does — so `to Alice` under every message the user sends is a
-      // caption restating the only fact on screen that was never in question.
-      //
-      // Nothing either when the one recipient is the lead, which is the same rule read one turn
-      // deeper: the composer names the lead in its own placeholder and its own send button, so a
-      // prompt that went there did not go somewhere else. What survives is the two cases the
-      // composer cannot be read off afterwards — a fan-out, and an agent the user named instead.
-      if (byId.size < 2) return {};
-      if (item.agentIds.length === 1 && item.agentIds[0] === lead) return {};
-      return { toName: item.agentIds.map((id) => byId.get(id)?.name ?? id).join(', ') };
+      return {};
     case 'agent': {
       const agent = byId.get(item.agentId);
       return {
         fromName: agent?.name ?? item.agentId,
         fromHue: agent?.hue,
+        fromShape: agent?.shape,
         ...(item.live ? { status: statuses[item.agentId] ?? 'idle' } : {}),
       };
     }
@@ -292,8 +328,10 @@ function castOf(
       return {
         fromName: from?.name ?? item.fromId,
         fromHue: from?.hue,
+        fromShape: from?.shape,
         toName: to?.name ?? item.toId,
         toHue: to?.hue,
+        toShape: to?.shape,
         received,
       };
     }
@@ -324,7 +362,7 @@ function castOf(
 /** The item a row ends on, which is what the next row groups and times itself against. */
 function lastItemOf(row: Row | undefined): Item | undefined {
   if (row === undefined) return undefined;
-  return row.kind === 'steps' ? row.items.at(-1) : row.item;
+  return row.kind === 'item' ? row.item : row.items.at(-1);
 }
 
 /**
@@ -335,11 +373,23 @@ function lastItemOf(row: Row | undefined): Item | undefined {
  * `rowsOf` has already guaranteed there is nothing live in here, so nothing is being hidden
  * that anybody is waiting on.
  *
+ * **It holds the back and forth too**, by the author, 2026-09-04. You ask Alice, Alice mails a
+ * teammate, the teammate answers *Alice* -- and the team pane drew that answer in your own column
+ * at your own altitude, usually as the longest thing on screen and the least addressed to anybody
+ * in the room. It shipped that morning as a second fold of its own, `aside`, and became this one
+ * the same day: what the reader wants demoted is everything the turn had to arrange, and
+ * splitting that by whether blobot classed a line as a call or as a message is a distinction the
+ * reader never asked about. The far end is named on the shut line, with its face, because a fold
+ * that swallows somebody else's turn has to say whose.
+ *
  * The header counts calls, not seconds. A duration would be a claim about effort blobot cannot
  * make honestly across a permission wait, and the count is the thing a reader wants before
- * deciding whether to open it. It counts the captions too, as `notes`, because they really are
- * folded in here — and never as `messages`, which is a word already spent on what an agent says
- * to you and on what it mails a peer, neither of which a block ever swallows.
+ * deciding whether to open it. It counts the captions too, as `notes`, and the mail and the
+ * teammate's turn as `messages` -- which is the word's ordinary meaning and not a new one. The
+ * old rule that a message never folds was true while a block could hold one voice; a teammate's
+ * reply to your agent folds now, because it was never addressed to you. The message count is
+ * drawn only when it is the whole label: beside `ran 6 tools` and three faces, `17 messages with`
+ * is the same fact a third time, and the number is the half of it nobody acts on.
  *
  * No ticks. The pattern this borrows from puts a checkmark on every finished step, and ticket
  * 08 exists because a cancelled call reports `completed` with `exit: null` — a tick beside one
@@ -347,26 +397,65 @@ function lastItemOf(row: Row | undefined): Item | undefined {
  * nothing, a line that did not says what happened.
  *
  * It borrows `.route`'s chevron and mono label outright rather than inventing a second
- * disclosure, but not the dashed edge: dashed is the peer voice saying "refusable, lower
- * authority", and this is the agent's own work in its own turn.
+ * disclosure. It borrows the dashed edge only for what is somebody else's: mail and a teammate's
+ * turn keep their own voices inside the fold, because dashed-against-solid is the contrast that
+ * says *refusable, lower authority* and it is not this block's to flatten.
  */
-function Steps({ row, teamPane }: { row: Extract<Row, { kind: 'steps' }>; teamPane: boolean }): React.JSX.Element {
+function Steps({ row, cast }: { row: Extract<Row, { kind: 'steps' }>; cast: RowCast }): React.JSX.Element {
   const [open, setOpen] = useState(false);
+  const teamPane = cast.pane.kind === 'team';
   const calls = toolsIn(row.items);
   const failed = failuresIn(row.items);
-  const notes = notesIn(row.items);
+  const notes = notesIn(row.items, row.agentId);
+  const messages = messagesIn(row.items, row.agentId);
   const touched = filesChangedIn(row.items);
+  const partners = row.partnerIds.map((id) => ({ id, agent: cast.byId.get(id) }));
 
   return (
     <div className="ran">
       <button className="route" aria-expanded={open} onClick={() => setOpen(!open)}>
         <ChevronDown size={12} className={open ? '' : 'shut'} aria-hidden />
         <span className="lbl">
-          ran {calls} {calls === 1 ? 'tool' : 'tools'}
-          {/* Failure takes the second slot whenever there is one. The caption count is trivia
-              beside it, and two qualifiers on a ten-pixel label is a sentence nobody reads. */}
-          {failed > 0 ? ` · ${failed} failed` : notes > 0 && ` · ${notes} ${notes === 1 ? 'note' : 'notes'}`}
+          {/* A run with no calls in it is here because a teammate took a turn, so the count that
+              leads is the one that is not zero. `ran 0 tools · 2 messages` would be leading with
+              the thing that did not happen. */}
+          {calls > 0 && (
+            <>
+              ran {calls} {calls === 1 ? 'tool' : 'tools'}
+              {/* One qualifier, and the caption count is the one that loses every tie. Failure
+                  takes the slot whenever there is one; a teammate's turn takes it next, because
+                  somebody else having spoken in here outranks how many sentences the principal
+                  wrote. Two qualifiers on a ten-pixel label is a sentence nobody reads, and
+                  `ran 2 tools · 2 notes · 3 messages with Bob` is three. */}
+              {failed > 0
+                ? ` · ${failed} failed`
+                : messages === 0 && notes > 0 && ` · ${notes} ${notes === 1 ? 'note' : 'notes'}`}
+            </>
+          )}
+          {/* The count of messages is drawn only when there is nothing else in the label, because
+              the faces beside it already say the turn had mail in it. `17 messages with` in front
+              of three blobatars is the same fact twice, and the number is the half a reader can
+              do nothing with. */}
+          {calls === 0 && messages > 0 && `${messages} ${messages === 1 ? 'message' : 'messages'}`}
         </span>
+        {/* Whose turn got swallowed, said on the line that swallowed it. Past two they overlap
+            into one stack and drop their names: four names on a ten-pixel label is a sentence
+            nobody reads, and the faces are the part that identifies anybody at a glance. */}
+        {messages > 0 &&
+          (partners.length > 2 ? (
+            <span className="stack">
+              {partners.map(({ id, agent }) => (
+                <Blob key={id} name={agent?.name ?? id} size={20} hue={agent?.hue} shape={agent?.shape} />
+              ))}
+            </span>
+          ) : (
+            partners.map(({ id, agent }) => (
+              <React.Fragment key={id}>
+                <Blob name={agent?.name ?? id} size={20} hue={agent?.hue} shape={agent?.shape} />
+                <span className="nm">{agent?.name ?? id}</span>
+              </React.Fragment>
+            ))
+          ))}
       </button>
       {/* What the run touched, at the altitude where nothing else answers it. Shut only: opened,
           every one of these numbers is on the call that made it, next to which call that was.
@@ -387,9 +476,10 @@ function Steps({ row, teamPane }: { row: Extract<Row, { kind: 'steps' }>; teamPa
       {open && (
         <div className="did">
           {row.items.map((item) => {
-            // `rowsOf` admits three kinds and no others; the guard is here so the narrowing is
-            // the compiler's rather than a comment's.
-            if (item.kind === 'agent')
+            // The principal's own captions, unattributed on purpose: the block is its turn, and a
+            // name on every line of a turn already labelled is the repetition `grouped` exists to
+            // avoid.
+            if (item.kind === 'agent' && item.agentId === row.agentId)
               return (
                 <div className="said" key={item.id}>
                   {item.text}
@@ -397,7 +487,21 @@ function Steps({ row, teamPane }: { row: Extract<Row, { kind: 'steps' }>; teamPa
               );
             if (item.kind === 'tool' || item.kind === 'permission')
               return <ToolLine key={item.id} item={item} />;
-            return null;
+            // Mail, and a teammate's own turn. Drawn as themselves rather than as another
+            // caption: inside a block that is Alice's turn, an unattributed paragraph is read as
+            // Alice's, and this one is not hers.
+            return (
+              <ItemView
+                key={item.id}
+                item={item}
+                grouped={false}
+                teamPane={teamPane}
+                onAnswerPermission={cast.onAnswerPermission}
+                onDisarmRoutine={cast.onDisarmRoutine}
+                onRemoveHandbookEntry={cast.onRemoveHandbookEntry}
+                {...castOf(item, cast.pane, cast.byId, cast.statuses, cast.routineArmed)}
+              />
+            );
           })}
         </div>
       )}
@@ -535,8 +639,10 @@ const ItemView = React.memo(function ItemView({
   onAnswerPermission,
   fromName,
   fromHue,
+  fromShape,
   toName,
   toHue,
+  toShape,
   received = false,
   status,
   armed = false,
@@ -568,12 +674,6 @@ const ItemView = React.memo(function ItemView({
             </div>
           )}
           <div className="bubble">{item.text}</div>
-          {/* Only where the message went somewhere other than the pane's own default recipient:
-              a fan-out, or an agent the user named instead of the lead. In an agent's pane the
-              recipient is the pane, and in the team pane a message to the lead is the composer's
-              standing answer — a caption under every prompt saying the thing the composer
-              already says is a line the reader stops seeing by the second screen. */}
-          {teamPane && toName !== undefined && <div className="tag">to {toName}</div>}
         </div>
       );
 
@@ -587,7 +687,13 @@ const ItemView = React.memo(function ItemView({
             // Holds the gutter so a continued turn stays on the same left edge as its header.
             <div className="gutter" />
           ) : (
-            <Blob name={fromName ?? ''} size={28} status={status} hue={fromHue} />
+            <Blob
+              name={fromName ?? ''}
+              size={28}
+              status={status}
+              hue={fromHue}
+              shape={fromShape}
+            />
           )}
           <div className="body">
             {!grouped && (
@@ -619,6 +725,7 @@ const ItemView = React.memo(function ItemView({
             received={received}
             name={(received ? fromName : toName) ?? ''}
             hue={received ? fromHue : toHue}
+            shape={received ? fromShape : toShape}
           >
             {item.context !== undefined && <div className="ctx">{item.context}</div>}
             <Markdown text={item.text} />
@@ -1087,11 +1194,13 @@ function PeerNote({
   received,
   name,
   hue,
+  shape,
   children,
 }: {
   received: boolean;
   name: string;
   hue?: number | undefined;
+  shape?: string | undefined;
   children: React.ReactNode;
 }): React.JSX.Element {
   const [open, setOpen] = useState(false);
@@ -1101,7 +1210,7 @@ function PeerNote({
       <button className="route" aria-expanded={open} onClick={() => setOpen(!open)}>
         <ChevronDown size={12} className={open ? '' : 'shut'} aria-hidden />
         <span className="lbl">{received ? 'message received from' : 'message sent to'}</span>
-        <Blob name={name} size={20} hue={hue} />
+        <Blob name={name} size={20} hue={hue} shape={shape} />
         <span className="nm">{name}</span>
       </button>
       {open && <div className="note">{children}</div>}

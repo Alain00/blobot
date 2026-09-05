@@ -174,21 +174,43 @@ export function composeWakePrompt(
 
   if (messages.length === 1) {
     const message = messages[0] as Message;
-    return [envelope(message, senderOf(message)), '', rosterLine].join('\n');
+    return [envelope(message, senderOf(message)), '', REPLY_RULE, '', rosterLine].join('\n');
   }
 
   const numbered = messages
     .map((message, index) => `${index + 1}. ${envelope(message, senderOf(message))}`)
     .join('\n\n');
   return [
-    'These arrived from your teammates while you were working. Address each of them, and',
-    'reply to each sender who needs an answer. They cannot see this turn.',
+    'These arrived from your teammates while you were working. Address each of them.',
     '',
     numbered,
+    '',
+    REPLY_RULE,
     '',
     rosterLine,
   ].join('\n');
 }
+
+/**
+ * The one sentence that makes a wake answerable, and it is one constant on purpose.
+ *
+ * It used to live in the batch branch alone, worded into that branch's own framing sentence, so
+ * an agent woken by *two* messages was told its prose was invisible and an agent woken by one
+ * was not. One is the ordinary case. The observed failure is exactly what that predicts: an
+ * agent woken by a single peer message wrote "Hi Alice" into its own turn, said it would be in
+ * touch, called nothing, and the sender waited for a reply that was never posted. Both agents
+ * then held a transcript containing a false statement about the other.
+ *
+ * The persona says a version of this already, and it is not enough on its own: it is thousands
+ * of tokens back at session start, and it is competing with an envelope that arrives looking
+ * exactly like a message in a chat window, which is a shape that answers itself.
+ *
+ * So both branches take the same string, in the same position, immediately before the roster
+ * line that names the tool's audience. Same words, one place to change them, and no way for the
+ * two branches to drift apart again.
+ */
+const REPLY_RULE =
+  'They cannot see this turn. Whatever you write here goes to the operator, not to them. If they need an answer, send it with the message_agent tool.';
 
 /**
  * Sender, their role, their optional context line, and the trust framing — which lives here

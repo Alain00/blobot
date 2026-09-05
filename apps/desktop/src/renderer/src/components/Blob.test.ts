@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { AgentStatus } from '@blobot/core/domain';
-import { SEEN, TRAVEL, aimOf } from './Blob.js';
+import { SEEN, TRAVEL, aimOf, wanderPoint } from './Blob.js';
 
 /** Every status the fold can produce, so a new one cannot quietly slip past these rules. */
 const STATUSES: readonly AgentStatus[] = [
@@ -54,8 +54,10 @@ describe('where a face looks', () => {
 
   it('collapses an unaimed face to null rather than leaving the driver unasked', () => {
     // The library distinguishes the two: omitted means "I aim this myself", and a hook that was
-    // handed `undefined` would never write over an imperative call. Nothing here aims
-    // imperatively, so the distinction can only produce a face that ignores its own props.
+    // handed `undefined` would never write over an imperative call. Null is the answer that
+    // makes the wander possible rather than the one that ignores it: a declared target is
+    // re-applied only when it changes, so `null` hands the eyes to `useWander`'s imperative
+    // calls and takes them straight back the moment a status has something to say.
     expect(aimOf(undefined, undefined)).toBeNull();
   });
 });
@@ -77,5 +79,55 @@ describe('how far a face looks', () => {
     // At 24 the mark reaches the edge of the head and the eye arrives there at almost no width.
     // Half of that is a turn a person reads as being looked at.
     expect(SEEN).toBeLessThanOrEqual(12);
+  });
+});
+
+/**
+ * Where a wandering face looks.
+ *
+ * The timer and the driver are not testable in jsdom -- there is no layout, no `getBBox` and no
+ * pointer, and `stubGazeHost` answers no to everything on purpose -- so the seam is the one pure
+ * function: a box and a source of randomness in, a point in the room out. What is worth pinning
+ * is that it always lands outside the near field, where `DEADZONE` eases the excursion to
+ * nothing, and that it reaches every direction rather than one quadrant.
+ */
+describe('a face glancing around the room', () => {
+  /** A rail-sized face, part of the way down the column. */
+  const FACE = { left: 12, top: 200, width: 44, height: 44 } as DOMRect;
+
+  /** A `roll` that plays the numbers it is given, in order. */
+  const rolls = (...values: number[]): (() => number) => {
+    let index = 0;
+    return () => values[index++ % values.length] as number;
+  };
+
+  it('never lands on itself, whatever it rolls', () => {
+    // The angle sweeps the circle and the distance takes both ends of its range, including the
+    // shortest, which is the roll a near field could swallow.
+    for (const angle of [0, 0.125, 0.25, 0.5, 0.75, 0.9]) {
+      for (const reach of [0, 0.5, 0.999]) {
+        const point = wanderPoint(FACE, rolls(angle, reach));
+        const away = Math.hypot(
+          point.x - (FACE.left + FACE.width / 2),
+          point.y - (FACE.top + FACE.height / 2),
+        );
+        // Well past `DEADZONE`, which is a fraction of the face's own radius: inside it the
+        // excursion eases to zero and the glance would be a face not moving.
+        expect(away).toBeGreaterThan(FACE.width);
+      }
+    }
+  });
+
+  it('reaches every direction, so a column of faces cannot share one', () => {
+    const quadrants = new Set(
+      [0.1, 0.35, 0.6, 0.85].map((angle) => {
+        const point = wanderPoint(FACE, rolls(angle, 0.5));
+        const right = point.x > FACE.left + FACE.width / 2;
+        const down = point.y > FACE.top + FACE.height / 2;
+        return `${right ? 'r' : 'l'}${down ? 'd' : 'u'}`;
+      }),
+    );
+
+    expect(quadrants.size).toBe(4);
   });
 });

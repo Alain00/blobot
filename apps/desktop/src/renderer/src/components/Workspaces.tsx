@@ -527,6 +527,7 @@ function Holder({ held }: { held: UiBranch['heldBy'] }): React.JSX.Element | nul
           name={held.agentName}
           size={16}
           {...(held.agentHue === undefined ? {} : { hue: held.agentHue })}
+          {...(held.agentShape === undefined ? {} : { shape: held.agentShape })}
         />
       </span>
     );
@@ -619,7 +620,7 @@ export function WorkspacePanel({
           key={status.agentId}
           status={status}
           named
-          {...hueOf(agents, status.agentId)}
+          {...faceOf(agents, status.agentId)}
           looking={looking}
           onPublish={(options) => onPublish(status.agentId, options)}
           onPlan={(options) => onPlan(status.agentId, options)}
@@ -633,6 +634,7 @@ function Row({
   status,
   named = false,
   hue,
+  shape,
   looking,
   onRefresh,
   onPublish,
@@ -649,6 +651,7 @@ function Row({
    */
   named?: boolean;
   hue?: number;
+  shape?: string;
   looking: boolean;
   onRefresh?: () => void;
   onPublish: (options: { title?: string; draft?: boolean }) => Promise<UiPublishResult>;
@@ -659,7 +662,12 @@ function Row({
       <div className="wsfacts">
         {named && (
           <>
-            <Blob name={status.agentName} size={14} {...(hue === undefined ? {} : { hue })} />
+            <Blob
+              name={status.agentName}
+              size={14}
+              {...(hue === undefined ? {} : { hue })}
+              {...(shape === undefined ? {} : { shape })}
+            />
             <span className="who">{status.agentName}</span>
           </>
         )}
@@ -859,9 +867,15 @@ function canPublish(status: UiWorkspaceStatus): boolean {
 }
 
 /** Spread rather than passed, because `exactOptionalPropertyTypes` distinguishes the two. */
-function hueOf(agents: readonly UiAgent[], agentId: string): { hue?: number } {
-  const hue = agents.find((agent) => agent.id === agentId)?.hue;
-  return hue === undefined ? {} : { hue };
+function faceOf(
+  agents: readonly UiAgent[],
+  agentId: string,
+): { hue?: number; shape?: string } {
+  const agent = agents.find((row) => row.id === agentId);
+  return {
+    ...(agent?.hue === undefined ? {} : { hue: agent.hue }),
+    ...(agent?.shape === undefined ? {} : { shape: agent.shape }),
+  };
 }
 
 /** `blobot/<team>/<agent>` is deterministic, so the half that identifies the agent is enough. */

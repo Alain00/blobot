@@ -1272,8 +1272,17 @@ export function itemsFor(items: readonly Item[], pane: Pane): Item[] {
  *   stopped agent behind a chevron is the modal problem wearing a chevron;
  * - a live answer, and any prose long enough to be one.
  *
- * Trailing prose is trimmed off the end of a block for the same reason: the last thing said in
- * a turn has no call after it, so it is the answer, and the answer never folds.
+ * And a fourth, which is the same rule read one turn wider (2026-09-04): **everything the agent
+ * said to you** is outside, not only the paragraph the run ends on. It is drawn under the block
+ * in the order it was said, where consecutive rows from one agent group into one turn. An agent
+ * that pings three teammates writes a paragraph after every reply, and its last paragraph is the
+ * last increment rather than a summary, so keeping only that one would throw away what it learned
+ * about the other two. blobot provides no inference: it cannot summarise them and must not drop
+ * them.
+ *
+ * A short caption is what stays in, and it is barely an exception. It introduces the call beneath
+ * it and means nothing away from it, which is what {@link CAPTION} has always measured. Prose is
+ * a caption only while the agent has more of its own work to come.
  */
 export type Row =
   | { readonly kind: 'item'; readonly at: number; readonly item: Item }
@@ -1281,7 +1290,16 @@ export type Row =
       readonly kind: 'steps';
       readonly id: string;
       readonly at: number;
+      /**
+       * Whose turn this is: the agent the last prompt addressed. A run never spans two of them,
+       * so an answer inside a fold is never ambiguous about who wrote it.
+       */
       readonly agentId: string;
+      /**
+       * Everyone else who is in here, in the order they first appear: agents the prompt did not
+       * address, and the far end of any mail. Empty for the ordinary run of one agent's own work.
+       */
+      readonly partnerIds: readonly string[];
       readonly items: readonly Item[];
     };
 
@@ -1311,10 +1329,27 @@ function settledWork(item: Item): boolean {
     case 'permission':
       return item.outcome !== undefined;
     case 'agent':
-      return !item.live && item.text.trim().length <= CAPTION;
+      return !item.live;
     default:
       return false;
   }
+}
+
+/**
+ * Prose long enough to be an answer rather than a caption on a call.
+ *
+ * It used to be part of {@link settledWork}, which meant a paragraph *broke* the run outright.
+ * That was right while a block was one agent's own work and is wrong across an exchange: an
+ * agent that pings three teammates writes a paragraph after each reply, and every one of those
+ * broke the run, so one prompt came back as four blocks with four of the agent's reports
+ * standing between them. Only the last of those is an answer to you. The others are the agent
+ * telling you what it has arranged so far, which is what a block is *for*.
+ *
+ * So length no longer decides admission. It decides where a run **ends**, in {@link runFrom},
+ * and only in the stretch of the run that nobody else is in.
+ */
+function isAnswerLength(item: Item): boolean {
+  return item.kind === 'agent' && item.text.trim().length > CAPTION;
 }
 
 /** How many calls a block actually stands for, which is what its header counts. */
@@ -1342,12 +1377,30 @@ export function failuresIn(items: readonly Item[]): number {
  * `Steps` draws every `agent` item in the run inside the fold, and a reader deciding whether to
  * open one wants to know there is prose behind the count and not only calls.
  *
- * They are `notes` and never `messages`. A message in blobot is what an agent says to you or
- * mails to a peer, and neither of those is ever folded — `rowsOf` trims the answer off the end
- * and a peer item is nobody's turn. Borrowing the word here would name two different things.
+ * They are `notes` and never `messages`, and the principal's alone. The word `messages` is spent
+ * on {@link messagesIn} for what the fold now also holds — mail, and a teammate's own turn —
+ * which is exactly what it always meant: what an agent says to you, or mails to a peer.
+ *
+ * That is a reversal, and worth naming as one. The rule here used to be that a message is
+ * *never* folded, which was true while a block could only hold one voice. A teammate's reply to
+ * your agent is a message and it does fold now, because it was never addressed to you.
  */
-export function notesIn(items: readonly Item[]): number {
-  return items.filter((item) => item.kind === 'agent').length;
+export function notesIn(items: readonly Item[], principal?: string): number {
+  return items.filter((item) => item.kind === 'agent' && item.agentId === principal).length;
+}
+
+/**
+ * Mail, and turns taken by somebody other than the principal. What the header counts as messages.
+ *
+ * With **no** principal — a block made entirely of a teammate's work — every turn in it is
+ * somebody else's and all of them count. Written the other way round this returned zero there,
+ * and the header drew a chevron with an empty label beside it: a fold that said nothing at all
+ * about what it was holding.
+ */
+export function messagesIn(items: readonly Item[], principal?: string): number {
+  return items.filter(
+    (item) => item.kind === 'peer' || (item.kind === 'agent' && item.agentId !== principal),
+  ).length;
 }
 
 /**
@@ -1403,35 +1456,201 @@ function fileName(path: string): string {
   return tail.length === 0 ? path : tail;
 }
 
-/** The transcript's rows: every item as itself, except settled runs of work, which fold. */
+/**
+ * Settled work by an agent the prompt did **not** address, which a fold may swallow whole.
+ *
+ * Deliberately looser than {@link settledWork} on prose alone. That predicate refuses to fold
+ * anything longer than a caption, because the paragraph a turn ends on is the answer and the
+ * answer never folds. This is not that answer: the reader addressed somebody else, and this is a
+ * teammate replying to that somebody. What it is not looser about is liveness.
+ *
+ * Three kinds and no others. A `system` line, a compaction, a Routine an agent armed and a
+ * Handbook write are all disclosures that exist *because* something happened off screen, and
+ * answering one with a second thing off screen is not a fold.
+ */
+function partnerWork(item: Item): boolean {
+  switch (item.kind) {
+    case 'agent':
+      return !item.live;
+    case 'tool':
+      return item.status === 'completed' || item.status === 'failed';
+    case 'permission':
+      return item.outcome !== undefined;
+    default:
+      return false;
+  }
+}
+
+/**
+ * The run of work starting at `index`, and where it ends. Undefined when nothing starts here.
+ *
+ * One run holds three things now: the addressed agent's own settled steps, the mail it sent or
+ * received, and the whole turn a teammate took because of that mail. They were two folds for
+ * half a day — `ran 2 tools` and a separate `aside` — and that was one fold too many, by the
+ * author: what the reader wants demoted is *everything the turn had to arrange*, and splitting
+ * it by whether blobot classed a given line as a call or as a message is a distinction the
+ * reader never asked about.
+ *
+ * A run has one **principal**, so two agents the user addressed never merge into one block: an
+ * unattributed paragraph inside a fold would be read as the principal's, and on a fan-out that
+ * would be blobot putting Bob's words under Alice's name.
+ *
+ * With nothing addressed — the top of a bounded transcript — every speaker is a principal
+ * candidate, which is exactly the single-speaker rule this had before the addressed set existed.
+ * That is the honest failure rather than a guess: blobot does not know who was asked above the
+ * window it holds.
+ */
+function runFrom(
+  items: readonly Item[],
+  index: number,
+  addressed: ReadonlySet<string>,
+): { end: number; principal: string | undefined; said: readonly number[] } | undefined {
+  let principal: string | undefined;
+  let end = index;
+
+  while (end < items.length) {
+    const item = items[end] as Item;
+    // Mail belongs to whichever run it is sitting in. It is nobody's turn -- `speakerOf` says so
+    // -- and it is the hinge between the principal's work and the teammate's, so a run that
+    // stopped at it would put the outbound line between two folds of one exchange.
+    if (item.kind === 'peer') {
+      // Mail is nobody's turn, but it is somebody's act: an outbound line from an addressed
+      // agent settles whose run this is, which is how a run that opens on the mail itself knows
+      // the sender is the principal rather than one more partner.
+      if (principal === undefined && addressed.has(item.fromId)) principal = item.fromId;
+      end += 1;
+      continue;
+    }
+    const speaker = speakerOf(item);
+    if (speaker === undefined) break;
+
+    if (addressed.size === 0 || addressed.has(speaker)) {
+      if (principal !== undefined && principal !== speaker) break;
+      if (!settledWork(item)) break;
+      principal = speaker;
+    } else if (!partnerWork(item)) {
+      break;
+    }
+    end += 1;
+  }
+
+  if (end === index) return undefined;
+
+  /*
+   * What the principal actually said to you, which is never inside the block.
+   *
+   * The rule arrived in four steps in one day and the last step is the author's, from a real
+   * transcript. Popping trailing prose off the *end* was right while a block held one voice: the
+   * teammate's reply lands after your agent's words, so trimming the end folds away the only
+   * thing addressed to you. Cutting the run at that prose stranded whatever the teammate did
+   * afterwards below it as a second, unattributed block. Lifting only the *last* prose out then
+   * looked right and was worse than either: an agent that pings three teammates writes a
+   * paragraph after every reply, and its last paragraph is the last increment, not a summary --
+   * so folding the earlier ones threw away everything it had learned about the other two.
+   *
+   * So the line is drawn by **who it was addressed to** and by nothing else. Everything the
+   * principal said to you comes out and is drawn under the block, in order; the mail, the calls
+   * and the teammates' own turns stay in. A short caption is the one exception, and it is not
+   * really one: it introduces the call beneath it, is meaningless away from it, and is the
+   * reading this block was built on.
+   *
+   * Prose is a caption only while the principal has more of its own work to come. The last thing
+   * it says is its answer at any length, which is what {@link CAPTION} was always guarding, and a
+   * paragraph is an answer wherever it stands.
+   */
+  const lifted: number[] = [];
+  let trailing = true;
+  for (let back = end - 1; back >= index; back -= 1) {
+    const item = items[back] as Item;
+    if (item.kind === 'peer' || speakerOf(item) !== principal) continue;
+    if (item.kind !== 'agent') {
+      trailing = false;
+      continue;
+    }
+    if (trailing || isAnswerLength(item)) lifted.push(back);
+  }
+  lifted.reverse();
+
+  return { end, principal, said: lifted };
+}
+
+/** Everyone in a run who is not the principal: teammates who spoke, and the far end of mail. */
+function partnersOf(run: readonly Item[], principal: string | undefined): string[] {
+  const partners: string[] = [];
+  const add = (id: string): void => {
+    if (id !== principal && !partners.includes(id)) partners.push(id);
+  };
+  for (const item of run) {
+    if (item.kind === 'peer') {
+      add(item.fromId);
+      add(item.toId);
+      continue;
+    }
+    const speaker = speakerOf(item);
+    if (speaker !== undefined) add(speaker);
+  }
+  return partners;
+}
+
+/** Whether anybody but the principal actually took a turn in here, rather than only being mailed. */
+function partnerSpoke(run: readonly Item[], principal: string | undefined): boolean {
+  return run.some((item) => {
+    const speaker = speakerOf(item);
+    return speaker !== undefined && speaker !== principal;
+  });
+}
+
+/**
+ * The transcript's rows: every item as itself, except settled runs of work, which fold.
+ *
+ * The addressed set is read off the last thing the user said and off nothing else. Nothing new is
+ * stored for any of this, and nothing is reordered: where a runtime narrates after its call, the
+ * agent's mail out stays on its own line above its own answer and only what came back folds.
+ */
 export function rowsOf(items: readonly Item[]): Row[] {
   const rows: Row[] = [];
   let index = 0;
+  let addressed: ReadonlySet<string> = new Set();
 
   while (index < items.length) {
     const start = items[index] as Item;
-    const speaker = speakerOf(start);
 
-    if (speaker !== undefined && settledWork(start)) {
-      let end = index;
-      while (end < items.length) {
-        const item = items[end] as Item;
-        if (speakerOf(item) !== speaker || !settledWork(item)) break;
-        end += 1;
-      }
-      // The answer is whatever prose the run ends on, so it comes back out.
-      while (end > index && (items[end - 1] as Item).kind === 'agent') end -= 1;
+    // Whose thread this is now. A fan-out addresses several, and then several agents are
+    // answering the user directly and none of them is anybody's aside.
+    if (start.kind === 'user') addressed = new Set(start.agentIds);
 
-      const run = items.slice(index, end);
-      if (toolsIn(run) >= WORTH_FOLDING) {
+    const found = runFrom(items, index, addressed);
+    if (found !== undefined) {
+      // The run with everything the principal said to you taken out of it. What is left holds
+      // its own order, and so does what came out.
+      const said = new Set(found.said);
+      const run = items.slice(index, found.end).filter((_, at) => !said.has(index + at));
+      const answer = found.said.map((at) => items[at] as Item);
+      const principal = found.principal;
+      const partnerIds = partnersOf(run, principal);
+      /*
+       * Two ways in. The ordinary one is the tool threshold: below it a fold is a line replaced
+       * by a line, plus a click. The other is a teammate having taken a turn in here, which
+       * always folds however short it is, because that turn is the thing the reader did not ask
+       * for and the whole reason any of this exists.
+       *
+       * Mail with no turn behind it is neither: one outbound line nobody has answered yet is
+       * already one line, and it is the addressed agent's own act rather than somebody else's.
+       */
+      if (run.length > 0 && (partnerSpoke(run, principal) || toolsIn(run) >= WORTH_FOLDING)) {
         rows.push({
           kind: 'steps',
           id: `steps:${(run[0] as Item).id}`,
           at: (run[0] as Item).at,
-          agentId: speaker,
+          // Empty when nobody in here was addressed, which is a run made entirely of a teammate's
+          // work. Then there is no principal, everybody in it is a partner, and every line of it
+          // is drawn under its own name rather than as the block's own narration.
+          agentId: principal ?? '',
+          partnerIds,
           items: run,
         });
-        index = end;
+        for (const said of answer) rows.push({ kind: 'item', at: said.at, item: said });
+        index = found.end;
         continue;
       }
     }

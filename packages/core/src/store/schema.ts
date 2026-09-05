@@ -126,6 +126,17 @@ export const agentProfiles = sqliteTable('agent_profiles', {
    * follow it onto every team it joins — so it lives here and not in `localStorage`.
    */
   hue: integer('hue'),
+  /**
+   * The blobatar's silhouette, by name — `round`, `boxy`, `capsule` and so on — when the user
+   * has chosen one. NULL means the name derives it, which is the default and is what every
+   * agent hired before this column had.
+   *
+   * Beside the hue, and for the same reason: a face is a fact about the agent, so it has to
+   * follow it onto every team it joins. The **name** is stored rather than the number the
+   * renderer feeds the library, because that number is a position inside a band the library
+   * owns and a retune of those bands would silently move every stored face.
+   */
+  shape: text('shape'),
   createdAt: integer('created_at').notNull(),
   /** Tombstone, like an agent: teams that used it keep pointing at the row. */
   deletedAt: integer('deleted_at'),
@@ -165,6 +176,8 @@ export const agents = sqliteTable(
      * the thing the hue exists to prevent. See ADR-0002.
      */
     hue: integer('hue'),
+    /** Copied and restated exactly as the hue is, and for the same reason. NULL is the name's. */
+    shape: text('shape'),
     runtimeId: text('runtime_id').notNull(),
     /** Ticket 07 pins CLAUDE_CODE_EXECUTABLE to the user's own binary. */
     executablePath: text('executable_path'),

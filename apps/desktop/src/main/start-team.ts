@@ -93,6 +93,8 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       // colour while every other surface drew the one the user picked. The hue is the only
       // part of a face that is stored rather than derived; losing it is one agent, two faces.
       ...(record.hue === undefined ? {} : { hue: record.hue }),
+      // And the silhouette beside it, which is the other half of the same face.
+      ...(record.shape === undefined ? {} : { shape: record.shape }),
       // Dropped here the same way the hue was, and with teeth: the orchestrator reads
       // `agent.compaction ?? DEFAULT_COMPACTION`, so an agent the user had switched *off*
       // arrived as undefined and was compacted anyway. The setting was on screen, stored, and

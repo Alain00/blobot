@@ -402,9 +402,6 @@ export function App(): React.JSX.Element {
             statuses={state.statuses}
             items={items}
             opening={snapshot.opening === true}
-            {...(snapshot.team.leadAgentId === undefined
-              ? {}
-              : { lead: snapshot.team.leadAgentId })}
             moreAbove={state.moreAbove}
             onLoadEarlier={loadEarlier}
             onAnswerPermission={(requestId, choice) => {
@@ -566,6 +563,7 @@ export function App(): React.JSX.Element {
         {browsingAgents && (
           <Agents
             onClose={() => setBrowsingAgents(false)}
+            onChanged={refresh}
             hiringAtOnce={opened.get('screen') === 'hire'}
           />
         )}

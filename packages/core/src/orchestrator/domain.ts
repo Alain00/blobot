@@ -129,6 +129,15 @@ export interface AgentDefinition {
    * provider fact: nothing may branch on it, and nothing does.
    */
   readonly hue?: number;
+  /**
+   * The blobatar's silhouette, by name, when the user picked one. Absent means the name gives
+   * it, which is the default.
+   *
+   * Beside the hue and read by nobody but the UI, for the reason the hue is: the same face has
+   * to follow the agent onto every team it joins. The vocabulary of names is the renderer's,
+   * not this file's — core stores the string and never branches on it.
+   */
+  readonly shape?: string;
 }
 
 export interface Agent {
@@ -142,6 +151,8 @@ export interface Agent {
   readonly instructions?: string;
   /** Copied for the same reason: a transcript shows the face this agent wore at the time. */
   readonly hue?: number;
+  /** Copied beside the hue, and restated by an edit beside it. Absent is the name's own. */
+  readonly shape?: string;
   /** Copied from the profile, and restated by an edit. Absent is `auto`. */
   readonly compaction?: CompactionSetting;
   /**

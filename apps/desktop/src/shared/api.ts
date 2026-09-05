@@ -55,6 +55,7 @@ export interface UiRoutine {
   readonly agentId: string;
   readonly agentName?: string;
   readonly agentHue?: number;
+  readonly agentShape?: string;
   readonly teamName?: string;
   /** When it next comes due. Absent while it is disarmed, because a disarmed Routine has none. */
   readonly nextRunAt?: number;
@@ -139,6 +140,7 @@ export interface UiRoutineTarget {
   readonly agentId: string;
   readonly agentName: string;
   readonly agentHue?: number;
+  readonly agentShape?: string;
   readonly teamName: string;
 }
 
@@ -168,6 +170,8 @@ export interface UiAgent {
   readonly branch?: string;
   /** The blobatar's hue, when the user chose one. Absent means the name derives it. */
   readonly hue?: number;
+  /** The blobatar's silhouette, when the user chose one. Absent means the name gives it. */
+  readonly shape?: string;
   /**
    * What this agent's runtime takes attached to a prompt.
    *
@@ -258,6 +262,8 @@ export interface UiTeamMember {
   readonly name: string;
   /** The blobatar's hue, when the user chose one. Absent means the name derives it. */
   readonly hue?: number;
+  /** The blobatar's silhouette, when the user chose one. Absent means the name gives it. */
+  readonly shape?: string;
 }
 
 /** A row in the rail's team list. Every team the user has created, running or not. */
@@ -683,6 +689,8 @@ export interface UiBranch {
     readonly agentName?: string;
     /** Their own hue, so the row draws that agent's face and not a second one. */
     readonly agentHue?: number;
+    /** And their own silhouette, for the same reason: half a face is still a second Bob. */
+    readonly agentShape?: string;
     readonly isWorkspace?: boolean;
   };
 }
@@ -880,6 +888,8 @@ export interface UiAgentProfile {
   readonly instructions?: string;
   /** The blobatar's hue, when the user chose one. Absent means the name derives it. */
   readonly hue?: number;
+  /** The blobatar's silhouette, when the user chose one. Absent means the name gives it. */
+  readonly shape?: string;
   /** What it is set to among its runtime's options, so the edit form opens on the truth. */
   readonly runtimeOptions?: Readonly<Record<string, string>>;
   /**
@@ -917,6 +927,8 @@ export interface NewAgentSpec {
   readonly instructions?: string;
   /** 0 to 359. Omitted when the user kept the face the name gave it. */
   readonly hue?: number;
+  /** A silhouette by name. Omitted when the user kept the one the name gave it. */
+  readonly shape?: string;
   /**
    * What the user chose among the options the runtime advertises, keyed by the provider's own
    * group id. An absent key is the runtime's default, and an empty map is a form where the

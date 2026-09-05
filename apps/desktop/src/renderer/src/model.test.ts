@@ -10,6 +10,8 @@ import {
   isPending,
   lastLineOf,
   itemsFor,
+  messagesIn,
+  notesIn,
   paneAfterSnapshot,
   commandMenu,
   reduce,
@@ -919,10 +921,16 @@ describe('folding a run of settled work', () => {
     expect(rows[1]).toMatchObject({ kind: 'item', item: { id: 'perm_1' } });
   });
 
+  // Never folded, and since 2026-09-04 never split around either: what the agent said to you
+  // comes out and is drawn under the block, and its calls close up behind it as one run. The
+  // reader loses nothing by it, because where a paragraph stood among calls they cannot see is
+  // not a fact the block was reporting.
   it('never folds a live answer, or prose long enough to be one', () => {
     const essay = caption('3', 'x'.repeat(400));
     const rows = rowsOf([call('1'), call('2'), essay, call('4'), call('5')]);
-    expect(rows.map((row) => row.kind)).toEqual(['steps', 'item', 'steps']);
+    expect(rows.map((row) => row.kind)).toEqual(['steps', 'item']);
+    expect(toolsIn((rows[0] as Extract<Row, { kind: 'steps' }>).items)).toBe(4);
+    expect(rows[1]).toMatchObject({ kind: 'item', item: { id: '3' } });
   });
 
   it('leaves a lone call alone, where a fold costs more than it saves', () => {
@@ -955,6 +963,292 @@ describe('folding a run of settled work', () => {
       outcome: 'rejected',
     };
     expect(failuresIn([call('1'), rejected])).toBe(0);
+  });
+});
+
+/**
+ * The back and forth, inside the fold that already held the turn's own work.
+ *
+ * The failure it answers is on a screenshot. The user asked Alice to check on a teammate, Alice
+ * mailed them, the teammate answered *Alice*, and the team pane drew that answer in the user's
+ * own column at the user's own altitude with nothing marking it as somebody else's mail. It was
+ * the longest thing on screen and the least addressed to anyone in the room.
+ */
+describe('turns nobody addressed', () => {
+  const at = (n: number): number => 1_700_000_000_000 + n * 1000;
+  const prompt = (ids: readonly string[]): Item => ({
+    kind: 'user',
+    id: 'u',
+    at: at(0),
+    agentIds: [...ids],
+    text: 'can you check on the auditor',
+  });
+  const said = (id: string, agentId: string, text = 'on it', live = false): Item => ({
+    kind: 'agent',
+    id,
+    at: at(Number(id)),
+    agentId,
+    text,
+    live,
+  });
+  const mail = (id: string, fromId: string, toId: string): Item => ({
+    kind: 'peer',
+    id,
+    at: at(Number(id)),
+    fromId,
+    toId,
+    text: 'what are you on?',
+  });
+  const call = (id: string, agentId: string, status: 'running' | 'completed' = 'completed'): Item => ({
+    kind: 'tool',
+    id,
+    at: at(Number(id)),
+    agentId,
+    title: `npm run ${id}`,
+    toolKind: 'execute',
+    status,
+  });
+  const steps = (row: Row | undefined): Extract<Row, { kind: 'steps' }> =>
+    row as Extract<Row, { kind: 'steps' }>;
+
+  it('folds the mail out and the turn it came back with into one row', () => {
+    const rows = rowsOf([prompt(['alice']), mail('1', 'alice', 'auditor'), said('2', 'auditor')]);
+
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'steps']);
+    expect(steps(rows[1]).partnerIds).toEqual(['auditor']);
+    expect(steps(rows[1]).items).toHaveLength(2);
+  });
+
+  // One fold and not two, which is the whole of the 2026-09-04 correction: the reader wants
+  // everything the turn had to arrange demoted together, and whether blobot classed a given line
+  // as a call or as a message is not a distinction they asked about.
+  it('holds the calls and the mail in the same block', () => {
+    const rows = rowsOf([
+      prompt(['alice']),
+      call('1', 'alice'),
+      call('2', 'alice'),
+      mail('3', 'alice', 'auditor'),
+      said('4', 'auditor', 'nothing running my end'),
+    ]);
+
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'steps']);
+    expect(steps(rows[1]).items).toHaveLength(4);
+    expect(steps(rows[1]).agentId).toBe('alice');
+    expect(steps(rows[1]).partnerIds).toEqual(['auditor']);
+  });
+
+  /*
+   * The observed order, and the reason the answer is lifted rather than the run being cut.
+   * Alice's runtime narrates *after* the call, so her own answer sits between her mail out and
+   * the reply that comes back. Trimming the end of the run would fold away the only words she
+   * addressed to the user; cutting the run there stranded everything the teammate did afterwards
+   * below her answer as a second block. Lifting the answer leaves one block and one answer.
+   */
+  it('draws the addressed agent answer under one block, which is the whole point', () => {
+    const rows = rowsOf([
+      prompt(['alice']),
+      call('1', 'alice'),
+      mail('2', 'alice', 'auditor'),
+      said('3', 'alice', 'Asked them. I will relay it.'),
+      said('4', 'auditor', 'nothing running my end'),
+    ]);
+
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'steps', 'item']);
+    // Everything the turn had to arrange, in the order it happened, with the answer taken out.
+    expect(steps(rows[1]).items.map((item) => item.id)).toEqual(['1', '2', '4']);
+    expect(steps(rows[1]).partnerIds).toEqual(['auditor']);
+    // And her words to you underneath it, in her own voice.
+    expect(rows[2]).toMatchObject({ kind: 'item', item: { id: '3', agentId: 'alice' } });
+  });
+
+  /*
+   * The failure that made the answer move rather than the run split, caught on screen: Bob
+   * answered, the teammate he had mailed went on working, and that trailing work formed a second
+   * block under Bob's answer reading `ran 1 tool` -- standing for a turn that was not Bob's, with
+   * nothing on the line to say whose it was.
+   */
+  it('keeps a teammate still working after the answer in the same block', () => {
+    const rows = rowsOf([
+      prompt(['bob']),
+      mail('1', 'bob', 'auditor'),
+      said('2', 'auditor', 'looking'),
+      said('3', 'bob', 'Replied: no brief reached me either.'),
+      call('4', 'auditor'),
+      said('5', 'auditor', 'done'),
+    ]);
+
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'steps', 'item']);
+    expect(steps(rows[1]).items.map((item) => item.id)).toEqual(['1', '2', '4', '5']);
+    expect(rows[2]).toMatchObject({ kind: 'item', item: { id: '3', agentId: 'bob' } });
+  });
+
+  /*
+   * The observed shape of a fan-out, and the reason length stopped deciding what a run admits.
+   *
+   * `can u ping the team?` went to Bob, Bob mailed three teammates, and each reply woke him to
+   * write another paragraph about what he had arranged. Every one of those paragraphs was longer
+   * than a caption, so every one of them broke the run: one prompt came back as four blocks with
+   * four of Bob's reports standing between them, at the reader's own altitude, when only the last
+   * of them was an answer to the reader at all.
+   */
+  it('folds an agent own reports when it went on arranging things after them', () => {
+    const long = (id: string, agentId: string): Item =>
+      said(id, agentId, `${'Pinged all three and here is what came back. '.repeat(8)}`);
+    const rows = rowsOf([
+      prompt(['bob']),
+      mail('1', 'bob', 'auditor'),
+      long('2', 'bob'),
+      said('3', 'auditor', 'nothing in flight'),
+      long('4', 'bob'),
+      said('5', 'designer', 'idle here'),
+      long('6', 'bob'),
+    ]);
+
+    // One block, and everything Bob said to you under it, in order. Not four blocks with three
+    // of his reports standing between them -- and not one report either: the author's correction
+    // is that his last paragraph is the last increment and not a summary, so folding the earlier
+    // ones throws away what he learned about the other two teammates.
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'steps', 'item', 'item', 'item']);
+    expect(steps(rows[1]).items.map((item) => item.id)).toEqual(['1', '3', '5']);
+    expect(rows.slice(2).map((row) => (row.kind === 'item' ? row.item.id : ''))).toEqual([
+      '2',
+      '4',
+      '6',
+    ]);
+  });
+
+  // And they are one turn on screen: three consecutive rows from one agent drop the repeated
+  // blobatar and name, which is the transcript's oldest rule doing the work here.
+  it('draws what the agent said to you as one turn', () => {
+    const long = (id: string): Item => said(id, 'bob', 'On it, and here is where that got to. '.repeat(8));
+    const rows = rowsOf([prompt(['bob']), mail('1', 'bob', 'auditor'), long('2'), said('3', 'auditor', 'ok'), long('4')]);
+    const spoken = rows.slice(2).map((row) => (row.kind === 'item' ? row.item : undefined));
+
+    expect(spoken.map((item) => item?.id)).toEqual(['2', '4']);
+    expect(continuesSpeaker(spoken[1] as Item, spoken[0] as Item)).toBe(true);
+  });
+
+  // The other half of the same rule, and the one `DESIGN.md` has always stated: with nobody else
+  // in the stretch after it, a paragraph is the answer and stays out of the block.
+  it('still keeps a closing paragraph out when the agent was working alone', () => {
+    const essay = said('3', 'bob', 'x'.repeat(400));
+    const rows = rowsOf([prompt(['bob']), call('1', 'bob'), call('2', 'bob'), essay]);
+
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'steps', 'item']);
+    expect(steps(rows[1]).items.map((item) => item.id)).toEqual(['1', '2']);
+  });
+
+  /*
+   * A block made entirely of a teammate's work has no principal at all, and used to draw a
+   * chevron with an empty label beside it -- a fold saying nothing about what it held. Everybody
+   * in it is a partner, so everybody in it is counted and named.
+   */
+  it('names the teammates in a block that has no principal in it', () => {
+    const rows = rowsOf([prompt(['bob']), said('1', 'auditor', 'looking'), call('2', 'auditor')]);
+    const block = steps(rows.find((row) => row.kind === 'steps'));
+
+    expect(block.agentId).toBe('');
+    expect(block.partnerIds).toEqual(['auditor']);
+    expect(messagesIn(block.items, block.agentId)).toBe(1);
+  });
+
+  // Mail on its own is already one line, and it is the addressed agent's own act. Folding it
+  // would put the only trace of a sent message behind a chevron claiming a conversation.
+  it('does not fold mail nobody has answered yet', () => {
+    const rows = rowsOf([prompt(['alice']), mail('1', 'alice', 'auditor')]);
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'item']);
+  });
+
+  it('folds nothing on a fan-out, because then everybody is answering you', () => {
+    const rows = rowsOf([prompt(['alice', 'auditor']), mail('1', 'alice', 'auditor'), said('2', 'auditor')]);
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'item', 'item']);
+  });
+
+  // The block's three exclusions, which the teammate's turn is subject to unchanged. The last one
+  // matters more here than it does for an agent's own work: an agent nobody addressed is exactly
+  // the one whose permission request has no other way of reaching the user.
+  it('never folds a call that is still running', () => {
+    const rows = rowsOf([prompt(['alice']), mail('1', 'alice', 'auditor'), call('2', 'auditor', 'running')]);
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'item', 'item']);
+  });
+
+  it('never folds a question nobody has answered', () => {
+    const asking: Item = {
+      kind: 'permission',
+      id: 'perm_1',
+      at: at(2),
+      agentId: 'auditor',
+      toolCallId: 'tool_1',
+      title: 'rm -rf dist',
+      canAllow: true,
+      canAllowAlways: true,
+    };
+    const rows = rowsOf([prompt(['alice']), mail('1', 'alice', 'auditor'), asking]);
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'item', 'item']);
+  });
+
+  it('never folds a turn that is still being written', () => {
+    const rows = rowsOf([
+      prompt(['alice']),
+      mail('1', 'alice', 'auditor'),
+      said('2', 'auditor', 'thinking', true),
+    ]);
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'item', 'item']);
+  });
+
+  // A Routine an agent armed and a Handbook entry it wrote are disclosures that exist because
+  // something happened off screen. Answering one with a second thing off screen is not a fold.
+  it('never folds a disclosure', () => {
+    const armed: Item = {
+      kind: 'routine',
+      id: '2',
+      at: at(2),
+      agentId: 'auditor',
+      routineId: 'r',
+      name: 'morning audit',
+      schedule: 'every day at 09:00',
+      frequency: '1 firing a day',
+    };
+    const rows = rowsOf([prompt(['alice']), mail('1', 'alice', 'auditor'), armed]);
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'item', 'item']);
+  });
+
+  // Bounded transcripts: the addressed set is read off the user speaking, so a window that opens
+  // mid-exchange keeps the old single-speaker rule rather than guessing who had been asked.
+  it('folds nothing above the first thing the user said', () => {
+    const rows = rowsOf([mail('1', 'alice', 'auditor'), said('2', 'auditor')]);
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'item']);
+  });
+
+  // Two agents the user addressed never merge: an unattributed paragraph inside a fold is read as
+  // the principal's, and on a fan-out that would put one agent's words under the other's name.
+  it('never spans two agents the prompt addressed', () => {
+    const rows = rowsOf([
+      prompt(['alice', 'auditor']),
+      call('1', 'alice'),
+      call('2', 'alice'),
+      call('3', 'auditor'),
+      call('4', 'auditor'),
+    ]);
+
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'steps', 'steps']);
+    expect(steps(rows[1]).agentId).toBe('alice');
+    expect(steps(rows[2]).agentId).toBe('auditor');
+  });
+
+  it('counts the mail and the teammate as messages, and the principal prose as notes', () => {
+    const run = steps(
+      rowsOf([
+        prompt(['alice']),
+        said('1', 'alice', 'Asking them.'),
+        mail('2', 'alice', 'auditor'),
+        said('3', 'auditor', 'nothing running'),
+        call('4', 'alice'),
+      ])[1],
+    );
+
+    expect(messagesIn(run.items, run.agentId)).toBe(2);
+    expect(notesIn(run.items, run.agentId)).toBe(1);
   });
 });
 

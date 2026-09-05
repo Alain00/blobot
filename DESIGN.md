@@ -50,14 +50,33 @@ Consequences you will keep bumping into:
   for the same agent. That is exactly what happened: the rail seeded by Agent id, the roster
   lists by profile id and the hire preview by the name being typed, and one agent wore three
   faces. The colour picker already says the name gives the face; this is that sentence enforced.
-  Only the hue is stored, because the user can choose it.
-- **Nine silhouettes, never the organic one.** *2026-08-31.* The library partitions the hash into
-  ten shape bands, so `organic` is not something a name asks for and can be argued out of: it is
+  The hue and the silhouette are stored, because those are the two the user can choose;
+  everything else about a face is the name's. *Amended 2026-09-04: this read "only the hue is
+  stored", which was a fact about what had been built rather than a rule. What the rule is
+  protecting is that one agent has one face on every surface, and that is a claim about where a
+  chosen thing lives — on the agent, so it travels — not about how many things may be chosen.*
+- **Nine silhouettes, never the organic one, and any of the nine is choosable.** *2026-08-31,
+  extended 2026-09-04.* The library partitions the hash into ten shape bands, so `organic` is not something a name asks for and can be argued out of: it is
   a region of the hash, and the only way to not have it is to not offer it. Every `<Blobatar>` in
   the app spreads one constant, `SHAPE_TRAITS`, which names the other nine as a list and lets the
   name pick among those. What that costs is the library's weighting, since a list is uniform over
   what it lists, and the reason it is one constant rather than a choice per surface is the rule
   directly above: two rosters listing different shapes give one agent two faces.
+
+  A user who picks one gets **the same list with one entry in it**, which is the library's own
+  way to pin a trait: a chosen shape is not a second mechanism beside the derived one, it is the
+  derived one with less to choose from, so nothing about a face changes except how much of it the
+  hash decides. What is stored is the **name** and never the number — a number is a position
+  inside bands the library owns, so persisting one would mean a retune inside a minor silently
+  moving every face somebody chose — and a name this version does not know falls back to all
+  nine, because the face a name gives is a face while a silhouette blobot substituted is a
+  fourth party deciding what an agent looks like.
+
+  **The picker's cells are blobatars, not pictures of them.** Ten cells seeded by the name being
+  typed and wearing the hue chosen above, so the only thing that differs across the row is the
+  thing being chosen — which is what the colour row does with colour, and the reason neither
+  needs a caption. They are the only still faces in that dialog: ten gaze drivers under the one
+  preview that is *meant* to look back would be nine faces competing with it.
 - **A blobatar appears where you are identifying among agents or choosing one, and never
   where a single agent is merely named.** Saturation is the one channel that pulls the eye, so
   a face repeated on every surface that mentions its agent spends the channel on repetition and
@@ -120,8 +139,17 @@ already enclosed, and a border around it is the same statement drawn twice. Two 
 a stroke is how an interface starts looking like a form. What went, in one pass: the row above
 the transcript and its rule (the controls float over the ground now), the rail's and the
 activity column's edges against the transcript, the rule over the rail's three doors, the
-composer's pill, the user's bubble, and the Handbook notice above the composer with its button.
-Nothing moved and nothing changed plane; only the strokes went.
+composer's pill, the user's bubble, the Handbook notice above the composer, the tray under the
+composer, `.card` — the permission block and the Routine proposal — `.openerror`, and every
+`.btn` and `.iconbtn` in the app. Nothing moved and nothing changed plane; only the strokes
+went, and the buttons took a fill in exchange (see **Controls**).
+
+**What still has one, and it is a list rather than an oversight:** `.field` and the composer's
+own `.wstitle`, because a thing you type into has to invite typing and its focus state is the
+border moving to `--muted`; the floating layers — `.modal`, `.suggest`, `.selectmenu`, `.ctxpop`,
+`.wspop`, `.navsheet` — which sit over arbitrary content rather than on a ground of their own,
+where the hairline is the edge of the sheet and not a second enclosure; and `.md`'s tables and
+code blocks, which are quoting somebody else's structure.
 
 What a hairline is still for: **separating two things on the same plane**, where nothing else
 can say they are apart — the folded blocks' left rule inside a turn, a blockquote, the rule
@@ -199,8 +227,13 @@ Distinguished structurally, never chromatically. This is the load-bearing part o
 conversation and the reason it is not a generic chat app.
 
 - **From you** — a solid filled bubble, right-aligned, no name. Right *is* the label: there is
-  only ever one "you", so the side stays unambiguous however many agents share the pane. The
-  routing tag (`to Alice`) sits under it, and only in the team pane.
+  only ever one "you", so the side stays unambiguous however many agents share the pane. **No
+  routing tag.** `to Alice` sat under it in the team pane and is gone (the author, 2026-09-04).
+  It had already been suppressed on a team of one and on a prompt to the lead, which was the
+  argument arriving in instalments: under words that begin `@Alice` it is the address said twice,
+  once by the reader and once back at them in mono. What it was actually guarding against is the
+  reader losing which reply is whose, and the **fold** below answers that where it happens
+  rather than by captioning every prompt in the history.
 - **From the agent** — no container at all. It is the pane's default voice; boxing it would make
   the agent look like a guest in its own transcript.
 - **From a peer** — inset and unfilled: one line, being a chevron, `message received from` or
@@ -260,6 +293,58 @@ Other transcript rules:
   It takes `.route`'s chevron and mono label so the transcript has one disclosure gesture and
   not two, and leaves behind the dashed edge, which is the peer voice saying *refusable, lower
   authority* about somebody else's mail. This is the agent's own work in its own turn.
+
+  **And the same block holds the back and forth.** You ask Alice, Alice mails a teammate, the
+  teammate answers *Alice* — and the team pane drew that answer in your column at your altitude,
+  usually as the longest thing on screen and the least addressed to anyone in the room. So one
+  run now holds three things: the addressed agent's own settled steps, the mail either way, and
+  the whole turn a teammate took because of it. It shipped that morning as a *second* fold of its
+  own and became this one the same day, by the author: what the reader wants demoted is
+  everything the turn had to arrange, and splitting that by whether blobot classed a line as a
+  call or as a message is a distinction the reader never asked about.
+
+  Shut, the far end is **named, with its face** — `ran 2 tools · 1 message with` and Bob's blobatar — because a
+  fold that swallows somebody else's turn has to say whose, and a count past two teammates,
+  since four blobatars on a ten-pixel label is the saturation rule spent on the least important
+  row in the transcript. A run with no calls in it leads with the message count instead, because
+  `ran 0 tools` leads with the thing that did not happen. Open, mail and a teammate's turn keep
+  their **own voices, dashed edge included**: inside a block that is Alice's turn an
+  unattributed paragraph reads as Alice's, and that contrast is not this block's to flatten.
+
+  A run has **one principal**, so two agents you addressed in one fan-out never merge — that
+  would put one agent's words under the other's name. **A teammate's turn always folds**, however
+  short, since it is the thing you did not ask for; mail with nothing behind it does not, because
+  one outbound line nobody has answered yet is already one line and is your agent's own act. And
+  the three exclusions bind the teammate too, the last one harder than anywhere else: an agent
+  nobody addressed is precisely the one whose permission request has no other way of reaching
+  you.
+
+  **What the principal said to you is never in the block.** All of it comes out and is drawn
+  underneath, in order, where consecutive rows from one agent group into one turn the way they
+  always have. The line is drawn by who the words were addressed to and by nothing else: the
+  mail, the calls and the teammates' own turns stay in.
+
+  The rule arrived in four steps in one day, and the last of them is the author's, from a real
+  transcript. Popping trailing prose off the end was right while a block held one voice: where a
+  runtime narrates after its call the end of the run belongs to the teammate, so trimming it
+  folds away your agent's only words to you. Cutting the run at that prose stranded whatever the
+  teammate did afterwards below it as a second, unattributed block — `ran 1 tool` under Bob's
+  answer, standing for a turn that was not Bob's. Lifting only the *last* prose then looked right
+  and was worse than either: an agent that pings three teammates writes a paragraph after every
+  reply, and **its last paragraph is the last increment, not a summary**, so folding the earlier
+  ones threw away everything it had learned about the other two. blobot cannot summarise them —
+  it provides no inference — and it must not drop them.
+
+  A **short caption** is the one thing that stays in, and it is barely an exception: it introduces
+  the call beneath it, means nothing away from it, and is the reading the block was built on.
+  Prose is a caption only while the agent has more of its own work to come; the last thing it says
+  is its answer at any length, and a paragraph is an answer wherever it stands.
+
+  Nothing is stored: the addressed set is read off the last thing you said and off nothing else,
+  so a window that opens mid-exchange keeps the old single-speaker rule rather than guessing who
+  had been asked. A block with **no** principal in it at all — a teammate's work and nothing else
+  — names every voice in it, since with nobody addressed everybody in there is somebody you did
+  not ask.
 
   A call carries a **verb** from the four kinds core already has off both runtimes — `read`,
   `edit`, `run`, and nothing for an MCP tool, whose name is its server's and not ours to
@@ -354,8 +439,8 @@ Other transcript rules:
   that held for a refusal, which is one sentence. This is four things — a claim, a literal of unbounded length, a reason,
   and three answers — and an edge runs down the side of four things without containing them, so
   the block read as loose transcript rather than as one object that has stopped. It is the
-  composer's own ground, hairline and 14px radius, because every control descends from the
-  composer and this is the one place in the transcript that *is* a control. It keeps its width
+  composer's own ground and 14px radius, because every control descends from the composer and
+  this is the one place in the transcript that *is* a control. It keeps its width
   to a measure, so a two-word command does not make a card the width of the window.
 
   Inside it, **the command is its own line**: run inline through the sentence, a real one wraps
@@ -372,8 +457,8 @@ Other transcript rules:
   thing: something structural happened inside this turn and there is a control about it. They are
   told apart by what they say and by the fact that one of them is holding three answers, **not by
   an edge**. The ink edge was tried on the permission card for exactly that job and read as a
-  highlight stuck to one side of an already closed shape; a hairline all the way around is the
-  containment, and a second heavier edge on one side of it is decoration.
+  highlight stuck to one side of an already closed shape; the raised ground **is** the
+  containment, and an edge on one side of it is decoration.
 - **A session blobot replaced draws in the system voice, and it opens.** The one system line
   that is not just a line, because on a handoff it carries the note the agent wrote for itself,
   and that note is the whole argument for preferring a restart to an opaque `/compact`: a line
@@ -433,10 +518,17 @@ Every control descends from the composer. If you are adding one, start there.
 
 - **`.field`** — `--raised` ground, `--line` border, 12px radius, 9/14 padding. Focus moves the
   border to `--muted`. Inputs, textareas and the select trigger are all this.
-- **`.btn`** — the same pill, fully rounded. `.btn.primary` inverts to ink **only when it is
-  armed**, so the button answers "will this do anything?" before it is read. Disabled is 40%
-  and `not-allowed`.
-- **`.iconbtn`** — a 32px circle, muted at rest, ink on hover. For chrome: close, panel toggle.
+- **`.btn`** — the same pill, fully rounded, and **filled rather than outlined**: a low mix of
+  `--ink` (10%), raised to 16% on hover. *2026-09-04, with the hairline pass below.* It was
+  `--raised` inside a `--line` hairline, and `--raised` alone could not replace the border,
+  because half of these buttons sit **on** `--raised` — on a card, in a menu — where the fill and
+  the ground are the same value. The ink ramp is what reads on both grounds, and it is the ramp
+  the primary already ends: **10% is the quiet control, 17% is the loud one turned off, `--ink`
+  is the loud one.** Hover raises the fill; there is no edge left to light. `.btn.primary`
+  inverts to ink **only when it is armed**, so the button answers "will this do anything?" before
+  it is read. Disabled is 40% and `not-allowed`.
+- **`.iconbtn`** — a 32px circle on the same 10% fill, muted at rest, ink on hover. For chrome:
+  close, panel toggle.
 - **`waiting` is a pill.** The one inversion on the page is still an inversion, and it is round
   like everything else that is filled here. *Corrected 2026-08-30: it shipped square-cornered,
   the only unrounded corner in the interface, and read as a sticker stuck onto the row.*
@@ -833,8 +925,8 @@ One flat file, one flat namespace, no build step between it and the DOM.
   team row standing* taller *made the rail read as two lists stacked. Shorter does the opposite,
   and the rest of that paragraph went with the second line: the member count is the number of
   rows the team opens into, which is a worse way of saying what those rows say.*
-- **The doors at the foot of the rail** — *Agents*, *Routines*, *Settings*, over one hairline,
-  at the bottom of the column. *Added 2026-08-30, moving two of them.* They were mono rows above
+- **The doors at the foot of the rail** — *Agents*, *Routines*, *Settings*, at the bottom of the
+  column, over a gap and no rule (*the hairline went 2026-09-04, with every other one*). *Added 2026-08-30, moving two of them.* They were mono rows above
   `TEAMS`: two headed rows over the list pushed the teams down and read as a second list stacked
   on the first, which is the failure the team row's height was cut to avoid. **The order an app
   is built out of is not the order its column is read in** — this column is about teams, so the
@@ -850,8 +942,9 @@ One flat file, one flat namespace, no build step between it and the DOM.
   closing the roster off from the teams below. The gap was already doing that work — the group
   is the only thing in the column with rows nested under it, so its extent is legible from the
   nesting alone — and a line under it made the roster read as a panel dropped into the list
-  rather than as part of it. The rail's one hairline is at the foot, over the doors, which is
-  the only place in this column where what is below is not more of what is above.
+  rather than as part of it. *That reasoning outlived the exception it was written against: the
+  rail's one remaining hairline, over the doors at the foot, went the same way on 2026-09-04, and
+  the gap does that job there too.*
 - **The chevron is an indicator, not a control.** A team row was already a disclosure and
   nothing on screen said so. It does not toggle, and the row stays one click target: exactly one
   team is open, because the open team is the one whose sessions are on screen, and a twisty the
@@ -1006,8 +1099,8 @@ One flat file, one flat namespace, no build step between it and the DOM.
   inset of its own, because it is the composer's own notice and any margin would say it is a
   separate thing on the page. `Mara has not been briefed`, a muted line under it, and *brief them*
   pushed right. It is **`.openerror`'s shape**, which the app already owned: `--raised` ground, a
-  `--line` hairline, a 12px radius, the control at `margin-left:auto`, and no ink edge under the
-  ban on an ink edge on a closed shape. Two shapes invented for this both lost to it. **No icon**:
+  12px radius, the control at `margin-left:auto`, and no ink edge under the ban on an ink edge on
+  a closed shape. *Both lost their hairline on 2026-09-04.* Two shapes invented for this both lost to it. **No icon**:
   every icon at rest is `--muted`, so a muted glyph in that slot would have to mean something, and
   not yet briefed is the ordinary condition of a new hire rather than a kind of thing. It
   **persists** while the Handbook is empty, because it states a fact rather than announcing an
@@ -1229,7 +1322,7 @@ One flat file, one flat namespace, no build step between it and the DOM.
   refused; the row's own dimming is what says that, and the face keeps its colour inside it,
   since a desaturated blobatar is a different agent.
   **Nothing in the tray is boxed.** A row of bordered pills a few pixels under the composer's own
-  border reads as controls inside a control, so each one is type with a hover ground under it,
+  edge read as controls inside a control, so each one is type with a hover ground under it,
   and a chevron where there is a menu. The `+` and `−` are **not coloured**: green and red would
   be two saturated things on screen that are not blobatars, and the signs already say which
   direction each number goes. The commit **refuses while the agent is working** and stays on

@@ -275,7 +275,7 @@ function Whose({ row }: { row: UiRoutine }): React.JSX.Element {
   }
   return (
     <span className="sub mono muted whose">
-      <Blob name={row.agentName} size={16} hue={row.agentHue} />
+      <Blob name={row.agentName} size={16} hue={row.agentHue} shape={row.agentShape} />
       {row.agentName}
       {row.teamName === undefined ? '' : ` · ${row.teamName}`}
     </span>

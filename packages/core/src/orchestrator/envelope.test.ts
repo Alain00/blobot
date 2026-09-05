@@ -159,7 +159,42 @@ describe('the wake prompt', () => {
     expect(prompt).toContain('These arrived from your teammates while you were working');
     expect(prompt).toContain('1. From Alice');
     expect(prompt).toContain('2. From Alice');
-    expect(prompt).toContain('reply to each sender who needs an answer');
+  });
+
+  /*
+   * The observed failure, in a test rather than in a comment: Alice mailed a teammate, the
+   * teammate woke on a single message, wrote its reply as prose, mailed nobody, and Alice waited
+   * for something that had never been sent. The sentence that prevents it was in the batch
+   * branch only, which is the branch that fires least.
+   */
+  it('tells a single wake that its prose is invisible, and names the way back', () => {
+    const prompt = composeWakePrompt([peerMessage('what are you on?')], () => alice, [alice]);
+
+    expect(prompt).toContain('They cannot see this turn');
+    expect(prompt).toContain('message_agent');
+  });
+
+  it('says it identically on a batch, so the two branches cannot drift again', () => {
+    const one = composeWakePrompt([peerMessage('first')], () => alice, [alice]);
+    const many = composeWakePrompt(
+      [peerMessage('first'), peerMessage('second')],
+      () => alice,
+      [alice],
+    );
+    const rule = (prompt: string): string | undefined =>
+      prompt.split('\n').find((line) => line.includes('They cannot see this turn'));
+
+    expect(rule(one)).toBeDefined();
+    expect(rule(many)).toBe(rule(one));
+  });
+
+  it('puts the rule where it is read last, immediately above the roster line', () => {
+    const lines = composeWakePrompt([peerMessage('take a look')], () => alice, [alice])
+      .split('\n')
+      .filter((line) => line !== '');
+
+    expect(lines.at(-1)).toContain('Teammates you can message:');
+    expect(lines.at(-2)).toContain('message_agent');
   });
 
   it('refuses to compose nothing', () => {

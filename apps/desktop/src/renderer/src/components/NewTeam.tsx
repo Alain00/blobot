@@ -354,7 +354,7 @@ export function NewTeam({
                   >
                     {/* The same face it will wear in the rail and the transcript, so the roster
                         is recognisably the same set of agents rather than a list of names. */}
-                    <Blob name={agent.name} size={34} hue={agent.hue} />
+                    <Blob name={agent.name} size={34} hue={agent.hue} shape={agent.shape} />
                     <span className="who">
                       <span className="nm">
                         <b>{agent.name}</b> <span className="muted">{agent.role}</span>

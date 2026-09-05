@@ -148,6 +148,13 @@
       "when": 1788267481965,
       "tag": "0020_regular_blazing_skull",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1788530631764,
+      "tag": "0021_nice_human_fly",
+      "breakpoints": true
     }
   ]
 }

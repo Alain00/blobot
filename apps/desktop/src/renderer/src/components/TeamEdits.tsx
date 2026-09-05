@@ -371,7 +371,7 @@ export function EditTeam({
                         )
                       }
                     >
-                      <Blob name={agent.name} size={34} hue={agent.hue} />
+                      <Blob name={agent.name} size={34} hue={agent.hue} shape={agent.shape} />
                       <span className="who">
                         <span className="nm">
                           <b>{agent.name}</b> <span className="muted">{agent.role}</span>

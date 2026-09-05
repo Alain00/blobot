@@ -22,9 +22,21 @@ import { Blob } from './Blob.js';
  */
 export function Agents({
   onClose,
+  onChanged,
   hiringAtOnce,
 }: {
   onClose: () => void;
+  /**
+   * An agent's definition changed, so the surface behind this screen is out of date.
+   *
+   * A face is restated onto every membership the moment it is saved, and the rail draws its
+   * teams out of those rows — so without this the roster here showed the new face and the rail
+   * two layers down went on drawing the old one until something else happened to re-snapshot.
+   * One agent, two faces, which is the failure the whole face rule exists to prevent.
+   *
+   * It is a re-read and never a restart: nothing on this screen stops a team. ADR-0002.
+   */
+  onChanged?: () => void;
   /** `--screen=hire` only: the dialog a screenshot cannot click its way to. */
   hiringAtOnce?: boolean;
 }): React.JSX.Element {
@@ -38,7 +50,10 @@ export function Agents({
 
   const reload = useCallback(async (): Promise<void> => {
     setRoster(await window.blobot.listAgents());
-  }, []);
+    // The screen behind this one holds the same agents on their teams. Asked after the roster,
+    // because the roster is what the person is looking at.
+    onChanged?.();
+  }, [onChanged]);
 
   /** Ask the machine again. `detectRuntimes` re-detects, so signing one in redraws the picker. */
   const rescan = useCallback((): void => {
@@ -99,7 +114,7 @@ export function Agents({
                 <button className="listrow tall" onClick={() => setEditing(agent.id)}>
                   {/* The face it wears in the rail and the transcript, so this list is
                       recognisably the same set of agents rather than a list of names. */}
-                  <Blob name={agent.name} size={34} hue={agent.hue} />
+                  <Blob name={agent.name} size={34} hue={agent.hue} shape={agent.shape} />
                   <span className="who">
                     <span className="nm">
                       <b>{agent.name}</b> <span className="muted">{agent.role}</span>

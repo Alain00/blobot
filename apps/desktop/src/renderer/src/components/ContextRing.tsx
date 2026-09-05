@@ -103,7 +103,7 @@ export function ContextRing({
           <div className="mono muted ctxpophead">CONTEXT</div>
           {rows.map(({ agent, reading, ceiling, pct }) => (
             <div key={agent.id} className="ctxpoprow">
-              <Blob name={agent.name} size={14} hue={agent.hue} />
+              <Blob name={agent.name} size={14} hue={agent.hue} shape={agent.shape} />
               <span className="who">{agent.name}</span>
               <span className="n mono muted">
                 {tokens(reading.used)}/{tokens(reading.size)}

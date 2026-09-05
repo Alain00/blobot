@@ -41,6 +41,8 @@ export interface NewAgentSpec {
   readonly executablePath?: string;
   /** The blobatar hue the user picked, 0 to 359. Absent means the name derives it. */
   readonly hue?: number;
+  /** The silhouette the user picked, by name. Absent means the name derives that too. */
+  readonly shape?: string;
   /**
    * What the user chose among the options the runtime advertises, keyed by the provider's own
    * group id. Absent keys are the runtime's defaults, and nothing here reads either.
@@ -150,6 +152,7 @@ export function hireAgent(spec: NewAgentSpec, deps: CreateTeamDeps): AgentProfil
       : { instructions: spec.instructions.trim() }),
     ...(spec.executablePath === undefined ? {} : { executablePath: spec.executablePath }),
     ...(spec.hue === undefined ? {} : { hue: spec.hue }),
+    ...(spec.shape === undefined ? {} : { shape: spec.shape }),
     ...(spec.runtimeOptions === undefined ? {} : { runtimeOptions: spec.runtimeOptions }),
     ...(spec.trust === undefined ? {} : { trust: spec.trust }),
     ...(spec.compaction === undefined ? {} : { compaction: spec.compaction }),
@@ -223,6 +226,7 @@ export function editAgentProfile(
     ...(spec.verbosity === undefined ? {} : { verbosity: spec.verbosity }),
     ...(instructions === undefined || instructions === '' ? {} : { instructions }),
     ...(spec.hue === undefined ? {} : { hue: spec.hue }),
+    ...(spec.shape === undefined ? {} : { shape: spec.shape }),
   });
 
   const memberships = deps.store.membershipsOf(profileId);
@@ -235,6 +239,7 @@ export function editAgentProfile(
       role,
       ...(instructions === undefined || instructions === '' ? {} : { instructions }),
       ...(spec.hue === undefined ? {} : { hue: spec.hue }),
+      ...(spec.shape === undefined ? {} : { shape: spec.shape }),
       ...(spec.runtimeOptions === undefined ? {} : { runtimeOptions: spec.runtimeOptions }),
       ...(spec.trust === undefined ? {} : { trust: spec.trust }),
       ...(spec.compaction === undefined ? {} : { compaction: spec.compaction }),
@@ -349,6 +354,7 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
       runtimeId: profile.runtimeId,
       ...(profile.instructions === undefined ? {} : { instructions: profile.instructions }),
       ...(profile.hue === undefined ? {} : { hue: profile.hue }),
+      ...(profile.shape === undefined ? {} : { shape: profile.shape }),
       ...(profile.executablePath === undefined ? {} : { executablePath: profile.executablePath }),
       ...(profile.runtimeOptions === undefined ? {} : { runtimeOptions: profile.runtimeOptions }),
       ...(profile.trust === undefined ? {} : { trust: profile.trust }),
@@ -518,6 +524,8 @@ export interface AgentBranch {
      * on one agent: a hue is an identity in this app, not a decoration.
      */
     readonly agentHue?: number;
+    /** Their silhouette, carried beside the hue and for the same reason: half a face is two. */
+    readonly agentShape?: string;
     /** The Workspace itself: the repository the user opened, not any agent's copy of it. */
     readonly isWorkspace?: boolean;
   };
@@ -577,12 +585,23 @@ export async function switchAgentBranch(
 }
 
 /** The directory to run git in, plus what every other worktree path in it means. */
+/** One row's occupant in the branch menu: an agent's whole face, or the Workspace itself. */
+type BranchHolder = {
+  agentName?: string;
+  agentHue?: number;
+  agentShape?: string;
+  isWorkspace?: boolean;
+};
+
 function branchTarget(
   teamId: string,
   agentId: string,
   deps: CreateTeamDeps,
 ):
-  | { path: string; holders: Map<string, { agentName?: string; agentHue?: number; isWorkspace?: boolean }> }
+  | {
+      path: string;
+      holders: Map<string, BranchHolder>;
+    }
   | { error: string } {
   const team = deps.store.teamById(teamId);
   if (team === undefined) return { error: 'That team is already gone.' };
@@ -594,12 +613,13 @@ function branchTarget(
     return { error: 'this workspace is not a single git repository' };
   }
   const workspaces = deps.workspaces ?? workspaceProviderFor(team.workspaceKind);
-  const holders = new Map<string, { agentName?: string; agentHue?: number; isWorkspace?: boolean }>();
+  const holders = new Map<string, BranchHolder>();
   holders.set(team.workspacePath, { isWorkspace: true });
   for (const member of deps.store.agentsOfTeam(team.id)) {
     holders.set(workspaces.workspaceFor(requestFor(team, member.id, member.name)).path, {
       agentName: member.name,
       ...(member.hue === undefined || member.hue === null ? {} : { agentHue: member.hue }),
+      ...(member.shape === undefined || member.shape === null ? {} : { agentShape: member.shape }),
     });
   }
   return { path: workspaces.workspaceFor(requestFor(team, record.id, record.name)).path, holders };
@@ -823,6 +843,7 @@ export async function editTeamRoster(
       runtimeId: profile.runtimeId,
       ...(profile.instructions === undefined ? {} : { instructions: profile.instructions }),
       ...(profile.hue === undefined ? {} : { hue: profile.hue }),
+      ...(profile.shape === undefined ? {} : { shape: profile.shape }),
       ...(profile.executablePath === undefined ? {} : { executablePath: profile.executablePath }),
       ...(profile.runtimeOptions === undefined ? {} : { runtimeOptions: profile.runtimeOptions }),
       ...(profile.trust === undefined ? {} : { trust: profile.trust }),

@@ -265,16 +265,21 @@ export function Rail({
                       asserting what the fold only ever claimed of somebody. */}
                   {/* `SEEN` rather than the floor, because the rail is the column a person
                       looks at all day and the whole point of the layer is that the faces look
-                      back. What actually moves here is `waiting` alone — `aimOf` gives that one
-                      status the pointer and every other one nothing — so this is the excursion
-                      of a blocked agent following you until you answer, not of a roster
-                      swivelling in unison. */}
+                      back. Two things move at that excursion, and only ever one at a time:
+                      `waiting` claiming the pointer — `aimOf` gives that one status the cursor
+                      and every other one nothing — and `wander`, which is a face glancing around
+                      the room while nothing else is aiming it. The roster still cannot swivel in
+                      unison: every beat is a random hold on a random direction, phased by a
+                      random first beat, and an agent that owes the user an answer stops
+                      wandering and looks at them. */}
                   <Blob
                     name={agent.name}
 										size={44}
                     status={status}
                     hue={agent.hue}
+                    shape={agent.shape}
                     animated
+                    wander
                     travel={SEEN}
                   />
                   <span className="who">

@@ -389,6 +389,7 @@ function teamSummaries(): UiTeamSummary[] {
         name: agent.name,
         ...(agent.profileId === undefined ? {} : { profileId: agent.profileId }),
         ...(agent.hue === undefined ? {} : { hue: agent.hue }),
+        ...(agent.shape === undefined ? {} : { shape: agent.shape }),
       })),
       // The lead as a *profile* id, because the roster dialog is a set of ticks on profiles and
       // this is the tick it has to draw marked. Absent on a team formed before there were
@@ -430,6 +431,7 @@ function agentProfiles(): UiAgentProfile[] {
     runtimeLabel: runtimeLabel(profile.runtimeId),
     ...(profile.instructions === undefined ? {} : { instructions: profile.instructions }),
     ...(profile.hue === undefined ? {} : { hue: profile.hue }),
+    ...(profile.shape === undefined ? {} : { shape: profile.shape }),
     ...(profile.runtimeOptions === undefined ? {} : { runtimeOptions: profile.runtimeOptions }),
     ...(profile.trust === undefined ? {} : { trust: profile.trust }),
     ...(profile.compaction === undefined ? {} : { compaction: profile.compaction }),
@@ -477,6 +479,7 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
       workspacePath: team.workspacePath,
       ...(record.branch === undefined ? {} : { branch: record.branch }),
       ...(record.hue === undefined ? {} : { hue: record.hue }),
+      ...(record.shape === undefined ? {} : { shape: record.shape }),
       // Nothing has advertised anything yet, so the paperclip is closed with the composer.
       accepts: { images: false, textFiles: false },
       ...ceiling(record.runtimeId, record.runtimeOptions),
@@ -646,6 +649,31 @@ function snapshot(): UiSnapshot {
       ...(openError === undefined ? {} : { openError }),
     };
   }
+  /**
+   * Each agent's face as the *store* holds it, not as the running team was launched with it.
+   *
+   * An edit restates the face onto every membership the moment it is saved, and the rail draws
+   * its rows straight out of those rows — so reading the open team's faces off the in-memory
+   * Agent put the new face on the rail and the old one in the transcript beside it. One agent,
+   * two faces, which is the failure the whole face rule exists to prevent, and this time inside
+   * one window.
+   *
+   * The face is the one part of an edit with nothing to restart. A role and standing
+   * instructions wait for the next start because they are composed into a persona and the
+   * session in flight was composed from the old one; a hue is drawn, and there is no session
+   * for it to disagree with.
+   */
+  const faces = new Map(
+    team.store.agentsOfTeam(team.team.id).map((row) => [
+      row.id,
+      {
+        ...(row.hue === undefined ? {} : { hue: row.hue }),
+        ...(row.shape === undefined ? {} : { shape: row.shape }),
+      },
+    ]),
+  );
+  const faceOf = (agentId: string): { hue?: number; shape?: string } => faces.get(agentId) ?? {};
+
   return {
     team: {
       id: team.team.id,
@@ -665,7 +693,7 @@ function snapshot(): UiSnapshot {
             members: team.agents.map((agent) => ({
               id: agent.id,
               name: agent.name,
-              ...(agent.hue === undefined ? {} : { hue: agent.hue }),
+              ...faceOf(agent.id),
             })),
           },
         ]
@@ -676,7 +704,7 @@ function snapshot(): UiSnapshot {
       role: agent.role,
       runtimeLabel: team.runtimeLabels[agent.id] ?? 'unknown',
       workspacePath: agent.workspacePath,
-      ...(agent.hue === undefined ? {} : { hue: agent.hue }),
+      ...faceOf(agent.id),
       ...(team.branches[agent.id] === undefined ? {} : { branch: team.branches[agent.id] }),
       accepts: team.orchestrator.acceptsOf(agent.id),
       ...(team.contextCeilings[agent.id] === undefined

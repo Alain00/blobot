@@ -119,7 +119,12 @@ export function RoutineForm({
                             value={target.agentId}
                             className="selectitem"
                           >
-                            <Blob name={target.agentName} size={18} hue={target.agentHue} />
+                            <Blob
+                              name={target.agentName}
+                              size={18}
+                              hue={target.agentHue}
+                              shape={target.agentShape}
+                            />
                             <Select.ItemText>
                               {target.agentName} · {target.teamName}
                             </Select.ItemText>
@@ -134,7 +139,12 @@ export function RoutineForm({
                 </Select.Root>
               ) : (
                 <div className="whostated">
-                  <Blob name={routine.agentName ?? '?'} size={20} hue={routine.agentHue} />
+                  <Blob
+                    name={routine.agentName ?? '?'}
+                    size={20}
+                    hue={routine.agentHue}
+                    shape={routine.agentShape}
+                  />
                   <span>
                     {routine.agentName ?? 'nobody'}
                     {routine.teamName === undefined ? '' : ` · ${routine.teamName}`}
