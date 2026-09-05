@@ -321,10 +321,17 @@ transcript.
   `npm install` and `node`, both vouched at the same level. Removing it would take a keystroke and
   no capability. Left here struck through rather than deleted, because it was charted as a finding
   and a later session should meet the correction rather than the claim.
-- **Screen capture is unprompted on OpenCode**, at `normal`, today. Found by ticket 05 while
-  checking the opposite claim. `BASH_PERMISSIONS` is `'*': allow` minus a list and the whole
-  display-server class is absent from it, so `grim`, `scrot` and `import` run with no prompt. The
-  fix is written on that ticket and belongs to a build session, ahead of this map's own feature.
+- ~~**Screen capture is unprompted on OpenCode**, at `normal`, today.~~ **Fixed 2026-09-05**, and
+  it was in two places rather than one. OpenCode was the found instance: `BASH_PERMISSIONS` is
+  `'*': allow` minus a list, the whole display-server class was absent from it, and `grim`, `scrot`
+  and `import` ran with no prompt. Fourteen patterns are on it now as `ask` and on `TRUSTED_ANYWAY`
+  never. **The second instance was Claude at `unattended`**, which ticket 05 believed was correct by
+  omission and is not: that file's own measurement says *absent from an allowlist is not refused*
+  -- under `auto` the classifier answered for `chmod`, `git push` and `sudo` with no request
+  reaching blobot -- so the class is on `REFUSED_AT_UNATTENDED` beside the nine verbs, which is the
+  only shape that refuses anything at that level. The attended three still ask by omission, and a
+  test asserts nothing on the display class is ever vouched at any level, since a later
+  `TRUSTING_BASH` convenience is how this widens again. Cursor, Codex and fx cannot reach it.
 
 - **`vercel-labs/agent-browser`**, raised by the author 2026-09-05. Apache-2.0, a native Rust CLI
   that is both an MCP server and a plain `agent-browser screenshot <path>` command. It is the first

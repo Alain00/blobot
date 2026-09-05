@@ -114,6 +114,27 @@ describe('what unattended refuses outright', () => {
     expect(denied).toContain('Bash(git remote:*)');
   });
 
+  it('denies the display server too, where absence would have been a silent yes', () => {
+    // `agent-media/05`: off limits at every level. At the attended three that is absence, because
+    // an unlisted command asks. At `unattended` absence is the classifier answering, which is the
+    // measurement above, so the class has to be denied outright to be refused at all.
+    const denied = refusedTools('unattended');
+    for (const verb of ['grim', 'scrot', 'import', 'screencapture', 'xdotool', 'ffmpeg']) {
+      expect(denied).toContain(`Bash(${verb}:*)`);
+    }
+  });
+
+  it('vouches for nothing that reaches the display server, at any level', () => {
+    // The other end of the same rule, and the one that would break first: a later session adding
+    // a `playwright` or `ffmpeg` convenience to `TRUSTING_BASH` would widen this silently.
+    for (const trust of ['careful', 'normal', 'trusting', 'unattended'] as const) {
+      const rules = vouchedTools(trust);
+      for (const verb of ['grim', 'scrot', 'import', 'screencapture', 'xdotool', 'ffmpeg']) {
+        expect(rules).not.toContain(`Bash(${verb}:*)`);
+      }
+    }
+  });
+
   it('denies nothing at the three attended levels', () => {
     // There a human is the answer, and the block in the transcript is how they give it. A deny
     // rule here would turn "still asks before deleting" into "cannot delete", silently, for

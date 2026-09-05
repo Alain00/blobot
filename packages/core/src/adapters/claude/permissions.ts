@@ -235,9 +235,25 @@ export { ATTENDED_TRUST_LEVELS };
  * `gh`'s writing verbs are not here because `Bash(gh:*)` would deny the reading half that
  * `VOUCHED_BASH` allows from `normal`, and a prefix rule cannot see the difference; they remain
  * un-vouched rather than denied, which is the same asymmetry running in the safe direction.
+ *
+ * ## The display server, added 2026-09-05
+ *
+ * `agent-media/05` refused screen capture at every level and found it running unprompted on
+ * OpenCode, whose denylist makes absence the unsafe outcome. The same reasoning lands here for a
+ * different reason: at the other three levels these commands ask, because they are on no vouched
+ * list, but at `unattended` **absent from an allowlist is not refused** -- which is the whole
+ * finding above, arrived at by measurement -- and the classifier would answer for them. This is
+ * the one class on this list argued from **privacy** rather than from destructiveness or reach: a
+ * capture undoes nothing and photographs everything the person has open, a frame in a context
+ * window cannot be recalled, and the person whose privacy is spent is often not the one who typed
+ * the prompt. It is also the only verb here that reaches outside the AgentWorkspace entirely.
+ * Capture and input injection are one class because they are one reach, and `ffmpeg` is with them
+ * for `gh api`'s reason: `-f x11grab` is invisible to a prefix rule.
  */
 const REFUSED_AT_UNATTENDED = [
   'rm', 'sudo', 'chmod', 'chown', 'ssh', 'scp', 'docker', 'git push', 'git remote',
+  'import', 'scrot', 'grim', 'maim', 'spectacle', 'screencapture', 'gnome-screenshot',
+  'flameshot', 'wayshot', 'xwd', 'xdotool', 'wmctrl', 'ydotool', 'ffmpeg',
 ];
 
 /**

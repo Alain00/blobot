@@ -120,6 +120,26 @@ to `BASH_PERMISSIONS` as `ask`, and to `TRUSTED_ANYWAY` never. Cursor is an allo
 word with `read-only` and fx with `ask`, so neither can reach it either. OpenCode is the only one,
 and it is the only one because it is the only denylist.
 
+#### Built 2026-09-05, and Claude was a second instance
+
+The fix landed as written, and finding the second one is the lesson above turned on this ticket's
+own claim. **Claude is not correct by omission at `unattended`.** `permissions.ts` already carries
+the measurement that says why: under `auto`, three live runs had the classifier approve `chmod 777`,
+a `git push` to a real remote and a reach for `sudo`, with these commands absent from `allowedTools`
+exactly as designed and **no permission request ever reaching blobot**. *Absent from an allowlist is
+not refused* -- it is the classifier answering. So at that one level the display class is on
+`REFUSED_AT_UNATTENDED` beside the nine verbs, which is the only shape that refuses anything there.
+
+At the three attended levels it stays absent and therefore asks, which is what this ticket wanted
+and what the copy promises: denying it there would turn *still asks before* into *cannot*, silently,
+for every agent already hired -- the same argument that file already makes for `rm`.
+
+The general lesson survives with a wider edge than it was written with. It is not *allowlist safe,
+denylist unsafe*: it is that **absence means whatever the runtime decides it means**, and on Claude
+that answer changes with the trust level. A second test asserts the class is vouched at no level on
+either runtime, because a later session adding an `ffmpeg` or `playwright` convenience to
+`TRUSTING_BASH` is how this widens again and it would widen silently.
+
 The general lesson is worth writing on the ticket rather than only fixing the instance: **a rule
 that is safe by omission on one runtime is unsafe by omission on the other**, and every future
 "this is already handled because it is on no list" has to be checked against both ends.
