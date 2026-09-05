@@ -19,13 +19,19 @@ export async function directorySize(path: string): Promise<number> {
   const stack = [path];
   while (stack.length > 0) {
     const next = stack.pop() as string;
-    const stats = await lstat(next).catch(() => undefined);
+    const stats = await lstat(next).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return undefined;
+      throw error;
+    });
     if (stats === undefined) continue;
     if (!stats.isDirectory()) {
       total += stats.size;
       continue;
     }
-    const entries = await readdir(next).catch(() => []);
+    const entries = await readdir(next).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return [];
+      throw error;
+    });
     for (const entry of entries) stack.push(join(next, entry));
   }
   return total;

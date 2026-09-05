@@ -721,8 +721,10 @@ export type UiPublishResult =
   | { readonly ok: false; readonly step: 'push' | 'create'; readonly error: string };
 
 export interface UiTeamDiskUsage {
-  readonly bytes: number;
-  readonly agents: readonly { readonly agentName: string; readonly bytes: number }[];
+  readonly bytes: number | null;
+  readonly workBytes: number | null;
+  readonly stateBytes: number | null;
+  readonly agents: readonly { readonly agentName: string; readonly bytes: number | null; readonly workBytes: number | null; readonly stateBytes: number | null }[];
 }
 
 /**

@@ -1,4 +1,4 @@
-import { mkdir, open, readFile, rename, rmdir } from 'node:fs/promises';
+import { mkdir, open, readFile, rename, rmdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { SbxReference } from './data-transfer.js';
 import type { SbxBoundaryBaseline, SbxMailboxRule } from './observations.js';
@@ -27,6 +27,12 @@ export interface SbxRecord {
 export class SbxRegistry {
   readonly #locks = new Set<string>();
   constructor(readonly directory: string) {}
+  /** Called under the lifecycle lock only after every owned engine object was removed. */
+  async remove(agentId: string): Promise<void> {
+    await unlink(join(this.directory, `${sbxNameFor(agentId)}.json`));
+    const directory = await open(this.directory, 'r');
+    try { await directory.sync(); } finally { await directory.close(); }
+  }
   async lease(agentId: string): Promise<() => Promise<void>> {
     const path = join(this.directory, `${sbxNameFor(agentId)}.owner`);
     await mkdir(this.directory, { recursive: true, mode: 0o700 });

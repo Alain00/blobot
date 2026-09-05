@@ -50,6 +50,7 @@ describe('the persona', () => {
   it('states the situation that never changes', () => {
     expect(persona).toContain('You are Bob, reviewer, on the team "demo"');
     expect(persona).toContain('/agents/bob');
+    expect(persona).not.toContain(team.workspacePath);
     expect(persona).toContain('Alice (frontend)');
   });
 

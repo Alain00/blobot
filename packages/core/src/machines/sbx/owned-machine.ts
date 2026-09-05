@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { verifyBoxMountPaths } from '../../workspace/box-mounts.js';
 import type { Machine, MachineLocation, MachineReadiness, MachineSpawnRequest, MachineStartRequest, MachineTransport } from '../machine.js';
 import { machineLimits, sameMachineLimits, type MachineLimits } from '../resources.js';
 import { sbxClientEnvironment } from './client-environment.js';
@@ -30,8 +31,8 @@ export interface OwnedSbxMachineOptions {
 
 /**
  * Staged RC5 lifecycle. NOT selected by machineFor: image, Workspace, egress and product
- * onboarding admission must land first. No daemon/global-settings mutations, host mounts,
- * vendor kits, credential imports or automatic orphan removal occur here.
+ * onboarding admission must land first. Host mounts are the AgentWorkspace and its approved
+ * shared Git directories only. No daemon/global-settings mutations or credential imports.
  */
 export class OwnedSbxMachine implements Machine {
   readonly kind = 'box';
@@ -53,10 +54,15 @@ export class OwnedSbxMachine implements Machine {
     if (options.commandTimeoutMs !== undefined && (!Number.isSafeInteger(options.commandTimeoutMs) || options.commandTimeoutMs < 1)) {
       throw new Error('Invalid sandbox command timeout.');
     }
-    this.#options = { ...options, kit: Object.freeze({ ...options.kit }), limits: machineLimits(options.limits) };
+    this.#options = { ...options, kit: Object.freeze({ ...options.kit,
+      ...(options.kit.sharedSkillLocations === undefined ? {} : { sharedSkillLocations: Object.freeze([...options.kit.sharedSkillLocations]) }),
+      ...(options.kit.workspace === undefined ? {} : { workspace: Object.freeze({ ...options.kit.workspace,
+        commonGit: Object.freeze([...options.kit.workspace.commonGit]) }) }),
+    }), limits: machineLimits(options.limits) };
     this.#engineClient = new SbxEngine(sbxCommandRunner(options.sbxExecutable, options.commandTimeoutMs));
-    this.#location = Object.freeze({ agentId: options.agentId, kind: 'box', workspacePath: '/workspace',
-      volumes: Object.freeze({ data: '/home/agent', workspace: '/workspace' }) });
+    this.#location = Object.freeze({ agentId: options.agentId, kind: 'box', workspacePath: options.kit.workspace?.path ?? '/workspace',
+      ...(options.kit.workspace?.sharedSkillsPath === undefined ? {} : { sharedSkillsPath: options.kit.workspace.sharedSkillsPath }),
+      volumes: Object.freeze({ data: '/home/agent', workspace: options.kit.workspace === undefined ? '/workspace' : null }) });
   }
   location(): MachineLocation { return this.#location; }
 
@@ -189,6 +195,7 @@ export class OwnedSbxMachine implements Machine {
       if (!this.#started || this.#active === undefined) throw new Error('This Machine is not awake.');
       await this.#engine();
       const record = await this.#record();
+      if (this.#options.kit.workspace !== undefined) await verifyBoxMountPaths(this.#options.kit.workspace);
       if (record.active?.id !== this.#active.id || record.mailbox === undefined) throw new Error('Machine configuration changed.');
       const rules = await this.#rules(this.#active);
       const mailbox = rules.filter((rule) => rule['id'] === record.mailbox?.id);
@@ -218,7 +225,30 @@ export class OwnedSbxMachine implements Machine {
   }
   /** Called only after the Workspace owner has preserved work and the user requested removal. */
   async destroy(): Promise<void> {
-    throw new Error('Machine data removal awaits Workspace preservation integration. No data was deleted.');
+    if (this.#options.kit.workspace === undefined) throw new Error('Machine data removal awaits Workspace preservation integration. No data was deleted.');
+    await this.#locked(async () => {
+      if (this.#started || this.#transports.size !== 0) throw new Error('Stop this Machine before deleting its data.');
+      const stored = await this.#options.registry.read(this.#options.agentId);
+      if (stored === undefined) return;
+      let record = await this.#record();
+      await this.#engine();
+      record = await this.#revokeMailbox(record);
+      // Save each completed removal so an interrupted deletion can continue from its journal.
+      for (const reference of [...record.retained, ...record.active === undefined ? [] : [record.active]]) {
+        await this.#stopOwned(reference);
+        await this.#run(['rm', '-f', reference.name]);
+        const inventory = await this.#json(['ls', '--json']);
+        if (!Array.isArray(inventory['sandboxes']) || inventory['sandboxes'].some((box: { id?: string; name?: string }) =>
+          box.id === reference.id || box.name === reference.name)) throw new Error('Machine removal could not be verified.');
+        const { active, ...rest } = record;
+        record = { ...rest, ...(active?.id === reference.id || active === undefined ? {} : { active }),
+          retained: record.retained.filter((box) => box.id !== reference.id) };
+        await this.#options.registry.save(record);
+      }
+      await this.#options.registry.remove(this.#options.agentId);
+      this.#active = undefined;
+      this.#safeToRelease = true;
+    });
   }
   async measure(): Promise<number | null> { return null; } // no verified engine-owned byte metric
 
@@ -237,6 +267,9 @@ export class OwnedSbxMachine implements Machine {
       const original = record.active;
       if (original === undefined) throw new Error('This Machine has not been created.');
       if (sameMachineLimits(original.limits, desired)) return;
+      // A mounted Workspace needs no copy. The remaining private system/Docker state must
+      // be preserved by the image contract before replacement is admitted.
+      if (this.#options.kit.workspace !== undefined) throw new Error('Resource changes await complete Machine state preservation. The Machine was kept.');
       this.#started = false;
       await this.#identity(original);
       record = await this.#revokeMailbox(record);
@@ -280,10 +313,14 @@ export class OwnedSbxMachine implements Machine {
       version: 1, agentId: this.#options.agentId, kit: this.#options.kit, retained: [],
     };
     if (record.pending !== undefined) throw new Error('This Machine has an unfinished operation. Recover it before continuing.');
-    if (renderSbxKit(record.kit) !== renderSbxKit(this.#options.kit)) throw new Error('The recorded Machine image or volume configuration does not match.');
+    if (renderSbxKit(record.kit) !== renderSbxKit(this.#options.kit) ||
+        JSON.stringify(record.kit.workspace ?? null) !== JSON.stringify(this.#options.kit.workspace ?? null)) {
+      throw new Error('The recorded Machine image, storage or workspace configuration does not match.');
+    }
     return record;
   }
   async #create(record: SbxRecord, limits: MachineLimits): Promise<OwnedSbx> {
+    if (record.kit.workspace !== undefined) await verifyBoxMountPaths(record.kit.workspace);
     // Keep engine names short; ownership is the durable Agent/id binding, not a name prefix.
     const name = `blobot-${randomUUID()}`;
     const pending = { name, limits: machineLimits(limits) };
@@ -295,7 +332,9 @@ export class OwnedSbxMachine implements Machine {
       await mkdir(kit);
       await writeFile(join(kit, 'spec.yaml'), renderSbxKit(record.kit), { mode: 0o600 });
       this.#safeToRelease = false;
-      await this.#run(['create', '--name', name, '--cpus', String(limits.maxCpus), '--memory', String(limits.maxMemoryBytes), kit]);
+      const mounts = record.kit.workspace === undefined ? [] : [record.kit.workspace.path, ...record.kit.workspace.commonGit,
+        ...(record.kit.workspace.sharedSkillsPath === undefined ? [] : [`${record.kit.workspace.sharedSkillsPath}:ro`])];
+      await this.#run(['create', '--name', name, '--cpus', String(limits.maxCpus), '--memory', String(limits.maxMemoryBytes), kit, ...mounts]);
       const inventory = await this.#json(['ls', '--json']);
       const boxes = inventory['sandboxes'];
       if (!Array.isArray(boxes)) throw new Error('Sandbox inventory is unavailable.');
@@ -306,8 +345,8 @@ export class OwnedSbxMachine implements Machine {
       this.#safeToRelease = false;
       await this.#options.registry.save({ ...record, pending: { ...pending, id: reference.id } });
       await this.#identity(reference);
-      const rootProbe = await this.#json(['exec', '-u', '0', name, record.kit.guestNode, '-e', SBX_BOUNDARY_PROBE]);
-      const baseline = verifySbxBoundary(rootProbe, limits, 0);
+      const rootProbe = await this.#json(['exec', '-u', '0', name, record.kit.guestNode, '-e', SBX_BOUNDARY_PROBE, this.#privatePaths()]);
+      const baseline = verifySbxBoundary(rootProbe, limits, 0, undefined, record.kit.workspace);
       const active: OwnedSbx = { ...reference, limits, baseline };
       await this.#boundary(active);
       verifySbxNetworkRules(await this.#rules(active));
@@ -331,12 +370,16 @@ export class OwnedSbxMachine implements Machine {
     verifySbxReference(await this.#json(['ls', '--json']), reference);
   }
   async #boundary(reference: OwnedSbx): Promise<void> {
+    if (this.#options.kit.workspace !== undefined) await verifyBoxMountPaths(this.#options.kit.workspace);
     await this.#identity(reference);
     for (const uid of [0, 1000] as const) {
-      verifySbxBoundary(await this.#json(['exec', '-u', String(uid), reference.name, this.#options.kit.guestNode, '-e', SBX_BOUNDARY_PROBE]),
-        reference.limits, uid, reference.baseline);
+      verifySbxBoundary(await this.#json(['exec', '-u', String(uid), reference.name, this.#options.kit.guestNode, '-e', SBX_BOUNDARY_PROBE, this.#privatePaths()]),
+        reference.limits, uid, reference.baseline, this.#options.kit.workspace);
     }
     await this.#identity(reference);
+  }
+  #privatePaths(): string {
+    return JSON.stringify(this.#options.kit.workspace === undefined ? ['/home/agent', '/workspace'] : ['/home/agent']);
   }
   async #stopOwned(reference: SbxReference): Promise<void> {
     await this.#identity(reference);

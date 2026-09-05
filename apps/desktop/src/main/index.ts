@@ -1639,12 +1639,12 @@ void app.whenReady().then(async () => {
    * makes the option answerable: nobody can decide about "delete the workspaces too" without it.
    */
   ipcMain.handle('blobot:teamDiskUsage', async (_event, teamId: string): Promise<UiTeamDiskUsage> => {
-    if (store === undefined) return { bytes: 0, agents: [] };
+    if (store === undefined) return { bytes: null, workBytes: null, stateBytes: null, agents: [] };
     try {
       return await measureTeam(teamId, { store, clock });
     } catch {
       // A team blobot cannot measure is offered nothing rather than a wrong figure.
-      return { bytes: 0, agents: [] };
+      return { bytes: null, workBytes: null, stateBytes: null, agents: [] };
     }
   });
 

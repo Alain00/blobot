@@ -89,11 +89,12 @@ export function saySize(bytes: number): string {
  */
 function sizeLine(usage: UiTeamDiskUsage | undefined): string {
   if (usage === undefined) return 'measuring…';
+  if (usage.bytes === null) return 'size unavailable · full clean unavailable';
   if (usage.bytes === 0) return 'these workspaces are holding nothing';
   const each = usage.agents
-    .filter((agent) => agent.bytes > 0)
-    .map((agent) => `${agent.agentName} ${saySize(agent.bytes)}`);
-  return [`recovers about ${saySize(usage.bytes)}`, ...each].join(' · ');
+    .filter((agent) => agent.bytes !== null && agent.bytes > 0)
+    .map((agent) => `${agent.agentName} ${saySize(agent.bytes ?? 0)}`);
+  return [`recovers about ${saySize(usage.bytes)}`, ...(usage.stateBytes ? [`work ${saySize(usage.workBytes ?? 0)} · state ${saySize(usage.stateBytes)}`] : []), ...each].join(' · ');
 }
 
 export function DeleteTeam({
@@ -126,7 +127,7 @@ export function DeleteTeam({
     let live = true;
     void window.blobot.teamDiskUsage(team.id).then((measured) => {
       if (live) setUsage(measured);
-    });
+    }).catch(() => { if (live) setUsage({ bytes: null, workBytes: null, stateBytes: null, agents: [] }); });
     return () => {
       live = false;
     };
@@ -185,6 +186,7 @@ export function DeleteTeam({
               <button
                 className={`listrow pick${clean ? ' on' : ''}`}
                 aria-pressed={clean}
+                disabled={busy || usage === undefined || usage.bytes === null}
                 onClick={() => setClean(!clean)}
               >
                 <span className="who">

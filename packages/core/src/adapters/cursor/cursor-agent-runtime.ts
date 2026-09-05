@@ -525,7 +525,7 @@ export class CursorAgentRuntime implements AgentRuntime {
   }
 
   #offerableNames(): ReadonlySet<string> {
-    this.#offerable ??= offerableNames(this.#options.cwd);
+    this.#offerable ??= offerableNames(this.#options.cwd, this.#options.machine?.kind === 'box' ? this.#options.machine.location() : undefined);
     return this.#offerable;
   }
 

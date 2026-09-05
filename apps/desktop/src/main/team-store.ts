@@ -29,6 +29,7 @@ import {
   type VerbosityLevel,
   type WorkspaceInspection,
   type WorkspaceProvider,
+  type Machine,
 } from '@blobot/core';
 
 /** Hiring an agent. It exists after this, on no team. */
@@ -98,6 +99,8 @@ export interface CreateTeamDeps {
    * kind of Workspace decides it, which is the point of `workspaceProviderFor`.
    */
   readonly workspaces?: WorkspaceProvider;
+  /** Persisted per-Agent Machines; absent for local execution. */
+  readonly machines?: ReadonlyMap<string, Machine>;
   /**
    * Injected separately from the provider because inspection is what *chooses* the provider —
    * asking one of the three what a folder is would mean having already picked one.
@@ -427,32 +430,30 @@ export interface TeamDeletion {
  * blobot kept would be a stale one.
  */
 export interface TeamDiskUsage {
-  readonly bytes: number;
-  readonly agents: readonly { readonly agentName: string; readonly bytes: number }[];
+  readonly bytes: number | null;
+  readonly workBytes: number | null;
+  readonly stateBytes: number | null;
+  readonly agents: readonly { readonly agentName: string; readonly bytes: number | null; readonly workBytes: number | null; readonly stateBytes: number | null }[];
 }
 
-/** How much disk this team's AgentWorkspaces are holding right now. */
+function sumKnown(values: readonly (number | null)[]): number | null {
+  return values.some((value) => value === null) ? null : values.reduce<number>((total, value) => total + (value ?? 0), 0);
+}
+
+/** Work on the host and private Machine state are priced separately; unknown is never zero. */
 export async function measureTeam(teamId: string, deps: CreateTeamDeps): Promise<TeamDiskUsage> {
   const team = deps.store.teamById(teamId);
   if (team === undefined) throw new TeamCreationError('unknown_agent', 'That team is already gone.');
   const workspaces = deps.workspaces ?? workspaceProviderFor(team.workspaceKind);
-
-  const agents: { agentName: string; bytes: number }[] = [];
+  const agents: TeamDiskUsage['agents'][number][] = [];
   for (const record of deps.store.agentsOfTeam(team.id)) {
-    // Never a refusal, at any level: this number is drawn beside a button, and a team whose
-    // folder has been deleted is the ordinary team to be deleting.
-    const bytes = await workspaces
-      .measure({
-        workspacePath: team.workspacePath,
-        teamName: team.name,
-        agentId: record.id,
-        agentName: record.name,
-        ...(team.workspaceRepos === undefined ? {} : { repos: team.workspaceRepos }),
-      })
-      .catch(() => 0);
-    agents.push({ agentName: record.name, bytes });
+    const workBytes = await measureWorkspaceOf(record, team, workspaces);
+    const machine = deps.machines?.get(record.id);
+    const stateBytes = machine === undefined ? 0 : await machine.measure().catch(() => null);
+    agents.push({ agentName: record.name, workBytes, stateBytes, bytes: sumKnown([workBytes, stateBytes]) });
   }
-  return { bytes: agents.reduce((total, agent) => total + agent.bytes, 0), agents };
+  return { bytes: sumKnown(agents.map((agent) => agent.bytes)), agents,
+    workBytes: sumKnown(agents.map((agent) => agent.workBytes)), stateBytes: sumKnown(agents.map((agent) => agent.stateBytes)) };
 }
 
 /**
@@ -582,7 +583,7 @@ function branchTarget(
   agentId: string,
   deps: CreateTeamDeps,
 ):
-  | { path: string; holders: Map<string, { agentName?: string; agentHue?: number; isWorkspace?: boolean }> }
+  | { path: string; agentName: string; holders: Map<string, { agentName?: string; agentHue?: number; isWorkspace?: boolean }> }
   | { error: string } {
   const team = deps.store.teamById(teamId);
   if (team === undefined) return { error: 'That team is already gone.' };
@@ -602,7 +603,7 @@ function branchTarget(
       ...(member.hue === undefined || member.hue === null ? {} : { agentHue: member.hue }),
     });
   }
-  return { path: workspaces.workspaceFor(requestFor(team, record.id, record.name)).path, holders };
+  return { path: workspaces.workspaceFor(requestFor(team, record.id, record.name)).path, agentName: record.name, holders };
 }
 
 /** The two commands a commit would run, for the confirm to show before it runs them. */
@@ -614,15 +615,14 @@ export function commitPlanFor(
 ): readonly string[] {
   const found = branchTarget(teamId, agentId, deps);
   if ('error' in found) return [];
-  return commitPlan({ path: found.path, message });
+  return commitPlan({ path: found.path, message, agentName: found.agentName });
 }
 
 /**
  * Commit what is in this agent's workspace, at the user's click.
  *
  * The user's own git, on the user's own say-so, with the commands shown first. No runtime is
- * told, nothing enters a session, and `git commit` is on no trust level's allowlist, so an agent
- * cannot do this for itself. The message is the user's and is never generated: blobot provides
+ * told and nothing enters a session. Authorship names the Agent whose work is committed. The message is the user's and is never generated: blobot provides
  * no inference, and asking the agent that wrote the code to name what it did is a different
  * feature with a different way of being wrong.
  */
@@ -634,7 +634,7 @@ export async function commitAgentWork(
 ): Promise<CommitOutcome> {
   const found = branchTarget(teamId, agentId, deps);
   if ('error' in found) return { ok: false, error: found.error };
-  return commitWorktree({ path: found.path, message }, spawnCommand);
+  return commitWorktree({ path: found.path, message, agentName: found.agentName }, spawnCommand);
 }
 
 /** What a pull request from this agent would merge into, and what `ahead` counts against. */
@@ -740,14 +740,17 @@ export async function deleteTeam(
   const workspaces = deps.workspaces ?? workspaceProviderFor(team.workspaceKind);
   const records = deps.store.agentsOfTeam(team.id);
   const clean = options.clean === true;
+  const usage = clean ? await measureTeam(teamId, deps) : undefined;
+  if (usage?.bytes === null) throw new Error('The size is unavailable. Delete the team without full clean, or try measuring again.');
 
   const removals: AgentRemoval[] = [];
   let freedBytes = 0;
   for (const record of records) {
     // Measured first, while it is still there. The whole point of the option is the number, and
     // a number reported after the fact would have to be the estimate rather than the result.
-    if (clean) freedBytes += await measureWorkspaceOf(record, team, workspaces);
-    removals.push(await removeWorkspaceOf(record, team, workspaces, clean));
+    const removal = await removeWorkspaceOf(record, team, workspaces, clean, deps.machines?.get(record.id));
+    removals.push(removal);
+    if (clean && removal.work === 'discarded') freedBytes += usage?.agents.find((agent) => agent.agentName === record.name)?.bytes ?? 0;
     // The one case where a Routine's record is not kept. Everywhere else a Routine that cannot
     // run is disarmed and left saying who it belonged to; here it would be a pointer to nothing.
     for (const routine of deps.store.routinesOfAgent(record.id)) {
@@ -850,7 +853,7 @@ export async function editTeamRoster(
 
   const removals: AgentRemoval[] = [];
   for (const member of leaving) {
-    removals.push(await removeWorkspaceOf(member, team, workspaces));
+    removals.push(await removeWorkspaceOf(member, team, workspaces, false, deps.machines?.get(member.id)));
     // The agent's Routines are **disarmed and kept**, not tombstoned: unlike a deleted team,
     // this is a roster the user is still looking at, and a Routine that says who it belonged to
     // is how they find out their nightly typecheck stopped. Never reassigned to whoever is
@@ -869,7 +872,7 @@ async function measureWorkspaceOf(
   record: { readonly id: string; readonly name: string },
   team: Team,
   workspaces: WorkspaceProvider,
-): Promise<number> {
+): Promise<number | null> {
   return workspaces
     .measure({
       workspacePath: team.workspacePath,
@@ -878,7 +881,7 @@ async function measureWorkspaceOf(
       agentName: record.name,
       ...(team.workspaceRepos === undefined ? {} : { repos: team.workspaceRepos }),
     })
-    .catch(() => 0);
+    .catch(() => null);
 }
 
 async function removeWorkspaceOf(
@@ -886,6 +889,7 @@ async function removeWorkspaceOf(
   team: Team,
   workspaces: WorkspaceProvider,
   clean = false,
+  machine?: Machine,
 ): Promise<AgentRemoval> {
   const request = {
     workspacePath: team.workspacePath,
@@ -895,9 +899,11 @@ async function removeWorkspaceOf(
     ...(team.workspaceRepos === undefined ? {} : { repos: team.workspaceRepos }),
   };
   try {
+    await machine?.stop();
     const outcome = clean
       ? await workspaces.purge(request)
       : await workspaces.remove(request);
+    await machine?.destroy();
     return {
       agentName: record.name,
       work: outcome.work,

@@ -539,7 +539,7 @@ export class CodexAgentRuntime implements AgentRuntime {
 
   /** Read once. A skill added to the workspace mid-session needs a restart to be offered. */
   #offerableNames(): ReadonlySet<string> {
-    this.#offerable ??= offerableNames(this.#options.cwd);
+    this.#offerable ??= offerableNames(this.#options.cwd, this.#options.machine?.kind === 'box' ? this.#options.machine.location() : undefined);
     return this.#offerable;
   }
 

@@ -43,8 +43,10 @@ export interface MachineIdentity {
 
 export interface MachineLocation extends MachineIdentity {
   readonly kind: MachineKind;
+  /** An operator directory explicitly shared readonly; never the whole operator home. */
+  readonly sharedSkillsPath?: string;
   /** Local execution has no owned volumes. Never describe the user's home as our volume. */
-  readonly volumes: { readonly data: string; readonly workspace: string } | null;
+  readonly volumes: { readonly data: string; readonly workspace: string | null } | null;
 }
 
 export type MachineReadiness =

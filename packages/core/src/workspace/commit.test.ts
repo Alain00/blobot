@@ -13,7 +13,7 @@ function runner(table: Record<string, Partial<CommandResult>>): CommandRunner {
 
 describe('commitPlan', () => {
   it('shows the two commands the user is agreeing to', () => {
-    expect(commitPlan({ path: '/w', message: 'fix the retry loop' })).toEqual([
+    expect(commitPlan({ path: '/w', agentName: 'Alice', message: 'fix the retry loop' })).toEqual([
       'git add -A',
       'git commit -m "fix the retry loop"',
     ]);
@@ -23,7 +23,7 @@ describe('commitPlan', () => {
 describe('commitWorktree', () => {
   it('stages everything in the worktree, then commits it', async () => {
     const ran: string[] = [];
-    const outcome = await commitWorktree({ path: '/w', message: 'one' }, async (command, args) => {
+    const outcome = await commitWorktree({ path: '/w', agentName: 'Alice', message: 'one' }, async (command, args) => {
       ran.push([command, ...args].join(' '));
       return { code: 0, stdout: 'ab12cd3\n', stderr: '' };
     });
@@ -34,7 +34,7 @@ describe('commitWorktree', () => {
 
   it('refuses an empty message without running git', async () => {
     let ran = false;
-    const outcome = await commitWorktree({ path: '/w', message: '  ' }, async () => {
+    const outcome = await commitWorktree({ path: '/w', agentName: 'Alice', message: '  ' }, async () => {
       ran = true;
       return { code: 0, stdout: '', stderr: '' };
     });
@@ -46,7 +46,7 @@ describe('commitWorktree', () => {
     // Found live: `git commit` with nothing staged exits 1 and prints a paragraph beginning
     // `On branch try-it`, so taking the first line reported the branch and meant the opposite.
     const outcome = await commitWorktree(
-      { path: '/w', message: 'one' },
+      { path: '/w', agentName: 'Alice', message: 'one' },
       runner({
         'git commit': {
           code: 1,
@@ -59,7 +59,7 @@ describe('commitWorktree', () => {
 
   it('passes a refusal from git through without the word fatal', async () => {
     const outcome = await commitWorktree(
-      { path: '/w', message: 'one' },
+      { path: '/w', agentName: 'Alice', message: 'one' },
       runner({
         'git commit': { code: 128, stderr: 'fatal: unable to auto-detect email address\n' },
       }),

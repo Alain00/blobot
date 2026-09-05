@@ -27,8 +27,7 @@ export function composePersona(
   const teammates = roster.filter((member) => member.id !== agent.id);
   const lines = [
     `You are ${agent.name}, ${agent.role}, on the team "${team.name}".`,
-    `The team works on ${team.workspacePath}.`,
-    `You work in your own copy of it at ${agent.workspacePath}.`,
+    `You work in your own copy of the workspace at ${agent.workspacePath}.`,
     '',
     teammates.length === 0
       ? 'You have no teammates on this team yet.'

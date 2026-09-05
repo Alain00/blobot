@@ -1,3 +1,4 @@
+import { boxPaletteNames, type BoxPaletteScope } from '../acp/box-palette.js';
 import { readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -84,7 +85,8 @@ export function personalSkillNames(): Set<string> {
 }
 
 /** Everything blobot is willing to offer in this workspace, by name. */
-export function offerableNames(cwd: string): Set<string> {
+export function offerableNames(cwd: string, box?: BoxPaletteScope): Set<string> {
+  if (box !== undefined) return new Set([...boxPaletteNames(cwd, [{ path: join(cwd, '.claude', 'skills'), kind: 'skills' }, { path: join(cwd, '.claude', 'commands'), kind: 'commands' }], box), ...VOUCHED_BUILT_INS]);
   const names = projectCommandNames(cwd);
   for (const name of personalSkillNames()) names.add(name);
   for (const name of VOUCHED_BUILT_INS) names.add(name);

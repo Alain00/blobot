@@ -122,3 +122,28 @@ the author's 37 are links into a shared `~/.agents/skills`. `readdirSync` report
 symlink and not as a directory, so the first implementation found exactly one skill. Membership
 is now decided by `statSync` on the `SKILL.md`, which follows links, and the case is pinned by a
 test.
+
+
+## Second amendment, 2026-09-05: inheritance inside a box
+
+Accepted by Guillermo in [Where a Workspace lives when the Machine is not this one](../../.scratch/machines/issues/05-where-a-workspace-lives.md).
+On `local`, the previous amendment stands. Inside a box, `project` and `local` refer to
+its mounted AgentWorkspace, and `user` refers to that Agent's private home. The operator's
+skills are shared read-only; their global CLAUDE.md, settings, hooks and user MCP server
+configuration are not imported. Sharing skills does not require sharing a settings file
+whose permissions merge into a session.
+
+The palette reads the same host AgentWorkspace that the guest mounts, including loose
+files. Its only operator scope is the explicitly mounted skills directory. It excludes
+links that resolve outside the relevant mount and intersects these names with the runtime's
+advertisement. Adding a second host skills directory requires a separate decision.
+The image supplies each runtime's native skills lookup paths; initialization links those
+paths to the mount after the Agent's home is attached, refusing conflicting existing data.
+
+The box worktree also shares its repository's Git metadata, explicitly accepted on
+[What a Machine is, and what grain it hangs at](../../.scratch/machines/issues/01-what-a-machine-is.md).
+That includes its Git configuration and hooks; it is not an isolated Git database. No host
+credential file or signing socket is imported separately. Commits in an AgentWorkspace
+use the Agent's author and committer identity, with signing disabled in the launch
+configuration. This is a default for ordinary commits, not an enforcement boundary against
+an explicit Git command that overrides it. The user's Git configuration is never rewritten.

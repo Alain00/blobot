@@ -522,7 +522,7 @@ export class OpencodeAgentRuntime implements AgentRuntime {
 
   /** Read once. A command added to the workspace mid-session needs a restart to be offered. */
   #projectCommands(): ReadonlySet<string> {
-    this.#projectNames ??= offerableNames(this.#options.cwd);
+    this.#projectNames ??= offerableNames(this.#options.cwd, this.#options.machine?.kind === 'box' ? this.#options.machine.location() : undefined);
     return this.#projectNames;
   }
 

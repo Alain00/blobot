@@ -1,8 +1,35 @@
 Type: grilling
-Status: open
-Blocked by: none
+Status: resolved
+Blocked by: 01
 
 # Where a Workspace lives when the Machine is not this one
+
+## Current direction, 2026-09-05 — author requests worktrees, not box clones
+
+**Read this before the historical clone design below.** After accepting the earlier proposed
+details, Guillermo clarified clone versus worktree and then rejected the clone:
+“prefiero worktree siempre igual que en local”. Implementing the independent-clone design is
+no longer the requested work. The shared-access decision belongs to the narrowly reopened
+[What a Machine is, and what grain it hangs at](01-what-a-machine-is.md#answer-to-the-narrow-reopen-2026-09-05--worktrees-on-both-kinds);
+the author has accepted that boundary and this ticket continues implementation.
+
+The earlier acceptance of clone-specific fetch, missing-volume recovery and status semantics
+is superseded where it depends on a separate guest repository. A real worktree's branch is
+already in the host repository; it has no fetch-home stage. Loose files are on the host too,
+and the existing host status, commit and publication paths can inspect that same worktree.
+The same repository configuration supplies origin; host credentials do not follow from that.
+
+With the shared-access answer accepted, rebase this ticket's implementation on the existing local
+Workspace providers, including scoped nested worktrees and plain-copy retention. Reassess
+the fixed guest path, workspace-volume markers, clone-only palette lookup and lifecycle
+workspace-copy assumptions against the mounted worktree. Keep Agent authorship and unsigned
+commits, the persona's host-checkout-line removal, the skills-only boundary and the full-clean
+measurement distinction unless explicitly changed; those decisions do not require a clone.
+
+The [research and live fixture](../research/20-worktrees-in-sbx.md) distinguish the now-tested
+ordinary mount from pending path/admission cases. The implementation and current verification are recorded in the Answer below. The production
+box activation guards remain closed. The image ticket follows
+the completed Workspace work; it must read the resulting persistence/access contract.
 
 ## Question
 
@@ -740,3 +767,126 @@ under an existing id and the orphan sweep are `17`'s, which says so. The name is
 On §9: `research/08` §3 set a git identity by hand *before* committing; that `git commit` refuses
 without one is git's documented behaviour, not something the record measured. `.invalid` stands
 over `research/08`'s `.local`, and `13` reads it.
+
+## Comments
+
+### 2026-09-05 — resumed implementation; author decisions pending
+
+Claimed on the author's request to continue the next two tickets, following the engine
+reevaluation's continuation order. The next implementation ticket after this one is
+[The image: one per runtime](13-the-image-one-per-runtime.md). No production source or tests
+have changed in this resumption yet.
+
+Read the full ticket and amendments, the engine reevaluation, required research, and the
+current Workspace and Machine code. A read-only cross-check found these remaining choices;
+the recommendations below are **not resolutions or author approvals**:
+
+- §1: confirm bringing commits home to the Agent's local branch after turns, fast-forward
+  only, and reading loose-work figures in the guest. Fetch failure and unavailable loose-work
+  figures need separate states and sentences, separate also from the forge reading.
+- §2: confirm one clone and fetch per selected repository in a nested Workspace.
+- §3: confirm an explicit recovery offer from the last fetched commit when the workspace
+  volume is lost, naming the loose/unfetched work that cannot be recovered. The later
+  lifecycle decision still requires quarantine and explicit recovery for doubtful ownership;
+  an old table here does not authorize automatic engine-object adoption or reconstruction.
+- §4: decide the storage breakdown shown at full clean, disabling that destructive option
+  while the measurement is unknown, and ordinary deletion when the final fetch cannot run.
+  A proposed ordinary deletion retains unreachable data and reports it. Unknown measurement
+  itself is already decided by the Machine interface and is not being reopened.
+- Plain Workspaces: ordinary deletion currently preserves the only copy
+  (`CopiedDirectoryWorkspaces.remove`); reconcile this with §4's general wording about
+  deleting both volumes. Recommend retaining the copy until explicit full clean. Clarify
+  that §11(e)'s untracked-file exclusion applies to repository imports; a plain Workspace
+  necessarily copies documents with no Git tracking.
+
+Do not ask again about the initial narrow import/no remote (§10), the guest path, identity
+or the closed crossing list (§§7–11). Their explicit decisions supersede older proposals.
+Keep the ticket claimed and open until the author answers and the agreed work is verified.
+
+### 2026-09-05 — recommendations accepted; clone terminology being clarified
+
+The author answered “sí acepto la sugerencia” to the six recommendations: local fast-forward
+fetch after turns; separate loose-work and fetch observations; a clone per selected repository;
+explicit recovery from the last fetched commit; measured full clean with unknown disabling it
+and ordinary deletion retaining inaccessible data; and plain-copy retention with the untracked
+exclusion scoped to repository imports.
+
+In the same reply the author asked whether a clone is a worktree. Clarified that a linked
+worktree shares the original Git object store, while the planned box clone owns an independent
+one and returns commits by fetch. Asked whether to retain that already recorded box design or
+revisit it. The clone-dependent implementation waits for that clarification; this does not
+record a request to change the engine or an approval to mount the host repository.
+
+
+## Answer
+
+Guillermo chose worktrees on both Machine kinds and explicitly accepted shared Git metadata
+RW on [What a Machine is, and what grain it hangs at](01-what-a-machine-is.md#answer-to-the-narrow-reopen-2026-09-05--worktrees-on-both-kinds).
+That answer supersedes this ticket's historical clone, fixed guest path, no-origin,
+fetch-home, guest workspace-volume marker and fetched-branch palette design.
+
+### Workspace contract implemented
+
+- Existing providers remain the source of work: a linked worktree for `git`, a mirrored
+  tree of the selected worktrees for `nested`, and a copied directory for `plain`. A box
+  receives the AgentWorkspace and each actual common Git directory at canonical host paths.
+  The main checkout and other Agents' working files are not mounted. No clone or fetch-home
+  stage exists. `origin`, refs, Git config/hooks and reflogs are shared; credentials are not
+  separately imported. The worktree path is both the runtime cwd and the host inspection path.
+- `workspace/box-mounts.ts` derives the mount plan from the selected repositories and their
+  registered linked worktrees. It rejects mismatched repositories, overlapping/reserved paths,
+  ambiguous CLI delimiters, symlink retargets, external object stores and submodules that need
+  additional mount support. The latter two are explicit refusals in the staged implementation,
+  not claims of supported layouts. Existing provider reconcile handles missing directories
+  and branches; doubtful engine ownership still refuses through the registry.
+- The staged owned lifecycle persists and checks the exact mount plan. Guest admission at
+  root and UID 1000 accepts exactly these RW mounts, optional skills RO and the two engine
+  network files RO. A mounted Workspace has no private `/workspace` volume. Replacements must
+  reattach the host work rather than copy or roll it back; resource changes on this shape
+  currently refuse until the image ticket verifies preservation of the complete private
+  system and Docker state. The legacy two-volume copy remains only for its isolated fixtures.
+- Host status, branch switching, commits and publication operate on that same worktree. They
+  need no guest filesystem proxy or stale fetched-branch view. The persona names only the
+  AgentWorkspace, on both kinds. The desktop's common runtime construction and commit button
+  supply Agent author/committer identity under `agents.blobot.invalid` and disable signing
+  without editing shared Git configuration. Explicit commands can still override Git defaults.
+
+### Skills and deletion
+
+- Only the operator's canonical `~/.claude/skills` directory is an optional RO mount. The kit
+  initializes image-supplied guest lookup aliases after mounting home and refuses conflicts.
+  The [verified lookup matrix](../research/21-image-decision-frontier.md#follow-up-linux-skill-discovery-roots-for-the-five-pins)
+  supplies the image's locations. Guest aliases into `.agents/skills` do not mount the host's
+  `.agents/skills`. The palette uses loose project files from the mounted worktree and the
+  mounted skill names only; escaping links and other operator command/settings directories
+  are excluded. fx keeps its measured built-ins-only palette. Actual provider sessions on
+  the release images remain the image/runtime acceptance work, not a claim made by the
+  filesystem fixture. ADR-0003 now carries its second amendment.
+- Deletion composes Workspace and Machine ownership: stop first, remove/preserve host work
+  according to the existing provider, then destroy only recorded Machine objects. Ordinary
+  deletion retains a plain copy; explicit full clean purges it. An inaccessible Machine
+  retains its data and reports the failure while ordinary team deletion can complete.
+- The delete dialog carries total, work and state sizes. A missing path is zero; a failed
+  measurement is unknown. Unknown size disables full clean, and the main-process handler
+  remeasures every Agent before any purge. Shared Git objects and shared images are excluded
+  from Workspace bytes. The engine has no verified owned-byte metric yet and honestly
+  returns unknown. Machine activation must pass its recorded Machines into the deletion
+  dependency; the current production path is still local-only.
+
+### Verification and limits
+
+- Real Git tests cover Agent authorship from runtime and button, unsigned commits despite
+  signing enabled in repo config, config unchanged, selected nested repositories, plain
+  retention and invalid mount plans. Palette tests cover contained and escaping symlinks.
+- `machines/sbx/worktree.live.test.ts` passed on this Mac and pinned RC5: create through the
+  actual owned lifecycle, UID 1000 commit through its transport, immediate host branch,
+  unchanged main checkout/config, loose work across sleep/reopen, readonly synthetic skills
+  at root and UID 1000 through native guest aliases, and Machine destruction leaving host
+  work intact. Only disposable fixtures and cached shell template were used. Owned boxes
+  and host fixture directories were removed. No login or provider inference ran.
+- The first integration attempt incorrectly supplied `:rw` to `create`; that spelling belongs
+  to a different command, while `create` uses writable paths by default and supports `:ro`.
+  It was stopped, its absent box verified and host fixture removed; corrected runs passed.
+- Full test/typecheck/build results are recorded in [build status](../build.md). Box factory
+  and adapter activation remain gated on the image, egress and setup tickets. No release
+  image, provider first-start traffic or whole-system replacement is certified here.

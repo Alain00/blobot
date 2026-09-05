@@ -1,4 +1,5 @@
 import type { CommandRunner } from './status.js';
+import { agentGitEnvironment } from './git-identity.js';
 
 /**
  * Committing what is in an AgentWorkspace, at the user's click.
@@ -12,13 +13,13 @@ import type { CommandRunner } from './status.js';
  * the agent that wrote the code to also name what it did is a different feature with a different
  * failure mode. An empty message is refused rather than filled in.
  *
- * **`git commit` is on no trust level's allowlist and stays off it.** An agent commits nothing;
- * a person does, from here, and no runtime is told it happened.
+ * Both the runtime and this button author the Agent's work as the Agent, unsigned.
  */
 
 export interface CommitRequest {
   readonly path: string;
   readonly message: string;
+  readonly agentName: string;
 }
 
 export type CommitOutcome =
@@ -43,6 +44,7 @@ export async function commitWorktree(
 ): Promise<CommitOutcome> {
   const message = request.message.trim();
   if (message === '') return { ok: false, error: 'a commit needs a message' };
+  const env = agentGitEnvironment(request.agentName, process.env);
 
   const staged = await exec('git', ['add', '-A'], { cwd: request.path, timeoutMs: 30_000 });
   if (staged.code !== 0) return { ok: false, error: firstLine(staged.stderr) };
@@ -50,6 +52,7 @@ export async function commitWorktree(
   const committed = await exec('git', ['commit', '-m', message], {
     cwd: request.path,
     timeoutMs: 30_000,
+    env,
   });
   if (committed.code !== 0) {
     return { ok: false, error: firstLine(committed.stderr) || whyNothing(committed.stdout) };

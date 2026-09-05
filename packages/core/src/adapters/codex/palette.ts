@@ -1,3 +1,4 @@
+import { boxPaletteNames, type BoxPaletteScope } from '../acp/box-palette.js';
 import { readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -56,7 +57,8 @@ export function skillRoots(cwd: string): string[] {
 }
 
 /** Everything blobot is willing to offer in this workspace, by name and without the `$`. */
-export function offerableNames(cwd: string): Set<string> {
+export function offerableNames(cwd: string, box?: BoxPaletteScope): Set<string> {
+  if (box !== undefined) return new Set([...boxPaletteNames(cwd, [{ path: join(cwd, '.codex', 'skills'), kind: 'skills' }], box), ...VOUCHED_BUILT_INS]);
   const names = new Set<string>(VOUCHED_BUILT_INS);
   for (const root of skillRoots(cwd)) for (const name of skillNames(root)) names.add(name);
   return names;

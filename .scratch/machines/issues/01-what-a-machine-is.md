@@ -3,6 +3,43 @@ Status: resolved
 
 # What a Machine is, and what grain it hangs at
 
+## Answer to the narrow reopen, 2026-09-05 — worktrees on both kinds
+
+Guillermo rejected the box clone after clarifying that it owns an independent Git store and
+the planned clone has no origin: “prefiero worktree siempre igual que en local”. This reopens
+**points 4 and 5 only**, the clone/private-workspace-volume choice and the closed host-access
+list. The Machine's grain, the local/box kinds, sbx selection and guest capabilities stand.
+
+The accepted implementation is the existing host AgentWorkspace worktree plus its common Git
+directory, both mounted RW at their canonical host paths in the Agent's own box. The parent
+checkout and other worktrees' file directories remain unmounted. Nested Workspaces reuse the
+existing scoped worktree tree and add each selected repository's actual common directory;
+plain Workspaces remain private copies, since they have no Git repository to hold a worktree.
+
+The [worktree research](../research/20-worktrees-in-sbx.md#parent-session-live-fixture--observed-2026-09-05)
+now includes a passing synthetic RC5 fixture: commit inside at UID 1000, the host branch
+updated without fetch, the same origin URL, main checkout and sibling loose files absent at
+UID 1000 and root, and work preserved after stop/start. Fixture boxes and host files were
+removed. It establishes the ordinary two-directory mount shape, not all repository layouts
+or production activation.
+
+**Accepted by Guillermo:** “eso está bien, no pasa nada”. This closes the shared Git write boundary. A true worktree
+shares the repository's objects, refs, configuration and hooks. Mounting that common directory
+RW lets a process in the box modify those shared files, including files a later host Git
+command will use. This is access to the user's repository metadata, even while the user's
+checkout files stay outside the box. A per-Agent branch is not an enforcement boundary around
+that metadata. The old no-host-repository boundary cannot be claimed for this design.
+
+The author selected worktrees and explicitly accepted the broader metadata consequence.
+No real user repository was mounted for the investigation. Host credentials, SSH forwarding,
+host home and the host Docker socket have not been added to the access list. The same origin
+URL does not by itself grant a box the host's authentication or authorize egress.
+
+The narrow reopen is resolved. Continue
+[Where a Workspace lives when the Machine is not this one](05-where-a-workspace-lives.md).
+Its implementation revises the Workspace-dependent lifecycle assumptions; unrelated resolved
+decisions and their measured evidence remain valid.
+
 ## Question
 
 There is an object in blobot that has never been named because it has never had more than one
@@ -147,3 +184,11 @@ Four corrections to the answer above, each raised by a ticket that read it, none
   of the user's whole checkout inside the box is ADR-0004's read hole, and the forward is off. What
   stands is the mechanism beneath it, a clone in the volume and a git daemon that let blobot fetch
   the branch home in 38 ms (`research/08` §3), which blobot drives itself. Three reasons remain.
+
+
+### Comment, 2026-09-05: inheritance amendment delivered
+
+[ADR-0003's second amendment](../../../docs/adr/0003-what-an-agent-inherits.md#second-amendment-2026-09-05-inheritance-inside-a-box)
+now records that the operator's skills cross read-only while the box's user settings scope
+belongs to the Agent. The accepted shared-Git exception also means Git config/hooks/reflogs
+are shared; the older clone list's absence claims about those files are superseded.

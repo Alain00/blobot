@@ -606,7 +606,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
   /** Read once. A skill added to the workspace mid-session needs a restart to be offered,
    *  which is the same bargain the provider's own `/reload-skills` exists to make. */
   #projectCommands(): ReadonlySet<string> {
-    this.#projectNames ??= offerableNames(this.#options.cwd);
+    this.#projectNames ??= offerableNames(this.#options.cwd, this.#options.machine?.kind === 'box' ? this.#options.machine.location() : undefined);
     return this.#projectNames;
   }
 

@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: claimed
 Blocked by: none
 
 # The image: one per runtime
@@ -462,3 +462,13 @@ Before designing replacement, use the persistent-state inventory in
 [Lifecycle, persistence and resource costs](../research/16-engine-lifecycle-persistence-and-costs.md):
 home/workspace copying alone does not preserve system package changes or the private daemon's
 data. Do not label those covered by the existing synthetic two-volume test.
+
+
+## Current continuation, 2026-09-05
+
+Claimed as the second implementation ticket in the author's two-ticket continuation.
+[Image decision frontier](../research/21-image-decision-frontier.md) separates existing
+answers, proposals and factual gates. The base proposal (a pinned common shell-docker
+derivative) is pending the author's answer. Do not infer approval from elapsed time.
+Workspace now uses host worktrees; its former clone volume budget does not apply.
+No release image has been built or published in this continuation.

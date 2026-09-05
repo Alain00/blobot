@@ -83,13 +83,14 @@ export interface CommandResult {
 export type CommandRunner = (
   command: string,
   args: readonly string[],
-  options?: { readonly cwd?: string; readonly timeoutMs?: number },
+  options?: { readonly cwd?: string; readonly timeoutMs?: number; readonly env?: Readonly<Record<string, string>> },
 ) => Promise<CommandResult>;
 
 export const spawnCommand: CommandRunner = async (command, args, options = {}) => {
   try {
     const { stdout, stderr } = await run(command, [...args], {
       ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
+      ...(options.env === undefined ? {} : { env: { ...process.env, ...options.env } }),
       timeout: options.timeoutMs ?? 8_000,
       maxBuffer: 4 * 1024 * 1024,
     });

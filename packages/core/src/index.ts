@@ -201,6 +201,8 @@ export { inspectWorkspace } from './workspace/inspect.js';
 export { prepareWorkspace } from './workspace/prepare.js';
 export { findWorkspaceIcon, type WorkspaceIcon } from './workspace/icon.js';
 export { workspaceProviderFor } from './workspace/provider-for.js';
+export { agentGitEnvironment } from './workspace/git-identity.js';
+export { boxWorkspaceMounts, type BoxWorkspaceMounts } from './workspace/box-mounts.js';
 // What a full clean would recover. The words for a size are the renderer's, not core's.
 export { directorySize } from './workspace/size.js';
 export {

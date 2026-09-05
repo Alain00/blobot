@@ -11,6 +11,18 @@ const sample = () => ({
     '115 101 0:28 /hosts /etc/hosts ro,relatime - virtiofs bind-b rw\n',
 });
 describe('limited sbx observation admission', () => {
+  it('admits exactly the declared worktree and Git mounts, with escaped spaces and no private workspace volume', () => {
+    const workspace = { path: '/Users/test/agent work', commonGit: ['/Users/test/repo/.git'] };
+    const sampleValue = sample();
+    const observed = { ...sampleValue, roots: sampleValue.roots.slice(0, 1),
+      mountinfo: sampleValue.mountinfo.split('\n').filter((line) => !line.includes(' /workspace ')).join('\n') +
+        '116 101 0:29 / /Users/test/agent\\040work rw,relatime - virtiofs work rw\n' +
+        '117 101 0:30 / /Users/test/repo/.git rw,relatime - virtiofs git rw\n',
+    };
+    expect(() => verifySbxBoundary(observed, limits, 0, undefined, workspace)).not.toThrow();
+    expect(() => verifySbxBoundary(observed, limits, 0)).toThrow();
+    expect(() => verifySbxBoundary({ ...observed, mountinfo: observed.mountinfo + '118 101 0:31 / /Users/test/repo rw - virtiofs checkout rw\n' }, limits, 0, undefined, workspace)).toThrow();
+  });
   it('reads RC5’s null empty scoped list, but refuses missing or malformed rule inventories', () => {
     expect(readSbxNetworkRules({ rules: null })).toEqual([]);
     expect(readSbxNetworkRules({ rules: [] })).toEqual([]);

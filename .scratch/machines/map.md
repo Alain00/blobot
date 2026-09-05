@@ -62,6 +62,20 @@ amended, and it is not to be worked around quietly.
 
 ## Notes
 
+**Current continuation, 2026-09-05 (Guillermo): worktrees on both kinds.** The author rejected
+the independent box clone after clarifying clone/worktree/remote semantics. The host-access
+portion of [What a Machine is, and what grain it hangs at](issues/01-what-a-machine-is.md)
+is resolved with the author’s explicit acceptance of shared Git metadata RW; the rest of its
+decisions stand.
+[Where a Workspace lives when the Machine is not this one](issues/05-where-a-workspace-lives.md)
+is implemented and resolved. Continue the claimed
+[The image: one per runtime](issues/13-the-image-one-per-runtime.md), whose proposed base awaits
+the author’s answer.
+The latter's current-direction section supersedes its historical clone design. A synthetic
+worktree mount has been verified in sbx; the evidence and its limits live on the tickets.
+This changes neither the engine choice nor the two-ticket continuation request; the image
+work follows the revised Workspace contract. No production activation has been enabled.
+
 **Execution opened, 2026-09-05 (Guillermo).** The author asked to begin development so each
 Agent is born and works in its own Docker Machine. Implementation is now in scope, one ticket
 per session, alongside the decisions. Start with *The engine, the Machine interface, and a
@@ -198,8 +212,11 @@ none is discarded, and the destination is unchanged:
 
 ## Decisions so far
 
+- [Where a Workspace lives when the Machine is not this one](issues/05-where-a-workspace-lives.md): host worktrees and shared Git metadata mounted in the staged box lifecycle, Agent commit identity, scoped skills and measured deletion; verified with real Git and sbx, activation remains gated on the remaining tickets.
+
+- [What a Machine is, and what grain it hangs at](issues/01-what-a-machine-is.md): one Machine per Agent; local and box use the existing AgentWorkspace, with its shared Git metadata explicitly writable in a box and the main checkout unmounted.
+
 - [Which runtimes have a sandbox](issues/03-which-runtimes-have-a-sandbox.md): three do (Claude, Codex, Cursor) and two do not (OpenCode, fx); every one fences the shell and never the CLI, so the mailbox survives everywhere and no inside fence can promise what an outside one can; the three disagree on reads and loopback, which is ticket 14's asymmetry restated and the case for the boundary being the Machine. Evidence in `research/04`.
-- [What a Machine is, and what grain it hangs at](issues/01-what-a-machine-is.md): the noun is **Machine**; a home and a Machine are two objects; a Machine is a kind in a global registry and **every Agent gets its own instance**, placed per Agent with a Team default; two volumes, data and workspace; a closed list of accesses; `local` and `box` in scope with `box` built first and `local` the default; **one image, many engines**, `sbx` first behind the interface; four constraints a future kind imposes. ADR-0001 extended, `CONTEXT.md` gains *Machine*.
 - [Can a sandboxed agent still reach the mailbox](issues/02-can-an-agent-reach-the-mailbox.md): yes on every kind, by a different door each; the mailbox's three constants survive unchanged and the **carrier** (the hostname minted in `endpointFor` plus the one door the kind opens) is a property of the Machine kind. Linux is read, not run; the Docker door has since been run (`research/08`, comment on the ticket). Evidence in `research/02`, `research/03`, `research/08`.
 
 - [The engine, the Machine interface, and a box's lifecycle](issues/14-the-engine-and-the-machine-interface.md): the Agent-bound interface and null engine are implemented across all five launch paths, with explicit environment layers and shared client-capability protection; box activation remains the engine's work. [Build status](build.md).

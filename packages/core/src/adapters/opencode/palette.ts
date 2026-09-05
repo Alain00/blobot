@@ -1,3 +1,4 @@
+import { boxPaletteNames, type BoxPaletteScope } from '../acp/box-palette.js';
 import { readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -28,7 +29,8 @@ import { join } from 'node:path';
 const PROJECT_DIRS = ['command', 'commands', 'skill', 'skills'];
 
 /** Everything blobot is willing to offer in this workspace, by name. */
-export function offerableNames(cwd: string): Set<string> {
+export function offerableNames(cwd: string, box?: BoxPaletteScope): Set<string> {
+  if (box !== undefined) return boxPaletteNames(cwd, PROJECT_DIRS.map((dir) => ({ path: join(cwd, '.opencode', dir), kind: 'mixed' })), box);
   const names = new Set<string>();
   for (const dir of PROJECT_DIRS) {
     for (const name of entriesUnder(join(cwd, '.opencode', dir))) names.add(name);

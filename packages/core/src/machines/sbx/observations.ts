@@ -1,5 +1,6 @@
 import type { MachineLimits } from '../resources.js';
 import type { SbxReference } from './data-transfer.js';
+import { validateBoxWorkspaceMounts, type BoxWorkspaceMounts } from '../../workspace/box-mounts.js';
 
 /** The development pin approved by the operator. Not a production prerelease policy. */
 export const SBX_DEVELOPMENT_PIN = Object.freeze({
@@ -46,7 +47,7 @@ let sshAbsent=false;try{fs.lstatSync('/run/ssh-agent.sock')}catch(e){if(e.code!=
 console.log(JSON.stringify({uid:process.getuid(),cpus:os.cpus().length,
  memoryKiB:Number(/^MemTotal:\s+(\d+) kB$/m.exec(fs.readFileSync('/proc/meminfo','utf8'))?.[1]),
  sshAbsent,mountinfo:fs.readFileSync('/proc/self/mountinfo','utf8'),
- roots:['/home/agent','/workspace'].map(path=>{const s=fs.lstatSync(path);return {path,uid:s.uid,gid:s.gid,mode:s.mode&4095,directory:s.isDirectory(),device:s.dev}})}));
+ roots:JSON.parse(process.argv[1]||'["/home/agent","/workspace"]').map(path=>{const s=fs.lstatSync(path);return {path,uid:s.uid,gid:s.gid,mode:s.mode&4095,directory:s.isDirectory(),device:s.dev}})}));
 `;
 
 export interface SbxBoundaryBaseline {
@@ -60,7 +61,9 @@ export interface SbxBoundaryBaseline {
  * these checks cannot establish immutable image/config identity against out-of-band changes.
  */
 export function verifySbxBoundary(value: unknown, limits: MachineLimits, uid: 0 | 1000,
-  baseline?: SbxBoundaryBaseline): SbxBoundaryBaseline {
+  baseline?: SbxBoundaryBaseline, workspace?: BoxWorkspaceMounts): SbxBoundaryBaseline {
+  if (workspace !== undefined) validateBoxWorkspaceMounts(workspace);
+  const privatePaths = workspace === undefined ? ['/home/agent', '/workspace'] : ['/home/agent'];
   const data = object(value);
   if (data['uid'] !== uid || data['sshAbsent'] !== true || data['cpus'] !== limits.maxCpus) {
     throw new Error('Sandbox identity, CPU ceiling or SSH isolation could not be verified.');
@@ -73,16 +76,16 @@ export function verifySbxBoundary(value: unknown, limits: MachineLimits, uid: 0 
       (baseline !== undefined && memory !== baseline.memoryKiB)) {
     throw new Error('Sandbox memory capacity could not be verified.');
   }
-  if (typeof data['mountinfo'] !== 'string' || !Array.isArray(data['roots']) || data['roots'].length !== 2) {
+  if (typeof data['mountinfo'] !== 'string' || !Array.isArray(data['roots']) || data['roots'].length !== privatePaths.length) {
     throw new Error('Sandbox storage could not be verified.');
   }
   const mounts = data['mountinfo'].trim().split('\n').map((line) => {
     const [left, right] = line.split(' - ');
     const fields = left?.split(' '), tail = right?.split(' ');
     if (!fields || fields.length < 6 || !tail || tail.length < 3) throw new Error('Unknown sandbox mount format.');
-    return { path: fields[4], mode: fields[5]?.split(','), kind: tail[0] };
+    return { path: fields[4]?.replace(/\\([0-7]{3})/g, (_, octal: string) => String.fromCharCode(parseInt(octal, 8))), mode: fields[5]?.split(','), kind: tail[0] };
   });
-  for (const path of ['/home/agent', '/workspace']) {
+  for (const path of privatePaths) {
     const roots = data['roots'].map(object).filter((root) => root['path'] === path);
     const root = roots[0];
     if (roots.length !== 1 || root?.['uid'] !== 1000 || root['gid'] !== 1000 || root['mode'] !== 0o700 || root['directory'] !== true) {
@@ -94,8 +97,11 @@ export function verifySbxBoundary(value: unknown, limits: MachineLimits, uid: 0 
     }
   }
   const hostMounts = mounts.filter((mount) => mount.kind === 'virtiofs');
-  if (hostMounts.length !== 2 || !['/etc/hosts', '/etc/resolv.conf'].every((path) =>
-    hostMounts.filter((mount) => mount.path === path && mount.mode?.includes('ro')).length === 1)) {
+  const expected = [['/etc/hosts', 'ro'], ['/etc/resolv.conf', 'ro'],
+    ...(workspace === undefined ? [] : [workspace.path, ...workspace.commonGit].map((path) => [path, 'rw'])),
+    ...(workspace?.sharedSkillsPath === undefined ? [] : [[workspace.sharedSkillsPath, 'ro']])];
+  if (hostMounts.length !== expected.length || !expected.every(([path, mode]) =>
+    hostMounts.filter((mount) => mount.path === path && mount.mode?.includes(mode!)).length === 1)) {
     throw new Error('Unexpected host mounts are exposed to this sandbox.');
   }
   if (mounts.some((mount) => mount.path?.startsWith('/home/agent/') || mount.path?.startsWith('/workspace/'))) {
@@ -106,7 +112,7 @@ export function verifySbxBoundary(value: unknown, limits: MachineLimits, uid: 0 
   const normalized = JSON.stringify(mounts.map((mount) => [mount.path, mount.kind, [...mount.mode ?? []].sort()]).sort());
   if (baseline !== undefined && normalized !== baseline.mounts) throw new Error('Sandbox mounts changed.');
   const roots = data['roots'].map(object);
-  if (typeof roots[0]?.['device'] !== 'number' || typeof roots[1]?.['device'] !== 'number' || roots[0]['device'] === roots[1]['device']) {
+  if (roots.some((root) => typeof root['device'] !== 'number') || new Set(roots.map((root) => root['device'])).size !== roots.length) {
     throw new Error('Private volumes are not separate devices.');
   }
   return { memoryKiB: memory, mounts: normalized };

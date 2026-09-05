@@ -300,3 +300,69 @@ closed activation guards. **Still no Agent runs in Docker through blobot.**
 Research fixture cleanup was verified: no disposable sbx Machines or labeled Engine fixtures
 remain, and the pre-existing Engine containers were left unchanged. Neither shared daemon was
 stopped or reconfigured for the comparison. No real provider login or paid inference was used.
+
+## 2026-09-05 — Workspace resumed; author changes box clones to worktrees
+
+The Workspace ticket was claimed and its historical proposals audited against later decisions.
+Guillermo accepted the recommended remaining choices, then clarified clone/worktree/remote
+semantics and explicitly requested worktrees on both local and box. Its **Current direction**
+section supersedes the clone implementation plan. The Machine ticket is narrowly reopened
+and claimed for the resulting shared-Git access boundary; Workspace keeps its claim and is
+blocked on that answer. The map's **Current continuation** is the entry point.
+
+The public RC5 create route was verified with an owned synthetic fixture mounting exactly
+one worktree and its common Git directory, both RW, beside the generated network files.
+Commit inside at UID 1000 updated the host branch immediately, without fetch, with the same
+origin URL; the main checkout and sibling loose files were absent at root and Agent UID.
+The work survived stop/reopen. The [fixture and limitations](research/20-worktrees-in-sbx.md#parent-session-live-fixture--observed-2026-09-05)
+remain research evidence, not production integration or a new isolation guarantee. The owned
+box and temporary host tree were removed, with empty inventories before/after and no shared
+daemon changes, provider login, paid turn or real repository mounted.
+
+No application source changed in this resumption. No application test/build result is newly
+claimed; the prior implementation checkpoint still stands. Worktree integration must revise
+the volume/admission/persistence assumptions before activation, and the image work must read
+that revised contract. The two implementation tickets have not been marked complete.
+
+
+## 2026-09-05 — host-worktree Workspace implemented; image decision pending
+
+Guillermo accepted shared Git metadata RW (“eso está bien, no pasa nada”), closing the narrow
+Machine reopen. [Where a Workspace lives when the Machine is not this one](issues/05-where-a-workspace-lives.md#answer)
+is now implemented and resolved. Its Answer owns the revised contract, scope and limitations;
+the preceding research-only/no-source checkpoint is historical.
+
+The implementation derives validated same-path mounts from the existing host providers,
+admits them through the staged owned lifecycle, keeps Agent work separate from Machine
+removal, supplies Agent commit identity without rewriting Git config, omits the main checkout
+from the persona, limits box palettes to mounted authored content, and initializes readonly
+skills aliases after home attaches. Full clean carries work/state/total bytes and refuses
+unknown sizes before any purge; ordinary removal reports preserved inaccessible data.
+Machine state measurement is still honestly unknown. The production factory and adapters
+remain local-only until image/egress/setup admission is complete; no Agent runs in Docker
+through the application yet.
+
+Verification on this Mac, after implementation:
+
+- Core: **837 passed, 46 skipped**, 74 passing files. Opt-in live suites are skipped normally.
+- Desktop: **506 passed, 1 skipped**, 46 passing files. Existing jsdom canvas messages remained.
+- Core and desktop `tsc --noEmit`: passed.
+- Core build: passed. Desktop Electron main/preload/renderer build: passed.
+- `BLOBOT_LIVE_SBX_WORKTREE=1` staged lifecycle fixture: **1 passed**, 27.80 seconds with the
+  final readonly-skills test. UID 1000 commit reaches the host branch without fetch; main
+  checkout/config stay unchanged; loose files survive sleep/reopen; skills remain readonly
+  at root and UID 1000; destroying the Machine leaves host work intact. No provider login,
+  paid inference, real repository or real skills tree used. Cached shell template only.
+- `sbx ls --json`: empty after cleanup. No shared daemon/configuration changes. The failed
+  first `:rw` syntax attempt was cleaned after verifying its box absent; corrected public
+  `create` calls use writable paths by default and `:ro` only for skills.
+- `git diff --check`: passed.
+
+The second requested ticket, [The image: one per runtime](issues/13-the-image-one-per-runtime.md),
+is claimed and **not complete**. [Image decision frontier](research/21-image-decision-frontier.md)
+records primary-source research and the skills lookup matrix. The author has been asked
+whether to use a pinned derivative of Docker's shell template or build a fresh Ubuntu base;
+no answer has arrived. No image or release has been built/published. Complete private
+system/Docker preservation, capacity budgets, release distribution and per-runtime acceptance
+remain that ticket's work. Resource replacement on mounted Workspaces refuses until the
+preservation contract is verified; it never runs the legacy home/workspace-only copy on them.

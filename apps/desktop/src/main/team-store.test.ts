@@ -1,7 +1,8 @@
 import { fileURLToPath } from 'node:url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   SqliteStore,
+  machineFor,
   VirtualClock,
   openDatabase,
   type AgentWorkspace,
@@ -711,12 +712,47 @@ describe('deleting a team', () => {
     const usage = await measureTeam(team.id, deps());
     expect(usage.bytes).toBe(3_072);
     expect(usage.agents).toEqual([
-      { agentName: 'Alice', bytes: 2_048 },
-      { agentName: 'Bob', bytes: 1_024 },
+      { agentName: 'Alice', bytes: 2_048, workBytes: 2_048, stateBytes: 0 },
+      { agentName: 'Bob', bytes: 1_024, workBytes: 1_024, stateBytes: 0 },
     ]);
     // Measuring is a question, never a change.
     expect(workspaces.removed).toHaveLength(0);
     expect(workspaces.purged).toHaveLength(0);
+  });
+
+  it('blocks a full clean with unknown Machine size before removing anything, while ordinary deletion can retain inaccessible data', async () => {
+    const team = await createTeam(spec, deps());
+    const agent = store.agentsOfTeam(team.id)[0]!;
+    const machine = machineFor('local', { agentId: agent.id, workspacePath: '/fixture/agent' });
+    vi.spyOn(machine, 'measure').mockResolvedValue(null);
+    const stop = vi.spyOn(machine, 'stop').mockRejectedValue(new Error('Machine unavailable. Its data was kept.'));
+    const machines = new Map([[agent.id, machine]]);
+    const context = { ...deps(), machines };
+    expect(await measureTeam(team.id, context)).toMatchObject({ bytes: null, stateBytes: null });
+    await expect(deleteTeam(team.id, context, { clean: true })).rejects.toThrow('size is unavailable');
+    expect(workspaces.purged).toHaveLength(0);
+    expect(stop).not.toHaveBeenCalled();
+    expect(store.teamById(team.id)).toBeDefined();
+    const deleted = await deleteTeam(team.id, context);
+    expect(deleted.removals[0]).toMatchObject({ work: 'unknown', detail: 'Machine unavailable. Its data was kept.' });
+    expect(workspaces.removed.map((request) => request.agentName)).toEqual(['Bob']);
+  });
+
+  it('prices work and state separately and stops the Machine before removing work and its data', async () => {
+    const team = await createTeam(spec, deps());
+    const agent = store.agentsOfTeam(team.id)[0]!;
+    const machine = machineFor('local', { agentId: agent.id, workspacePath: '/fixture/agent' });
+    vi.spyOn(machine, 'measure').mockResolvedValue(4_096);
+    const stop = vi.spyOn(machine, 'stop');
+    const destroy = vi.spyOn(machine, 'destroy').mockImplementation(async () => {
+      expect(stop).toHaveBeenCalled();
+      expect(workspaces.removed.map((request) => request.agentName)).toContain('Alice');
+    });
+    workspaces.sizes = { Alice: 2_048 };
+    const context = { ...deps(), machines: new Map([[agent.id, machine]]) };
+    expect(await measureTeam(team.id, context)).toMatchObject({ bytes: 6_144, workBytes: 2_048, stateBytes: 4_096 });
+    await deleteTeam(team.id, context);
+    expect(destroy).toHaveBeenCalledOnce();
   });
 
   it('frees the name, so a team can be made again for the folder it was moved to', async () => {
