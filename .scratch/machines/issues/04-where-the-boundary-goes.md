@@ -1,5 +1,5 @@
 Type: grilling
-Status: claimed
+Status: resolved
 Blocked by: none
 
 # Where the boundary goes: around the bridge, or inside the runtime
@@ -383,7 +383,68 @@ Keychain turn is this ticket's on `16`'s amendment point 2, and is spent here or
 two findings about shipped code — Codex's mode name and Cursor's `allow_all` comment — which `03`
 relayed to their own efforts.
 
+## Answer
+
+Resolved 2026-09-05 with Guillermo's acceptance of the three architecture rules and the
+explicit follow-up on native failure timing.
+
+**Local uses native protection with disclosed differences.** Claude now receives
+`sandbox:{enabled:true,failIfUnavailable:true,autoAllowBashIfSandboxed:false,allowUnsandboxedCommands:false}`
+on both new and resumed sessions, including a failed resume's fresh-session fallback. Settings
+scopes remain user/project/local. Their array-valued sandbox rules, including excluded commands,
+remain authoritative inputs; this is not a fixed application-only fence. No user/workspace
+settings file, additional Git root or blanket localhost exemption is written. In-process MCP
+needs none. Existing approval modes and allowlists are unchanged at every trust level.
+
+The accepted failure contract is native: detected missing dependencies may refuse startup;
+a native backend failure may instead reject a protected Bash invocation after session startup.
+The session and tools outside Bash can remain usable. This explicitly amends the earlier
+strict startup requirement; a successful session handshake is never positive sandbox attestation.
+[Research42](../research/42-claude-native-sandbox-policy.md) measures settings precedence and
+the startup limitation. [Research44](../research/44-claude-required-bash-failure.md) exercises the real
+pinned CLI with synthetic local responses: approval granted still produces a Bash error and no
+marker after backend failure; the same outer guard and command create the marker with sandbox
+disabled; refusal of approval prevents execution as well. No external inference or credentials
+were involved. The global turn can finish successfully while its Bash tool has failed; the
+pinned bridge maps that tool result to failed, which core preserves.
+
+Cursor's existing local setting and Codex's existing mode stay unchanged. However,
+[research43](../research/43-cursor-codex-inner-sandbox.md) corrects the earlier Cursor claim:
+ACP's provider returns `insecure_none` independently of sandbox config. The UI therefore says
+there is no verified OS sandbox through that integration. OpenCode and fx have none. Local reach
+is described separately from credential presence and approval controls in the runtime picker
+and Settings, using adapter-owned text through the existing dispatch. Full Machine disclosure
+and box copy remain the dependent disclosure ticket's work.
+
+**Box uses the microVM as the common boundary.** Disable only independently optional inner
+protection. Claude's prepared box policy is `enabled:false`; ordinary project/local true loses
+to it in the measured settings cascade. Cursor's prepared box config disables that independent
+setting while preserving its complete approval mode and permission arrays. Managed restrictions
+are not overridden by this claim. Codex retains its coupled `read-only` bridge mode because
+the full-access mode would also change approvals. No box activation guard is removed here;
+image preparation, complete-state preservation, egress and onboarding remain separate gates.
+
+**The external local wrapper is deferred**, retaining the research and its platform/credential
+distinctions. No new outer wrapper or global engine policy is installed. **Placement and
+approval posture remain separate controls**; choosing a box does not grant permissions.
+The higher trust level and the shape of its unavailable row belong to the trust ticket.
+ADR-0006 records the architecture and its accepted failure-timing amendment.
+
+Validation: core **960 passed / 46 skipped**, desktop **610 passed / 1 skipped**; both
+typechecks and builds pass. Wire tests cover all four trust levels across new, resumed and
+forgotten sessions. Settings was visually checked in the built Electron demo. The real native
+failure fixture is pinned to Claude2.1.260/SDK0.3.232 on macOS; it does not certify every local
+CLI release, Linux host, administrator policy, or a running provider inside a box.
+
 ## Comments
+
+**2026-09-05 — failure timing accepted with “ok” after checkpoint `d9da267`.** Guillermo
+accepts the native contract: detected missing dependencies can refuse startup; a backend
+initialization failure can instead refuse a protected Bash invocation while the session and
+non-shell tools remain usable. Validate that failure path before activating Claude's policy.
+This is an explicit amendment of the strict startup condition, not a new permission grant or
+a claim of a universal local boundary. Research44 is assigned a credential-free synthetic
+local-provider test with no external inference, while adapter integration is prepared.
 
 **2026-09-05 — conditional validation found an unresolved startup contract.**
 [Claude native policy research](../research/42-claude-native-sandbox-policy.md) confirms

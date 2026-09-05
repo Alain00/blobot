@@ -30,6 +30,7 @@ import {
 import { offerableNames, paletteOf } from './palette.js';
 import { LocalMachine } from '../../machines/local-machine.js';
 import { CLAUDE_MACHINE_IMAGE } from './image.js';
+import { claudeSandboxFor } from './sandbox.js';
 import { requireLocalMachine, type Machine } from '../../machines/machine.js';
 import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
 import {
@@ -395,6 +396,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
             disallowedTools: [...SHADOWING_TOOLS, ...refusedTools(this.trust)],
             settingSources: SETTING_SCOPES,
             allowedTools: preApprovedTools(this.#options.mcpServers ?? [], this.trust),
+            sandbox: claudeSandboxFor(this.#options.machine?.kind ?? 'local'),
           },
         },
       },

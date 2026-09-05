@@ -3,6 +3,19 @@ Status: resolved
 
 # Does OpenCode have a sandbox
 
+## Current evidence amendment, 2026-09-05
+
+The historical answer below describes native capabilities, not proof that every integration
+actually uses them. [Research43](../research/43-cursor-codex-inner-sandbox.md) executes Cursor's
+pinned ACP permission provider and finds `insecure_none` with either sandbox setting; ACP does
+not wire the interactive command's sandbox provider. Therefore the existing enabled config
+does not establish native protection through blobot's Cursor integration. The boundary ticket
+and UI now state that limit. Claude's scalar precedence and merged arrays are measured in
+[research42](../research/42-claude-native-sandbox-policy.md), and its protected-command failure
+in [research44](../research/44-claude-required-bash-failure.md). `enabled` is a scalar; the earlier wording
+grouping it with array-valued rules should not be read as an array merge claim.
+
+
 ## Question
 
 `opencode` 1.18.4 links the Landlock syscalls — `landlock_create_ruleset`, `landlock_add_rule`,

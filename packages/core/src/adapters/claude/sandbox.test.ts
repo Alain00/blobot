@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { ClaudeAgentRuntime } from './claude-agent-runtime.js';
 import { FakeBridge } from './fake-bridge.js';
 import { claudeSandboxFor } from './sandbox.js';
+import { claudeModeFor, vouchedTools } from './permissions.js';
 
-describe('prepared native policy', () => {
+describe('native policy independent of approvals', () => {
   it('does not let the SDK auto-approve sandboxed Bash or silently fall back', () => {
     expect(claudeSandboxFor('local')).toEqual({
       enabled: true,
@@ -17,16 +18,41 @@ describe('prepared native policy', () => {
     expect(claudeSandboxFor('box')).toEqual({ enabled: false });
   });
 
-  it('keeps activation closed until the native startup failure condition is resolved', async () => {
-    const bridge = new FakeBridge();
-    const runtime = new ClaudeAgentRuntime({ agentId: 'alice', cwd: '/tmp', spawn: () => bridge });
-    await runtime.start();
-    const session = bridge.received.find((message) => message.method === 'session/new');
-    const options = (session?.params as {
-      _meta: { claudeCode: { options: { sandbox?: unknown; settingSources: string[] } } };
-    })._meta.claudeCode.options;
-    expect(options.sandbox).toBeUndefined();
-    expect(options.settingSources).toEqual(['user', 'project', 'local']);
-    await runtime.stop();
-  });
+  for (const trust of ['careful', 'normal', 'trusting', 'unattended'] as const) {
+    it.each(['new', 'resume', 'forgotten'] as const)(
+      `asserts the same native policy on %s while preserving ${trust} approvals and scopes`,
+      async (route) => {
+        const bridge = new FakeBridge({
+          availableModes: [{ id: 'default' }, { id: 'auto' }],
+          ...(route === 'forgotten' ? { failLoad: 'session not found' } : {}),
+        });
+        const runtime = new ClaudeAgentRuntime({
+          agentId: 'alice', cwd: '/tmp', trust, spawn: () => bridge,
+          mcpServers: [{ type: 'http', name: 'blobot', url: 'http://127.0.0.1:1/' }],
+          ...(route === 'new' ? {} : { resumeSessionId: 'yesterday' }),
+        });
+        try {
+          await runtime.start();
+          const sessions = bridge.received.filter((message) =>
+            message.method === 'session/new' || message.method === 'session/load');
+          expect(sessions.map((message) => message.method)).toEqual(
+            route === 'new' ? ['session/new']
+              : route === 'resume' ? ['session/load'] : ['session/load', 'session/new']);
+          for (const session of sessions) {
+            const options = (session.params as {
+              _meta: { claudeCode: { options: {
+                sandbox: unknown; settingSources: string[]; allowedTools: string[];
+              } } };
+            })._meta.claudeCode.options;
+            expect(options.sandbox).toEqual(claudeSandboxFor('local'));
+            expect(options.settingSources).toEqual(['user', 'project', 'local']);
+            expect(options.allowedTools).toEqual([...vouchedTools(trust), 'mcp__blobot']);
+          }
+          expect(runtime.permissionMode).toBe(claudeModeFor(trust));
+        } finally {
+          await runtime.stop();
+        }
+      },
+    );
+  }
 });

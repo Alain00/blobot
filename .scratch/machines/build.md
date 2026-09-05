@@ -634,3 +634,40 @@ The boundary ticket stays claimed. Pause for the focused decision as the author 
 do not reopen the three accepted rules. Full-state image migration, box activation and the
 remaining Machines goal remain unfinished. Main integration remains `1167d61`; this checkpoint
 does not push the application branch or change the accepted worktree/storage/image decisions.
+
+## 2026-09-05 — native boundary policy implemented and resolved
+
+Guillermo answered the failure-timing follow-up with “ok”. The accepted native contract may
+reject a protected Bash command after successful session startup; other tools and the session
+can remain available. ADR-0006 records that explicit amendment. The other three decisions are
+unchanged. [Where the boundary goes: around the bridge, or inside the runtime](issues/04-where-the-boundary-goes.md)
+is now resolved.
+
+`claudeSandboxFor` is connected to the common session parameters used by session/new,
+session/load and a forgotten session's fallback. Native protection is enabled locally with
+required availability, sandbox auto-approval disabled and the model's unsandboxed retry path
+disabled. All existing approval modes/lists and user/project/local scopes remain in place.
+Project exceptions remain exceptions; no common local containment promise is made. The runtime
+description names command-time failure and outside-shell tools. Cursor's ACP limit is recorded
+as a current evidence amendment on the earlier runtime-sandbox research ticket.
+
+[Research44](research/44-claude-required-bash-failure.md) uses the actual production helper,
+pinned Claude2.1.260/SDK0.3.232 and a synthetic local Messages server. Three cases and **70
+assertions** establish: required backend failure rejects an approved Bash command with no marker;
+the disabled control writes the marker under the same outer guard; denial of approval prevents
+execution. Each still ends its session successfully, so the per-tool result is the relevant
+signal. The pinned bridge maps `tool_result.is_error` to `tool_call_update.status=failed`, and
+core preserves that error while permitting turn continuation. No external inference, login,
+real credential or shared engine change was involved; all fixture resources were cleaned.
+
+Validation: core **960 passed / 46 skipped**, desktop **610 passed / 1 skipped**; both
+typechecks and builds pass. The new wire tests cover all four trust levels across new/resumed/
+forgotten sessions. Saved research observations pass their verifier. Built Electron Settings
+was visually checked at `/private/tmp/blobot-native-policy-runtimes.png`; no clipped rows.
+The display's locally detected Claude2.1.261 is distinct from the tested image pin2.1.260.
+Logs: `/private/tmp/blobot-native-policy-{core-tests,desktop-tests,desktop-build}.log`.
+
+Continue the full Machines goal at the next frontier. The image ticket remains claimed and
+complete-state migration remains unfinished. Box runtime preparation and production activation
+guards remain closed; this resolution does not certify provider turns inside a box, Linux
+native failure behavior, egress, onboarding or preservation. Do not re-ask the boundary choices.

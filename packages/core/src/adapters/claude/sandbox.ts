@@ -1,15 +1,15 @@
 import type { MachineKind } from '../../machines/machine.js';
 
 export const CLAUDE_LOCAL_PROTECTION =
-  'Local execution does not require a shell sandbox yet. Your runtime and project settings may enable one; approval rules still apply.';
+  'Local shell commands use native protection, with project exceptions. Failures may surface when a command runs; other tools stay outside this sandbox.';
 
 /**
- * Prepared native policy, NOT connected to session startup yet. Research42 found that the
- * pinned CLI can acknowledge initialize while native backend initialization has failed;
- * failIfUnavailable only refuses detected missing dependencies at startup. The accepted
- * startup requirement therefore needs a further decision before this policy can activate.
+ * Research42 found that the pinned CLI can acknowledge initialize while native backend
+ * initialization has failed. The author accepted the native contract: missing dependencies
+ * may refuse startup; a protected command may instead fail when the backend is first used.
+ * An open session is not a positive sandbox-readiness observation (ADR-0006).
  *
- * Native reach is independent of approval posture (ADR-0006). Delivery will use the pinned
+ * Native reach is independent of approval posture (ADR-0006). Delivery uses the pinned
  * bridge's SDK options on both new and resumed sessions, never a workspace or user file.
  *
  * Claude merges array-valued rules from user/project/local settings into this tier. In

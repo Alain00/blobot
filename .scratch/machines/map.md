@@ -68,17 +68,13 @@ goal, starting with the claimed image ticket's complete-state preservation work.
 UI is the baseline for later UI work. All existing acceptance gates and commit/validation
 requirements remain in force.
 
-**Current human frontier.** After state-transfer/recovery checkpoint `65ec602`,
-[Where the boundary goes](issues/04-where-the-boundary-goes.md) is claimed for the author's
-[native/box protection and separate-controls decision](boundary-decision-round.md).
-This is the image ticket's existing inner-fence dependency, not a new engine decision.
-The author subsequently accepted the three restated rules with “ok”. Conditional research
-then found a narrower decision: Claude can acknowledge session startup after native sandbox
-initialization failed, with no normal status channel exposing the failure. Its new native
-policy is prepared but activation is withheld pending the
-[startup-versus-tool-failure follow-up](boundary-decision-round.md#follow-up-native-initialization-failure).
-Cursor's ACP configuration is not evidence of an effective native fence; its disclosure is corrected.
-The image ticket remains claimed and its complete-state migration is still unfinished.
+**Current checkpoint.**
+[Where the boundary goes: around the bridge, or inside the runtime](issues/04-where-the-boundary-goes.md)
+is resolved after Guillermo accepted both the architecture and the native failure timing.
+Claude's local policy is active and its protected-command failure is measured with a synthetic
+local provider. Cursor's ACP setting is not described as a verified native fence. No boundary
+answer remains pending. Continue the full implementation goal; the image ticket remains claimed
+and its complete-state migration is still unfinished. All box activation gates remain in place.
 
 **Main integration, 2026-09-05.** The incoming September 4 planning fork predates the
 accepted local/box scope and uses the numbers now held by the image and engine tickets.
@@ -263,11 +259,13 @@ none is discarded, and the destination is unchanged:
 
 ## Decisions so far
 
+- [Where the boundary goes: around the bridge, or inside the runtime](issues/04-where-the-boundary-goes.md): native local protection with disclosed limits and inherited project rules; optional box fences disabled independently of approvals, coupled Codex mode retained; protected-command failure may follow startup, verified on the pinned Claude CLI.
+
 - [Where a Workspace lives when the Machine is not this one](issues/05-where-a-workspace-lives.md): host worktrees and shared Git metadata mounted in the staged box lifecycle, Agent commit identity, scoped skills and measured deletion; verified with real Git and sbx, activation remains gated on the remaining tickets.
 
 - [What a Machine is, and what grain it hangs at](issues/01-what-a-machine-is.md): one Machine per Agent; local and box use the existing AgentWorkspace, with its shared Git metadata explicitly writable in a box and the main checkout unmounted.
 
-- [Which runtimes have a sandbox](issues/03-which-runtimes-have-a-sandbox.md): three do (Claude, Codex, Cursor) and two do not (OpenCode, fx); every one fences the shell and never the CLI, so the mailbox survives everywhere and no inside fence can promise what an outside one can; the three disagree on reads and loopback, which is ticket 14's asymmetry restated and the case for the boundary being the Machine. Evidence in `research/04`.
+- [Does OpenCode have a sandbox](issues/03-which-runtimes-have-a-sandbox.md): OpenCode and fx have none; Claude/Codex have native shell protection, while Cursor's native capability is not established through its ACP integration. Current evidence amendment distinguishes capability, configured setting and effective protection.
 - [Can a sandboxed agent still reach the mailbox](issues/02-can-an-agent-reach-the-mailbox.md): yes on every kind, by a different door each; the mailbox's three constants survive unchanged and the **carrier** (the hostname minted in `endpointFor` plus the one door the kind opens) is a property of the Machine kind. Linux is read, not run; the Docker door has since been run (`research/08`, comment on the ticket). Evidence in `research/02`, `research/03`, `research/08`.
 
 - [The engine, the Machine interface, and a box's lifecycle](issues/14-the-engine-and-the-machine-interface.md): the Agent-bound interface and null engine are implemented across all five launch paths, with explicit environment layers and shared client-capability protection; box activation remains the engine's work. [Build status](build.md).
