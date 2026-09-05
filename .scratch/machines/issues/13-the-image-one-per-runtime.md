@@ -602,3 +602,28 @@ validates authoritative absence/type restoration and safe default replacement in
 synthetic chroot. It records negative unlink/overwrite cases and the remaining xattr/socket
 coverage gates. The fixture passes eleven assertions, cleans its own container, and does not
 exercise production migration, real rootfs composition or durable cutover.
+
+### Resumed after main; transfer and interrupted-replacement recovery checkpoint
+
+Guillermo resumed the complete implementation goal after the validated main merge `1167d61`.
+[Whole-root composition](../research/38-full-rootfs-composition-and-reopen.md) now covers
+62,746 entries and excludes all three synthetic host mounts. Two full PAX archives per boot
+match with no warnings. Reopening the original changes only `dockerd.log` in the recorded
+projection; a post-boot whole-root SHA is therefore not interchangeable with restoration
+verification. [Inode flags and preboot verification](../research/39-inode-flags-and-preboot-verification.md)
+records the unknown flags and the absence of a documented RC5 maintenance-boot contract.
+
+The internal three-tree protocol preflights rootfs/home/Docker, bounds aggregate bytes and
+checks source/relay/receiver digests. [PAX validation](../research/41-state-archive-validation.md)
+adds bounded path/metadata/coverage checks, including omitted members and archive warnings'
+underlying coverage risk. Both remain foundations for the guest worker; they do not claim a
+complete migration or substitute byte equality for metadata not encoded by the archive.
+
+The staged lifecycle now records an admitted candidate and its copying/verifying phase
+before mutation. Explicit recovery keeps the original active and retains the partial candidate.
+Separate SQLite OS locks replace stale-on-crash directory locks for new operations, using
+the existing dependency and no payload database. Process-death tests verify exclusion while
+alive and reacquisition after SIGKILL without changing the journal. Legacy directory locks
+still refuse automatic adoption. The real isolated two-volume lifecycle fixture verifies
+interruption, recovery through a fresh owner, preserved files and restart; this is not a
+full-root/private-Docker migration test. Keep the image ticket claimed and existing guards.

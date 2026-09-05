@@ -89,7 +89,20 @@ it.skipIf(process.env['BLOBOT_LIVE_SBX_RC5'] !== '1')('owns, sleeps, reopens and
     const interrupted = await registry.read(agentId);
     expect(interrupted?.active?.id).toBe(target.id);
     expect(interrupted?.pending?.id).toBeTypeOf('string');
+    expect(interrupted?.pending?.phase).toBe('copying');
+    expect(interrupted?.pending?.candidate?.id).toBe(interrupted?.pending?.id);
     await expect(machine.start({ mailboxPort: 34569 })).rejects.toThrow('unfinished');
+    // Recovery is an explicit operation and keeps the partial candidate as well as the original.
+    const reopenedOwner = create(agentId);
+    await reopenedOwner.recoverReconfiguration();
+    const recovered = await registry.read(agentId);
+    expect(recovered?.pending).toBeUndefined();
+    expect(recovered?.active?.id).toBe(target.id);
+    expect(recovered?.retained.map(box => box.id)).toEqual([source.id, interrupted!.pending!.id]);
+    await reopenedOwner.start({ mailboxPort: 34569 });
+    expect(JSON.parse(await run(['exec', target.name, '/usr/bin/node', '-e', inspect])))
+      .toEqual({ cpus: 3, session: 'synthetic', work: 'kept' });
+    await reopenedOwner.stop();
   } finally {
     await machine.stop().catch(() => {});
     await peer.stop().catch(() => {});

@@ -282,6 +282,10 @@ export class OwnedSbxMachine implements Machine {
         if (options.signal?.aborted) throw new Error('Machine reconfiguration was cancelled.');
         // The journal retains the original as active until verified cutover.
         candidate = await this.#create(record, desired);
+        // The admitted candidate must be durable before the first private byte is copied.
+        // A restart can distinguish partial data from a creation whose identity is unknown.
+        const pending = { name: candidate.name, id: candidate.id, limits: desired, candidate };
+        await this.#options.registry.save({ ...record, pending: { ...pending, phase: 'copying' } });
         await this.#stopOwned(candidate);
         await this.#boundary(original);
         await this.#boundary(candidate);
@@ -289,6 +293,7 @@ export class OwnedSbxMachine implements Machine {
           ...(this.#options.sbxExecutable === undefined ? {} : { sbxExecutable: this.#options.sbxExecutable }),
           ...options });
         if (options.signal?.aborted) throw new Error('Machine reconfiguration was cancelled.');
+        await this.#options.registry.save({ ...record, pending: { ...pending, phase: 'verifying' } });
         // Verify after an actual stop/reopen, not just in the VM that received the copy.
         await this.#stopOwned(candidate);
         await this.#engine();
@@ -306,6 +311,41 @@ export class OwnedSbxMachine implements Machine {
         ]);
         // An unknown partial create cannot be certified stopped or have its lease released.
         this.#safeToRelease = candidate !== undefined && stopped.every((result) => result.status === 'fulfilled');
+      }
+    });
+  }
+
+  /** Explicitly keep using the original after an interrupted, recorded replacement. */
+  async recoverReconfiguration(): Promise<void> {
+    await this.#locked(async () => {
+      if (this.#started || this.#transports.size !== 0) throw new Error('Close this Agent execution before recovering its Machine.');
+      const record = await this.#options.registry.read(this.#options.agentId);
+      const original = record?.active, candidate = record?.pending?.candidate;
+      if (record === undefined || original === undefined || candidate === undefined ||
+          (record.pending?.phase !== 'copying' && record.pending?.phase !== 'verifying')) {
+        throw new Error('There is no admitted replacement to recover. Unknown creation data was kept.');
+      }
+      if (renderSbxKit(record.kit) !== renderSbxKit(this.#options.kit) ||
+          JSON.stringify(record.kit.workspace ?? null) !== JSON.stringify(this.#options.kit.workspace ?? null)) {
+        throw new Error('The recorded Machine configuration does not match.');
+      }
+      await this.#engine();
+      await this.#identity(original);
+      await this.#identity(candidate);
+      this.#safeToRelease = false;
+      try {
+        await this.#stopOwned(candidate);
+        await this.#stopOwned(original);
+        await this.#boundary(original);
+        await this.#stopOwned(original);
+        const { pending: _pending, ...kept } = record;
+        await this.#options.registry.save({ ...kept, retained: [...kept.retained, candidate] });
+        this.#active = original;
+      } catch {
+        throw new Error('Machine recovery did not complete. Both copies were kept.');
+      } finally {
+        const stopped = await Promise.allSettled([this.#stopOwned(candidate), this.#stopOwned(original)]);
+        this.#safeToRelease = stopped.every(result => result.status === 'fulfilled');
       }
     });
   }

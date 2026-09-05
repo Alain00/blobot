@@ -529,3 +529,53 @@ Stop here at Guillermo's request. The next continuation resumes complete-state m
 the remaining Machines plan against this merged UI baseline. No new Machines UI work began,
 the image ticket is still claimed and the overall goal is not complete. The application branch
 has not been pushed.
+
+## 2026-09-05 — resumed; transfer verification and explicit recovery
+
+The author said “continua” after the main merge and requested pause. Continuous advancement
+is authorized again. `1167d61` remains the merged baseline; no new Machines UI work has begun.
+
+The staged lifecycle records an admitted replacement before copying and its copying/verifying
+phase. `recoverReconfiguration` verifies both owned identities, stops both Machines, verifies
+the original, removes the pending operation and retains the partial replacement. A new owner
+can perform this recovery. Unknown creation identities remain refused and nothing is deleted.
+
+New ownership/operation locks use separate empty SQLite files and `BEGIN EXCLUSIVE`, through
+the existing better-sqlite3 dependency. They release on process death and do not depend on PID
+reuse, elapsed time or stale-lock stealing. Files remain in place to preserve lock identity;
+legacy `.owner`/`.lock` directories are explicit recovery cases. The message database and
+private Machine contents are not involved. Primary locking semantics:
+[SQLite locking](https://www.sqlite.org/lockingv3.html) and
+[exclusive transactions](https://www.sqlite.org/lang_transaction.html).
+Two actual child-process tests verify contention, SIGKILL recovery and unchanged journal.
+
+`copySbxState` preflights all three trees before receiver mutation, checks source/relay/target
+digests and bounds aggregate bytes, with cancellation and sanitized errors. The strict fresh
+maintenance verifier compares saved digests; it deliberately does not exempt boot changes.
+The guest-only PAX checker verifies member paths, full dumpdir coverage and bounded metadata.
+Research41 proves acceptance of a real GNU tar stream in addition to the negative unit cases.
+Neither component is wired to a full-state guest worker yet; resource replacement remains
+refused for mounted Workspaces and explicit private Docker storage.
+
+Research38 supplies a whole-root inventory/stream measurement, including mount exclusion,
+and shows a real `dockerd.log` change after reopening even the original. Research39 traces
+the unobservable flags and explains why same-base copying alone cannot establish their
+preservation. Further attribute measurement is running as research40, with one synthetic
+sbx owned by `image_preservation_resume`; wait for its explicit engine handoff before any
+other sbx fixture. No provider sign-in, paid turn or production activation is implied.
+
+Validation at this checkpoint:
+
+- Core: **945 passed, 46 skipped**; typecheck and build pass.
+- Desktop: **610 passed, 1 skipped**; typecheck and production build pass. Existing canvas/act
+  test-environment notices are non-failing.
+- Real staged lifecycle: interruption and recovery pass in **143.45 seconds**, including a
+  fresh owner and the new SQLite leases. The original and partial candidate stay recorded;
+  the UUID-owned fixture cleans them afterward. Final sbx inventory was empty before research40.
+- PAX checker: **17 tests pass**, plus the real GNU tar fixture; its own Docker container is
+  removed. A final metadata-buffer adjustment is checked again before committing.
+
+Next: finish measured metadata admission, implement the held guest workers and isolated
+rootfs/home/Docker restore, then verify stop/reopen semantics and durable cutover. Do not mark
+the image ticket resolved at this checkpoint. Complete-state migration and the full Machines
+goal remain unfinished; the application branch has not been pushed.

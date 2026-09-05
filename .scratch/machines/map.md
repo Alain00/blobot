@@ -62,6 +62,12 @@ amended, and it is not to be worked around quietly.
 
 ## Notes
 
+**Resumed after main integration, 2026-09-05 (Guillermo).** The author said “continua” after
+the validated merge `1167d61`. The requested pause is complete; continue the entire Machines
+goal, starting with the claimed image ticket's complete-state preservation work. The merged
+UI is the baseline for later UI work. All existing acceptance gates and commit/validation
+requirements remain in force.
+
 **Main integration, 2026-09-05.** The incoming September 4 planning fork predates the
 accepted local/box scope and uses the numbers now held by the image and engine tickets.
 Its two questions are preserved under unique identities:
