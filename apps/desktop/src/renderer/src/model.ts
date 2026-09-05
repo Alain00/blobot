@@ -362,6 +362,15 @@ export interface AppState {
   /** The slash menu each agent offers, by agent id. Per session, so it is not on `UiAgent`. */
   commands: Record<string, readonly UiCommand[]>;
   items: Item[];
+  /**
+   * The log of settled work: finished tool calls, ended turns, errors, compactions.
+   *
+   * **Nothing draws it since 2026-09-05**, when the activity column it was the body of came off
+   * and its two heads moved into a popover (`components/Details.tsx`). It is kept because a
+   * settled event arriving here is the cheapest honest signal that a worktree may have changed,
+   * and `useWorkspaces` re-reads local git off its length. Restored from the persisted rows on
+   * every snapshot, so that signal survives a team switch the same way it always did.
+   */
   feed: FeedEntry[];
   budget: { used: number; budget: number } | undefined;
   /** How full each agent's context is, by agent id. Absent means it has never reported. */
@@ -653,6 +662,13 @@ export function reduce(state: AppState, action: Action): AppState {
           // why, is the exact shape of a bug report nobody can act on.
           ...action.snapshot.log.compactions.map((compaction) =>
             compactionItem(`${compaction.agentId}:${compaction.at}:compacted`, compaction),
+          ),
+          // A Picture comes back from the store, and a Picture that was **not** drawn comes back
+          // too: that event is the only record it ever happened, so losing it on a team switch
+          // would put the silent drop back one screen further along. The bytes are not here --
+          // the pane fetches one at a time by id.
+          ...action.snapshot.log.pictures.map((picture) =>
+            pictureItem(`${picture.agentId}:${picture.at}:picture`, picture),
           ),
           // Restored from the rows, so the disclosure survives a relaunch and a team switch. A
           // block that only existed while the app happened to be watching would be one the user
@@ -1855,6 +1871,7 @@ function liveRunIn(
   const calls: number[] = [];
   const replies: number[] = [];
   let open = -1;
+  let lastOwn = -1;
   for (let at = index; at < end; at += 1) {
     const item = items[at] as Item;
     const speaker = speakerOf(item);
@@ -1863,6 +1880,7 @@ function liveRunIn(
       if (item.kind === 'agent' && !item.live) replies.push(at);
       continue;
     }
+    lastOwn = at;
     if (item.kind !== 'tool') continue;
     calls.push(at);
     if (open === -1 && item.status === 'running') open = at;
@@ -1877,9 +1895,27 @@ function liveRunIn(
     }
     batch = calls.slice(from);
   }
+
+  /*
+   * A reply is in here while it is **news**, and no longer.
+   *
+   * The first build collected every reply in the run, so a teammate's line stood in the block for
+   * the rest of the turn and a second reply stacked under the first -- the author, from a real
+   * frame: *"why if there have past time from this message from bob it's still in the live
+   * steps?"*. A step is what is happening now, and a reply the principal has already worked past
+   * is not: it is the turn's history, which is what the fold is.
+   *
+   * So the boundary is where *now* begins — the first call of the open batch, or, with nothing
+   * open, the last thing the principal itself did. A reply after it arrived during the work the
+   * reader is watching and stays until that work does; a reply before it has been answered by
+   * everything under it and folds.
+   */
+  const boundary = batch.length > 0 ? (batch[0] as number) : lastOwn;
+  const news = replies.filter((at) => at > boundary);
+
   // In the order they happened: a reply that came back between two calls belongs between them,
   // because this is the turn as it is being lived rather than two lists stacked.
-  return [...batch, ...replies].sort((left, right) => left - right);
+  return [...batch, ...news].sort((left, right) => left - right);
 }
 
 /** Whether the principal said anything of its own between two of its calls, which ends a batch. */

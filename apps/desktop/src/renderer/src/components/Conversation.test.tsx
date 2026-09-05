@@ -288,6 +288,17 @@ describe('the voices, after the roster stopped being passed down', () => {
     const live = draw(items, { kind: 'team' }, { a: 'working', b: 'idle' });
     expect(live).toContain('NOTHING RUNNING MY END');
 
+    // And it is news only until the principal has worked past it. Two calls of Alice's after the
+    // reply and it is the turn's history, which is what the fold is for.
+    const worked: Item[] = [
+      ...items,
+      { kind: 'tool', id: 't1', at: at + 3000, agentId: 'a', title: 'npm run one', toolKind: 'execute', status: 'completed' },
+      { kind: 'tool', id: 't2', at: at + 4000, agentId: 'a', title: 'npm run two', toolKind: 'execute', status: 'running' },
+    ];
+    const moved = draw(worked, { kind: 'team' }, { a: 'working', b: 'idle' });
+    expect(moved).toContain('npm run two');
+    expect(moved).not.toContain('NOTHING RUNNING MY END');
+
     // Still being written, it is in neither place: not a paragraph at the top level, and not a
     // line in the block. `when it finished` is the whole of the instruction.
     const writing: Item[] = [

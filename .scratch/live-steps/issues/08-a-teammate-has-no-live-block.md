@@ -172,3 +172,21 @@ unanswered permission is still outside the block, hardest for a teammate.
 
 The `principal: boolean` argument this had added to `runWork` is gone with it, so the predicate is
 one function again, which is what 07 said it should be.
+
+### Correction the same day: a reply is in there while it is news
+
+The first build of the amendment collected **every** reply in the run, so a teammate's line stood
+in the block for the rest of the turn and a second one stacked under the first. The author, from
+a real frame with two identical Bob lines above three of Alice's steps: *"why if there have past
+time from this message from bob it's still in the live steps?"*
+
+A step is what is happening now. A reply the principal has already worked past is the turn's
+history, and history is what the fold is. So the boundary is where *now* begins — the first call
+of the open batch, or, with nothing open, the last thing the principal itself did. A reply after
+it arrived during the work the reader is watching and stays as long as that work does; a reply
+before it has been answered by everything under it and folds.
+
+Worth knowing about the demo rather than the rule: `many-steps` gives Alice no pause, so the
+window a reply is visible in is short there. `MockAgentRuntime` also replays a scenario on every
+wake, which is why Bob said the same sentence twice — the duplicate was two real replies, not one
+drawn twice.
