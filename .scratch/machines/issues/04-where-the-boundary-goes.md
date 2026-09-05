@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: claimed
 Blocked by: none
 
 # Where the boundary goes: around the bridge, or inside the runtime
@@ -384,6 +384,21 @@ two findings about shipped code — Codex's mode name and Cursor's `allow_all` c
 relayed to their own efforts.
 
 ## Comments
+
+**2026-09-05 — claimed for the live decision round after implementation checkpoint `65ec602`.**
+The author delegates basic engineering choices but requires `grill-with-docs` and a pause for
+non-obvious product/trust choices. This independent frontier is now opened because the image
+ticket explicitly reads its inner-fence decision. The image ticket remains claimed; its
+complete-state migration is unfinished. Current worktree/shared-Git decisions supersede the
+historical clone/volume wording above. No trust policy has been changed by claiming this ticket.
+
+[Current decision round](../boundary-decision-round.md) condenses the five questions above
+into three product choices: native-only local protection with disclosed asymmetry and preserved
+settings scopes; optional inner protection inside a box; separate location and approval controls.
+The first proposal includes deferring the external srt wrapper and leaving existing Codex/Cursor
+behavior in place. These are recommendations awaiting the author, not resolutions. No paid
+provider turn or real sign-in is authorized or performed by this round. Technical facts still
+requiring a probe stay conditional; the author's answer cannot make an unmeasured behavior true.
 
 **2026-09-04 — measured after the amendment above was first written (`research/07`, section
 5).** Two real turns on `claude` 2.1.260 through the pinned bridge, on this Mac. The amendment's

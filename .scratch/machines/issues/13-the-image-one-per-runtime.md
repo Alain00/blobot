@@ -627,3 +627,11 @@ alive and reacquisition after SIGKILL without changing the journal. Legacy direc
 still refuse automatic adoption. The real isolated two-volume lifecycle fixture verifies
 interruption, recovery through a fresh owner, preserved files and restart; this is not a
 full-root/private-Docker migration test. Keep the image ticket claimed and existing guards.
+
+[File attributes and tar omission](../research/40-file-attributes-and-tar-omission.md) adds
+42 verified synthetic attribute mutations/restorations. PAX omits the measured immutable,
+append-only, nodump and project-inheritance flags. Base ioctl failures and statx's possibly
+inherited lower-layer immutable bit remain distinct observations; none authorizes a blanket
+metadata exception. Fixtures are cleaned and sbx is available. The implementation checkpoint
+is `65ec602`; the author-facing decision round on the existing inner-fence owner is now open
+at [Where the boundary goes](04-where-the-boundary-goes.md). This image ticket remains claimed.

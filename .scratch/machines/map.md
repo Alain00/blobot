@@ -68,6 +68,13 @@ goal, starting with the claimed image ticket's complete-state preservation work.
 UI is the baseline for later UI work. All existing acceptance gates and commit/validation
 requirements remain in force.
 
+**Current human frontier.** After state-transfer/recovery checkpoint `65ec602`,
+[Where the boundary goes](issues/04-where-the-boundary-goes.md) is claimed for the author's
+[native/box protection and separate-controls decision](boundary-decision-round.md).
+This is the image ticket's existing inner-fence dependency, not a new engine decision.
+No proposal is accepted yet. The image ticket remains claimed and its complete-state migration
+is still unfinished. Pause at the decision round, as the author requested for non-obvious choices.
+
 **Main integration, 2026-09-05.** The incoming September 4 planning fork predates the
 accepted local/box scope and uses the numbers now held by the image and engine tickets.
 Its two questions are preserved under unique identities:

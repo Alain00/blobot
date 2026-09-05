@@ -560,9 +560,11 @@ refused for mounted Workspaces and explicit private Docker storage.
 Research38 supplies a whole-root inventory/stream measurement, including mount exclusion,
 and shows a real `dockerd.log` change after reopening even the original. Research39 traces
 the unobservable flags and explains why same-base copying alone cannot establish their
-preservation. Further attribute measurement is running as research40, with one synthetic
-sbx owned by `image_preservation_resume`; wait for its explicit engine handoff before any
-other sbx fixture. No provider sign-in, paid turn or production activation is implied.
+preservation. [Research40](research/40-file-attributes-and-tar-omission.md) is now complete:
+both attribute ioctls return ENOTTY on the measured base entries; statx supplies only partial
+evidence. Forty-two synthetic cases demonstrate PAX omission of mutable inode flags and
+verify their explicit reversion. The exact owned resources were cleaned and sbx was ceded;
+no agent holds the engine now. No provider sign-in, paid turn or production activation is implied.
 
 Validation at this checkpoint:
 
@@ -573,9 +575,19 @@ Validation at this checkpoint:
   fresh owner and the new SQLite leases. The original and partial candidate stay recorded;
   the UUID-owned fixture cleans them afterward. Final sbx inventory was empty before research40.
 - PAX checker: **17 tests pass**, plus the real GNU tar fixture; its own Docker container is
-  removed. A final metadata-buffer adjustment is checked again before committing.
+  removed. The final bounded metadata-buffer adjustment passed these tests and the real GNU
+  fixture again, followed by core typecheck/build.
 
 Next: finish measured metadata admission, implement the held guest workers and isolated
 rootfs/home/Docker restore, then verify stop/reopen semantics and durable cutover. Do not mark
 the image ticket resolved at this checkpoint. Complete-state migration and the full Machines
 goal remain unfinished; the application branch has not been pushed.
+
+Implementation checkpoint committed as `65ec602`. The next necessary human frontier is now
+claimed in [Where the boundary goes](issues/04-where-the-boundary-goes.md), which owns the
+image ticket's still-undecided optional inner sandbox policy. The
+[decision round](boundary-decision-round.md) proposes native local protections with disclosed
+differences, the microVM as the common box boundary, and separate location/approval controls.
+These are proposals only. Pause for Guillermo's answers as instructed; do not implement a
+security-policy choice on his behalf. The image ticket stays claimed, and the measured
+metadata/maintenance/restore/cutover work is not resolved by this pause.
