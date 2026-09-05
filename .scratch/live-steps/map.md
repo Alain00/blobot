@@ -85,7 +85,7 @@ resolved and built, and then two agents really overlapped for the first time —
 ticket 03 was built for and what nothing could produce until 02 existed. It found a stranded call
 (06) and, behind it, a decision this map never made.
 
-**The frontier is 07.** The author's framing: *there are two kinds of message, internal from bot
+**The frontier is 08.** The author's framing: *there are two kinds of message, internal from bot
 to bot, which folds and is part of the turn, and public for the user, which the user must see.*
 The settled transcript already does this — `runFrom` folds a teammate's whole turn into the
 principal's block and lifts the principal's own words back out — and the live path built here
@@ -115,17 +115,33 @@ decided *while* building, and what is left over, is on `build.md`.
 - **04 — no cap, and no overflow line.** The author's, and it settles the hole: a step leaves the
   block for exactly one reason, it finished. `DESIGN.md`'s two-in-the-air is a cap on motion and
   is untouched.
+- **07 — public is what only you can act on.** The author's two kinds are real and the axis
+  that produces them is not a property of the message. Adopted with one correction: *who it was
+  addressed to* is the proxy and not the rule, because a teammate's permission request was
+  addressed to nobody and is the most public thing in the transcript. And `runFrom` **cannot** be
+  consulted live — it terminates on the first unsettled item from anybody, which is where the
+  live region starts — so 08 is *compute the boundary once over both halves*, and it owns the
+  settled side of 06 too: that screenshot has two folds in it, not one fold and a stray line.
 - **05 — one face, by construction.** `responding` is out of `isInFlight`, so a block and a live
   message are never mounted together. The real two-faces case was a *settled* caption above the
   block, and `continuesAgent` groups the first block under it.
+
+## Found on the way
+
+- **A Routine firing re-addresses a turn it has nothing to do with.** `addressed` is reset by
+  every `user` item and a Routine draws in the user's voice, so a Routine firing for Bob while
+  Alice is mid-turn on a prompt the person typed reclassifies Alice as Bob's partner and merges
+  two unrelated turns into one fold. In the settled path today; not introduced by this effort.
+  Found resolving 07.
 
 ## Fog
 
 - Whether the activity column should show concurrency at all, or stays a flat chronological feed.
   Out of scope until the transcript's answer is settled — and 09 may make it load-bearing, since
   it is one of the places a reader could be sent instead of the transcript.
-- Whether a lead's turn is a third case. `composeLeadBrief` says a lead is not a pipe and mail to
-  it lands on it, so a lead holding a turn is an ordinary principal — but nobody has checked what
-  the fold does when the principal *is* the lead and the teammates it woke are answering it.
+- ~~Whether a lead's turn is a third case.~~ **Closed by 07** in the half that was a question of
+  classification: a lead is who the prompt addressed, so it is an ordinary principal and the
+  teammates it woke are partners. What is still unchecked is the *shape* — what the fold looks
+  like when one principal wakes four agents at once — which is 09's, not a third category.
 - Whether a step should ever say how long it has been running. Nobody has asked; a duration on a
   live line is a second moving thing.

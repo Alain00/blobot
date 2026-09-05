@@ -72,3 +72,14 @@ Ticket 07 settles the axis, 08 does the work, and the question this ticket asks 
 
 Left open rather than resolved, because the screenshot in it is the evidence and the *done when*
 is still the right test.
+
+## Note, 2026-09-05 — the screenshot has two folds in it
+
+Re-reading the frame above while resolving 07: the stranded line is not the only fault in it.
+There is a fold *above* it (`RAN 16 TOOLS · 1 FAILED`) and another *below* (`RAN 5 TOOLS · 1
+NOTE`), and those are one turn of Alice's cut in half — `rowsOf` breaks a run at the first
+unsettled item from anybody, so Bob's open call ended Alice's run and a fresh one opened after it.
+
+So the cause is not `liveTailOf`'s trailing-run heuristic alone, and lifting the loose line out of
+the settled rows would leave one turn still drawn as two records. The *done when* here stands and
+gains a clause on 08: **one turn, one fold.**

@@ -116,7 +116,7 @@ Consequences you will keep bumping into:
 | `--line` | `#232327` | Every hairline and every border at rest. |
 | `--sans` | Geist | Everything a user reads as prose. |
 | `--mono` | Geist Mono | The three cases under **Type**, and nothing else: a value, a literal, a signage label. |
-| `--hand` | Caveat | Display type on the creation flow. Nowhere else. |
+| `--hand` | Caveat | The one display line at the head of a dialog. Nowhere else. |
 
 Dark only (`color-scheme:dark`). There is no light theme and adding one is a design project,
 not a variable swap: half these rules are about what is *brightest* on the page.
@@ -211,8 +211,10 @@ shape does not resize when the state arrives.
   and blobot talks in prose. Uppercase mono with letter-spacing is the least readable setting on
   the page, so the one line explaining a failure is the worst thing to spend it on. Content an
   agent wrote is prose too: a markdown table's header is the agent's, not blobot's signage.
-- The hand face carries the creation flow's display line only. One voice per page: handwriting
-  on every subhead would make the steps look optional.
+- The hand face carries one display line per surface, at its head, and nothing else. One voice
+  per page: handwriting on every subhead would make everything under it look optional. *Amended
+  2026-09-05: it read "the creation flow's display line only", which the dialogs had already
+  outgrown and which the creation flow itself stopped using when it became a bar.*
 - **The three faces are bundled, never fetched.** Geist, Geist Mono and Caveat come from
   `@fontsource`, imported in `main.tsx`, latin subset, and only at the weights named here. They
   were a `<link>` to Google Fonts, which made a local-first app render in Geist on a machine with
@@ -345,6 +347,28 @@ Other transcript rules:
   had been asked. A block with **no** principal in it at all — a teammate's work and nothing else
   — names every voice in it, since with nobody addressed everybody in there is somebody you did
   not ask.
+
+  **The live half of a run is the same run, drawn at a different altitude.** A turn that has not
+  finished becoming a record is a **live block**: the agent's blobatar, its name, and under it the
+  calls that have not returned, in the order they were called. It replaces what the column used to
+  do, which was to draw running calls as loose mono lines in the shared column with nothing on
+  them saying whose they were, and one set of three dots under all of them. With two agents
+  working that is six lines interleaved in call-start order and attributable to nobody. The dots
+  survive only where they are the only thing to see — asked and not yet started — because under a
+  running call the line's own three dots already say it, and that is the same claim twice. The
+  list is **not capped**: a step leaves the block for exactly one reason, it finished. A cap would
+  buy a shorter block by claiming a call had ended when it had not, and an overflow line saying
+  otherwise is a second thing to read about work you cannot see.
+
+  **What decides whether a line is at the top level or inside the block is the same rule in both
+  halves: a line is public when you are the only one who can act on it.** For prose that means it
+  was addressed to you; for everything else it means nobody else in the run can answer it — a
+  permission nobody has answered, a refusal, a failure that ended a teammate's turn. Everything
+  else the turn had to arrange is internal, and folds. The addressed set is what the code reads,
+  because for prose the two coincide and it is already computed; it is the proxy, not the rule.
+  A teammate is therefore not a second live block standing beside the principal's — its work is
+  inside the run it was caused by, live or settled, and it changes altitude for no reason the
+  reader caused.
 
   A call carries a **verb** from the four kinds core already has off both runtimes — `read`,
   `edit`, `run`, and nothing for an MCP tool, whose name is its server's and not ours to
@@ -1185,7 +1209,34 @@ One flat file, one flat namespace, no build step between it and the DOM.
   fold into one the way four statuses fold into a `StatusWord`, and four agents' entries in a
   232px column is a wall. The team pane says what a Handbook **costs**; the agent's pane is the
   only place it says what a Handbook **is**.
-- **The creation flow** — the one *editorial* page. It ends with ticket 14's disclosure: an
+- **The creation flow** — a **bar over the working surface**, in the shape of opening a direct
+  message: two questions and nothing else. *Rewritten 2026-09-05 at the author's direction,
+  replacing the paragraph kept below.* It takes the navigator's layer wholesale — same scrim,
+  same sheet, same cmdk list — because it is the same object doing the same job, a door rather
+  than a place, and the team you were on keeps running behind it. **Question one is a field that
+  is a search and a multi-select at once**: agents you have taken sit in it as chips, the caret
+  follows them, an arrow at the right goes on. Arrow keys move the list, Tab takes what they
+  landed on, Backspace on an empty field gives the last one back, and **Enter means *this one*
+  while you are typing and *go on* when you are not** — the one ambiguity, resolved by whether
+  there is a query to have meant something. **Question two is the name and a folder icon**, with
+  the folder under it in mono: the one you chose, or the `~/blobot/<name>` that is about to be
+  made, named in full before the arrow is pressed, which is what keeps *make one for me* from
+  having become something that happens silently. *Hire an agent* sits under the list and outside
+  it, because it is not somebody you can put on the team.
+  **Everything else came off**, and the test that decided it was whether the answer is
+  recoverable a minute later. The lead is the first agent you picked and is named and changed on
+  the team's own row; the turn budget is ten; the icon is offered by the edit dialog from the
+  same detection this screen used to run; the roster and the name are edited on that row too.
+  What did **not** come off is ticket 14's disclosure, reduced to the two sentences carrying its
+  whole claim and sitting under the folder line: it is the one thing here that is not
+  recoverable, because by the time a user goes looking for it agents are already running in a
+  copy of their folder. It is stated and never consented to, and it may only claim what blobot
+  actually arranged — it does not name commands, because blobot can only name them on some
+  runtimes. Nothing on it is set as a page: no hand face, no standfirst, no numerals.
+  *The paragraph below is kept as written, because forming a team is what stands between a new
+  user and the only thing this app does, and the reasoning that built the page is what has to be
+  argued with if anybody wants it back.*
+  ~~The one *editorial* page. It ends with ticket 14's disclosure: an
   unnumbered block with an ink edge, above the button that spawns the first agent. Stated, never
   consented to, and it may only claim what blobot actually arranged. It says the runtimes are
   set to prompt; it does not name commands, because blobot can only name them on some runtimes. A display line in the hand face, a
@@ -1210,7 +1261,7 @@ One flat file, one flat namespace, no build step between it and the DOM.
   first keystroke — and one the user opens by hand stays open, because a step that re-folds
   itself while you are reading it is worse than one that never folded. The gesture is the
   transcript's chevron, at the **end** of the head rather than in front of it, so the numerals of
-  the steps that fold stay in line with the ones that do not.
+  the steps that fold stay in line with the ones that do not.~~
 - **Your agents** — every AgentProfile the user has hired, over the working surface rather than
   in place of it: the team behind it keeps running, and nothing on this screen restarts one. A
   row is a face, a name, a role, the runtime and the teams it is on, with its standing

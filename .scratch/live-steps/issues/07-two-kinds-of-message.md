@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: resolved
 
 # Two kinds of message, and what actually decides which
 
@@ -80,3 +80,100 @@ argue about where. It is not top-level. It belongs inside the principal's block,
 
 One sentence in `DESIGN.md` says what makes a line public, and both `runFrom` and the live path
 are described as reading it.
+
+## Answer
+
+**The axis is adopted. One sentence in the proposal is struck and one word in it is changed.**
+
+### Struck: *"they exist, are tested, and are simply not consulted anywhere in the live path"*
+
+They cannot be consulted. `runFrom` terminates on the first unsettled item belonging to anybody
+in the run — `settledWork` for the principal, `partnerWork` for a teammate, and both of them
+return false for `running` and `asking`. The run boundary the settled path computes is *defined*
+to end exactly where the live region begins. There is no reading of it that reaches into a turn
+still happening.
+
+So 08 is not "make the live path read `addressed`". It is **compute the run boundary once, over
+settled and unsettled items together**, and let the two halves render the same run at two
+altitudes. That is a larger change than 07 implied and the map should say so.
+
+**And this is the deeper cause of 06,** which blames `liveTailOf`'s trailing-run heuristic alone.
+06's own screenshot carries the evidence nobody read back off it: there are **two folds** around
+the stranded line, `RAN 16 TOOLS · 1 FAILED 🔵 Bob` above it and `RAN 5 TOOLS · 1 NOTE` below.
+That second fold is not the live tail's doing — it is `rowsOf` breaking Alice's run at Bob's open
+call and opening a fresh run after it. Lift the stranded line out of the settled rows and that
+half is still wrong: one turn drawn as two records with a hole where the live work was.
+
+06's *done when* is therefore necessary and not sufficient. 08 has to fix the settled side in the
+same change, and its test is not only "no call outside a face's block" but **one turn, one fold**.
+
+### Changed: *who it was addressed to* → *who can act on it*
+
+"Internal folds" is false as a universal, and 10's list is not a set of exceptions bolted onto
+the rule — it is the rule's second clause, and writing the rule without it makes 10 look like
+patching.
+
+Take 10's three hardest entries against the addressing reading:
+
+- A teammate's **permission request** was addressed to nobody. Under "who it was addressed to" it
+  has no answer at all, and the safe default for an unaddressed thing in a partner's stretch of
+  the run is *fold*, which is the exact failure the whole ticket exists to prevent.
+- A **refusal** is addressed to the agent that mailed it. Strictly internal, and strictly
+  something the person has to see.
+- A **fatal error** is addressed to no one. The agent is dead; `ran 3 tools` over it is a false
+  summary.
+
+All three are public, and all three for one reason: **the only party who can act is the person.**
+For ordinary prose the two readings coincide — an answer to you is a thing only you can act on,
+a reply to Alice is a thing Alice acts on — which is why the addressed set stays the thing the
+code actually reads. It is the cheap and correct proxy in the case that occurs a thousand times
+to the other's once. It is not the rule.
+
+The rule, one sentence:
+
+> **A line is public when the person is the only one who can act on it** — which for prose means
+> it was addressed to them, and otherwise means nobody else in the run can answer it. Everything
+> else the turn had to arrange is internal, and folds.
+
+### Upheld, and cheaper than the proposal claimed
+
+**Clause 3, *internal is relative to the pane*, costs nothing and is already true.** `itemsFor`
+filters before `rowsOf`, so in Bob's own pane the user's `@alice` bubble is filtered out entirely,
+`addressed` never gets set, and `runFrom`'s *nothing addressed means every speaker is a principal
+candidate* branch already makes Bob his own principal there. The proposal presents this as a
+requirement to design; it is a property the existing filter order gives away. Verified by reading
+rather than by test, so 08 should pin it with one.
+
+**Clause 2, the fan-out, is upheld.** `runFrom` breaks on `principal !== speaker`, and both
+members of an `@alice @bob` are in `addressed`, so neither can become the other's machinery
+whichever of them mails the other first.
+
+### What this closes
+
+The map's fog item *"whether a lead's turn is a third case"* is closed by the axis, in the
+classification half at least. A lead is who the prompt addressed, `composeLeadBrief` already says
+a lead is not a pipe, and the teammates it woke are partners. It is an ordinary principal and
+nothing about it is a third kind. What remains unchecked is the *shape* the fold takes when a
+lead wakes four agents at once, which is 09's problem and not a classification one.
+
+### Found on the way, and not 07's to fix
+
+`addressed` is reset by **every** `user` item, and a Routine firing draws in the user's voice. So
+a Routine that fires for Bob while Alice is mid-turn on a prompt the person actually typed
+silently reclassifies Alice as Bob's partner and merges two causally unrelated turns into one
+fold. This is in the settled path today and is not introduced by anything here. Recorded on the
+map.
+
+### A note for 10
+
+10 lists a Routine proposal and a Handbook write under *what must come out*. `CLAUDE.md` says
+both **open inline in the turn that created them**, in `Compaction`'s collapsed shape — which is
+disclosed *inside* the run, not lifted to the top level beside the principal's answer. They are a
+third category: **visible without being public.** 10 should say which of its five entries are
+lifted out of the block and which are merely never collapsed inside it, because those are two
+different mechanisms and only the first of them has a place to go.
+
+### Done
+
+`DESIGN.md`'s transcript section carries the sentence, under a new **The live half of a run**
+paragraph that also writes down ticket 03's block, which was built and never recorded there.

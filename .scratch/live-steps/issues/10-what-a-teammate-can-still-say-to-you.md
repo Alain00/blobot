@@ -44,3 +44,21 @@ merge already fixed once. Lifting is almost certainly right and is not what the 
 The list is one exported predicate with the reason on each entry, read by both `runFrom` and the
 live path, and a scenario exists in which a teammate raises a permission mid-fold and the block
 does not eat it.
+
+## Note, 2026-09-05 — from 07: two of these five are a different mechanism
+
+The list mixes two things and only one of them has somewhere to go.
+
+**Lifted** — out of the block, at the top level beside the principal's answer: an unanswered
+permission, a refusal, a failure that ended the teammate's turn. These are public under 07's rule
+because the person is the only party who can act on them.
+
+**Visible without being public** — a Routine proposal and a Handbook write. `CLAUDE.md` says both
+*open inline in the turn that created them*, in `Compaction`'s collapsed shape. That is a
+disclosure **inside** the run, not a lift out of it; the argument was that arming or recording
+something off screen must not exist, and a block the reader can open is not off screen. Lifting
+them would also put a teammate's bookkeeping at the same altitude as the answer to the question
+the person asked.
+
+So the exported predicate is probably two predicates, or one returning which of the two it is.
+Say so on each entry, since the reason differs per entry and that is what this ticket is for.
