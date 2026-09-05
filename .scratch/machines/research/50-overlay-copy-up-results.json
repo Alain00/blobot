@@ -1,0 +1,768 @@
+{
+  "date": "2026-09-05T23:38:34.657Z",
+  "uuid": "435e0f24-57f4-4c0c-b468-bb4fe6b7dff1",
+  "name": "blobot-copyup50-435e0f24-57f4-4c0c-b468-bb4fe6b7dff1",
+  "candidate": "blobot-machine-probe:explicit-docker-20260905",
+  "manifest": "sha256:1cd3184fceaf6d60c0f364c81bdb26f3359bab91efc666cd172fb75c68ed974c",
+  "scope": "synthetic disposable guest only",
+  "commands": [
+    {
+      "label": "daemon-status",
+      "code": 0,
+      "ms": 183.15258300000002
+    },
+    {
+      "label": "version",
+      "code": 0,
+      "ms": 262.6855
+    },
+    {
+      "label": "read-ssh-forwarding",
+      "code": 0,
+      "ms": 128.13070900000002
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 145.92420900000002
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 124.89266599999996
+    },
+    {
+      "label": "load-local-archive",
+      "code": 0,
+      "ms": 1967.4705000000001
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 146.28533300000026
+    },
+    {
+      "label": "create-owned-box",
+      "code": 0,
+      "ms": 2474.9921670000003
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 143.45079199999964
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 140.62125000000015
+    },
+    {
+      "label": "remove-owned-box",
+      "code": 0,
+      "ms": 321.73954199999935
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 156.76787499999955
+    },
+    {
+      "label": "remove-owned-local-alias",
+      "code": 0,
+      "ms": 186.5193330000002
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 139.65129199999865
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 144.3527090000007
+    }
+  ],
+  "diskChecks": [
+    {
+      "label": "before-load",
+      "availableBytes": "20895440896"
+    },
+    {
+      "label": "before-create",
+      "availableBytes": "20895084544"
+    },
+    {
+      "label": "before-probe",
+      "availableBytes": "20878823424"
+    },
+    {
+      "label": "after-probe",
+      "availableBytes": "20876709888"
+    },
+    {
+      "label": "after-cleanup",
+      "availableBytes": "20894355456"
+    }
+  ],
+  "cleanup": {
+    "errors": [],
+    "remainingOwnedBoxes": [],
+    "remainingOwnedImages": [],
+    "tempRemoved": true
+  },
+  "scripts": {
+    "workerSha256": "c03b18843b663b57fabc1d5b81fef9d00b671c5ff84af7d69986213c7dc81eab",
+    "pythonSha256": "f33a7c3899957f3bb21919bb79733a3680e598a3fb99524baee54f2caff2e3fd"
+  },
+  "version": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "image": {
+    "id": "1cd3184fceaf",
+    "repository": "docker.io/library/blobot-machine-probe",
+    "tag": "explicit-docker-20260905",
+    "flavor": "shell-docker",
+    "created_at": "2026-09-05T23:38:37Z",
+    "size": 588690428
+  },
+  "kit": {
+    "schemaVersion": "2",
+    "kind": "sandbox",
+    "name": "blobot-synthetic-copyup50",
+    "sandbox": {
+      "image": "blobot-machine-probe:explicit-docker-20260905",
+      "entrypoint": [
+        "/usr/bin/node"
+      ],
+      "command": {
+        "default": [
+          "--version"
+        ]
+      }
+    },
+    "security": {
+      "privileged": true
+    },
+    "credentials": [],
+    "permissions": {
+      "network": {
+        "allow": [],
+        "deny": []
+      }
+    },
+    "volumes": [
+      {
+        "path": "/home/agent",
+        "size": "8589934592",
+        "mode": "0700"
+      },
+      {
+        "path": "/var/lib/docker",
+        "size": "21474836480",
+        "mode": "0700"
+      }
+    ]
+  },
+  "box": {
+    "name": "blobot-copyup50-435e0f24-57f4-4c0c-b468-bb4fe6b7dff1",
+    "id": "1dd4346b-a620-465a-95e5-3b81b808b369",
+    "agent": "blobot-synthetic-copyup50",
+    "status": "running",
+    "workspaces": [
+      "/private/tmp/blobot-copyup50-y64mYY/synthetic-worktree"
+    ]
+  },
+  "workerExit": {
+    "code": 0,
+    "stderr": ""
+  },
+  "minimumObservedSpace": "20876996608",
+  "guest": {
+    "kernel": "7.0.12",
+    "arch": "arm64",
+    "bootId": "94cf412f-45f0-4ecf-b250-a70baa27df11",
+    "workerPid": 284,
+    "dockerBefore": [
+      {
+        "pid": 106,
+        "comm": "dockerd",
+        "start": "67"
+      },
+      {
+        "pid": 113,
+        "comm": "containerd",
+        "start": "91"
+      }
+    ],
+    "dockerAfter": [],
+    "freeze": {
+      "relative": "/docker/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7",
+      "scope": "/sys/fs/cgroup/docker/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7",
+      "maintenance": "/sys/fs/cgroup/docker/blobot-maintenance50-435e0f24-57f4-4c0c-b468-bb4fe6b7dff1",
+      "events": "populated 1\nfrozen 1\n"
+    },
+    "probe": {
+      "namespace": "mnt:[4026532464]",
+      "rootMount": "72 71 0:29 / / rw,relatime - overlay overlay rw,lowerdir=/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/1:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/2:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/3:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/4:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/5:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/6:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/7:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/8:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/9:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/10:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/11:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/12:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/13:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/14:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/15,upperdir=/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/0/upper,workdir=/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/0/work,uuid=on,nouserxattr",
+      "runMount": "80 72 0:52 / /run rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "viewMounts": [
+        "87 80 0:29 / /run/blobot-control50-435e0f24-57f4-4c0c-b468-bb4fe6b7dff1/root rw,relatime - overlay overlay rw,lowerdir=/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/1:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/2:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/3:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/4:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/5:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/6:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/7:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/8:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/9:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/10:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/11:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/12:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/13:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/14:/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/15,upperdir=/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/0/upper,workdir=/run/bundles/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7/mounts/0/work,uuid=on,nouserxattr"
+      ],
+      "result": {
+        "paths": {
+          "write": "/.rock/metadata.yaml",
+          "parent": "/.rock",
+          "chmod": "/etc/issue",
+          "delete": "/etc/issue.net",
+          "directory": "/usr/share/doc",
+          "untouched": "/etc/debian_version"
+        },
+        "uid": 0,
+        "gid": 0,
+        "before": {
+          "write": {
+            "mode": 33188,
+            "uid": 0,
+            "gid": 0,
+            "size": 179,
+            "mtimeNs": 1786957474000000000,
+            "atimeNs": 1786957474000000000,
+            "ctimeNs": 1786957474000000000,
+            "ino": 16140901064495858000,
+            "dev": 29,
+            "nlink": 1,
+            "blocks": 8,
+            "statx": {
+              "attributes": 16,
+              "attributesMask": 2109492
+            },
+            "getflags": {
+              "errno": 25,
+              "error": "Inappropriate ioctl for device"
+            },
+            "fsgetxattr": {
+              "errno": 25,
+              "error": "Inappropriate ioctl for device"
+            },
+            "xattrs": {},
+            "sha256": "c551207ecde90465fc493029ead1a881c1ab8bfd5ad52fe799137a14c856579f"
+          },
+          "parent": {
+            "mode": 16877,
+            "uid": 0,
+            "gid": 0,
+            "size": 52,
+            "mtimeNs": 1786957474000000000,
+            "atimeNs": 1786957474000000000,
+            "ctimeNs": 1786957474000000000,
+            "ino": 16140901064495858000,
+            "dev": 29,
+            "nlink": 2,
+            "blocks": 8,
+            "statx": {
+              "attributes": 16,
+              "attributesMask": 2109492
+            },
+            "getflags": {
+              "errno": 25,
+              "error": "Inappropriate ioctl for device"
+            },
+            "fsgetxattr": {
+              "errno": 25,
+              "error": "Inappropriate ioctl for device"
+            },
+            "xattrs": {}
+          },
+          "chmod": {
+            "mode": 33188,
+            "uid": 0,
+            "gid": 0,
+            "size": 24,
+            "mtimeNs": 1776674791000000000,
+            "atimeNs": 1776674791000000000,
+            "ctimeNs": 1776674791000000000,
+            "ino": 17293822569102705000,
+            "dev": 29,
+            "nlink": 1,
+            "blocks": 8,
+            "statx": {
+              "attributes": 16,
+              "attributesMask": 2109492
+            },
+            "getflags": {
+              "errno": 25,
+              "error": "Inappropriate ioctl for device"
+            },
+            "fsgetxattr": {
+              "errno": 25,
+              "error": "Inappropriate ioctl for device"
+            },
+            "xattrs": {},
+            "sha256": "547700963039ce6e3779f128ec369b54f8559db50e9d20fa39459f5b5b7434de"
+          },
+          "delete": {
+            "mode": 33188,
+            "uid": 0,
+            "gid": 0,
+            "size": 17,
+            "mtimeNs": 1776674791000000000,
+            "atimeNs": 1776674791000000000,
+            "ctimeNs": 1776674791000000000,
+            "ino": 17293822569102705000,
+            "dev": 29,
+            "nlink": 1,
+            "blocks": 8,
+            "statx": {
+              "attributes": 16,
+              "attributesMask": 2109492
+            },
+            "getflags": {
+              "errno": 25,
+              "error": "Inappropriate ioctl for device"
+            },
+            "fsgetxattr": {
+              "errno": 25,
+              "error": "Inappropriate ioctl for device"
+            },
+            "xattrs": {},
+            "sha256": "685128090d9f69663f4c48e865f719bfd888c01002ee6d6454fed3f417ded1d9"
+          },
+          "directory": {
+            "mode": 16877,
+            "uid": 0,
+            "gid": 0,
+            "size": 304,
+            "mtimeNs": 1787749581000000000,
+            "atimeNs": 1787749581000000000,
+            "ctimeNs": 1787749581000000000,
+            "ino": 2305843009213699600,
+            "dev": 29,
+            "nlink": 1,
+            "blocks": 8,
+            "statx": {
+              "attributes": 16,
+              "attributesMask": 2109492
+            },
+            "getflags": {
+              "errno": 25,
+              "error": "Inappropriate ioctl for device"
+            },
+            "fsgetxattr": {
+              "errno": 25,
+              "error": "Inappropriate ioctl for device"
+            },
+            "xattrs": {}
+          },
+          "untouched": {
+            "mode": 33188,
+            "uid": 0,
+            "gid": 0,
+            "size": 10,
+            "mtimeNs": 1776674791000000000,
+            "atimeNs": 1776674791000000000,
+            "ctimeNs": 1776674791000000000,
+            "ino": 17293822569102705000,
+            "dev": 29,
+            "nlink": 1,
+            "blocks": 8,
+            "statx": {
+              "attributes": 16,
+              "attributesMask": 2109492
+            },
+            "getflags": {
+              "errno": 25,
+              "error": "Inappropriate ioctl for device"
+            },
+            "fsgetxattr": {
+              "errno": 25,
+              "error": "Inappropriate ioctl for device"
+            },
+            "xattrs": {},
+            "sha256": "3c84b36be589a13576e4d54126a87ca950fe4b01716c42ef4ceb462e7445401c"
+          }
+        },
+        "operations": {
+          "openForWriteWithoutWriting": {
+            "ok": true
+          },
+          "appendBeforeExplicitImmutable": {
+            "ok": true
+          },
+          "setExplicitImmutable": {
+            "ok": true
+          },
+          "appendWithExplicitImmutable": {
+            "errno": 1,
+            "error": "Operation not permitted"
+          },
+          "unlinkWithExplicitImmutable": {
+            "errno": 1,
+            "error": "Operation not permitted"
+          },
+          "clearExplicitImmutable": {
+            "ok": true
+          },
+          "sameModeChmodFile": {
+            "ok": true
+          },
+          "sameModeChmodDirectory": {
+            "ok": true
+          },
+          "unlinkBaseFile": {
+            "ok": true
+          }
+        },
+        "checks": {
+          "appendActuallyChangedBytes": true,
+          "untouchedExactSnapshot": true,
+          "openWithoutWritePreservesComparedMetadata": true,
+          "restoredBytesAndComparedMetadata": true,
+          "recreatedBytesAndComparedMetadata": true
+        },
+        "afterOpenWithoutWrite": {
+          "mode": 33188,
+          "uid": 0,
+          "gid": 0,
+          "size": 179,
+          "mtimeNs": 1786957474000000000,
+          "atimeNs": 1786957474000000000,
+          "ctimeNs": 1788651522293076500,
+          "ino": 16140901064495858000,
+          "dev": 29,
+          "nlink": 1,
+          "blocks": 8,
+          "statx": {
+            "attributes": 0,
+            "attributesMask": 3160180
+          },
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "xattrs": {},
+          "sha256": "c551207ecde90465fc493029ead1a881c1ab8bfd5ad52fe799137a14c856579f"
+        },
+        "parentAfterChildOpen": {
+          "mode": 16877,
+          "uid": 0,
+          "gid": 0,
+          "size": 4096,
+          "mtimeNs": 1786957474000000000,
+          "atimeNs": 1786957474000000000,
+          "ctimeNs": 1788651522293076500,
+          "ino": 16140901064495858000,
+          "dev": 29,
+          "nlink": 1,
+          "blocks": 16,
+          "statx": {
+            "attributes": 0,
+            "attributesMask": 3160180
+          },
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "xattrs": {}
+        },
+        "afterAppend": {
+          "mode": 33188,
+          "uid": 0,
+          "gid": 0,
+          "size": 238,
+          "mtimeNs": 1788651522293353500,
+          "atimeNs": 1786957474000000000,
+          "ctimeNs": 1788651522293353500,
+          "ino": 16140901064495858000,
+          "dev": 29,
+          "nlink": 1,
+          "blocks": 8,
+          "statx": {
+            "attributes": 0,
+            "attributesMask": 3160180
+          },
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "xattrs": {},
+          "sha256": "8231b09c96ed6536e6af12f898a0eb7b9102fc6ef2bb3d27a2a37036ddfcfa5f"
+        },
+        "afterContentAndTimesRestored": {
+          "mode": 33188,
+          "uid": 0,
+          "gid": 0,
+          "size": 179,
+          "mtimeNs": 1786957474000000000,
+          "atimeNs": 1786957474000000000,
+          "ctimeNs": 1788651522293497300,
+          "ino": 16140901064495858000,
+          "dev": 29,
+          "nlink": 1,
+          "blocks": 8,
+          "statx": {
+            "attributes": 0,
+            "attributesMask": 3160180
+          },
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "xattrs": {},
+          "sha256": "c551207ecde90465fc493029ead1a881c1ab8bfd5ad52fe799137a14c856579f"
+        },
+        "withExplicitImmutable": {
+          "mode": 33188,
+          "uid": 0,
+          "gid": 0,
+          "size": 179,
+          "mtimeNs": 1786957474000000000,
+          "atimeNs": 1786957474000000000,
+          "ctimeNs": 1788651522293721900,
+          "ino": 16140901064495858000,
+          "dev": 29,
+          "nlink": 1,
+          "blocks": 16,
+          "statx": {
+            "attributes": 16,
+            "attributesMask": 3160180
+          },
+          "getflags": {
+            "flags": 524304
+          },
+          "fsgetxattr": {
+            "xflags": 8,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "xattrs": {},
+          "sha256": "c551207ecde90465fc493029ead1a881c1ab8bfd5ad52fe799137a14c856579f"
+        },
+        "withExplicitImmutableAfterAttempts": {
+          "mode": 33188,
+          "uid": 0,
+          "gid": 0,
+          "size": 179,
+          "mtimeNs": 1786957474000000000,
+          "atimeNs": 1786957474000000000,
+          "ctimeNs": 1788651522293721900,
+          "ino": 16140901064495858000,
+          "dev": 29,
+          "nlink": 1,
+          "blocks": 16,
+          "statx": {
+            "attributes": 16,
+            "attributesMask": 3160180
+          },
+          "getflags": {
+            "flags": 524304
+          },
+          "fsgetxattr": {
+            "xflags": 8,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "xattrs": {},
+          "sha256": "c551207ecde90465fc493029ead1a881c1ab8bfd5ad52fe799137a14c856579f"
+        },
+        "afterImmutableReverted": {
+          "mode": 33188,
+          "uid": 0,
+          "gid": 0,
+          "size": 179,
+          "mtimeNs": 1786957474000000000,
+          "atimeNs": 1786957474000000000,
+          "ctimeNs": 1788651522293773000,
+          "ino": 16140901064495858000,
+          "dev": 29,
+          "nlink": 1,
+          "blocks": 8,
+          "statx": {
+            "attributes": 0,
+            "attributesMask": 3160180
+          },
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "xattrs": {},
+          "sha256": "c551207ecde90465fc493029ead1a881c1ab8bfd5ad52fe799137a14c856579f"
+        },
+        "afterSameModeChmodFile": {
+          "mode": 33188,
+          "uid": 0,
+          "gid": 0,
+          "size": 24,
+          "mtimeNs": 1776674791000000000,
+          "atimeNs": 1776674791000000000,
+          "ctimeNs": 1788651522293773000,
+          "ino": 17293822569102705000,
+          "dev": 29,
+          "nlink": 1,
+          "blocks": 8,
+          "statx": {
+            "attributes": 0,
+            "attributesMask": 3160180
+          },
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "xattrs": {},
+          "sha256": "547700963039ce6e3779f128ec369b54f8559db50e9d20fa39459f5b5b7434de"
+        },
+        "afterSameModeChmodDirectory": {
+          "mode": 16877,
+          "uid": 0,
+          "gid": 0,
+          "size": 4096,
+          "mtimeNs": 1787749581000000000,
+          "atimeNs": 1787749581000000000,
+          "ctimeNs": 1788651522293852000,
+          "ino": 2305843009213699600,
+          "dev": 29,
+          "nlink": 1,
+          "blocks": 8,
+          "statx": {
+            "attributes": 0,
+            "attributesMask": 3160180
+          },
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "xattrs": {}
+        },
+        "afterUnlink": {
+          "errno": 2,
+          "error": "No such file or directory"
+        },
+        "afterRecreateIdenticalBytesAndTimes": {
+          "mode": 33188,
+          "uid": 0,
+          "gid": 0,
+          "size": 17,
+          "mtimeNs": 1776674791000000000,
+          "atimeNs": 1776674791000000000,
+          "ctimeNs": 1788651522293852000,
+          "ino": 917553,
+          "dev": 29,
+          "nlink": 1,
+          "blocks": 8,
+          "statx": {
+            "attributes": 0,
+            "attributesMask": 3160180
+          },
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "xattrs": {},
+          "sha256": "685128090d9f69663f4c48e865f719bfd888c01002ee6d6454fed3f417ded1d9"
+        },
+        "untouchedAfter": {
+          "mode": 33188,
+          "uid": 0,
+          "gid": 0,
+          "size": 10,
+          "mtimeNs": 1776674791000000000,
+          "atimeNs": 1776674791000000000,
+          "ctimeNs": 1776674791000000000,
+          "ino": 17293822569102705000,
+          "dev": 29,
+          "nlink": 1,
+          "blocks": 8,
+          "statx": {
+            "attributes": 16,
+            "attributesMask": 2109492
+          },
+          "getflags": {
+            "errno": 25,
+            "error": "Inappropriate ioctl for device"
+          },
+          "fsgetxattr": {
+            "errno": 25,
+            "error": "Inappropriate ioctl for device"
+          },
+          "xattrs": {},
+          "sha256": "3c84b36be589a13576e4d54126a87ca950fe4b01716c42ef4ceb462e7445401c"
+        },
+        "completed": true,
+        "cleanup": {
+          "sampleContentRestored": true,
+          "explicitImmutableAbsent": true,
+          "baseBackingNotRestored": true
+        }
+      }
+    },
+    "originalMountNamespaceUnchanged": true,
+    "completed": true,
+    "thaw": {
+      "events": "populated 1\nfrozen 0\n",
+      "membership": "0::/docker/e96188e69aa1c4b2d0787dacb04912282dd7071f9c016f3253a267dec0b9efb7",
+      "maintenanceRemoved": true
+    }
+  },
+  "passed": true
+}

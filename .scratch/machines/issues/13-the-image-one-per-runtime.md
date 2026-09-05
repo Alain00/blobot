@@ -635,3 +635,17 @@ inherited lower-layer immutable bit remain distinct observations; none authorize
 metadata exception. Fixtures are cleaned and sbx is available. The implementation checkpoint
 is `65ec602`; the author-facing decision round on the existing inner-fence owner is now open
 at [Where the boundary goes](04-where-the-boundary-goes.md). This image ticket remains claimed.
+
+### Guest protocol checkpoint — 2026-09-06
+
+[The guest protocol](../research/51-guest-state-protocol.md) now implements the
+bounded, ordered peer for the existing host relay, with independent wire checks,
+backend restoration verification and disposal on failure. Its 14 new tests pass;
+full core is 989 passed / 47 skipped, with typechecks and core build passing.
+The actual filesystem/maintenance backend and full migration remain unfinished.
+
+[Overlay copy-up](../research/50-overlay-copy-up-and-base-attributes.md) confirms
+that the measured image-backed immutable observation does not prevent ordinary
+mutation, while explicitly set upper immutable does. Rewriting also changes
+ancestor-directory representation. Selective restoration is being investigated;
+no unknown-attribute exception or production gate removal is adopted here.

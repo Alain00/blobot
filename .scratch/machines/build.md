@@ -823,3 +823,18 @@ runtime accepts it. Preserve messages until guest readiness before shipping that
 Continue the already claimed image ticket's full-state worker/preservation gate, then finish
 operational UI. Neither a mock resource editor nor the scoped network proof closes that gate.
 The disclosure ticket was committed as `5b4b46c`. No new question is pending.
+
+## 2026-09-06 — guest state protocol checkpoint
+
+[The guest protocol](research/51-guest-state-protocol.md) implements the other
+side of the three-tree relay, including ordering, bounded frames, backpressure,
+independent digests and cleanup. Full core is 989 passed / 47 skipped; core
+typecheck/build and desktop typecheck pass. Filesystem restoration remains an
+injected contract. No actual full-state migration or activation is claimed.
+
+[Copy-up research](research/50-overlay-copy-up-and-base-attributes.md) verifies
+the different behavior of base-backed and explicit upper inode flags, including
+ancestor changes. Continue the claimed image ticket's restoration work before
+enabling CPU/RAM replacement. Selective GNU tar extraction is under investigation.
+The user reiterated that network filtering is a later effort and asked for a
+simple, organized, understandable and minimal UI consistent with the current site.

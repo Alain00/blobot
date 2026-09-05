@@ -62,6 +62,11 @@ amended, and it is not to be worked around quietly.
 
 ## Notes
 
+**Design direction, 2026-09-06 (Guillermo).** Be meticulous about design: simple,
+organized, understandable and minimal, respecting the site's existing design.
+Use the current components and patterns; reveal operational details only where
+they help. This supplements DESIGN.md and the claimed Machine-screen ticket.
+
 **Resumed after main integration, 2026-09-05 (Guillermo).** The author said “continua” after
 the validated merge `1167d61`. The requested pause is complete; continue the entire Machines
 goal, starting with the claimed image ticket's complete-state preservation work. The merged
