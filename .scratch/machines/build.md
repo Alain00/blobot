@@ -282,3 +282,21 @@ Machines feature being ready, or use the upcoming research as permission to swit
 Implementation committed as **`5d2edd9`**. After that commit, the author-requested research pair
 and dependent reevaluation were created under the map's next-session priority. They remain
 open and unclaimed; neither research nor the grill was run, and no downstream plan was changed.
+
+## 2026-09-05 — engine comparison closed; implementation resumes next session
+
+The research pair was completed with bounded synthetic Mac fixtures and committed as `7afa57d`.
+The author's subsequent engine/workload decision is recorded in
+[Reevaluate the first Machine engine with the measured trade-offs](issues/22-reevaluate-the-first-machine-engine.md#answer).
+All three comparison tickets are now resolved. The map's **Engine review complete** note is the
+current continuation order; the research-first handoff and priority above are historical.
+
+The author requested commit and handoff before the next implementation task. Only planning and
+research artifacts changed in this follow-up; no production code changed, no implementation
+ticket was claimed, and no application test/build result is newly claimed. The lifecycle and
+detection closure above remains the authoritative implementation checkpoint, including its
+closed activation guards. **Still no Agent runs in Docker through blobot.**
+
+Research fixture cleanup was verified: no disposable sbx Machines or labeled Engine fixtures
+remain, and the pre-existing Engine containers were left unchanged. Neither shared daemon was
+stopped or reconfigured for the comparison. No real provider login or paid inference was used.

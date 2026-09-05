@@ -88,6 +88,14 @@ before resuming the older numeric frontier. Their findings unblock
 Only the author's decision there can change the engine or remaining plan. This priority changes
 no other ticket's status, scope or dependencies. No comparison research was started on creation.
 
+**Engine review complete, 2026-09-05 (Guillermo).** The research pair and human reevaluation
+are resolved. [Reevaluate the first Machine engine with the measured trade-offs](issues/22-reevaluate-the-first-machine-engine.md)
+records the author's decision and the remaining validation boundaries. Resume box implementation
+at [Where a Workspace lives when the Machine is not this one](issues/05-where-a-workspace-lives.md),
+before the independent local inner-fence work. This supersedes the research-first priority above;
+the next session claims the implementation ticket before working it. Implementation was deferred
+to that session at the author's request.
+
 **Domain.** blobot is a local-first Electron desktop app that assembles teams from the coding
 agents a user already has installed. It provides no inference, stores no credentials and provides
 no infrastructure. `CLAUDE.md` has the permanent architectural rules and `CONTEXT.md` the
@@ -200,6 +208,7 @@ none is discarded, and the destination is unchanged:
 - [Detection, and its remedies, when the runtime is not on this computer](issues/08-detection-and-remedies-per-machine.md): four states with engine/Agent subjects, awake-only guest probes, fresh checks after remedies and no login inference from exit; Machine-screen and real runtime-image activation remain with their existing tickets.
 - [Docker Engine and sbx: isolation, network access and product constraints](issues/21-engine-isolation-egress-and-product.md): researched the shared-kernel versus per-Agent microVM boundary, nested Docker, egress and setup/login/distribution costs; no engine choice or trust change, with unverified guarantees explicit in the evidence.
 - [Docker Engine and sbx: lifecycle, persistence and resource costs](issues/20-engine-lifecycle-persistence-and-costs.md): native Engine update/reuse/inspection and sbx copy costs investigated and fixture-tested on Mac; full-Agent performance remains unmeasured, and engine selection belongs to the human reevaluation.
+- [Reevaluate the first Machine engine with the measured trade-offs](issues/22-reevaluate-the-first-machine-engine.md): author confirms sbx and general-purpose Machines with guest sudo and private Docker/Compose; resume the existing box implementation without an Engine migration.
 
 Query the issue status and blocking lines for the current frontier; the former recharting
 snapshot is superseded by the interface's resolution.

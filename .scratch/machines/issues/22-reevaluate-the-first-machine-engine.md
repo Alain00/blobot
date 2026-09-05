@@ -1,5 +1,5 @@
 Type: grilling
-Status: claimed
+Status: resolved
 Blocked by: 20, 21
 
 # Reevaluate the first Machine engine with the measured trade-offs
@@ -66,3 +66,42 @@ The answer determines the next comparison: a hardened container for a narrower w
 or the costs and boundary of a private nested Docker environment. Then decide whether a
 shared Linux kernel is acceptable, settle any necessary deployment conditions, and obtain
 the author's final engine choice. Do not record an answer or migrate on the author's behalf.
+
+## Answer
+
+### 2026-09-05 — author confirms continuing with sbx
+
+After the comparison and recommendation, Guillermo explicitly asked to close the research and
+reevaluation tickets, resume implementation where it stopped, and confirmed that **each Agent
+may use sudo and run its own Docker and Compose inside its Machine**. This answers the pending
+workload question and approves **continue Docker Sandboxes through sbx**, not a switch to vanilla
+Docker Engine. The research pair is already resolved; this closes the human decision too.
+
+The trade-off accepted is a general-purpose development Machine with a per-Agent microVM and
+private Docker, rather than narrowing the workload to obtain Engine's simpler container
+lifecycle. Engine's native limit updates and volume reuse remain real advantages; reproducing
+the current isolation and egress boundary around private nested Docker would require additional
+work. The reasoning and measured costs remain in the two linked research artifacts, not here.
+Existing implementation effort alone is not the reason to retain sbx.
+
+The current Machine, credential, host-access and egress boundaries remain binding. Guest sudo
+is a capability, not permission to use host sudo, expose the host Docker socket, or silently
+change runtime approval modes. Passwordless guest sudo and a private Docker/Compose environment
+are requirements for the image ticket; the Agent process still starts as UID 1000.
+
+This choice does not certify the remaining product implementation. In particular, production
+distribution/pinning and real CLI login remain subject to their existing validation gates.
+The lifecycle research's persistence inventory must be applied to the image: the two currently
+copied trees do not establish preservation of packages installed elsewhere or inner-Docker
+state. Resolve those concrete guarantees before claiming replacement preserves the whole
+Machine. No additional host mounts, credentials, or migration are authorized by this decision.
+
+Resume the box implementation with **Where a Workspace lives when the Machine is not this one**,
+then the image and other activation dependencies in the map. The independent local inner-fence
+decision remains open and is not a reason to delay the box spine. Preserve existing staged
+lifecycle/detection work and activation guards. Any genuinely unanswered choice encountered
+during implementation goes to the author through grill-with-docs.
+
+The author then deferred that implementation to the next session and requested commit/handoff.
+No new implementation ticket was claimed and no production code changed in this closure.
+No new ADR or glossary change is needed: this reaffirms the existing engine and Machine meaning.

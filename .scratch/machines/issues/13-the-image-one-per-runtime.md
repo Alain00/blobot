@@ -451,3 +451,14 @@ The fallback identity's domain is `05` §9's `.invalid`, not `.local`. And the 6
 install's, not the env var's: the bridge package pulls two bundled `claude` binaries, and
 `CLAUDE_CODE_EXECUTABLE` only chooses which CLI runs (`research/08` §5); this ticket asks how the
 image installs the bridge without them.
+
+## Implementation input, 2026-09-05 — engine reevaluation closed
+
+[Reevaluate the first Machine engine with the measured trade-offs](22-reevaluate-the-first-machine-engine.md#answer)
+settles guest sudo and private Docker/Compose as required capabilities while retaining sbx.
+Read that resolution before revisiting the base/daemon alternatives above. This ticket remains
+open: the image still needs its contents and persistence guarantees implemented and verified.
+Before designing replacement, use the persistent-state inventory in
+[Lifecycle, persistence and resource costs](../research/16-engine-lifecycle-persistence-and-costs.md):
+home/workspace copying alone does not preserve system package changes or the private daemon's
+data. Do not label those covered by the existing synthetic two-volume test.
