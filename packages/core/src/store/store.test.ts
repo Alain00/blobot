@@ -8,6 +8,7 @@ import type { Agent, Team } from '../orchestrator/domain.js';
 import type { Routine, RoutineOutcome, Schedule } from '../routines/domain.js';
 import { Orchestrator } from '../orchestrator/orchestrator.js';
 import type { AgentRuntime } from '../runtime.js';
+import { PICTURE_LIMIT } from '../pictures.js';
 import { openDatabase, type OpenedDatabase } from './database.js';
 import { SqliteRecorder } from './recorder.js';
 import { SqliteStore } from './sqlite-store.js';
@@ -588,7 +589,13 @@ describe('what a turn leaves behind', () => {
       turnBudget: 10,
       createdAt: 0,
     });
-    expect(store.logOfTeam('team_2')).toEqual({ running: [], tools: [], turns: [], compactions: [] });
+    expect(store.logOfTeam('team_2')).toEqual({
+      running: [],
+      tools: [],
+      turns: [],
+      compactions: [],
+      pictures: [],
+    });
   });
 });
 
@@ -1234,5 +1241,50 @@ describe('dictation settings', () => {
     store.saveDictationSettings({ ...store.dictationSettings(), enabled: false, at: 6 });
     expect(store.dictationSettings().enabled).toBe(false);
     expect(store.dictationSettings().measuredRtf).toBe(0.12);
+  });
+});
+
+/**
+ * A Picture's bytes, and the one place they are decided about.
+ *
+ * The measuring is the store's rather than an adapter's on purpose: what the bytes are has one
+ * answer whatever runtime asked, so no two runtimes can disagree about what blobot will draw.
+ */
+describe('keeping a picture', () => {
+  const PNG = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64',
+  );
+
+  it('measures the bytes and hands back an id, never the runtime word for what they are', () => {
+    const kept = store.keepPicture({ agentId: alice.id, source: 'observed', data: PNG, at: 5 });
+    expect(kept).toEqual({ pictureId: expect.any(String), width: 1, height: 1, bytes: PNG.byteLength });
+    const back = 'pictureId' in kept ? store.picture(kept.pictureId) : undefined;
+    expect(back?.mimeType).toBe('image/png');
+    expect(Buffer.from(back?.data ?? new Uint8Array())).toEqual(PNG);
+  });
+
+  it('says its bytes did not arrive whole for a file that stopped early', () => {
+    const kept = store.keepPicture({
+      agentId: alice.id,
+      source: 'observed',
+      data: PNG.subarray(0, 12),
+      at: 5,
+    });
+    expect(kept).toEqual({ notDrawn: 'unreadable', bytes: 12 });
+  });
+
+  it('refuses one past the ceiling without reading it', () => {
+    const kept = store.keepPicture({
+      agentId: alice.id,
+      source: 'observed',
+      data: new Uint8Array(PICTURE_LIMIT + 1),
+      at: 5,
+    });
+    expect(kept).toEqual({ notDrawn: 'too_large', bytes: PICTURE_LIMIT + 1 });
+  });
+
+  it('has nothing to fetch for an id nothing wrote, which is the replay case', () => {
+    expect(store.picture('pic_nothing')).toBeUndefined();
   });
 });

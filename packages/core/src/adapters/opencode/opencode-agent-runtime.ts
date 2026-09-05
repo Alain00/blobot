@@ -12,6 +12,7 @@ import type {
   AvailableCommand,
   PermissionHandler,
   PermissionOption,
+  PictureStore,
   Prompt,
   RuntimeLifecycle,
   RuntimeOptionChoices,
@@ -20,6 +21,7 @@ import type {
 } from '../../runtime.js';
 import { applyOptionChoices, optionGroupsFrom } from '../acp/config-options.js';
 import { JsonRpcConnection, type LineTransport } from '../acp/jsonrpc.js';
+import { PictureWatch } from '../acp/pictures.js';
 import { commandsFrom, stopReasonOf, translateSessionUpdate } from '../acp/session-updates.js';
 import { withTarget } from '../acp/target.js';
 import { ACCEPTS_NOTHING, acceptsOf, contentBlockOf } from '../acp/attachments.js';
@@ -104,6 +106,11 @@ export interface OpencodeAgentRuntimeOptions {
   /** Injected in tests: a transport that speaks the protocol without spawning anything. */
   readonly spawn?: SpawnOpencode;
   readonly onStderr?: (line: string) => void;
+  /**
+   * Where a Picture's bytes go. Absent is a runtime with nowhere to put one, which is reported
+   * as such rather than dropped: `.scratch/agent-media/10`.
+   */
+  readonly pictures?: PictureStore;
 }
 
 /**
@@ -125,6 +132,7 @@ export class OpencodeAgentRuntime implements AgentRuntime {
   readonly #eventListeners = new Set<(event: AgentEvent) => void>();
   readonly #lifecycleListeners = new Set<(lifecycle: RuntimeLifecycle) => void>();
   readonly #commandListeners = new Set<(commands: readonly AvailableCommand[]) => void>();
+  readonly #pictures: PictureWatch;
 
   #sessionId = '';
   #lifecycle: RuntimeLifecycle = 'created';
@@ -145,6 +153,7 @@ export class OpencodeAgentRuntime implements AgentRuntime {
   constructor(options: OpencodeAgentRuntimeOptions) {
     this.agentId = options.agentId;
     this.#options = options;
+    this.#pictures = new PictureWatch(options.pictures);
     this.#clock = options.clock ?? new SystemClock();
     this.#spawn = options.spawn ?? spawnOpencode;
     this.#agentKey = agentKeyFor(options.agentName ?? options.agentId);
@@ -535,6 +544,11 @@ export class OpencodeAgentRuntime implements AgentRuntime {
     // Where ACP says which paths a call is about, that is the title. OpenCode's own title for
     // a file call is the absolute path with its leading slash gone, which said the same work
     // very differently from Claude's workspace-relative one.
+    // OpenCode sends a picture canonically **and** as a `data:` URL of its own in
+    // `rawOutput.attachments[]`. The canonical block already covers it, so that path is
+    // deliberately not read: a second reader here would draw every screenshot twice.
+    for (const picture of this.#pictures.from(update, this.agentId, this.#clock.now()))
+      this.#emit(picture);
     for (const event of translateSessionUpdate(update))
       this.#emit(withTarget(event, update, this.#options.cwd));
   }

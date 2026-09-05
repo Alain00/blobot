@@ -12,6 +12,7 @@ import type {
   AvailableCommand,
   PermissionHandler,
   PermissionOption,
+  PictureStore,
   Prompt,
   RuntimeLifecycle,
   RuntimeOptionChoices,
@@ -22,6 +23,7 @@ import { DEFAULT_TRUST, type TrustLevel } from '../../trust.js';
 import { ACCEPTS_NOTHING, acceptsOf, contentBlockOf } from '../acp/attachments.js';
 import { applyOptionChoices, optionGroupsFrom } from '../acp/config-options.js';
 import { JsonRpcConnection, type LineTransport } from '../acp/jsonrpc.js';
+import { PictureWatch } from '../acp/pictures.js';
 import { commandsFrom, stopReasonOf, translateSessionUpdate } from '../acp/session-updates.js';
 import { withTarget } from '../acp/target.js';
 import type {
@@ -104,6 +106,11 @@ export interface FxAgentRuntimeOptions {
   /** Injected in tests: a transport that speaks the protocol without spawning anything. */
   readonly spawn?: SpawnFx;
   readonly onStderr?: (line: string) => void;
+  /**
+   * Where a Picture's bytes go. Absent is a runtime with nowhere to put one, which is reported
+   * as such rather than dropped: `.scratch/agent-media/10`.
+   */
+  readonly pictures?: PictureStore;
 }
 
 /**
@@ -126,6 +133,7 @@ export class FxAgentRuntime implements AgentRuntime {
   readonly #eventListeners = new Set<(event: AgentEvent) => void>();
   readonly #lifecycleListeners = new Set<(lifecycle: RuntimeLifecycle) => void>();
   readonly #commandListeners = new Set<(commands: readonly AvailableCommand[]) => void>();
+  readonly #pictures: PictureWatch;
 
   #sessionId = '';
   #lifecycle: RuntimeLifecycle = 'created';
@@ -160,6 +168,7 @@ export class FxAgentRuntime implements AgentRuntime {
   constructor(options: FxAgentRuntimeOptions) {
     this.agentId = options.agentId;
     this.#options = options;
+    this.#pictures = new PictureWatch(options.pictures);
     this.#clock = options.clock ?? new SystemClock();
     this.#spawn = options.spawn ?? spawnFx;
   }
@@ -538,6 +547,14 @@ export class FxAgentRuntime implements AgentRuntime {
 
     if (this.#replaying) return;
     if (notification.sessionId !== this.#sessionId) return;
+    // fx stringifies the whole tool result into a text block and cuts it at 200 characters,
+    // mid-base64, saying nothing. There is no reader for that and there deliberately is not one:
+    // deciding a truncated fragment inside prose was a picture is a heuristic, and a heuristic
+    // that misfires draws `not drawn` over an ordinary sentence an agent wrote, which is a false
+    // claim in the transcript whose job is to be accurate. Open on `.scratch/agent-media/10`
+    // until somebody measures whether that block carries a reliable marker.
+    for (const picture of this.#pictures.from(update, this.agentId, this.#clock.now()))
+      this.#emit(picture);
     for (const event of translateSessionUpdate(update))
       this.#emit(
         withoutVerbOnMcp(

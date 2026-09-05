@@ -8,6 +8,7 @@ export type {
   AgentMessageSent,
   AgentThoughtDelta,
   ContextCompacted,
+  PictureArrived,
   StopReason,
   ToolCallStarted,
   ToolCallStatus,
@@ -19,15 +20,23 @@ export type {
 
 export { sameCommands } from './commands.js';
 
+/** A Picture, and every way one fails to be on screen. `.scratch/agent-media/`. */
+export type { PictureNotDrawn, PictureSource, PictureMeasurement } from './pictures.js';
+export { PICTURE_LIMIT, measurePicture, pictureNotDrawnBecause } from './pictures.js';
+
 export type {
   AgentRuntime,
   AvailableCommand,
+  KeptPicture,
   PeerMessageAck,
   PeerMessageCall,
   PeerMessageHandler,
   PermissionHandler,
   PermissionOption,
   PermissionRequest,
+  PictureContent,
+  PictureKept,
+  PictureStore,
   Prompt,
   RuntimeLifecycle,
   RuntimeOptionChoices,

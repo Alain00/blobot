@@ -5,6 +5,8 @@ import type {
   AttachmentSupport,
   CompactionSetting,
   Message,
+  PictureNotDrawn,
+  PictureSource,
   RoutineOutcome,
   Schedule,
   StopReason,
@@ -349,6 +351,28 @@ export interface UiLog {
   readonly turns: readonly UiTurnLog[];
   /** Sessions blobot replaced, or decided to keep. Ticket 10. */
   readonly compactions: readonly UiCompaction[];
+  /** Pictures an agent showed, and the ones that could not be shown. */
+  readonly pictures: readonly UiPicture[];
+}
+
+/**
+ * One Picture as a restored transcript rebuilds it.
+ *
+ * The record and never the bytes: the pane asks for one picture at a time by id, the way a chip
+ * asks for an attachment, because an agent decides how many Pictures a transcript has. A row with
+ * `notDrawn` set has no bytes anywhere -- nothing was kept -- and this event is the only record
+ * that it happened at all.
+ */
+export interface UiPicture {
+  readonly agentId: string;
+  readonly at: number;
+  readonly source: PictureSource;
+  readonly pictureId?: string;
+  readonly notDrawn?: PictureNotDrawn;
+  readonly toolName?: string;
+  readonly name?: string;
+  readonly writtenAt?: number;
+  readonly turnStartedAt?: number;
 }
 
 /**
@@ -1145,6 +1169,8 @@ export interface BlobotApi {
    * picture, and for an id nothing wrote.
    */
   attachmentUrl(id: string): Promise<string | undefined>;
+  /** One Picture's bytes, for the pane about to draw it. Undefined for an id nothing wrote. */
+  pictureUrl(id: string): Promise<string | undefined>;
   /**
    * The window of transcript above the one the pane is holding.
    *

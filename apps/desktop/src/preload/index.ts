@@ -68,6 +68,7 @@ const api: BlobotApi = {
     >,
   attachmentUrl: (id) =>
     ipcRenderer.invoke('blobot:attachmentUrl', id) as Promise<string | undefined>,
+  pictureUrl: (id) => ipcRenderer.invoke('blobot:pictureUrl', id) as Promise<string | undefined>,
   /**
    * A dropped file's path.
    *

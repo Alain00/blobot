@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { PanelRight, PanelRightClose } from 'lucide-react';
 import { Agents } from './components/Agents.js';
 import { Composer } from './components/Composer.js';
 import { Conversation } from './components/Conversation.js';
-import { Feed } from './components/Feed.js';
+import { Details } from './components/Details.js';
 import { ComposerFooter, HandbookNotice } from './components/Handbook.js';
 import { Navigator } from './components/Navigator.js';
 import { NewTeam } from './components/NewTeam.js';
@@ -12,7 +11,6 @@ import { Routines } from './components/Routines.js';
 import { Settings } from './components/Settings.js';
 import { DeleteTeam, EditTeam } from './components/TeamEdits.js';
 import { initialState, itemsFor, paneAfterSnapshot, reduce, type Pane } from './model.js';
-import { useFeedVisible } from './useFeedVisible.js';
 import { useWorkspaces } from './useWorkspaces.js';
 import { useRailWidth } from './useRailWidth.js';
 import { useDictation } from './useDictation.js';
@@ -82,7 +80,6 @@ export function App(): React.JSX.Element {
   const rail = useRailWidth();
   /** The composer floats over the transcript; this keeps the transcript's last line clear of it. */
   const convRoom = useComposerRoom();
-  const feed = useFeedVisible();
 
   /**
    * The team these streams are allowed to be about.
@@ -274,7 +271,8 @@ export function App(): React.JSX.Element {
   // than as it was when it was built.
   oldest.current = state.oldest;
   /**
-   * Where each agent's work is. Local git follows the feed, so the count moves as the agents do;
+   * Where each agent's work is. Local git follows the settled log, so the count moves as the
+   * agents do;
    * GitHub is asked on opening the team and on the user's own refresh, and never on a timer.
    *
    * Read up here, above every early return, because this component has two of them — no
@@ -396,7 +394,7 @@ export function App(): React.JSX.Element {
       <div
         className="vA"
         style={{
-          gridTemplateColumns: `${rail.width}px minmax(0,1fr)${feed.visible ? ' 288px' : ''}`,
+          gridTemplateColumns: `${rail.width}px minmax(0,1fr)`,
         }}
       >
         <Rail
@@ -472,19 +470,21 @@ export function App(): React.JSX.Element {
                     turn budget spent · continue
                   </button>
                 )}
-                <button
-                  className="paneltoggle"
-                  onClick={feed.toggle}
-                  title={feed.visible ? 'Hide activity' : 'Show activity'}
-                  aria-label={feed.visible ? 'Hide activity' : 'Show activity'}
-                  aria-pressed={feed.visible}
-                >
-                  {feed.visible ? (
-                    <PanelRightClose size={16} aria-hidden />
-                  ) : (
-                    <PanelRight size={16} aria-hidden />
-                  )}
-                </button>
+                {/* Where the activity column's toggle stood, and the same two blocks behind
+                    it: the column is gone and `CONTEXT` and `WORKSPACE` are read on purpose
+                    now rather than watched. */}
+                <Details
+                  agents={snapshot.agents}
+                  usage={state.usage}
+                  injection={state.injection}
+                  handbooks={state.handbooks}
+                  workspaces={pane.kind === 'team' ? workspaces.statuses : []}
+                  looking={workspaces.looking}
+                  onRefreshWorkspaces={workspaces.refresh}
+                  onPublish={publish}
+                  onPlan={plan}
+                  startOpen={opened.get('screen') === 'details'}
+                />
                 {/* The budget is per prompt and the pips fill as the team spends it, so it
                     belongs above the transcript it is being spent in. */}
                 <span className="budget">
@@ -563,21 +563,6 @@ export function App(): React.JSX.Element {
                 })}
           />
         </div>
-        {feed.visible && (
-          <Feed
-            entries={state.feed}
-            agents={snapshot.agents}
-            usage={state.usage}
-            injection={state.injection}
-            handbooks={state.handbooks}
-            pane={pane}
-            workspaces={pane.kind === 'team' ? workspaces.statuses : []}
-            looking={workspaces.looking}
-            onRefreshWorkspaces={workspaces.refresh}
-            onPublish={publish}
-            onPlan={plan}
-          />
-        )}
         {editingTeam !== undefined && (
           <EditTeam
             team={editingTeam}

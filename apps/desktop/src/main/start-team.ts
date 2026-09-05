@@ -177,6 +177,9 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
         },
       ],
       onStderr: (line) => log(`[runtime:${agent.id}] ${line}`),
+      // The store measures the bytes and decides whether there is anything to draw, so no two
+      // runtimes can disagree about what blobot will keep. `.scratch/agent-media/06`.
+      pictures: { keep: (picture) => store.keepPicture(picture) },
     });
     runtime.onLifecycleChange((lifecycle) => {
       log(`[${agent.id}] ${lifecycle}`);

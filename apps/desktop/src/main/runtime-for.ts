@@ -13,6 +13,7 @@ import {
   codexCeiling,
   opencodeCeiling,
   type AgentRuntime,
+  type PictureStore,
   type TrustLevel,
 } from '@blobot/core';
 
@@ -39,6 +40,11 @@ export interface RuntimeRequest {
     readonly headers?: readonly { readonly name: string; readonly value: string }[];
   }[];
   readonly onStderr: (line: string) => void;
+  /**
+   * Where a Picture's bytes go. Handed in here rather than reached for, so `packages/core` still
+   * has no idea SQLite exists and a test can count Pictures without a database.
+   */
+  readonly pictures?: PictureStore;
 }
 
 /**
@@ -63,6 +69,7 @@ export function runtimeFor(request: RuntimeRequest): AgentRuntime {
     ...(request.trust === undefined ? {} : { trust: request.trust }),
     mcpServers: request.mcpServers,
     onStderr: request.onStderr,
+    ...(request.pictures === undefined ? {} : { pictures: request.pictures }),
   };
   switch (request.runtimeId) {
     case 'claude-code':

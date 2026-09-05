@@ -497,7 +497,7 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
     // The gauge is a persisted fact, so it is drawn while the team is still coming up: what
     // these agents were carrying when they were last awake is what they will resume with.
     usage: store?.lastUsageOfTeam(team.id) ?? {},
-    log: store?.logOfTeam(team.id) ?? { running: [], tools: [], turns: [], compactions: [] },
+    log: store?.logOfTeam(team.id) ?? { running: [], tools: [], turns: [], compactions: [], pictures: [] },
     // Read while the processes are still coming up, like the roster and the transcript: a
     // Handbook is a persisted fact and nothing about it waits on a session.
     handbooks: store === undefined ? {} : handbooksOf(store, team.id, records),
@@ -636,7 +636,7 @@ function snapshot(): UiSnapshot {
       commands: {},
       usage: {},
       handbooks: {},
-      log: { running: [], tools: [], turns: [], compactions: [] },
+      log: { running: [], tools: [], turns: [], compactions: [], pictures: [] },
       injection: {},
       messages: [],
       answers: [],
@@ -1237,6 +1237,19 @@ void app.whenReady().then(async () => {
   ipcMain.handle('blobot:attachmentUrl', (_event, id: string) => {
     const found = (current()?.orchestrator.store ?? store)?.attachment(id);
     return found === undefined ? undefined : dataUrlOf(found);
+  });
+
+  // One Picture's bytes, asked for by the pane about to draw it. The snapshot carries the record
+  // and never the picture: an agent decides how many Pictures a transcript has, so carrying them
+  // would put every screenshot of the session through here on every team switch.
+  ipcMain.handle('blobot:pictureUrl', (_event, id: string) => {
+    // The one store, not the team's: the orchestrator holds a `MessageStore & AttachmentStore`
+    // and pictures are deliberately not on it. Nothing an agent can reach knows this table
+    // exists, which is `.scratch/agent-media/02`'s invariant and has a test named for it.
+    const found = store?.picture(id);
+    return found === undefined
+      ? undefined
+      : `data:${found.mimeType};base64,${Buffer.from(found.data).toString('base64')}`;
   });
   ipcMain.handle('blobot:resume', () => current()?.orchestrator.resumeAfterBudget());
 

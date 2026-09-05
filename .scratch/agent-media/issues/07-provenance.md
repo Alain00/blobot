@@ -176,3 +176,22 @@ The observed frame loses its arrival clause. It said *received during this turn*
 drawn inside the turn it arrived in already says that by where it sits. What remains is the one
 fact the reader cannot get from looking: which tool it came out of, and that it is not the other
 kind.
+
+## Amendment, 2026-09-05: an observed Picture has no line at all
+
+From the author against the first live run, and it is this ticket's own amendment applied one
+step further than the ticket applied it. The observed frame was `from <tool>`. On screen that read
+`from Read File`, and it is **not provenance**: it is the runtime's prose title for a call whose
+own fold is on screen directly above the picture, so the line was repeating something already
+visible rather than adding a defeater. *If the reader can see it, blobot does not say it* cuts it.
+
+What this gives up is worth stating plainly, because it is this ticket's subject. An observed
+Picture now carries **nothing measured**. That is honest rather than a loss: with `annotations`
+stripped by every bridge ticket 01 measured, `lastModified` -- the protocol's own answer to the
+age question -- was already gone, and a tool's name weighs no claim about the world. The frame was
+poor on purpose and it turns out the poorest honest version of it is empty.
+
+*The two frames must never draw the same* survives and is stronger for it: one carries a sentence
+and the other carries none, which is a wider gap than a name against a name. And the ticket's
+governing finding is untouched -- the fact that decides the map is **whether the file was written
+during this turn**, which only a *shown* Picture can answer, and that line is unchanged.

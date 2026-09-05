@@ -668,7 +668,9 @@ function Row({
               {...(hue === undefined ? {} : { hue })}
               {...(shape === undefined ? {} : { shape })}
             />
-            <span className="who">{status.agentName}</span>
+            <span className="who" title={status.agentName}>
+              {status.agentName}
+            </span>
           </>
         )}
         <span
@@ -682,7 +684,9 @@ function Row({
           ) : (
             <>
               <GitBranch size={11} aria-hidden />
-              {short(status.branch)}
+              {/* Its own element rather than a bare text node, so the panel's rows can clamp it:
+                  an anonymous flex item cannot be given an ellipsis. */}
+              <span className="b">{short(status.branch)}</span>
             </>
           )}
         </span>

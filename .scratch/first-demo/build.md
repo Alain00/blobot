@@ -3880,3 +3880,12 @@ two gestures the right way round. The badge used to remove on any press, argued 
 inside a small target is a mis-click on the destructive half* — which is the argument **for** this
 arrangement once there are two things to do here, not against it: the press that is easy to hit is
 the one that changes nothing you cannot see.
+
+**The name step draws the team, and it is the way back.** Up to four faces overlapped at the head
+of the field, then `+N`, and pressing them returns to question one with the field as it was left.
+Two reasons, and the second is the one that made it worth the pixels: a name is easier to choose
+while looking at who it is for, and a two-step flow with no way back is a flow you restart by
+pressing Escape and starting again. The stack is the transcript's, halo and all -- four
+drop-shadows of the surface's own ground rather than a border, because a blobatar is a silhouette
+and a rounded outline would cut its edge. Four rather than three, because these are 20px against a
+field rather than 11px inside a folder.

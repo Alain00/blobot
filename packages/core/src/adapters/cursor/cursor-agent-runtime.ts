@@ -11,6 +11,7 @@ import type {
   AvailableCommand,
   PermissionHandler,
   PermissionOption,
+  PictureStore,
   Prompt,
   RuntimeLifecycle,
   RuntimeOptionChoices,
@@ -21,6 +22,7 @@ import { DEFAULT_TRUST, type TrustLevel } from '../../trust.js';
 import { ACCEPTS_NOTHING, acceptsOf, contentBlockOf } from '../acp/attachments.js';
 import { applyOptionChoices, optionGroupsFrom } from '../acp/config-options.js';
 import { JsonRpcConnection, type LineTransport } from '../acp/jsonrpc.js';
+import { PictureWatch } from '../acp/pictures.js';
 import { commandsFrom, stopReasonOf, translateSessionUpdate } from '../acp/session-updates.js';
 import { withTarget } from '../acp/target.js';
 import type {
@@ -98,6 +100,11 @@ export interface CursorAgentRuntimeOptions {
   /** Injected in tests: a transport that speaks the protocol without spawning anything. */
   readonly spawn?: SpawnCursor;
   readonly onStderr?: (line: string) => void;
+  /**
+   * Where a Picture's bytes go. Absent is a runtime with nowhere to put one, which is reported
+   * as such rather than dropped: `.scratch/agent-media/10`.
+   */
+  readonly pictures?: PictureStore;
 }
 
 /**
@@ -130,6 +137,7 @@ export class CursorAgentRuntime implements AgentRuntime {
   readonly #eventListeners = new Set<(event: AgentEvent) => void>();
   readonly #lifecycleListeners = new Set<(lifecycle: RuntimeLifecycle) => void>();
   readonly #commandListeners = new Set<(commands: readonly AvailableCommand[]) => void>();
+  readonly #pictures: PictureWatch;
 
   #sessionId = '';
   #lifecycle: RuntimeLifecycle = 'created';
@@ -149,6 +157,7 @@ export class CursorAgentRuntime implements AgentRuntime {
   constructor(options: CursorAgentRuntimeOptions) {
     this.agentId = options.agentId;
     this.#options = options;
+    this.#pictures = new PictureWatch(options.pictures);
     this.#clock = options.clock ?? new SystemClock();
     this.#spawn = options.spawn ?? spawnCursor;
     this.#configDir = options.configDir ?? defaultCursorConfigDir(options.agentId);
@@ -536,6 +545,8 @@ export class CursorAgentRuntime implements AgentRuntime {
     if (notification.sessionId !== this.#sessionId) return;
     // No MCP-verb correction is needed here: Cursor types MCP tool calls `kind: "other"`
     // itself, measured on a real loopback call — the same answer fx gave and Codex did not.
+    for (const picture of this.#pictures.from(update, this.agentId, this.#clock.now()))
+      this.#emit(picture);
     for (const event of translateSessionUpdate(update))
       this.#emit(withTarget(event, update, this.#options.cwd));
   }

@@ -246,6 +246,10 @@ export async function createDemoTeam(
         // Ticket 03's tool, wired for the same reason: without it a scripted write comes back
         // `blobot_record_entry failed`, which is the mock reporting an unattached handler.
         recordEntry: (call) => orchestrator.handleRecordEntry(call),
+        // The demo's own store, so a scripted picture is measured and refused by exactly the
+        // code a real runtime's goes through. A mock with a kinder path would be the thing
+        // ticket 08 says a mock must never be.
+        pictures: { keep: (picture) => store.keepPicture(picture) },
         script: script.alice,
       }),
     ],
@@ -261,6 +265,7 @@ export async function createDemoTeam(
         // handler and not a refusal blobot ever makes.
         proposeRoutine: (call) => orchestrator.handleProposeRoutine(call),
         recordEntry: (call) => orchestrator.handleRecordEntry(call),
+        pictures: { keep: (picture) => store.keepPicture(picture) },
         script: script.bob,
       }),
     ],

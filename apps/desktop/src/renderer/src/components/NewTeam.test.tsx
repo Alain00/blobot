@@ -268,6 +268,19 @@ describe('where they work', () => {
     );
   });
 
+  it('draws who it is for, and goes back to them on a press', async () => {
+    const host = await named('checkout');
+    expect(host.querySelectorAll('.pickback .stack > span')).toHaveLength(1);
+
+    await act(async () => {
+      (host.querySelector('.pickback') as HTMLButtonElement).click();
+    });
+
+    // Back on the first question, with the field as it was left.
+    expect(naming(host)).toBe(false);
+    expect(chips(host)).toEqual(['Alice']);
+  });
+
   it('will not create a team with no name', async () => {
     const host = await named('');
     expect((host.querySelector('.pickgo') as HTMLButtonElement).disabled).toBe(true);

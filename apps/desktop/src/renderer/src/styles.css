@@ -163,7 +163,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* `minmax(0,1fr)` on the row and `min-height:0` on the column are what make `.stream`
    scroll: a grid item's automatic minimum is its content, so without them the conversation
    grows the row past the viewport instead of overflowing inside it. */
-.vA{position:relative;flex:1;display:grid;grid-template-columns:232px minmax(0,1fr) 288px;grid-auto-rows:minmax(0,1fr);min-height:0;overflow:hidden}
+.vA{position:relative;flex:1;display:grid;grid-template-columns:232px minmax(0,1fr);grid-auto-rows:minmax(0,1fr);min-height:0;overflow:hidden}
 /* THE FLANKS.
    `--ground` is the reading surface and nothing else: the transcript, and the transcript alone.
    Everything either side of it is chrome, so both sides sit one step up, on the plane the
@@ -178,14 +178,12 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    the blobatars live and a darker ground under a face is more contrast for it, not less.
    The hairlines stay either way: the tone says *different plane*, the line says *edge*.
 
-   TO TRY THE RAIL ALONE: drop `.vA .feed` from the two selectors below. Everything else here
-   is scoped to `.rail`, so nothing else needs touching. */
-.vA .rail,.vA .feed{background:var(--recessed)}
-/* Nothing else moves, which is the other argument for going down. Every lifted surface inside a
-   flank — Search at the head of the rail, a selected row, the highlighted feed row, the gauge's
-   open row, the workspace row's hover — is still `--raised`, and its gap widened from nine
-   levels to thirteen instead of collapsing to five. The upward version needed a fifth surface
-   to buy that back. This one needs none. */
+   The activity column was the other flank until 2026-09-05; the rail is the only one now. */
+.vA .rail{background:var(--recessed)}
+/* Nothing else moves, which is the other argument for going down. Every lifted surface inside the
+   flank — Search at the head of the rail, a selected row — is still `--raised`, and its gap
+   widened from nine levels to thirteen instead of collapsing to five. The upward version needed
+   a fifth surface to buy that back. This one needs none. */
 /* A column in two parts: the list, which scrolls, and the doors at its foot, which do not.
    The rail itself stopped being the scroll container when the doors moved down here — a place
    that is not about any team must not be at the far end of every team. */
@@ -603,48 +601,36 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .suggest [cmdk-item][data-selected='true']{background:var(--ground)}
 .suggest .r{color:var(--muted);font-size:12px;margin-left:auto}
 .hint{font-family:var(--mono);font-size:10.5px;color:var(--muted);white-space:nowrap}
-.vA .feed{overflow:auto;padding:0 0 14px}
-/* The column's head stays put while the log scrolls under it. Opaque on the column's own
-   ground, no radius, no shadow and no translucency: it is chrome the log passes beneath, not
-   a card floating on top of it, which is the distinction between this and the pinned rail
-   group DESIGN.md rejects. `padding-top` moved off `.feed` and onto here, so the head keeps
-   its 14px whether it is resting or pinned.
+/* The panel behind the chrome's gauge glyph: `CONTEXT` and `WORKSPACE`, and nothing else.
 
-   The ceiling is what stops it eating the column: CONTEXT and WORKSPACE are one row per
-   agent, and an expanded `.sent` panel adds nine more, so a large roster would pin the entire
-   height and leave the log with nothing. Past the ceiling the head scrolls inside itself, and
-   `overscroll-behavior` keeps that scroll from continuing into the log underneath. */
-.feedtop{position:sticky;top:0;z-index:2;background:var(--recessed);padding-top:14px;max-height:min(60%,420px);overflow:auto;overscroll-behavior:contain}
-.feedhead{padding:0 14px 10px;display:flex;align-items:baseline;justify-content:space-between}
-/* An entry is two lines: when and who, then what happened under them.
+   `.wspop`'s ground, border, radius and shadow, because a third popover shape in one app would
+   be a third answer to a question already answered twice. The column's width, kept: both blocks
+   are one row per agent and their columns of figures were laid out against 288px. It scrolls
+   inside itself past a ceiling for the reason the column's head did — a six-agent roster with a
+   `sent` panel open is taller than the window.
 
-   It was one line of three columns, and in a 288px column that arithmetic does not work: the
-   time takes about 52px and a two-word agent name about 100, which leaves the event itself
-   around eleven characters. So every row with a real tool name on it broke mid-token and
-   clamped, and the log read as a column of fragments rather than as a list of events. The
-   stack costs nothing on those rows — they were already two lines — and gives the event the
-   column's whole width. The name still truncates rather than wrapping, for the roster whose
-   names are longer than the column however it is laid out. */
-.fev{display:flex;flex-direction:column;gap:1px;padding:5px 14px;font-family:var(--mono);font-size:11px;color:var(--muted)}
-.fev .line{display:flex;gap:8px;align-items:baseline;min-width:0}
-.fev .t{opacity:.5;flex:0 0 auto}
-.fev .who{color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-/* A tool is named after its command, and a command runs to six lines of `&&`. Two lines is
-   what the log can spend on one entry; the model has already flattened and cut it, this is the
-   guard for a long unbroken token. */
-.fev .what{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.fev.hi{background:var(--raised)}
-.feedempty{padding:2px 14px;font-size:11.5px;line-height:1.5;color:var(--muted);opacity:.6}
-/* The context gauge, at the head of the activity column. Occupancy is a value, so it is mono
+   Vertical padding only. The blocks inset their own rows by 6px so the highlight stops short of
+   the rule between them, exactly as they did in the column. */
+.detailspop{transform-origin:var(--radix-popper-transform-origin);animation:enterpop 140ms var(--ease-out);width:288px;max-width:calc(100vw - 24px);max-height:min(70vh,520px);overflow:auto;background:var(--raised);border:1px solid var(--line);border-radius:12px;padding:12px 0;box-shadow:0 10px 30px rgba(0,0,0,.45);z-index:20}
+/* The last block in the panel carries no rule and no gap: the panel's own edge is the end. */
+.detailspop > *:last-child{border-bottom:0;margin-bottom:0;padding-bottom:0}
+/* A hover ground of `--raised` on a `--raised` panel is no hover at all. `--tray` is the step
+   below it on the same ramp, so a row lifts *out* of the popover here where it lifts *off* the
+   recessed column — the same distance in the other direction, which is what keeps the gesture
+   reading the same. */
+.detailspop .ctxrow:hover,.detailspop .ctxrow[aria-expanded='true'],.detailspop .ws .wsrow:hover{background:var(--tray)}
+.detailspop .ctxrow[aria-expanded='true'] + .sent{background:var(--tray)}
+.detailsempty{padding:0 14px;font-size:11.5px;line-height:1.5;color:var(--muted);opacity:.6}
+/* The context gauge, first in the details panel. Occupancy is a value, so it is mono
    and monochrome: no bar, no fill, and nothing that turns a colour as it grows. The runtimes
    report it at different moments (one during a turn, one only at the end of it), so nothing
    here may move or otherwise claim to be live. */
 .ctx{padding:0 0 10px;border-bottom:1px solid var(--line);margin-bottom:10px}
 .ctxhead{padding:0 14px 6px}
-/* Inset like a rail row, not run to the column's edges: `margin:0 6px` with `8px` of padding
-   puts the text on the same 14px as the log below while the highlight stops short of the rule.
-   A band that touched both edges read as a section of the column rather than as one row in it,
-   which is the same reason the rail's rows are inset. */
+/* Inset like a rail row, not run to the panel's edges: `margin:0 6px` with `8px` of padding
+   puts the text on the same 14px as the head above it while the highlight stops short of the
+   rule. A band that touched both edges read as a section rather than as one row in it, which
+   is the same reason the rail's rows are inset. */
 .ctxrow{display:flex;gap:8px;padding:3px 8px;margin:0 6px;width:calc(100% - 12px);font-family:var(--mono);font-size:11px;color:var(--muted);align-items:center;text-align:left;cursor:pointer;border-radius:8px}
 .ctxrow:hover,.ctxrow[aria-expanded='true']{background:var(--raised)}
 /* The open row and its panel are one block. Held apart, the highlighted row read as the thing
@@ -1015,6 +1001,57 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* Prose, and the reason it is no longer a mono label: this is the one line that explains why
    an answer stopped, and uppercase mono with letter-spacing is the least readable setting on
    the page. The rules on either side are what make it a divider; the family never was. */
+/* ---------- a Picture ----------
+ * `.scratch/agent-media/08`: the picture, then one mono line, and nothing else.
+ *
+ * **Colour, the second yield.** DESIGN.md's governing rule says the blobatars are the only
+ * saturated thing on screen, and it already yields once for an attachment on a narrow reading:
+ * a file the user attached is their own content quoted back, not a signal blobot is emitting.
+ * This is the second, written just as narrowly. A Picture is a photograph of the user's own app
+ * taken inside a checkout of the user's own repository, and the functional half settles it on
+ * its own: the question is *how does my app look*, and a grey screenshot cannot answer it. An
+ * observed Picture is in colour too, on a rule and not a shrug -- colour must not carry
+ * provenance, when the two frames already carry the difference in words.
+ *
+ * It stops at the picture's edge: no coloured frame, no tint, no ring. And it does not animate. */
+/* Every Picture one agent showed in a turn, on one line. Wrapping rather than scrolling, because
+   a row that scrolls sideways hides pictures behind an edge, which is the thing this row exists
+   to stop happening vertically. */
+.picts{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px;margin:8px 0 0}
+/* **One height, and the width is the picture's own.** What a row needs is a constant frame, so
+   the reader compares contents rather than shapes -- but a constant *box* buys that with
+   letterboxing, and a tall screenshot in a wide box is a band of dead ground on either side,
+   which is the same waste in the other axis as the scroll this row exists to save. A constant
+   height gives the row its edge and costs nothing: every tile is the same weight, the portrait
+   one is simply narrow.
+
+   No crop and no letterbox, because neither is needed once the box stops being fixed. The
+   pictures are bounded by height, and by width only where one is so wide it would leave the
+   column, which is the case where a shorter tile is the honest answer.
+
+   Small on purpose: several at half a column still cost most of a screen. What a tile has to do
+   is say which picture this is, and full size is one click away. */
+.picts .pict{flex:0 0 auto;min-width:0;max-width:100%;margin:0}
+.picts .pict img{width:auto;height:auto;max-height:140px;max-width:100%;aspect-ratio:auto;object-fit:contain}
+.picts .pict .shim{width:180px;height:140px}
+.pict{margin:8px 0 0}
+/* Scaled to fit and never cropped: `contain`, not `cover`. A crop is the same defect as a
+   resize -- a wrong answer with no visible cause -- so a tall page screenshot is bounded by
+   height and shrinks rather than losing its bottom half. */
+.pict img{display:block;width:100%;height:auto;max-height:360px;object-fit:contain;object-position:left top;border-radius:4px;cursor:zoom-in}
+.pict .shim{display:block;width:100%;height:160px;border-radius:4px;background:var(--line)}
+/* The footnote, under the thing rather than over it, because it is not a title on it. It says
+   only what blobot measured and only what the reader cannot already see. */
+.pict .pline{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px}
+/* Full size, over the surface, and that is the whole of the control: no toolbar, no zoom, no
+   next and previous. This is not a gallery. */
+.pfull{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:32px;cursor:zoom-out}
+.pfull img{max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;cursor:zoom-out}
+/* The one case in this feature that is text alone, and the exception the rule implies rather
+   than one against it: blobot does not caption what the reader can see, and here there is
+   nothing to see. Not a `.sysline`, because no third party is in the room. */
+.pnone{font-family:var(--mono);font-size:11px;color:var(--muted);margin:2px 0}
+
 .sysline{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:11.5px}
 /* The time between sittings: centred like the sysline it sits among, but without its rules —
    two ruled lines in a row would read as one enclosure. */
@@ -1044,8 +1081,26 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* The field is the whole control: the agents already taken, the caret, and the way on. A row
    that wraps, because a team of six wraps and a field that scrolls sideways hides its own
    contents. */
-.navsheet.pickbar .pickfield{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:9px 9px 9px 13px;border-bottom:1px solid var(--line)}
-.navsheet.pickbar [cmdk-input],.navsheet.pickbar .pickinput{flex:1;min-width:110px;width:auto;background:transparent;border:0;outline:none;padding:4px 0;font-size:14px;color:var(--ink);border-bottom:0}
+/* The team, at the head of the name field, and the way back to changing it. The halo is four
+   drop-shadows of the sheet's own ground rather than a border, which is the transcript's rule
+   for the same stack and for the same reason: a blobatar is a silhouette and not a circle, so a
+   rounded outline would cut its edge, and `filter` follows the shape it is given. */
+.navsheet.pickbar .pickback{display:flex;align-items:center;gap:5px;flex:0 0 auto;padding:4px 2px 4px 0;color:var(--muted)}
+.navsheet.pickbar .pickback:hover{color:var(--ink)}
+.navsheet.pickbar .pickback .stack{display:inline-flex;align-items:center}
+.navsheet.pickbar .pickback .stack>span{margin-left:-7px;filter:drop-shadow(1.5px 0 0 var(--raised)) drop-shadow(-1.5px 0 0 var(--raised)) drop-shadow(0 1.5px 0 var(--raised)) drop-shadow(0 -1.5px 0 var(--raised))}
+.navsheet.pickbar .pickback .stack>span:first-child{margin-left:0}
+.navsheet.pickbar .pickback .mono{font-size:10px;letter-spacing:.04em}
+/* Bottom aligned, not centred: the caret is always on the last row, and the arrow is what the
+   caret is typing towards, so it belongs beside it rather than beside the middle of a stack of
+   badges. The input is given the buttons' own height so the two sit exactly level whether the
+   field has wrapped or not. */
+.navsheet.pickbar .pickfield{display:flex;align-items:flex-end;gap:6px;padding:9px 9px 9px 13px;border-bottom:1px solid var(--line)}
+/* What wraps. The arrow is the field's sibling rather than the last thing in the wrapping row,
+   so a team of seven pushes the badges onto a second line and the way out stays on the right
+   edge. */
+.navsheet.pickbar .pickitems{flex:1;min-width:0;display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.navsheet.pickbar [cmdk-input],.navsheet.pickbar .pickinput{flex:1;min-width:110px;width:auto;min-height:28px;background:transparent;border:0;outline:none;padding:4px 0;font-size:14px;color:var(--ink);border-bottom:0}
 .navsheet.pickbar [cmdk-input]::placeholder,.navsheet.pickbar .pickinput::placeholder{color:var(--muted)}
 /* An agent in the field is the face, the name and, on one of them, the word LEAD. Pressing the
    badge makes that agent the lead; the × takes them off and is revealed on hover, which is the
@@ -1662,11 +1717,27 @@ button.listrow:not(.pick):hover{outline:1px solid var(--line);outline-offset:-1p
 .wsrow{font-size:11.5px;color:var(--muted)}
 .ws .wsrow{padding:3px 8px;margin:0 6px;border-radius:8px}
 .ws .wsrow:hover{background:var(--raised)}
-/* Wraps rather than truncating. A branch name is the one thing here that cannot be recovered
-   by looking somewhere else on screen, so it gets the second line instead of an ellipsis. */
+/* Wraps rather than truncating, under an agent's own composer. A branch name is the one thing
+   there that cannot be recovered by looking somewhere else on screen, so it gets the second line
+   instead of an ellipsis. The panel's rows reverse this, below. */
 .wsfacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
 .wsfacts .who{color:var(--ink)}
 .wsbranch{display:inline-flex;align-items:center;gap:4px;color:var(--ink);word-break:break-all}
+/* **One line per agent, clamped**, in the panel only. *2026-09-05, at the author's direction,
+   reversing the wrap above for this half.* In a 288px panel the wrap is false about the shape of
+   the block: a two-word agent name pushed its own branch onto the line below, where it read as a
+   fourth agent with no face, and the list stopped being one row per agent — which is the claim
+   `CONTEXT` and this block are both laid out on. What answers the old rule instead is the
+   `title` on either half, carrying the full name and the full branch on hover, and the tray under
+   an agent's own composer, which stays unclamped and is where one branch is the whole subject. */
+.ws .wsfacts{flex-wrap:nowrap}
+.ws .wsfacts .who,.ws .wsbranch{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* The branch yields first. Both halves can shrink, but a name identifies the row and a branch
+   is already abbreviated by `short()`, so the squeeze is spent three to one on the half that
+   survives losing characters. A name long enough to need the room still gets it. */
+.ws .wsbranch{word-break:normal;flex-shrink:3}
+.ws .wsbranch .b{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ws .wsbranch svg,.ws .wsseg,.ws .wspr,.ws .wsrefresh,.ws .wsflat{flex:0 0 auto}
 /* Only when it really is a branch. The same slot says `checkout` or `a copy` where there is
    none, and that is a word blobot chose. */
 .wsbranch.named{font-family:var(--mono);font-size:11px}

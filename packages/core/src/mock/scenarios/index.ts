@@ -1,6 +1,20 @@
 import { Scenario, scenario, tool } from '../scenario.js';
 
 /**
+ * A one-pixel PNG, and a real one.
+ *
+ * The mock exists because a kind mock produces a UI that shatters on first contact with a real
+ * runtime, so the demo's picture is a file that actually decodes rather than a placeholder the
+ * measurement would have to be taught to forgive.
+ */
+const ONE_PIXEL = Uint8Array.from(
+  Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64',
+  ),
+);
+
+/**
  * The checked-in scenarios. These are what the tests assert against and what demo mode
  * plays. Being in the repo is the point: "does the app handle a runtime dying mid-turn?"
  * becomes a file rather than a memory.
@@ -560,6 +574,29 @@ export const writesItDown: Scenario = scenario('writes-it-down')
   .say('Written down. Remove any of it above if I have it wrong.')
   .end();
 
+/**
+ * A screenshot in the transcript, and the ugly half beside it.
+ *
+ * The happy case is one line of the story and it is not the one that needed a scenario: what a
+ * review has to be able to see is a picture that arrived and could not be shown, and a run of
+ * them, which is the case that would otherwise draw a column of identical apologies. So the turn
+ * has all three -- one drawn, one refused, and a burst that has to collapse to a count.
+ *
+ * The picture is a real one-pixel PNG rather than a placeholder, because the mock's whole reason
+ * for existing is that a kind mock produces a UI that shatters on first contact.
+ */
+export const showsAPicture: Scenario = scenario('shows-a-picture')
+  .say('Taking a look at the page now.')
+  .callTool('playwright_screenshot --url http://localhost:5173', 'other', { durationMs: 900 })
+  .picture('observed', { toolName: 'playwright_screenshot', data: ONE_PIXEL })
+  .say('The submit button is still on the old surface token.')
+  .callTool('playwright_screenshot --url http://localhost:5173/settings', 'other', { durationMs: 600 })
+  .picture('observed', { toolName: 'playwright_screenshot', notDrawn: 'unreadable' })
+  .picture('observed', { toolName: 'playwright_screenshot', notDrawn: 'unreadable' })
+  .picture('observed', { toolName: 'playwright_screenshot', notDrawn: 'unreadable' })
+  .say('The settings page would not come back cleanly. I will try it again after the rebuild.')
+  .end();
+
 export const scenarios = {
   'alice-asks-bob': aliceAsksBob,
   'bob-reviews': bobReviews,
@@ -574,6 +611,7 @@ export const scenarios = {
   'asks-before-deleting': asksBeforeDeleting,
   'schedules-itself': schedulesItself,
   'writes-it-down': writesItDown,
+  'shows-a-picture': showsAPicture,
   'advertises-commands': advertisesCommands,
   'loses-commands': losesCommands,
   'runs-out-of-room': runsOutOfRoom,

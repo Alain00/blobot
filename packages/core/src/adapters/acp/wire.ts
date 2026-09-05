@@ -122,6 +122,13 @@ export interface AvailableCommandWire {
 export interface ContentBlock {
   readonly type?: string;
   readonly text?: string;
+  /**
+   * Base64, on an `image` block. This is where the two halves of one protocol concept finally
+   * meet: `attachments.ts` has been emitting `{type:'image', mimeType, data}` outbound the whole
+   * time, and this type could not express what came back. `.scratch/agent-media/06`.
+   */
+  readonly data?: string;
+  readonly mimeType?: string;
 }
 
 export interface ToolContent {

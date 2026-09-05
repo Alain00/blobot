@@ -56,7 +56,7 @@ describe('a snapshot', () => {
     statuses: {},
     commands: {},
     usage: {},
-    log: { running: [], tools: [], turns: [], compactions: [] },
+    log: { running: [], tools: [], turns: [], compactions: [], pictures: [] },
     injection: {},
     handbooks: {},
     messages: [peerMessage],
@@ -95,7 +95,7 @@ describe('a snapshot', () => {
             },
           ],
           turns: [],
-          compactions: [],
+          compactions: [], pictures: [],
         },
       },
     });
@@ -108,6 +108,31 @@ describe('a snapshot', () => {
     expect(state.items).toMatchObject([
       { kind: 'peer', fromId: 'alice', toId: 'bob' },
       { kind: 'agent', agentId: 'bob', text: 'on it', live: false },
+    ]);
+  });
+
+  it('brings a picture back, and brings back the one that could not be drawn', () => {
+    // The second half is the one that matters: for a Picture that was not drawn, this event is
+    // the only record it ever happened, so losing it on a team switch would put the silent drop
+    // back one screen further along.
+    const state = reduce(initialState, {
+      type: 'snapshot',
+      snapshot: {
+        ...snapshot,
+        messages: [],
+        answers: [],
+        log: {
+          ...snapshot.log,
+          pictures: [
+            { agentId: 'alice', at: 20, source: 'observed', pictureId: 'pic_1' },
+            { agentId: 'alice', at: 21, source: 'observed', notDrawn: 'unreadable' },
+          ],
+        },
+      },
+    });
+    expect(state.items).toMatchObject([
+      { kind: 'picture', pictureId: 'pic_1' },
+      { kind: 'picture', notDrawn: 'unreadable' },
     ]);
   });
 
@@ -656,7 +681,7 @@ describe('a permission block', () => {
         statuses: {},
         commands: {},
         usage: {},
-        log: { running: [], tools: [], turns: [], compactions: [] },
+        log: { running: [], tools: [], turns: [], compactions: [], pictures: [] },
         injection: {},
         handbooks: {},
         messages: [],
@@ -864,7 +889,7 @@ describe('the context gauge', () => {
         statuses: {},
         commands: {},
         usage: { alice: { used: 37_000, size: 1_000_000 } },
-        log: { running: [], tools: [], turns: [], compactions: [] },
+        log: { running: [], tools: [], turns: [], compactions: [], pictures: [] },
         injection: {},
         handbooks: {},
         messages: [],
@@ -959,7 +984,7 @@ describe('the activity column, after a team switch', () => {
         },
       ],
       turns: [{ turnId: 'turn_1', agentId: 'alice', at: 20, stopReason: 'end_turn' }],
-      compactions: [],
+      compactions: [], pictures: [],
     });
     expect(state.feed.map((entry) => entry.text)).toEqual([
       'turn ended · end_turn',
@@ -982,7 +1007,7 @@ describe('the activity column, after a team switch', () => {
         },
       ],
       turns: [],
-      compactions: [],
+      compactions: [], pictures: [],
     });
     expect(state.feed[0]?.id).toBe('call_1:done');
   });
@@ -994,7 +1019,7 @@ describe('the activity column, after a team switch', () => {
       running: [],
       tools: [],
       turns: [{ turnId: 'turn_1', agentId: 'alice', at: 20, stopReason: 'max_tokens' }],
-      compactions: [],
+      compactions: [], pictures: [],
     });
     expect(state.items).toMatchObject([
       { kind: 'system', agentId: 'alice', text: 'turn stopped · the context window is full' },
@@ -1007,7 +1032,7 @@ describe('the activity column, after a team switch', () => {
       running: [],
       tools: [],
       turns: [{ turnId: 'turn_1', agentId: 'alice', at: 20, stopReason: 'end_turn' }],
-      compactions: [],
+      compactions: [], pictures: [],
     });
     expect(state.items).toEqual([]);
   });
@@ -1457,7 +1482,7 @@ describe('a restored transcript', () => {
         statuses: {},
         commands: {},
         usage: {},
-        log: { running: [], tools, turns: [], compactions: [] },
+        log: { running: [], tools, turns: [], compactions: [], pictures: [] },
         injection: {},
         handbooks: {},
         messages: [],
@@ -1545,7 +1570,7 @@ it('brings back a call that was in flight when the snapshot was read, and lets i
         ],
         tools: [],
         turns: [],
-        compactions: [],
+        compactions: [], pictures: [],
       },
       injection: {},
       handbooks: {},
@@ -1728,6 +1753,7 @@ describe('a session blobot replaced', () => {
               handoff: 'Migrating the old call sites.',
             },
           ],
+          pictures: [],
         },
       },
     });
@@ -1750,7 +1776,7 @@ describe('a turn a clock started', () => {
     statuses: {},
     commands: {},
     usage: {},
-    log: { running: [], tools: [], turns: [], compactions: [] },
+    log: { running: [], tools: [], turns: [], compactions: [], pictures: [] },
     injection: {},
     handbooks: {},
     answers: [],
@@ -1853,7 +1879,7 @@ describe('an agent that put itself on a schedule', () => {
     statuses: {},
     commands: {},
     usage: {},
-    log: { running: [], tools: [], turns: [], compactions: [] },
+    log: { running: [], tools: [], turns: [], compactions: [], pictures: [] },
     injection: {},
     handbooks: {},
     messages: [],
@@ -2078,5 +2104,149 @@ describe('which pane a snapshot leaves you in', () => {
     expect(
       paneAfterSnapshot({ open: { kind: 'team' }, arrived: true, roster, wanted: 'carol' }),
     ).toEqual({ kind: 'team' });
+  });
+});
+
+/**
+ * `.scratch/agent-media/10`. The defect this whole effort starts from is that blobot deletes a
+ * picture without saying so, so what these assert is that nothing is ever silent.
+ */
+describe('a picture', () => {
+  const arrived = (over: Partial<Extract<AgentEvent, { type: 'picture_arrived' }>>) =>
+    ({
+      type: 'picture_arrived' as const,
+      source: 'observed' as const,
+      at: 10,
+      ...identity,
+      ...over,
+    }) as AgentEvent;
+
+  it('is an item in the transcript, where there used to be nothing at all', () => {
+    const state = apply([arrived({ pictureId: 'pic_1', toolName: 'playwright_screenshot' })]);
+    expect(state.items).toHaveLength(1);
+    expect(state.items[0]).toMatchObject({
+      kind: 'picture',
+      pictureId: 'pic_1',
+      toolName: 'playwright_screenshot',
+    });
+  });
+
+  it('says it is not drawn, with the reason, rather than leaving a gap', () => {
+    const state = apply([arrived({ notDrawn: 'unreadable' })]);
+    expect(state.items[0]).toMatchObject({ kind: 'picture', notDrawn: 'unreadable' });
+  });
+
+  it('counts a screenshot loop instead of apologising four times', () => {
+    const state = apply([
+      arrived({ notDrawn: 'unreadable', at: 10 }),
+      arrived({ notDrawn: 'unreadable', at: 11 }),
+      arrived({ notDrawn: 'unreadable', at: 12 }),
+    ]);
+    expect(state.items).toHaveLength(1);
+    expect(state.items[0]).toMatchObject({ count: 3 });
+  });
+
+  it('keeps two reasons as two lines, because an averaged reason is not a reason', () => {
+    const state = apply([
+      arrived({ notDrawn: 'unreadable', at: 10 }),
+      arrived({ notDrawn: 'too_large', at: 11 }),
+    ]);
+    expect(state.items).toHaveLength(2);
+  });
+
+  it('never folds two pictures that were drawn, because they are different pictures', () => {
+    const state = apply([
+      arrived({ pictureId: 'pic_1', at: 10 }),
+      arrived({ pictureId: 'pic_2', at: 11 }),
+    ]);
+    expect(state.items).toHaveLength(2);
+  });
+
+  it('weighs the file against the turn rather than against the clock at draw time', () => {
+    // The fact that decides the map: a screenshot of a stale build presented as current. Both
+    // numbers travel on the event so a replay compares the same pair a live draw did.
+    const fresh = apply([arrived({ source: 'shown', pictureId: 'p', writtenAt: 90, turnStartedAt: 80 })]);
+    const stale = apply([arrived({ source: 'shown', pictureId: 'p', writtenAt: 70, turnStartedAt: 80 })]);
+    expect(fresh.items[0]).toMatchObject({ writtenThisTurn: true });
+    expect(stale.items[0]).toMatchObject({ writtenThisTurn: false });
+  });
+});
+
+/**
+ * A turn that takes four screenshots drew four column-width pictures with a name and a caption
+ * between each, and the answer they were taken for ended a screen and a half below the question.
+ */
+describe("a turn's pictures on one row", () => {
+  const shot = (id: string, agentId = 'alice', at = 1): Item => ({
+    kind: 'picture',
+    id,
+    at,
+    agentId,
+    source: 'observed',
+    pictureId: `pic_${id}`,
+  });
+  const missing = (id: string): Item => ({
+    kind: 'picture',
+    id,
+    at: 1,
+    agentId: 'alice',
+    source: 'observed',
+    notDrawn: 'unreadable',
+  });
+  const ran = (id: string, agentId = 'alice'): Item => ({
+    kind: 'tool',
+    id,
+    at: 1,
+    agentId,
+    title: 'read',
+    toolKind: 'read',
+    status: 'completed',
+  });
+
+  it('gathers two across the folds between them, and keeps the folds in order', () => {
+    // The observed shape: a run, a picture, another run, another picture. They are one turn and
+    // what stands between them is the turn's own demoted work.
+    const rows = rowsOf([
+      ran('t1'), ran('t2'), shot('p1'),
+      ran('t3'), ran('t4'), shot('p2'),
+    ]);
+    expect(rows.map((row) => row.kind)).toEqual(['steps', 'steps', 'pictures']);
+    const pictures = rows.at(-1) as Extract<Row, { kind: 'pictures' }>;
+    expect(pictures.items.map((item) => item.id)).toEqual(['p1', 'p2']);
+  });
+
+  it('leaves one picture alone, because half a column buys no scroll', () => {
+    const rows = rowsOf([ran('t1'), ran('t2'), shot('p1')]);
+    expect(rows.map((row) => row.kind)).toEqual(['steps', 'item']);
+  });
+
+  it('never gathers across something somebody said', () => {
+    // The window closes on prose. A row that moved a picture past a paragraph would be reordering
+    // the conversation rather than demoting the mechanics.
+    const rows = rowsOf([
+      ran('t1'), ran('t2'), shot('p1'),
+      // Past `CAPTION`, so it is something being explained rather than a caption on the call
+      // under it, and the fold lifts it out into the column where the reader can see it.
+      {
+        kind: 'agent',
+        id: 'm',
+        at: 1,
+        agentId: 'alice',
+        text: 'x'.repeat(300),
+        live: false,
+      },
+      ran('t3'), ran('t4'), shot('p2'),
+    ]);
+    expect(rows.filter((row) => row.kind === 'pictures')).toHaveLength(0);
+  });
+
+  it('never puts two agents under one face', () => {
+    const rows = rowsOf([ran('t1'), ran('t2'), shot('p1'), shot('p2', 'bob')]);
+    expect(rows.filter((row) => row.kind === 'pictures')).toHaveLength(0);
+  });
+
+  it('leaves a picture that could not be drawn out of it, because it is a sentence', () => {
+    const rows = rowsOf([ran('t1'), ran('t2'), shot('p1'), missing('p2')]);
+    expect(rows.filter((row) => row.kind === 'pictures')).toHaveLength(0);
   });
 });

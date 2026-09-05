@@ -1,4 +1,5 @@
 import type { StopReason, ToolKind } from '../events.js';
+import type { PictureNotDrawn, PictureSource } from '../pictures.js';
 import type { AvailableCommand, HandbookEntryInput } from '../runtime.js';
 
 /**
@@ -81,6 +82,26 @@ export type ScenarioStep =
       readonly code?: string;
       /** Whether the process is gone afterwards, or only this turn is lost. */
       readonly dies: boolean;
+    }
+  /**
+   * A Picture arrives, or does not and says why.
+   *
+   * The mock is a shipped demo mode and it is what the transcript was reviewed against, so it has
+   * to be able to reach the ugly cases as well as the happy one: two in a turn, one whose bytes
+   * will not decode, one the store would not take. `.scratch/live-steps/` was the last effort to
+   * find a review conducted against a mock that could not produce the case that mattered.
+   */
+  | {
+      readonly kind: 'picture';
+      readonly source: PictureSource;
+      readonly notDrawn?: PictureNotDrawn;
+      readonly toolName?: string;
+      readonly name?: string;
+      readonly width?: number;
+      readonly height?: number;
+      readonly bytes?: number;
+      /** The bytes, when the scenario wants a real picture on screen rather than a refusal. */
+      readonly data?: Uint8Array;
     }
   | { readonly kind: 'commands'; readonly commands: readonly AvailableCommand[] }
   | { readonly kind: 'end'; readonly stopReason: StopReason };
@@ -202,6 +223,38 @@ export class Scenario {
    */
   advertises(commands: readonly AvailableCommand[]): Scenario {
     return this.#with({ kind: 'commands', commands });
+  }
+
+  /**
+   * A Picture, drawn or refused.
+   *
+   * `data` is what makes the happy path real: the mock has no store, so the runtime keeps it in
+   * memory and hands the same id out, which is enough for a pane to draw one and exactly nothing
+   * more. Without `data` this is a refusal, which is the case worth scripting most.
+   */
+  picture(
+    source: PictureSource,
+    options: {
+      readonly notDrawn?: PictureNotDrawn;
+      readonly toolName?: string;
+      readonly name?: string;
+      readonly data?: Uint8Array;
+      readonly width?: number;
+      readonly height?: number;
+      readonly bytes?: number;
+    } = {},
+  ): Scenario {
+    return this.#with({
+      kind: 'picture',
+      source,
+      ...(options.notDrawn === undefined ? {} : { notDrawn: options.notDrawn }),
+      ...(options.toolName === undefined ? {} : { toolName: options.toolName }),
+      ...(options.name === undefined ? {} : { name: options.name }),
+      ...(options.data === undefined ? {} : { data: options.data }),
+      ...(options.width === undefined ? {} : { width: options.width }),
+      ...(options.height === undefined ? {} : { height: options.height }),
+      ...(options.bytes === undefined ? {} : { bytes: options.bytes }),
+    });
   }
 
   usage(used: number, size = 200_000, costUsd?: number): Scenario {

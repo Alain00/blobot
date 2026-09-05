@@ -352,6 +352,32 @@ export function NewTeam({
         ) : (
           <>
             <div className="pickfield">
+              {/* Who this is for, and the way back to changing it. The team being named is the
+                  answer to the question above, and a name is easier to choose while looking at
+                  it — so the faces are here rather than left behind on a step you can no longer
+                  see. Four, then a count: past four a row of faces stops identifying anybody and
+                  starts being a texture, and the number is the part that stays true. */}
+              <button
+                className="pickback"
+                onClick={() => setStage('who')}
+                title="Who is on this team"
+                aria-label="Who is on this team"
+              >
+                <span className="stack">
+                  {picked.slice(0, FACES).map((agent) => (
+                    <Blob
+                      key={agent.id}
+                      name={agent.name}
+                      size={20}
+                      {...(agent.hue === undefined ? {} : { hue: agent.hue })}
+                      {...(agent.shape === undefined ? {} : { shape: agent.shape })}
+                    />
+                  ))}
+                </span>
+                {picked.length > FACES && (
+                  <span className="mono">+{picked.length - FACES}</span>
+                )}
+              </button>
               <div className="pickitems">
               <input
                 className="pickinput"
@@ -480,6 +506,15 @@ function workspaceLine(inspection: UiWorkspaceInspection, repos: readonly string
 function basename(path: string): string {
   return path.replace(/\/+$/, '').split('/').pop() ?? '';
 }
+
+/**
+ * How many faces the name step draws before it counts instead.
+ *
+ * Four, which is the point at which a row of 20px faces stops identifying anybody and starts
+ * being a texture — the same reason the rail's mark stopped drawing them past three, one size
+ * up and against a folder rather than a field.
+ */
+const FACES = 4;
 
 /** One roster row's value in the list. Ids, so two agents called Alice are two rows. */
 function rowOf(agent: UiAgentProfile): string {

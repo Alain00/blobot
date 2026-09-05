@@ -671,6 +671,21 @@ problem, because four Handbooks do not fold into one the way four statuses fold 
   order**, because the case that matters is calls finishing out of order and nothing serial can
   spring that trap.
 
+- **The third column is gone, and its head is a popover.** 2026-09-05, at the author's direction.
+  The activity column carried a log of finished tool calls and ended turns under a pinned head of
+  `CONTEXT` and `WORKSPACE`. The log lost its reason the day before, when a settled call stopped
+  leaving the transcript: the turn's own fold holds it now, attributed and in place, so the column
+  was the same events listed a second time in a flank nobody reads while something is happening.
+  The head is what was worth keeping, and it is **not a column-shaped thing** — two blocks of one
+  row per agent, read on purpose rather than watched, which is a popover's shape and not worth a
+  fifth of the window. `components/Details.tsx` hangs it off one glyph in the chrome exactly where
+  the column's own toggle stood, on a press rather than the ring's hover, taking `.wspop`'s shape
+  and the column's 288px. `--screen=details` opens it at launch, because it is now a surface a
+  screenshot cannot click to. What is **not** removed is the model's `feed`: nothing draws it, and
+  `useWorkspaces` still reads local git off its length whenever something settles, which is the
+  cheapest honest signal that a worktree may have changed. DESIGN.md's activity-column entry is
+  rewritten rather than deleted, and the flanks rule now has one subject instead of two.
+
 Next: **the dictation done-when by hand** — a Spanish sentence with identifiers into a real
 agent, locally and through one provider (the `whisper-cli` workflow ran and its hashes are
 pinned; the engine's release URL is private for now, on `build.md`). Then **brief a real

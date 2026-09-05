@@ -99,6 +99,26 @@ Consequences you will keep bumping into:
   It licenses no coloured chrome, no coloured chips and no coloured icons, and it leaves the
   team icon and `RuntimeMark` exactly as they were — a vendor's logo is still greyed, because
   that is blobot choosing to put a brand on screen. See `.scratch/composer-attachments/`.
+- **A Picture an agent shows the user is drawn in colour too**, and this is the second time the
+  rule above yields rather than a widening of the first. It is written just as narrowly and on
+  the same half of the sentence: a Picture is a photograph of the user's own app, taken inside a
+  checkout of the user's own repository, so it is one step further from their hand than an
+  attachment and it is still not a signal blobot is emitting. The functional half settles it on
+  its own -- the whole question is *how does my app look*, and a grey screenshot of a UI does not
+  answer it, so desaturating it deletes the feature rather than strengthening the rule. **A
+  Picture blobot merely observed is in colour too**, on a rule and not a shrug: colour must not
+  carry provenance. Drawing one source saturated and the other grey would put a fact on the
+  colour channel, in an app where status is never colour and where the two frames already carry
+  the difference in words. It stops at the picture's edge -- no coloured frame, no tint, no ring.
+  See `.scratch/agent-media/08`.
+- **blobot does not caption what the reader can see.** Wider than pictures, and the author's own
+  rule: if a fact is visible in the thing itself, saying it beside the thing is noise dressed as
+  rigour. A Picture carries one mono line and it holds only what blobot *measured* and only what
+  the picture does not already show -- no dimensions, no byte size, no kind, no announcement that
+  a picture is a picture. `Attached.tsx`'s chip says a name and a size because a chip is a
+  stand-in for a file you cannot see; a Picture is a stand-in for nothing. The exception the rule
+  implies is a Picture that could **not** be drawn, which is text alone because there is nothing
+  to see.
 - **Contrast is the attention channel**, because colour is spoken for. Spend it almost never.
   There are two inversions in the whole app: `waiting` (the one state where an agent sits
   forever until a human looks) and an armed primary button.
@@ -107,7 +127,7 @@ Consequences you will keep bumping into:
 
 | Token | Value | What it is |
 |---|---|---|
-| `--recessed` | `#060608` | The flanks: the rail and the activity column. Below the page, never `#000`. |
+| `--recessed` | `#060608` | The flank: the rail. Below the page, never `#000`. *The activity column was the other one until 2026-09-05.* |
 | `--ground` | `#0a0a0b` | The reading surface: the transcript, and nothing else. |
 | `--tray` | `#0e0e10` | The bar tucked under the composer. |
 | `--raised` | `#131315` | Anything lifted: a bubble, a field, a menu, a selected row. |
@@ -138,7 +158,8 @@ narrows `--line` rather than removing it.* A shape that already sits on its own 
 already enclosed, and a border around it is the same statement drawn twice. Two plane steps and
 a stroke is how an interface starts looking like a form. What went, in one pass: the row above
 the transcript and its rule (the controls float over the ground now), the rail's and the
-activity column's edges against the transcript, the rule over the rail's three doors, the
+activity column's edges against the transcript (that column is gone; the pass is not), the
+rule over the rail's three doors, the
 composer's pill, the user's bubble, the Handbook notice above the composer, the tray under the
 composer, `.card` — the permission block and the Routine proposal — `.openerror`, and every
 `.btn` and `.iconbtn` in the app. Nothing moved and nothing changed plane; only the strokes
@@ -168,11 +189,12 @@ shape does not resize when the state arrives.
   is the channel-by-channel midpoint of its two neighbours, and the first value tried was `+4`,
   which everyone reads as *blue* rather than as a lifted grey. At this chroma a band says *this
   bar is a thing* and nothing more, which is the whole of what a surface may say next to a face.
-- **The flanks are recessed, and both of them are.** `--ground` is the surface you read on, so
-  the transcript has it and nothing else does; the rail and the activity column are chrome and
-  sit a step below it, on `--recessed`. Toning the rail alone was considered first and cannot
-  answer its own question: the activity column is exactly as much *not the transcript* as the
-  rail is, and dressing one side of a three-column window reads as an accident.
+- **The flank is recessed.** `--ground` is the surface you read on, so the transcript has it and
+  nothing else does; the rail is chrome and sits a step below it, on `--recessed`.
+  *Amended 2026-09-05: there was a second flank and there is one now.* The activity column was
+  toned with the rail on the argument that dressing one side of a **three**-column window reads
+  as an accident. That column came off, the window has two columns, and the argument's premise
+  went with it — the rule is unchanged and now has one subject.
 - **Down, not up, and the reason is the faces.** A lifted flank was built first and was wrong
   twice. It fights what the shape already says — a sidebar is the wall of the room, not
   something hovering over it — and it spends the tone in the direction that costs the blobatars
@@ -641,8 +663,11 @@ Every control descends from the composer. If you are adding one, start there.
   somebody. The panel **opens on hover** and holds **nothing but the rows** — a press is too much
   ceremony for a figure wanted in passing, and the three lines it shipped with, explaining where
   the handoff comes from and that nothing here is a limit, were the largest thing in it and true
-  every time. It takes no focus when it opens, because the caret belongs to the field. The figures are the activity column's own, out of one shared `usage.ts`, so the two
-  can never round differently.
+  every time. It takes no focus when it opens, because the caret belongs to the field. The
+  figures are the details panel's own, out of one shared `usage.ts`, so the two can never round
+  differently — and the two are not a duplicate, which is what survived the column: the ring
+  asks *how full is the window I am writing into*, the panel asks *how full is every window on
+  this team*.
 - **The composer's draft outlives the pane it was typed in, and nobody decided that.** There is
   one `Composer` for the whole app, so words typed at Alice are still in the field after a switch
   to another team, addressed to a stranger. It is recorded here so it is not mistaken for a
@@ -822,7 +847,7 @@ are narrow:
   anyway. If a user has to see the animation to understand what happened, the animation is
   doing a job that belongs to a word.
 - **Nothing on the paths that are walked all day.** Not the composer's `@mention` menu, not
-  pane switching, not the rail's hover colour, not the activity feed. Frequency is the
+  pane switching, not the rail's hover colour. Frequency is the
   disqualifier, not taste: a hundred small delays a day is a slow app.
 - **One exception, and it is the only one: a team opening.** The roster's box grows from
   nothing so the teams below slide out of the way instead of being shoved down between two
@@ -845,7 +870,7 @@ are narrow:
   mid-flight**, because A → B → C is an ordinary thing to do in a column of teams. And it obeys
   the rule below it: nothing is *learned* from it. The folder and the rows underneath already
   say what the roster is. Miss it, or ask for reduced motion, and you have lost nothing.
-- **Nothing that moves what the user is reading.** The transcript, the feed and the turn pips
+- **Nothing that moves what the user is reading.** The transcript and the turn pips
   are data, and data does not move for style. *The composer's context ring is the same rule and
   broke it for a day: its arc grew into place over 320ms, which is both a number animating for
   style and — since `usage_updated` arrives from a runtime while nobody is touching anything —
@@ -1135,9 +1160,26 @@ One flat file, one flat namespace, no build step between it and the DOM.
   started** — an agent finishing work you asked for is not unread, it is finished, and marking
   that would put a mark on almost every row within a day. Opening that agent's pane clears it,
   and nothing else does.
-- **The activity column** — the log. Tool calls and finished turns. Hideable from the chrome,
-  remembered. Never auto-collapses: it would reappear on the first tool call and shove the
-  conversation sideways mid-turn. At its head, `CONTEXT`: a row per agent with its face, its
+- **The details panel** — `CONTEXT` and `WORKSPACE`, behind one glyph in the chrome above the
+  transcript, where the activity column's own toggle stood.
+  ***Rewritten 2026-09-05 at the author's direction: the column is gone and the log went with
+  it.*** It was a docked third column, `--recessed`, 288px, hideable and remembered, with a log
+  of finished tool calls and ended turns under a pinned head. The log lost its reason on
+  2026-09-04, when a settled call stopped leaving the transcript: the fold in the turn holds it
+  now, attributed, in place, so the column was the same events listed a second time in a flank
+  nobody reads while something is happening. What was worth keeping is the head, and the head is
+  **not a column-shaped thing** — two blocks of one row per agent, read on purpose when a person
+  wants a figure, rather than watched. That is a popover's shape, and a fifth of the window is
+  the wrong price for it. **A press and not a hover**, unlike the composer's ring beside it: the
+  ring is one figure the pointer is already on, this is a panel whose rows open. It takes
+  `.wspop`'s ground, border, radius and shadow, because a third popover shape would be a third
+  answer to a question answered twice, and it keeps the column's 288px, because both blocks were
+  laid out against it. Rows hover to `--tray` here rather than `--raised`: on a raised panel the
+  old ground is no hover at all, so a row lifts *out* of the panel by the same step it lifted
+  *off* the recessed column. Both blocks withhold themselves rather than draw a header over
+  nothing, so the panel says in one muted line what will be there — the one thing worth carrying
+  over from the empty column.
+  `CONTEXT`: a row per agent with its face, its
   name, `used/size`, and the percent. *Amended 2026-08-30: the percent is of blobot's own
   **working ceiling**, not of the advertised window, and the ceiling is named beside it (`37k/1m
   · 12% · of 300k`).* The window a runtime reports answers when the turn hard-stops; it is the
@@ -1147,17 +1189,10 @@ One flat file, one flat namespace, no build step between it and the DOM.
   row says `past 300k` in words: a percentage over a hundred is not a fact about anything.
   Monochrome, no bar, no colour, and **it does not advise** — a ceiling is a fact about the
   model sitting next to a fact about the agent, never a suggestion to compact.
-  *Amended 2026-08-30: the column's head — the `ACTIVITY` label, `CONTEXT` and `WORKSPACE` — is
-  **pinned**, and the log scrolls under it.* Both blocks are one row per agent, so on a four-agent
-  team the log started below the fold, and reading it scrolled away the one figure on this column
-  a person watches *while* something is happening. **This is not the pinned rail group the column
-  above rejects.** That rejection is about a group of peers in one list: a team stuck to the edge
-  of the scrollport floats over the teams above and below it, and the rail is one list, so the
-  overlap reads as rank. This head is not a peer of the log — it is two labelled blocks that were
-  already above it, with a rule between, and it stays chrome by drawing as chrome: opaque on
-  `--recessed`, no radius, no shadow, no translucency, nothing that reads as a card. It carries
-  its own ceiling and scrolls inside itself past it, because a six-agent roster with a `sent`
-  panel open would otherwise pin the whole column and leave the log no room.
+  The two blocks keep the ceiling they were given when they were a pinned head: a six-agent
+  roster with a `sent` panel open is taller than the window, so the panel scrolls inside itself
+  past `min(70vh, 520px)`. That ceiling outlived the log it was measured against, because what it
+  is really about is the roster.
   *Added 2026-08-31:* a row opens to **what blobot put in there**, and a **Handbook is part of
   the persona rather than a fourth thing blobot injects**, so it draws as a sub-row under
   `persona` — `handbook`, then `your standing instructions`, in the order the persona composes
@@ -1165,7 +1200,7 @@ One flat file, one flat namespace, no build step between it and the DOM.
   and can change; the pair placed adjacent in the persona is drawn adjacent here, one
   relationship stated in two places and contradicted in neither. **No possessive and no count**:
   *your* is load-bearing on the row below, where the words really are the user's, and a Handbook
-  is partly the agent's, so the same word would be a small lie in a column whose whole job is
+  is partly the agent's, so the same word would be a small lie in a panel whose whole job is
   being accurate about cost. The count lives in the panel, where a person can act on it. Hidden
   when the Handbook is empty, like both its neighbours — the notice card above the composer is
   where an unbriefed agent is named, unmissably, and two surfaces saying it is one too many.
@@ -1224,7 +1259,7 @@ One flat file, one flat namespace, no build step between it and the DOM.
   team's next start, because ADR-0002's rule applies unchanged and without it a user removes an
   entry and watches the agent go on believing it.
   **In the team pane it is a figure and never a body.** `WORKSPACE` is drawn twice and becomes a
-  block in the activity column there, because one branch name would be false about the other
+  block in the details panel there, because one branch name would be false about the other
   members. A Handbook has the same problem and takes the opposite answer: four Handbooks do not
   fold into one the way four statuses fold into a `StatusWord`, and four agents' entries in a
   232px column is a wall. The team pane says what a Handbook **costs**; the agent's pane is the
@@ -1238,8 +1273,11 @@ One flat file, one flat namespace, no build step between it and the DOM.
   follows them, an arrow at the right goes on. Arrow keys move the list, Tab takes what they
   landed on, Backspace on an empty field gives the last one back, and **Enter means *this one*
   while you are typing and *go on* when you are not** — the one ambiguity, resolved by whether
-  there is a query to have meant something. **Question two is the name and a folder icon**, with
-  the folder under it in mono: the one you chose, or the `~/blobot/<name>` that is about to be
+  there is a query to have meant something. **Question two is the name and a folder icon**, with the team it is for
+  at the head of the field — up to four faces overlapped in the transcript's own stack, then a
+  count, and pressing them goes back to question one. A name is easier to choose while looking at
+  who it is for, and four is where a row of faces stops identifying anybody and starts being a
+  texture. Under the field the folder in mono: the one you chose, or the `~/blobot/<name>` that is about to be
   made, named in full before the arrow is pressed, which is what keeps *make one for me* from
   having become something that happens silently. *Hire an agent* sits under the list and outside
   it, because it is not somebody you can put on the team.

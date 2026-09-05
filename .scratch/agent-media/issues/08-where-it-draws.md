@@ -180,3 +180,70 @@ Two amendments to write, under **Colour**:
 2. A standing rule, from the author, 2026-09-05, wider than this feature: **blobot does not caption
    what the reader can see.** A visible thing is not introduced, labelled, counted or described.
    What blobot says beside it is only what looking cannot answer.
+
+## Amendment, 2026-09-05: a turn's Pictures are one row
+
+From the author, against the first live run: a turn that took two screenshots drew two
+column-width pictures with a face and a caption between them, and the answer they were taken for
+ended up a screen and a half below the question. **Where there is more than one, they share a
+row.**
+
+It does not contradict *not a chip, full column width*. That rule is about a Picture being the
+thing you are being shown rather than a reminder of one, and it holds for **one** Picture, which
+is what the ticket had in front of it. Several is a different object: the reader is comparing
+them, and a comparison that does not fit on screen is not one. A single Picture keeps the column
+unchanged, because halving one buys no scroll at all and costs exactly the detail the picture
+exists to carry.
+
+The gathering is in `rowsOf` and not in the item list, because the two Pictures the author was
+looking at were **not adjacent**: each came off its own run, with a shut fold between them. The
+window is the runs and the Pictures between them and it closes on anything else -- prose, a user
+message, a system line, a block still in flight -- so Pictures are only ever gathered across the
+turn's own **demoted** work. That is the same editorial call the fold already makes, applied to
+what the calls produced rather than to the calls. It is the one place in this column that moves a
+row past another, and what it moves past is a shut fold.
+
+Three refusals came with it, each a test: never across two agents, because a row under one face
+has to be that face's work; never a Picture that was **not** drawn, because that is a sentence
+that already counts rather than repeating and a row of them would be a row of nothing; and never
+at one, which is the rule the author actually stated.
+
+## Amendment, 2026-09-05: one height, and the width is the picture's own
+
+Also the author's, from the same run, and it arrived in two steps worth keeping both of.
+
+It was first written as **one box**: identical cells at a fixed aspect ratio, so a row of ragged
+tiles stopped reading as three unrelated things and only the contents differed. That is the right
+goal and the wrong instrument. A fixed box buys its uniformity with **letterboxing**, and the
+first picture in the real transcript was a portrait screenshot sitting in a landscape cell with a
+band of dead ground down either side -- the same waste of space in the other axis as the scroll
+this row was created to save. The author asked for that space back, correctly.
+
+So the constant is the **height**. Every tile carries the same weight, the row keeps its edge, and
+a portrait picture is simply narrow. Nothing is cropped and nothing is padded, because neither is
+needed once the box stops being fixed: the pictures are bounded by height, and by width only
+where one is wide enough to leave the column, which is the one case where a shorter tile is the
+honest answer.
+
+*Never cropped* was never at risk under either version, and is now not even reached.
+
+See ticket 07's amendment of the same date for the caption that went with it.
+
+## Amendment, 2026-09-05: a tile, and the full size is the click
+
+Third from the author on the same run. On a shared row a Picture draws **as a tile** -- around
+200px, not half a column -- and the full-size view is the whole of what it costs to see it
+properly.
+
+Two pictures at half width still take most of a screen, which is the scroll the row was created
+to save, so the row was only half doing its job. What a tile has to do is say **which picture this
+is**; judging it is what the click is for, and this ticket already put the full-size view there
+with no toolbar and no gallery around it. So the cells do not grow to fill the column when there
+happen to be only two of them.
+
+The single Picture is unchanged and keeps the column, for the reason the first amendment gave.
+
+Escape closing that view is now wired **on the document** rather than on the overlay, which is a
+fix and not a decision: a `keydown` handler on a div only fires while that div holds focus, and
+this one opens under the pointer. It has a test, because it is exactly the wiring a look at the
+screen would not catch.

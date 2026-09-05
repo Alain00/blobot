@@ -11,6 +11,9 @@ import type {
   Team,
 } from '../orchestrator/domain.js';
 import type { AttachmentStore, MessageStore } from '../orchestrator/message-store.js';
+import { uuidv7 } from '../ids.js';
+import { PICTURE_LIMIT, measurePicture, type PictureNotDrawn } from '../pictures.js';
+import type { KeptPicture, PictureContent, PictureKept } from '../runtime.js';
 import type { EntrySource, HandbookEntry, NewHandbookEntry } from '../handbook/domain.js';
 import type { Routine, RoutineOutcome, RoutineRun, Schedule } from '../routines/domain.js';
 import { trustLevelOf, type TrustLevel } from '../trust.js';
@@ -28,6 +31,7 @@ import {
   handbookEntries,
   messageAttachments,
   messages,
+  pictures,
   routineRuns,
   routines,
   sessions,
@@ -553,6 +557,61 @@ export class SqliteStore implements MessageStore, AttachmentStore {
   }
 
   /**
+   * A Picture's bytes, kept -- or the reason there will be nothing to look at.
+   *
+   * The measuring is **here and not in the adapter**, and that is the decision rather than a
+   * convenience: an adapter says where it found a picture, and what the bytes actually are is a
+   * question with one answer whatever runtime asked it. It also means every refusal in this
+   * feature is decided in one place, so no two runtimes can disagree about what blobot will draw.
+   *
+   * The mime type is read out of the header and the runtime's own claim is never stored. A
+   * truncated PNG has a signature and no dimensions, which is what makes `unreadable` measured
+   * rather than guessed at. See `.scratch/agent-media/10`.
+   */
+  keepPicture(picture: KeptPicture): PictureKept {
+    const bytes = picture.data.byteLength;
+    if (bytes > PICTURE_LIMIT) return { notDrawn: 'too_large', bytes };
+    const measured = measurePicture(picture.data);
+    if (measured === undefined) {
+      // Two states wearing one check: bytes that never were an image, and bytes that were and
+      // did not all arrive. The header cannot tell them apart and a reader could not act on the
+      // difference, so the sentence is chosen by whether anything claimed to be a picture at all.
+      return { notDrawn: bytes === 0 ? 'not_a_picture' : 'unreadable', bytes };
+    }
+    const id = uuidv7(picture.at);
+    try {
+      this.#db
+        .insert(pictures)
+        .values({
+          id,
+          agentId: picture.agentId,
+          source: picture.source,
+          mimeType: measured.mimeType,
+          width: measured.width,
+          height: measured.height,
+          bytes,
+          name: picture.name ?? null,
+          toolName: picture.toolName ?? null,
+          writtenAt: picture.writtenAt ?? null,
+          data: Buffer.from(picture.data),
+          at: picture.at,
+        })
+        .run();
+    } catch {
+      // A write that did not happen is not a picture that is on screen. The transcript says so
+      // rather than holding an id nothing can fetch.
+      return { notDrawn: 'not_kept', bytes };
+    }
+    return { pictureId: id, width: measured.width, height: measured.height, bytes };
+  }
+
+  picture(id: string): PictureContent | undefined {
+    const row = this.#db.select().from(pictures).where(eq(pictures.id, id)).get();
+    if (row === undefined) return undefined;
+    return { id: row.id, mimeType: row.mimeType, data: new Uint8Array(row.data) };
+  }
+
+  /**
    * Hang each row's attachments off it, in one query for the whole page.
    *
    * Metadata only, never the bytes: a transcript of two hundred messages must not carry two
@@ -879,9 +938,30 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       handoffPath?: string;
       reason?: string;
     }[];
+    /**
+     * Pictures an agent showed, and the ones that could not be shown. `.scratch/agent-media/06`.
+     *
+     * Windowed with the compactions rather than with the calls, for the same reason: they are the
+     * rows a reader goes back for, and a busy hour of tool calls would push every one of them out
+     * of a shared window. **Never the bytes** -- the id is here and the pane fetches one picture
+     * at a time, because an agent decides how many Pictures a transcript has.
+     */
+    pictures: {
+      agentId: string;
+      at: number;
+      source: 'shown' | 'observed';
+      pictureId?: string;
+      notDrawn?: PictureNotDrawn;
+      toolName?: string;
+      name?: string;
+      writtenAt?: number;
+      turnStartedAt?: number;
+    }[];
   } {
     const ids = this.agentsOfTeam(teamId, { includeDeleted: true }).map((agent) => agent.id);
-    if (ids.length === 0) return { running: [], tools: [], turns: [], compactions: [] };
+    if (ids.length === 0) {
+      return { running: [], tools: [], turns: [], compactions: [], pictures: [] };
+    }
     const tools = this.#db
       .select()
       .from(toolCalls)
@@ -989,15 +1069,59 @@ export class SqliteStore implements MessageStore, AttachmentStore {
           },
         ];
       });
+    const pictures = this.#db
+      .select({ payload: events.payload, agentId: events.agentId, at: events.at })
+      .from(events)
+      .where(and(eq(events.teamId, teamId), eq(events.kind, 'picture_arrived')))
+      .orderBy(desc(events.at))
+      .limit(limit)
+      .all()
+      .flatMap((row) => {
+        const payload = JSON.parse(row.payload) as {
+          source?: string;
+          pictureId?: string;
+          notDrawn?: string;
+          toolName?: string;
+          name?: string;
+          writtenAt?: number;
+          turnStartedAt?: number;
+        };
+        // A row that says neither *here it is* nor *here is why it is not* is not a fact about
+        // anything, and drawing half of one would put an empty frame in the transcript.
+        const notDrawn = isNotDrawn(payload.notDrawn) ? payload.notDrawn : undefined;
+        if (
+          row.agentId === null ||
+          (payload.source !== 'shown' && payload.source !== 'observed') ||
+          (payload.pictureId === undefined && notDrawn === undefined)
+        ) {
+          return [];
+        }
+        const source: 'shown' | 'observed' = payload.source;
+        return [
+          {
+            agentId: row.agentId,
+            at: row.at,
+            source,
+            ...(payload.pictureId === undefined ? {} : { pictureId: payload.pictureId }),
+            ...(notDrawn === undefined ? {} : { notDrawn }),
+            ...(payload.toolName === undefined ? {} : { toolName: payload.toolName }),
+            ...(payload.name === undefined ? {} : { name: payload.name }),
+            ...(payload.writtenAt === undefined ? {} : { writtenAt: payload.writtenAt }),
+            ...(payload.turnStartedAt === undefined ? {} : { turnStartedAt: payload.turnStartedAt }),
+          },
+        ];
+      })
+      .reverse();
     // A call still in flight is never windowed out. There are at most a handful, they are by
     // definition the newest thing the team has, and the transcript needs every one of them: a
     // fold that is missing one says the wrong number.
-    if (cutoff === undefined) return { running, tools: [], turns: [], compactions };
+    if (cutoff === undefined) return { running, tools: [], turns: [], compactions, pictures };
     return {
       running,
       tools: tools.filter((entry) => entry.at >= cutoff),
       turns: ended.filter((entry) => entry.at >= cutoff),
       compactions,
+      pictures,
     };
   }
 
@@ -1789,4 +1913,21 @@ function isCompactionKind(how: string | undefined): boolean {
  */
 function compactionSettingOf(stored: string): CompactionSetting {
   return stored === 'off' ? 'off' : DEFAULT_COMPACTION;
+}
+
+/**
+ * A reason this version of blobot still has a sentence for.
+ *
+ * A row written by a later version whose reason this one does not know is skipped rather than
+ * drawn with the raw word in it: the raw word is the protocol enum the transcript bans, and it is
+ * the same discipline `isCompactionKind` applies one field over.
+ */
+function isNotDrawn(value: unknown): value is PictureNotDrawn {
+  return (
+    value === 'unreadable' ||
+    value === 'not_a_picture' ||
+    value === 'too_large' ||
+    value === 'not_kept' ||
+    value === 'bytes_gone'
+  );
 }
