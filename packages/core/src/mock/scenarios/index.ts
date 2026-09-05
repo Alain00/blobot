@@ -1,4 +1,18 @@
-import { Scenario, scenario } from '../scenario.js';
+import { Scenario, scenario, tool } from '../scenario.js';
+
+/**
+ * A one-pixel PNG, and a real one.
+ *
+ * The mock exists because a kind mock produces a UI that shatters on first contact with a real
+ * runtime, so the demo's picture is a file that actually decodes rather than a placeholder the
+ * measurement would have to be taught to forgive.
+ */
+const ONE_PIXEL = Uint8Array.from(
+  Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64',
+  ),
+);
 
 /**
  * The checked-in scenarios. These are what the tests assert against and what demo mode
@@ -33,6 +47,58 @@ export const bobReviews: Scenario = scenario('bob-reviews')
   })
   .say('The retry loop has no backoff, so two immediate retries hit the same rate limit.')
   .messageAgent('Alice', 'Reviewed: the retry loop needs a backoff, otherwise both attempts hit the same 429.')
+  .end();
+
+/**
+ * Bob, woken mid-list, does his own batch and answers.
+ *
+ * The counterpart to `works-through-a-list`'s mail, and the whole reason it is there: the demo
+ * had no run in which two agents held calls at the same time, so the team pane's one block per
+ * agent — the thing `.scratch/live-steps/` was built for — could only be argued about from a
+ * unit test. Bob opens three reads while Alice is still editing the scene, and his block draws
+ * under his own face beside hers.
+ *
+ * He answers with a correction rather than a yes, because an agent that only ever confirms is
+ * the kind mock ticket 08 refuses: the reply has to be worth the turn it cost.
+ */
+export const bobChecksTheIdShape: Scenario = scenario('bob-checks-the-id-shape')
+  .think('The id shape is an API question, so the answer is in the serializer and not in the store.')
+  .parallel([
+    tool('read api/schema.ts', 'read', {
+      rawInput: { path: 'api/schema.ts' },
+      durationMs: 420,
+      outcome: { status: 'completed', output: '… 210 lines\n', exit: 0 },
+    }),
+    tool('read api/serialize.ts', 'read', {
+      rawInput: { path: 'api/serialize.ts' },
+      durationMs: 180,
+      outcome: { status: 'completed', output: '… 96 lines\n', exit: 0 },
+    }),
+    tool('grep -rn "objectId" api/', 'execute', {
+      rawInput: { command: 'grep -rn "objectId" api/' },
+      durationMs: 300,
+      outcome: { status: 'completed', output: 'api/schema.ts:41:  objectId: number;\n', exit: 0 },
+    }),
+  ])
+  .say('It is a number on our side, not a string. I will widen the serializer rather than make her cast it.')
+  .callTool('api/serialize.ts', 'edit', {
+    rawInput: { path: 'api/serialize.ts' },
+    durationMs: 260,
+    diff: {
+      oldText: '  objectId: row.object_id,\n',
+      newText: '  objectId: String(row.object_id),\n',
+    },
+    outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+  })
+  .callTool('npm test -- api/serialize', 'execute', {
+    rawInput: { command: 'npm test -- api/serialize' },
+    durationMs: 3_200,
+    outcome: { status: 'completed', output: '4 passing\n', exit: 0 },
+  })
+  .messageAgent(
+    'Alice',
+    'It was a number, not a string. I have made the serializer send it as a string, so your assumption holds now. Tests are green on my branch.',
+  )
   .end();
 
 /**
@@ -130,7 +196,7 @@ export const asksBeforeDeleting: Scenario = scenario('asks-before-deleting')
   .end();
 
 /**
- * A turn that is a dozen steps and one answer.
+ * A turn that is twenty-two calls and one answer.
  *
  * The shape every long piece of real work has and no other scenario here produced: a one-line
  * caption, a call, a caption, a call, for as long as it takes, and then the paragraph that was
@@ -140,12 +206,49 @@ export const asksBeforeDeleting: Scenario = scenario('asks-before-deleting')
  * led to it.
  *
  * It is checked in for the same reason the ragged deltas are: the transcript's fold (`rowsOf`)
- * is built against this, and without it the first place we would meet a twelve-step turn is
+ * is built against this, and without it the first place we would meet a turn this long is
  * somebody's real repository. Observed on a real Claude session, 2026-08-30.
+ *
+ * **Lengthened 2026-09-05, from six calls to twenty-two.** Six is not a long turn: it folds, but
+ * a fold that saves six lines is a fold you have to be told about, and reviewing the shut block
+ * against it proved nothing about the case it exists for. Twenty-two is the length the observed
+ * session ran to, and it is where the block earns its keep — the reads that found the files, the
+ * edits, the check that failed, the fix, the check that passed. Everything a long
+ * turn really contains is in here now: reads before edits, a `grep` that finds nothing and is
+ * not an error, a type check that fails and is recovered from inside the same turn, and repeated
+ * edits to the same file, which is what makes a flat transcript unreadable rather than merely
+ * long.
  */
 export const worksThroughAList: Scenario = scenario('works-through-a-list')
   .think('Fifteen files, and they only make sense in order.')
-  .say('Now the selection store and the interaction wrapper.')
+  .say('Reading the scene layer first, so I know what is already there.')
+  // A batch, and the durations disagree with the order on purpose: started `ls`, `Desk`,
+  // `objects`, they return `Desk`, `objects`, `ls`. Completion order is not call order, and
+  // anything that assumes it is passes every serial scenario in this file.
+  .parallel([
+    tool('ls src/scene', 'read', {
+      rawInput: { path: 'src/scene' },
+      durationMs: 380,
+      outcome: { status: 'completed', output: 'Desk.tsx  Lights.tsx  objects.tsx\n', exit: 0 },
+    }),
+    tool('read src/scene/Desk.tsx', 'read', {
+      rawInput: { path: 'src/scene/Desk.tsx' },
+      durationMs: 140,
+      outcome: { status: 'completed', output: '… 84 lines\n', exit: 0 },
+    }),
+    tool('read src/scene/objects.tsx', 'read', {
+      rawInput: { path: 'src/scene/objects.tsx' },
+      durationMs: 260,
+      outcome: { status: 'completed', output: '… 140 lines\n', exit: 0 },
+    }),
+  ])
+  .say('Nothing owns selection yet. Checking whether anything already reaches for one.')
+  .callTool('grep -rn "useSelection" src/', 'execute', {
+    rawInput: { command: 'grep -rn "useSelection" src/' },
+    durationMs: 260,
+    outcome: { status: 'failed', error: 'no matches' },
+  })
+  .say('Nothing does, so I am writing it. Now the selection store and the interaction wrapper.')
   .callTool('src/store/selection.ts', 'edit', {
     rawInput: { path: 'src/store/selection.ts' },
     durationMs: 240,
@@ -165,17 +268,48 @@ export const worksThroughAList: Scenario = scenario('works-through-a-list')
     },
     outcome: { status: 'completed', output: 'ok\n', exit: 0 },
   })
-  .say('Now the interaction wrapper that every desk object shares.')
-  .callTool('src/scene/Interactive.tsx', 'edit', {
-    rawInput: { path: 'src/scene/Interactive.tsx' },
-    durationMs: 260,
+  .callTool('src/store/index.ts', 'edit', {
+    rawInput: { path: 'src/store/index.ts' },
+    durationMs: 130,
     diff: {
-      oldText: '',
-      newText: 'export function Interactive({ id, children }: Props) {\n  const set = useSelection();\n  return (\n    <group onPointerOver={() => set.hover(id)} onPointerOut={() => set.hover(null)}>\n      {children}\n    </group>\n  );\n}\n',
+      oldText: "export * from './camera.js';\n",
+      newText: "export * from './camera.js';\nexport * from './selection.js';\n",
     },
     outcome: { status: 'completed', output: 'ok\n', exit: 0 },
   })
-  .say('Now the objects themselves. The camera is top-down, so I am shaping these to read by silhouette.')
+  .say('Now the two wrappers. They do not touch each other, so they go together.')
+  // The second batch, and a batch of writes rather than of reads: two new files that share no
+  // symbol. A turn's parallelism is not a reading-only phenomenon.
+  .parallel([
+    tool('src/scene/Interactive.tsx', 'edit', {
+      rawInput: { path: 'src/scene/Interactive.tsx' },
+      durationMs: 300,
+      diff: {
+        oldText: '',
+        newText: 'export function Interactive({ id, children }: Props) {\n  const set = useSelection();\n  return (\n    <group onPointerOver={() => set.hover(id)} onPointerOut={() => set.hover(null)}>\n      {children}\n    </group>\n  );\n}\n',
+      },
+      outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+    }),
+    tool('src/scene/HoverLabel.tsx', 'edit', {
+      rawInput: { path: 'src/scene/HoverLabel.tsx' },
+      durationMs: 180,
+      diff: {
+        oldText: '',
+        newText: 'export function HoverLabel() {\n  const id = useHovered();\n  if (!id) return null;\n  return <Html center>{labels[id]}</Html>;\n}\n',
+      },
+      outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+    }),
+  ])
+  // Mail in the middle of a long turn, which is where it really lands: Alice does not stop to
+  // wait for Bob, she hands him a piece and keeps going. It is what puts two agents in flight in
+  // the same frame, which no demo script could produce before — the leftover on
+  // `.scratch/live-steps/build.md`.
+  .messageAgent(
+    'Bob',
+    'While I do the scene: does the hover id we put on the store line up with what the API sends back? I am assuming a plain string.',
+    'Added `hovered` to src/store/selection.ts on blobot/checkout/alice; ids are the object names for now.',
+  )
+  .say('Bob is checking the id shape. Now the objects themselves. The camera is top-down, so I am shaping these to read by silhouette.')
   .callTool('src/scene/objects.tsx', 'edit', {
     rawInput: { path: 'src/scene/objects.tsx' },
     durationMs: 480,
@@ -185,21 +319,106 @@ export const worksThroughAList: Scenario = scenario('works-through-a-list')
     },
     outcome: { status: 'completed', output: 'ok\n', exit: 0 },
   })
+  .callTool('src/scene/objects.tsx', 'edit', {
+    rawInput: { path: 'src/scene/objects.tsx' },
+    durationMs: 320,
+    diff: {
+      oldText: '  <cylinderGeometry args={[0.12, 0.12, 0.3]} />\n',
+      newText: '  <cylinderGeometry args={[0.14, 0.1, 0.26, 24]} />\n  <meshStandardMaterial color="#4a3f35" roughness={0.9} />\n',
+    },
+    outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+  })
   .say('A stray character slipped into the laptop material. Fixing it.')
   .callTool('src/scene/objects.tsx', 'edit', {
     rawInput: { path: 'src/scene/objects.tsx' },
     durationMs: 150,
     diff: {
-      oldText: '  roughness={0.7} />\n',
+      oldText: '  roughness={0.7} />\n',
       newText: '  roughness={0.7} />\n',
     },
     outcome: { status: 'completed', output: 'ok\n', exit: 0 },
   })
-  .say('Now wiring it into the page and building.')
+  .say('Wrapping each object so the whole desk answers the pointer.')
+  .callTool('src/scene/Desk.tsx', 'edit', {
+    rawInput: { path: 'src/scene/Desk.tsx' },
+    durationMs: 420,
+    diff: {
+      oldText: '      <Laptop />\n      <Mug />\n      <Notebook />\n',
+      newText: '      <Interactive id="laptop"><Laptop /></Interactive>\n      <Interactive id="mug"><Mug /></Interactive>\n      <Interactive id="notebook"><Notebook /></Interactive>\n',
+    },
+    outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+  })
+  .callTool('src/scene/Lights.tsx', 'edit', {
+    rawInput: { path: 'src/scene/Lights.tsx' },
+    durationMs: 200,
+    diff: {
+      oldText: '  <ambientLight intensity={0.6} />\n',
+      newText: '  <ambientLight intensity={0.35} />\n  <directionalLight position={[2, 4, 1]} intensity={1.1} castShadow />\n',
+    },
+    outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+  })
+  .say('Now wiring it into the page.')
+  .callTool('read src/pages/index.astro', 'read', {
+    rawInput: { path: 'src/pages/index.astro' },
+    durationMs: 160,
+    outcome: { status: 'completed', output: '… 62 lines\n', exit: 0 },
+  })
+  .callTool('src/pages/index.astro', 'edit', {
+    rawInput: { path: 'src/pages/index.astro' },
+    durationMs: 380,
+    diff: {
+      oldText: '<Hero />\n',
+      newText: '<Hero />\n<Desk client:visible />\n<HoverLabel client:visible />\n',
+    },
+    outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+  })
+  .callTool('src/pages/index.astro', 'edit', {
+    rawInput: { path: 'src/pages/index.astro' },
+    durationMs: 140,
+    diff: {
+      oldText: "import Hero from '../components/Hero.astro';\n",
+      newText: "import Hero from '../components/Hero.astro';\nimport Desk from '../scene/Desk.tsx';\nimport HoverLabel from '../scene/HoverLabel.tsx';\n",
+    },
+    outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+  })
+  .say('Checking it.')
   .callTool('npx astro check 2>&1 | tail -30', 'execute', {
     rawInput: { command: 'npx astro check 2>&1 | tail -30' },
     durationMs: 2_400,
+    outcome: {
+      status: 'completed',
+      output: "src/scene/HoverLabel.tsx:3:15 - error ts(2304): Cannot find name 'labels'.\n1 error\n",
+      exit: 1,
+    },
+  })
+  .say('The label table does not exist yet. Writing it and importing it.')
+  .callTool('src/scene/labels.ts', 'edit', {
+    rawInput: { path: 'src/scene/labels.ts' },
+    durationMs: 190,
+    diff: {
+      oldText: '',
+      newText: "export const labels: Record<string, string> = {\n  laptop: 'Where the work happens',\n  mug: 'Cold, usually',\n  notebook: 'The good ideas',\n};\n",
+    },
+    outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+  })
+  .callTool('src/scene/HoverLabel.tsx', 'edit', {
+    rawInput: { path: 'src/scene/HoverLabel.tsx' },
+    durationMs: 130,
+    diff: {
+      oldText: '',
+      newText: "import { labels } from './labels.js';\n",
+    },
+    outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+  })
+  .callTool('npx astro check 2>&1 | tail -30', 'execute', {
+    rawInput: { command: 'npx astro check 2>&1 | tail -30' },
+    durationMs: 2_200,
     outcome: { status: 'completed', output: '0 errors\n', exit: 0 },
+  })
+  .callTool('npm run build', 'execute', {
+    rawInput: { command: 'npm run build' },
+    durationMs: 6_800,
+    outcome: { status: 'completed', output: 'built in 6.4s\n', exit: 0 },
   })
   .say(
     'Zero errors, and the build is green. The desk reads by silhouette at the top-down camera, ' +
@@ -355,9 +574,33 @@ export const writesItDown: Scenario = scenario('writes-it-down')
   .say('Written down. Remove any of it above if I have it wrong.')
   .end();
 
+/**
+ * A screenshot in the transcript, and the ugly half beside it.
+ *
+ * The happy case is one line of the story and it is not the one that needed a scenario: what a
+ * review has to be able to see is a picture that arrived and could not be shown, and a run of
+ * them, which is the case that would otherwise draw a column of identical apologies. So the turn
+ * has all three -- one drawn, one refused, and a burst that has to collapse to a count.
+ *
+ * The picture is a real one-pixel PNG rather than a placeholder, because the mock's whole reason
+ * for existing is that a kind mock produces a UI that shatters on first contact.
+ */
+export const showsAPicture: Scenario = scenario('shows-a-picture')
+  .say('Taking a look at the page now.')
+  .callTool('playwright_screenshot --url http://localhost:5173', 'other', { durationMs: 900 })
+  .picture('observed', { toolName: 'playwright_screenshot', data: ONE_PIXEL })
+  .say('The submit button is still on the old surface token.')
+  .callTool('playwright_screenshot --url http://localhost:5173/settings', 'other', { durationMs: 600 })
+  .picture('observed', { toolName: 'playwright_screenshot', notDrawn: 'unreadable' })
+  .picture('observed', { toolName: 'playwright_screenshot', notDrawn: 'unreadable' })
+  .picture('observed', { toolName: 'playwright_screenshot', notDrawn: 'unreadable' })
+  .say('The settings page would not come back cleanly. I will try it again after the rebuild.')
+  .end();
+
 export const scenarios = {
   'alice-asks-bob': aliceAsksBob,
   'bob-reviews': bobReviews,
+  'bob-checks-the-id-shape': bobChecksTheIdShape,
   'promises-bob-and-forgets': promisesBobAndForgets,
   'tool-failure-continues': toolFailureContinues,
   'bob-fails-midturn': bobFailsMidturn,
@@ -368,6 +611,7 @@ export const scenarios = {
   'asks-before-deleting': asksBeforeDeleting,
   'schedules-itself': schedulesItself,
   'writes-it-down': writesItDown,
+  'shows-a-picture': showsAPicture,
   'advertises-commands': advertisesCommands,
   'loses-commands': losesCommands,
   'runs-out-of-room': runsOutOfRoom,

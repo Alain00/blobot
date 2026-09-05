@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import * as Popover from '@radix-ui/react-popover';
+import { Gauge } from 'lucide-react';
 import { workingCeiling } from '@blobot/core/domain';
 import { percent, tokens } from '../usage.js';
 import type {
@@ -12,35 +14,40 @@ import type {
 import { sizeOf } from './Attached.js';
 import { Blob } from './Blob.js';
 import { WorkspacePanel } from './Workspaces.js';
-import type { FeedEntry, Pane } from '../model.js';
 
 /**
- * Docked right, always visible — a third column rather than a tab or a drawer, because the
- * demo's claim is that you can watch two agents work at once, and a feed you have to open is a
- * feed you never see while something is happening.
+ * What the machinery under this team is doing: `CONTEXT` and `WORKSPACE`, behind one glyph in
+ * the chrome above the transcript.
  *
- * For an agent: that agent's events on top, the team's below a rule. For the team: undivided.
+ * **It replaced a docked third column, 2026-09-05, at the author's direction.** That column
+ * carried a log of tool calls and finished turns above these two blocks, and the log went with
+ * it: a settled call is drawn in the transcript's own fold now, so the log was the second copy
+ * of it, in a column nobody reads while something is happening. What is left is two blocks that
+ * are **one row per agent** and are read on purpose rather than watched — how full each window
+ * is, and where each agent's work is — which is a popover's shape and not a column's.
+ *
+ * A press and never a hover, unlike the composer's context ring: the ring is one figure the
+ * pointer is already on, and this is a panel with rows that open. The trigger stands exactly
+ * where the column's own toggle stood, so the gesture that used to reveal these blocks still
+ * reveals them.
  */
-export function Feed({
-  entries,
+export function Details({
   agents,
   usage,
   injection,
   handbooks,
-  pane,
   workspaces,
   looking,
   onRefreshWorkspaces,
   onPublish,
   onPlan,
+  startOpen = false,
 }: {
-  entries: readonly FeedEntry[];
   agents: readonly UiAgent[];
   usage: Record<string, UiUsage>;
   injection: Record<string, UiInjection>;
   /** Every member's Handbook. The gauge's handbook row is a sum of exactly these entries. */
   handbooks: Record<string, readonly UiHandbookEntry[]>;
-  pane: Pane;
   /**
    * Every member's workspace, in the team pane only. An agent's pane draws its own under the
    * composer, because there one branch is the whole answer.
@@ -56,69 +63,47 @@ export function Feed({
     agentId: string,
     options: { title?: string; draft?: boolean },
   ) => Promise<readonly string[]>;
+  /**
+   * `--screen=details` on the main process, which puts the panel on screen at launch.
+   *
+   * The same review affordance `--screen=handbook` is, and for the same reason: this is now a
+   * surface a screenshot cannot click to, so without it nothing that reviews the app without a
+   * human at the screen can see `CONTEXT` or `WORKSPACE` at all.
+   */
+  startOpen?: boolean;
 }): React.JSX.Element {
-  const name = (agentId?: string): string =>
-    agents.find((agent) => agent.id === agentId)?.name ?? 'team';
-  const mine =
-    pane.kind === 'agent' ? entries.filter((entry) => entry.agentId === pane.agentId) : entries;
-  const rest = pane.kind === 'agent' ? entries.filter((entry) => entry.agentId !== pane.agentId) : [];
-
+  const nothing = Object.keys(usage).length === 0 && workspaces.length === 0;
   return (
-    <div className="feed">
-      {/* The column's head, pinned. CONTEXT is the one figure here a reader watches *while*
-          reading the log below it, and it scrolled away the moment they did. The log passes
-          under it; nothing floats. See the note in DESIGN.md on why this is not the rail's
-          rejected pinned group. It carries its own ceiling and scrolls inside itself, because
-          both blocks are one row per agent and a six-agent roster would otherwise pin the
-          whole column. */}
-      <div className="feedtop">
-        <div className="feedhead">
-          <span className="mono muted">ACTIVITY</span>
-        </div>
-        <Context agents={agents} usage={usage} injection={injection} handbooks={handbooks} />
-        <WorkspacePanel
-          statuses={workspaces}
-          agents={agents}
-          looking={looking}
-          onRefresh={onRefreshWorkspaces}
-          onPublish={onPublish}
-          onPlan={onPlan}
-        />
-      </div>
-      {entries.length === 0 && (
-        // A header over nothing is what a fifth of the window looked like on a quiet team.
-        // The column keeps its width rather than collapsing: it would reappear on the first
-        // tool call and shove the conversation sideways mid-turn, which is worse than a line
-        // of type saying what will land here.
-        <div className="feedempty">nothing yet. tool calls and finished turns land here</div>
-      )}
-      {mine.map((entry) => (
-        <FeedLine key={entry.id} entry={entry} who={name(entry.agentId)} />
-      ))}
-      {rest.length > 0 && <hr style={{ margin: '10px 0' }} />}
-      {rest.map((entry) => (
-        <FeedLine key={entry.id} entry={entry} who={name(entry.agentId)} />
-      ))}
-    </div>
+    <Popover.Root defaultOpen={startOpen}>
+      <Popover.Trigger className="paneltoggle" title="Context and workspace" aria-label="Context and workspace">
+        <Gauge size={16} aria-hidden />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content className="detailspop" side="bottom" align="end" sideOffset={8} collisionPadding={12}>
+          <Context agents={agents} usage={usage} injection={injection} handbooks={handbooks} />
+          <WorkspacePanel
+            statuses={workspaces}
+            agents={agents}
+            looking={looking}
+            onRefresh={onRefreshWorkspaces}
+            onPublish={onPublish}
+            onPlan={onPlan}
+          />
+          {/* Both blocks withhold themselves rather than drawing a header over nothing, so on a
+              team that has not taken a turn the panel would be an empty box. A line of type
+              saying what will be here is the same answer the activity column gave to the same
+              problem, and it is the half of that column worth keeping. */}
+          {nothing && (
+            <div className="detailsempty">
+              nothing yet. how full each window is, and where each agent's work is, land here
+            </div>
+          )}
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
-function FeedLine({ entry, who }: { entry: FeedEntry; who: string }): React.JSX.Element {
-  const time = new Date(entry.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  return (
-    <div className={`fev${entry.emphasis === true ? ' hi' : ''}`}>
-      {/* When and who, over what happened. Three columns in a 288px column left the last one
-          about eleven characters wide, so `mcp__meta-ads__ads_users` broke mid-token on every
-          row and the log read as a wall of clamped fragments. The stack costs no height on the
-          rows that were already wrapping and gives the event the column's full width. */}
-      <span className="line">
-        <span className="t">{time}</span>
-        <span className="who">{who}</span>
-      </span>
-      <span className="what">{entry.text}</span>
-    </div>
-  );
-}
 
 /**
  * How full each agent's context is. Occupancy, not billing, and blobot does not manage it: the
@@ -130,7 +115,7 @@ function FeedLine({ entry, who }: { entry: FeedEntry; who: string }): React.JSX.
  * why both numbers are here and not only the percent.
  *
  * Absent for an agent that has never reported, and the block disappears entirely when nobody
- * has. A header over nothing is the same mistake the empty-feed line exists to avoid.
+ * has. A header over nothing is the mistake the panel's own empty line exists to avoid.
  */
 function Context({
   agents,
@@ -167,7 +152,7 @@ function Context({
             aria-controls={`sent-${agent.id}`}
             onClick={() => setOpen(open === agent.id ? undefined : agent.id)}
           >
-            <Blob name={agent.name} size={14} hue={agent.hue} />
+            <Blob name={agent.name} size={14} hue={agent.hue} shape={agent.shape} />
             <span className="who">{agent.name}</span>
             <span className="n">
               {tokens(reading.used)}/{tokens(reading.size)}
@@ -202,9 +187,9 @@ function Context({
 /**
  * What blobot put in there, under the agent whose row was clicked.
  *
- * Opens **in place** rather than over the column, which is the same rule the rail keeps:
- * nothing in a column covers anything else in it, and a panel floating over the log would read
- * as sitting on top of the activity rather than belonging to the row it came from.
+ * Opens **in place**, under the row it belongs to, and never as a second layer over this one:
+ * a panel hanging off a panel is two things to dismiss for one fact, and the rows here are
+ * short enough that the panel simply pushes what is under it down.
  *
  * The numbers are **estimated**, and say so. blobot knows exactly how many characters it sent
  * and cannot know what they cost in tokens, because tokenizing is the provider's. They are

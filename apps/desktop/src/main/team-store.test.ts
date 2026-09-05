@@ -412,13 +412,27 @@ describe('editing an agent', () => {
 
   it('restates the whole definition on the profile', () => {
     const mara = hireAgent(
-      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code', instructions: 'Cite a source.', hue: 42 },
+      {
+        name: 'Mara',
+        role: 'marketing',
+        runtimeId: 'claude-code',
+        instructions: 'Cite a source.',
+        hue: 42,
+        shape: 'cloud',
+      },
       { store, clock },
     );
 
     editAgentProfile(
       mara.id,
-      { name: 'Marisol', role: 'growth', runtimeId: 'opencode', instructions: 'Cite two.', hue: 215 },
+      {
+        name: 'Marisol',
+        role: 'growth',
+        runtimeId: 'opencode',
+        instructions: 'Cite two.',
+        hue: 215,
+        shape: 'hexagon',
+      },
       deps(),
     );
 
@@ -428,6 +442,7 @@ describe('editing an agent', () => {
       runtimeId: 'opencode',
       instructions: 'Cite two.',
       hue: 215,
+      shape: 'hexagon',
     });
   });
 
@@ -518,19 +533,40 @@ describe('editing an agent', () => {
 
   it('restates role, instructions and face on a team the agent is on, and not the name', async () => {
     const mara = hireAgent(
-      { name: 'Mara', role: 'marketing', runtimeId: 'claude-code', instructions: 'Cite a source.', hue: 42 },
+      {
+        name: 'Mara',
+        role: 'marketing',
+        runtimeId: 'claude-code',
+        instructions: 'Cite a source.',
+        hue: 42,
+        shape: 'cloud',
+      },
       { store, clock },
     );
     const team = await createTeam({ ...spec, profileIds: [mara.id] }, deps());
 
     editAgentProfile(
       mara.id,
-      { name: 'Marisol', role: 'growth', runtimeId: 'opencode', instructions: 'Cite two.', hue: 215 },
+      {
+        name: 'Marisol',
+        role: 'growth',
+        runtimeId: 'opencode',
+        instructions: 'Cite two.',
+        hue: 215,
+        shape: 'hexagon',
+      },
       deps(),
     );
 
     const member = store.agentsOfTeam(team.id)[0];
-    expect(member).toMatchObject({ role: 'growth', instructions: 'Cite two.', hue: 215 });
+    // The silhouette travels with the hue: both halves of a face are restated on the team, or
+    // the agent wears one face on the roster screen and another on the team it is working on.
+    expect(member).toMatchObject({
+      role: 'growth',
+      instructions: 'Cite two.',
+      hue: 215,
+      shape: 'hexagon',
+    });
     // The two the membership is built out of. The branch is under the old name, and the open
     // session belongs to the runtime that opened it.
     expect(member?.name).toBe('Mara');

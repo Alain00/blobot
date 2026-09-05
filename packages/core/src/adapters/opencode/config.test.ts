@@ -104,6 +104,17 @@ describe('the trust levels', () => {
     }
   });
 
+  it('asks before anything reaches the display server, at every level', () => {
+    for (const trust of ['normal', 'trusting'] as const) {
+      const bash = permissionPosture(trust).bash;
+      for (const pattern of ['grim*', 'scrot*', 'import *', 'screencapture*', 'xdotool*', 'ffmpeg*']) {
+        expect(bash[pattern]).toBe('ask');
+      }
+    }
+    // Careful is the scalar-free allow-nothing, so the class is covered by `*` there.
+    expect(permissionPosture('careful').bash['*']).toBe('ask');
+  });
+
   it('asks about reading GitHub when the agent is careful', () => {
     expect(permissionPosture('careful').bash).toEqual({ '*': 'ask' });
   });

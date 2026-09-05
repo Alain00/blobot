@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { ChevronRight, Clock, Pencil, Search, Settings, Trash2, Users } from 'lucide-react';
+import * as Menu from '@radix-ui/react-context-menu';
+import { ChevronRight, Clock, Pencil, Plus, Search, Settings, Trash2, Users } from 'lucide-react';
 import type { AgentStatus } from '@blobot/core/domain';
 import type { UiAgent, UiTeam, UiTeamSummary } from '../../../shared/api.js';
 import { foldTeamStatus, lastLineOf, type Item, type Pane } from '../model.js';
@@ -140,6 +141,21 @@ export function Rail({
           shortcut it is teaching. It is a **button drawn as a field**, not a field: there is one
           search in this app and it lives in the navigator, and a second input here would either
           duplicate it or drift from it. */}
+      {/* The plus is on its own line above the field, right-aligned, and the field runs the
+          rail's full width under it. `TEAMS` and its `+ new` were a header *under* the search —
+          a heading over a list that is the whole of the column names nothing the column does
+          not already say, the rail being teams and the doors at its foot being what it is not.
+          What the header was really carrying was the one act that adds to the list, and that
+          belongs above the thing it adds to rather than tucked beside a field it has nothing to
+          do with. A glyph rather than `+ new`, because at that size the words read as a second
+          control standing next to search. */}
+      {onNewTeam !== undefined && (
+        <div className="railbar">
+          <button className="railadd" onClick={onNewTeam} title="New team" aria-label="New team">
+            <Plus size={16} aria-hidden />
+          </button>
+        </div>
+      )}
       {onFind !== undefined && (
         <button className="railfind" onClick={onFind} title="Find a team or an agent">
           <Search size={13} aria-hidden />
@@ -148,15 +164,6 @@ export function Rail({
           <span className="mono muted">{shortcut()}</span>
         </button>
       )}
-      <div className="railhead">
-        <span className="mono muted">TEAMS</span>
-        <span style={{ flex: 1 }} />
-        {onNewTeam !== undefined && (
-          <button className="railadd mono" onClick={onNewTeam} title="New team">
-            + new
-          </button>
-        )}
-      </div>
 
       {rows.map((row) => {
         const running = row.id === team.id;
@@ -266,17 +273,22 @@ export function Rail({
                       asserting what the fold only ever claimed of somebody. */}
                   {/* `SEEN` rather than the floor, because the rail is the column a person
                       looks at all day and the whole point of the layer is that the faces look
-                      back. What actually moves here is `waiting` alone — `aimOf` gives that one
-                      status the pointer and every other one nothing — so this is the excursion
-                      of a blocked agent following you until you answer, not of a roster
-                      swivelling in unison. */}
+                      back. Two things move at that excursion, and only ever one at a time:
+                      `waiting` claiming the pointer — `aimOf` gives that one status the cursor
+                      and every other one nothing — and `wander`, which is a face glancing around
+                      the room while nothing else is aiming it. The roster still cannot swivel in
+                      unison: every beat is a random hold on a random direction, phased by a
+                      random first beat, and an agent that owes the user an answer stops
+                      wandering and looks at them. */}
                   <span className="machineavatar">
                   <Blob
                     name={agent.name}
 										size={44}
                     status={status}
                     hue={agent.hue}
+                    shape={agent.shape}
                     animated={agent.machinePower === undefined || agent.machinePower === 'awake'}
+                    wander
                     travel={SEEN}
                   />
                   {agent.machinePower !== undefined && <MachinePowerDot power={agent.machinePower} />}
@@ -410,15 +422,22 @@ function shortcut(): string {
 }
 
 /**
- * One team row, and the two things you can do to it.
+ * One team row, and the two things you can do to it — on the row itself, under a right-click.
  *
- * The actions appear on hover and on keyboard focus rather than sitting there permanently: the
- * rail is a list of teams to *work in*, and a delete button on every row at rest would be the
- * loudest thing in a column whose job is to be quiet. They are icons because a label here would
- * repeat the row it is on, which is the rule the composer's send button already follows.
+ * They were two icons revealed on hover, and two is where that pattern stops working: a pencil
+ * and a bin sitting 4px apart, both 22px, both arriving in the same frame under a pointer that
+ * is already moving, is a mis-click waiting to happen and the mis-click is the destructive one.
+ * A named row cannot be hit the way a bin glyph can.
  *
- * A row is a button, so these cannot live inside it: nesting them would make one unclickable
- * control out of three.
+ * **The whole row is the trigger, and there is no button.** That is the trade taken knowingly:
+ * a right-click menu is the most invisible control an interface has, and nothing on screen now
+ * says these actions exist. What it buys is a rail with nothing on it but teams — no glyph
+ * appearing under the pointer on every row the user crosses, in the column DESIGN.md asks to
+ * be the quiet one. The actions are not lost either way: the team's own pane carries them, so
+ * this is a shortcut to something reachable elsewhere rather than the only door to it.
+ *
+ * A row is a button, so the menu wraps it rather than living inside it: nesting would make one
+ * unclickable control out of two.
  */
 function TeamRow({
   row,
@@ -433,31 +452,31 @@ function TeamRow({
 }): React.JSX.Element {
   if (onEditTeam === undefined && onDeleteTeam === undefined) return <>{children}</>;
   return (
-    <div className="teamrowwrap">
-      {children}
-      <span className="rowacts">
-        {onEditTeam !== undefined && (
-          <button
-            className="iconbtn sm"
-            onClick={() => onEditTeam(row.id)}
-            title={`Who is on ${row.name}`}
-            aria-label={`Who is on ${row.name}`}
-          >
-            <Pencil size={13} aria-hidden />
-          </button>
-        )}
-        {onDeleteTeam !== undefined && (
-          <button
-            className="iconbtn sm"
-            onClick={() => onDeleteTeam(row.id)}
-            title={`Delete ${row.name}`}
-            aria-label={`Delete ${row.name}`}
-          >
-            <Trash2 size={13} aria-hidden />
-          </button>
-        )}
-      </span>
-    </div>
+    <Menu.Root>
+      {/* `asChild` so the wrapper stays the one div the rest of the rail's rules are written
+          against, rather than the menu adding a layer between the row and its group. */}
+      <Menu.Trigger asChild>
+        <div className="teamrowwrap">{children}</div>
+      </Menu.Trigger>
+      <Menu.Portal>
+        {/* The app's one menu object, borrowed outright: a second menu that looked like a
+            different menu would be saying the two are different kinds of thing. */}
+        <Menu.Content className="selectmenu rowmenu">
+          {onEditTeam !== undefined && (
+            <Menu.Item className="selectitem" onSelect={() => onEditTeam(row.id)}>
+              <Pencil size={13} aria-hidden />
+              <span>Who is on {row.name}</span>
+            </Menu.Item>
+          )}
+          {onDeleteTeam !== undefined && (
+            <Menu.Item className="selectitem" onSelect={() => onDeleteTeam(row.id)}>
+              <Trash2 size={13} aria-hidden />
+              <span>Delete {row.name}</span>
+            </Menu.Item>
+          )}
+        </Menu.Content>
+      </Menu.Portal>
+    </Menu.Root>
   );
 }
 

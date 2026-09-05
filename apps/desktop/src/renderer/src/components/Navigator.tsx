@@ -11,6 +11,7 @@ interface Found {
   readonly id: string;
   readonly name: string;
   readonly hue?: number;
+  readonly shape?: string;
 }
 
 /**
@@ -71,6 +72,7 @@ export function Navigator({
     id: agent.id,
     name: agent.name,
     ...(agent.hue === undefined ? {} : { hue: agent.hue }),
+    ...(agent.shape === undefined ? {} : { shape: agent.shape }),
   }));
   const elsewhere: readonly Found[] = teams
     .filter((row) => row.id !== team.id)
@@ -81,6 +83,7 @@ export function Navigator({
         id: member.id,
         name: member.name,
         ...(member.hue === undefined ? {} : { hue: member.hue }),
+        ...(member.shape === undefined ? {} : { shape: member.shape }),
       })),
     );
   const found = [...here, ...elsewhere];
@@ -132,6 +135,7 @@ export function Navigator({
                       name={row.name}
                       size={20}
                       {...(row.hue === undefined ? {} : { hue: row.hue })}
+                      {...(row.shape === undefined ? {} : { shape: row.shape })}
                     />
                     <span>{row.name}</span>
                     {/* Which team, unless it is the one already on screen — that row is what

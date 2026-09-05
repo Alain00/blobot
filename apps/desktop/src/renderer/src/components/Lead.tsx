@@ -40,7 +40,7 @@ export function LeadPicker({
             aria-pressed={agent.id === lead}
             onClick={() => onPick(agent.id)}
           >
-            <Blob name={agent.name} size={24} hue={agent.hue} />
+            <Blob name={agent.name} size={24} hue={agent.hue} shape={agent.shape} />
             <span className="nm">{agent.name}</span>
           </button>
         ))}

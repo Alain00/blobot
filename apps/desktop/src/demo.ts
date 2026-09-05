@@ -175,6 +175,10 @@ function describe(event: AgentEvent): string {
       return `compacted ${event.how} at ${event.used}/${event.ceiling}${
         event.reason === undefined ? '' : ` (${event.reason})`
       }`;
+    case 'picture_arrived':
+      return `picture   ${event.source}${
+        event.notDrawn === undefined ? ` ${event.pictureId ?? ''}` : ` not drawn: ${event.notDrawn}`
+      }`;
     case 'turn_ended':
       return `turn      ${event.turnId} ${event.stopReason}`;
     case 'error':

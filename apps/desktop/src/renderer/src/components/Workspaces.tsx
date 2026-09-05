@@ -68,7 +68,7 @@ export function WorkspaceLine({
   teamId,
   busy,
   onSwitched,
-  onCommitted,
+  onOpenChanges,
   onPublish,
   onPlan,
   door,
@@ -79,7 +79,16 @@ export function WorkspaceLine({
   busy: boolean;
   /** The switch changed what is in the folder, so everything read from it is now stale. */
   onSwitched: () => void;
-  onCommitted: () => void;
+  /**
+   * Open the git panel, which is where committing lives now.
+   *
+   * The tray had a commit popover of its own until the sidebar grew a panel that can commit a
+   * *subset*. Two surfaces for one act, one of them able to do less, is the duplication
+   * `DESIGN.md` has refused three times, so this became the **door** to the other. The figure
+   * stays here, because the figure is a fact about the workspace and the tray is the line of
+   * facts.
+   */
+  onOpenChanges: () => void;
   onPublish: (options: { title?: string; draft?: boolean }) => Promise<UiPublishResult>;
   onPlan: (options: { title?: string; draft?: boolean }) => Promise<readonly string[]>;
   /**
@@ -112,13 +121,18 @@ export function WorkspaceLine({
       <div className="wstray">
         <span className="wsplace">
           <Churn churn={status.churn} />
-          <CommitButton
-            teamId={teamId}
-            agentId={status.agentId}
-            churn={status.churn}
-            busy={busy}
-            onCommitted={onCommitted}
-          />
+          {status.churn !== undefined &&
+            (status.churn.added > 0 || status.churn.removed > 0) && (
+              <button
+                type="button"
+                className="wsflat"
+                onClick={onOpenChanges}
+                title={busy ? 'this agent is working' : 'what has changed, and committing it'}
+              >
+                <GitCommitHorizontal size={11} aria-hidden />
+                commit
+              </button>
+            )}
         </span>
         <span className="wsdest">
           {/* One slot, two things that can never both be true: a pull request that exists, or
@@ -185,149 +199,6 @@ function Churn({ churn }: { churn: UiChurn | undefined }): React.JSX.Element | n
   );
 }
 
-/**
- * Committing what is in the workspace, in a popover over the tray.
- *
- * **The message is typed, never generated.** blobot provides no inference, and the agent that
- * wrote the code is the wrong thing to ask to name it: it would be a second opinion about work
- * the user has not read yet, arriving in the permanent record. So the field is the point of the
- * popover, exactly as the title is the point of the publish one, and it is what the button is
- * armed by.
- *
- * **It refuses while the agent is working.** A commit taken mid-turn captures a file the agent
- * is halfway through writing, and the resulting commit is not a state anything was ever in. The
- * control says so rather than disappearing, because a control that vanishes while an agent
- * happens to be thinking reads as a bug.
- *
- * *Redrawn 2026-08-31.* Three children stacked with no gap between them, so the field's border
- * met the plan's border and the panel read as one badly drawn box; the count lived inside the
- * button's label, where a live number set the width of a control; and the button, unarmed, wore
- * 40% of a secondary, which is the fade DESIGN.md's *a disabled primary keeps its fill* was
- * written against. Now: the numbers at the head, where the decision is made; the field at the
- * size of the thing the popover exists for; the commands quoted out of `--recessed` with a
- * shell prompt in the gutter rather than boxed a second time; and one word on a button that
- * stays a shape when it is off. Enter commits, because nothing else in here takes a keystroke.
- */
-function CommitButton({
-  teamId,
-  agentId,
-  churn,
-  busy,
-  onCommitted,
-}: {
-  teamId: string;
-  agentId: string;
-  churn: UiChurn | undefined;
-  busy: boolean;
-  onCommitted: () => void;
-}): React.JSX.Element | null {
-  const [open, setOpen] = useState(false);
-  const [message, setMessage] = useState('');
-  const [running, setRunning] = useState(false);
-  const [failed, setFailed] = useState<string | undefined>(undefined);
-  const [plan, setPlan] = useState<readonly string[]>([]);
-
-  // Rebuilt as the message is typed, so what is shown is what will run rather than what would
-  // have run before the user changed their mind. The commands are built in main, because argv is
-  // never the renderer's: the words travel, the command line does not.
-  useEffect(() => {
-    if (!open) return;
-    void window.blobot
-      .commitPlan(teamId, agentId, message)
-      .then(setPlan)
-      .catch(() => setPlan([]));
-  }, [open, teamId, agentId, message]);
-
-  if (churn === undefined || (churn.added === 0 && churn.removed === 0)) return null;
-
-  const armed = !running && message.trim() !== '';
-
-  const go = (): void => {
-    if (!armed) return;
-    setRunning(true);
-    setFailed(undefined);
-    void window.blobot
-      .commitWork(teamId, agentId, message)
-      .then((result) => {
-        if (!result.ok) return setFailed(result.error);
-        setOpen(false);
-        setMessage('');
-        onCommitted();
-      })
-      .finally(() => setRunning(false));
-  };
-
-  return (
-    <Popover.Root
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) setFailed(undefined);
-      }}
-    >
-      <Popover.Trigger
-        className="wsflat"
-        disabled={busy}
-        title={busy ? 'this agent is working' : 'commit what is here'}
-      >
-        <GitCommitHorizontal size={11} aria-hidden />
-        commit
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content className="wspop" side="top" align="start" sideOffset={10} collisionPadding={12}>
-          {/* What the commit would take, restated at the head of the panel. It was carried by
-              the button's own label (`commit 1 file`), which put a live number inside the width
-              of a control and left the panel opening on a field with nothing above it saying
-              what it was about. The figure belongs beside the thing it describes; the button
-              underneath is one word at every count. */}
-          <div className="wshead">
-            <span className="wschurn">
-              <span className="wsadd">+{churn.added}</span>
-              <span className="wsdel">−{churn.removed}</span>
-            </span>
-            <span className="wsfiles">
-              {churn.files} file{churn.files === 1 ? '' : 's'}
-            </span>
-          </div>
-          <input
-            className="wstitle"
-            placeholder="what this commit does"
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            // The field is the whole popover, so the key that finishes a field finishes this.
-            // Nothing else in here takes a keystroke, and reaching for the mouse to press the
-            // button beside a message you just typed is the gesture this saves.
-            onKeyDown={(event) => {
-              if (event.key !== 'Enter' || !armed) return;
-              event.preventDefault();
-              go();
-            }}
-            autoFocus
-          />
-          {plan.length > 0 && (
-            <div className="wsplan">
-              {plan.map((command) => (
-                <div className="wscmd" key={command}>
-                  {command}
-                </div>
-              ))}
-            </div>
-          )}
-          {failed !== undefined && <div className="wsfailed">{failed}</div>}
-          <div className="wsactions">
-            {armed && <span className="wshint">enter to commit</span>}
-            <button type="button" className="btn" onClick={() => setOpen(false)} disabled={running}>
-              cancel
-            </button>
-            <button type="button" className="btn primary" onClick={go} disabled={!armed}>
-              {running ? 'committing' : 'commit'}
-            </button>
-          </div>
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
-  );
-}
 
 /**
  * The branch, and every branch this worktree could be on instead.
@@ -527,6 +398,7 @@ function Holder({ held }: { held: UiBranch['heldBy'] }): React.JSX.Element | nul
           name={held.agentName}
           size={16}
           {...(held.agentHue === undefined ? {} : { hue: held.agentHue })}
+          {...(held.agentShape === undefined ? {} : { shape: held.agentShape })}
         />
       </span>
     );
@@ -619,7 +491,7 @@ export function WorkspacePanel({
           key={status.agentId}
           status={status}
           named
-          {...hueOf(agents, status.agentId)}
+          {...faceOf(agents, status.agentId)}
           looking={looking}
           onPublish={(options) => onPublish(status.agentId, options)}
           onPlan={(options) => onPlan(status.agentId, options)}
@@ -633,6 +505,7 @@ function Row({
   status,
   named = false,
   hue,
+  shape,
   looking,
   onRefresh,
   onPublish,
@@ -649,6 +522,7 @@ function Row({
    */
   named?: boolean;
   hue?: number;
+  shape?: string;
   looking: boolean;
   onRefresh?: () => void;
   onPublish: (options: { title?: string; draft?: boolean }) => Promise<UiPublishResult>;
@@ -659,8 +533,15 @@ function Row({
       <div className="wsfacts">
         {named && (
           <>
-            <Blob name={status.agentName} size={14} {...(hue === undefined ? {} : { hue })} />
-            <span className="who">{status.agentName}</span>
+            <Blob
+              name={status.agentName}
+              size={14}
+              {...(hue === undefined ? {} : { hue })}
+              {...(shape === undefined ? {} : { shape })}
+            />
+            <span className="who" title={status.agentName}>
+              {status.agentName}
+            </span>
           </>
         )}
         <span
@@ -674,7 +555,9 @@ function Row({
           ) : (
             <>
               <GitBranch size={11} aria-hidden />
-              {short(status.branch)}
+              {/* Its own element rather than a bare text node, so the panel's rows can clamp it:
+                  an anonymous flex item cannot be given an ellipsis. */}
+              <span className="b">{short(status.branch)}</span>
             </>
           )}
         </span>
@@ -859,9 +742,15 @@ function canPublish(status: UiWorkspaceStatus): boolean {
 }
 
 /** Spread rather than passed, because `exactOptionalPropertyTypes` distinguishes the two. */
-function hueOf(agents: readonly UiAgent[], agentId: string): { hue?: number } {
-  const hue = agents.find((agent) => agent.id === agentId)?.hue;
-  return hue === undefined ? {} : { hue };
+function faceOf(
+  agents: readonly UiAgent[],
+  agentId: string,
+): { hue?: number; shape?: string } {
+  const agent = agents.find((row) => row.id === agentId);
+  return {
+    ...(agent?.hue === undefined ? {} : { hue: agent.hue }),
+    ...(agent?.shape === undefined ? {} : { shape: agent.shape }),
+  };
 }
 
 /** `blobot/<team>/<agent>` is deterministic, so the half that identifies the agent is enough. */

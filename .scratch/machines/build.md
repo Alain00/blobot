@@ -488,3 +488,44 @@ conflicts resolved and validation, followed by a pause before more work or UI. K
 ticket claimed; this commit does not resolve its outstanding preservation, sign-in, mailbox,
 egress or activation gates. The overall goal is incomplete. Resume only after this requested
 pause; do not treat the older continuous instruction as permission to start UI now.
+
+## 2026-09-05 — main integrated and validated; requested pause
+
+Image/distribution checkpoint: `1991ff6` (`feat(machines): pin verified public runtime images`).
+Fetched `origin/main` at `9516cc9ea08b20f585c0758bb8497bc2389d3c14` and integrated its 19 new
+commits with a merge, preserving both histories. The incoming work includes the file/Git sidebar,
+live transcript blocks, pictures, chosen face shapes and updated design guidance.
+
+Conflict resolutions preserve both implementations: all five adapters keep Machine admission
+and local fallback construction while adding `PictureWatch`; the sleeping runtime factory
+passes the picture store; the rail keeps upstream shape/wandering behavior when awake and the
+existing Machine power/stillness behavior when asleep. Selective commits carry the Agent's
+unsigned identity, including inside a nested Workspace. The persona keeps upstream's explicit
+working-directory guidance while naming only the AgentWorkspace, as the accepted boundary
+requires. No production box or resource-migration guard was opened.
+
+The incoming September 4 map fork predates the accepted local/box scope. Resolved answers and
+their dependency statuses remain intact. Its two new questions had number collisions: the
+server fork is retained as ticket 23, closed under the already accepted scope boundary; the
+composition-root question remains open as ticket 24, subject to existing inheritance/home
+decisions. The main map records this reconciliation rather than silently reinstating the old
+server frontier or losing the questions.
+
+Validation on the combined branch:
+
+- Frozen-lockfile dependency installation succeeded. The pnpm shim's extra manager metadata
+  was removed from the working copy; the dependency lock is exactly main's version.
+- Core: typecheck and build pass; **911 tests passed, 46 skipped** across 83 passing files.
+- Desktop: typecheck and production build pass; **610 tests passed, 1 skipped** across 53
+  passing files. React `act` warnings were non-failing in existing runtime-options tests.
+- The real Git identity fixture now also verifies selected tracked/untracked files are
+  committed as the named Agent, unsigned, while unrelated staged work and shared config stay
+  intact. Existing selection, Machine power, adapter, store and sidebar tests all pass.
+- Electron demo opened the Alice pane with the file sidebar and exited successfully after
+  capturing `/private/tmp/blobot-main-merge-demo.png`; the empty synthetic folder is shown
+  honestly as `no folder`. This is a rendering smoke check, not real-provider acceptance.
+
+Stop here at Guillermo's request. The next continuation resumes complete-state migration and
+the remaining Machines plan against this merged UI baseline. No new Machines UI work began,
+the image ticket is still claimed and the overall goal is not complete. The application branch
+has not been pushed.

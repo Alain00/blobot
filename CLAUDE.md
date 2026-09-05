@@ -222,10 +222,14 @@ up. Read it before starting work.
 - **A screen for *your agents***, and what editing one means —
   `docs/adr/0002-editing-an-agents-definition.md`, the repo's second ADR, which answers the
   question ADR-0001 left open. An edit restates the whole definition; a team the agent is
-  already on takes the role, the standing instructions and the face at its next start, and keeps
-  its name and its runtime, because the branch is `blobot/<team>/<agent>` and a session belongs
-  to the runtime that opened it. The screen is over the working surface, reached from above TEAMS
-  in the rail, and nothing on it restarts a team.
+  already on takes the role, the standing instructions and how it answers at its next start,
+  **the face at once**, and keeps its name and its runtime, because the branch is
+  `blobot/<team>/<agent>` and a session belongs to the runtime that opened it. The screen is over
+  the working surface, reached from above TEAMS in the rail, and nothing on it restarts a team.
+  Both halves of a face are the user's to choose now — the hue and, since 2026-09-04, one of the
+  nine silhouettes, stored by name on the profile and restated onto every membership. The face
+  is the one part of an edit with nothing to restart, which is why it does not wait: it is drawn,
+  not composed into a persona, so a team holding the old one is one agent wearing two faces.
 
 - **Every rail row is its team, and says what that team is doing.** A row draws its members'
   faces and folds their status through the same `StatusWord` the open team uses, silent while
@@ -612,6 +616,165 @@ problem, because four Handbooks do not fold into one the way four statuses fold 
   app deliberately does not offer, and a twenty five second session at real cadence that is the
   only honest way to argue about frequency.
 
+- **Only the agent you asked answers you, and the rest folds.** Two fixes to one observed
+  failure, 2026-09-04. The **wake prompt** told an agent its prose was invisible to the sender
+  only on the *batch* branch, which is the branch that fires least; woken by a single peer
+  message, a real agent wrote *"Hi Alice"* into its own turn, promised to be in touch, called
+  nothing, and the sender waited for a reply that had never been posted. Both transcripts then
+  held a false statement about the other. `REPLY_RULE` in `envelope.ts` is one constant in both
+  branches, in the same position, so they cannot drift apart again. On screen, the team pane drew
+  that teammate's answer to *Alice* in the user's own column at the user's own altitude, usually
+  as the longest thing there; **the block that already folded the turn's own calls holds it now**,
+  one run of the addressed agent's steps, the mail either way and the whole turn a teammate took
+  because of it, named on the shut line with its face (`ran 2 tools · 1 message with` Bob). It
+  shipped that morning as a *second* fold, `aside`, and merged into this one the same day at the
+  author's direction: the reader wants everything the turn had to arrange demoted together, and
+  whether blobot classed a line as a call or as a message is not a distinction they asked about.
+  A run has one principal, so a fan-out never puts one agent's words under another's name; a
+  teammate's turn always folds however short, mail with nothing behind it never does; the three
+  exclusions bind the teammate too, the unanswered permission hardest, because an agent nobody
+  addressed has no other way of reaching the user. **What the principal said to you is never in the
+  block** -- all of it comes out and is drawn underneath in order, grouped into one turn -- which
+  is the fourth rule tried in one day and the author's own: trimming the end folds away your
+  agent's only words to you, cutting the run there strands the teammate's later work as a second
+  block reading `ran 1 tool` for a turn that was not theirs, and lifting only the *last* prose is
+  worse than both, because an agent that pings three teammates writes a paragraph per reply and
+  **the last one is the last increment, not a summary**. blobot provides no inference, so it
+  cannot summarise them and must not drop them. A short caption stays in, since it introduces the
+  call beneath it and means nothing away from it. The `to Alice` tag under the user's bubble went
+  with it: it was the address said twice under words that begin `@Alice`, and what it
+  was guarding against is answered where it happens. **The silent-handoff detector still cannot
+  see this**, because `#wake` passes it no `HandoffWatch` and its shape assumes an operator
+  prompt with names in it. That is a ticket, not a fix.
+
+- **A turn in flight is one block per agent, with its face on it.** `.scratch/live-steps/`, five
+  tickets, all resolved and built. Two sets of three dots used to sit forty pixels apart — the
+  running call's, at the end of its line, and the pending bubble's underneath it — the same glyph
+  saying the same thing twice, which is the duplicate this column had already refused twice in
+  `DESIGN.md`. And the calls were loose mono lines in the shared column with nothing on them
+  saying whose they were, so two agents running at once in a team pane was an interleave nobody
+  could read. `liveTailOf` splits the transcript into what has settled and a **live tail**: the
+  trailing loose calls of every agent mid-turn, one attributed block each, face over its own
+  steps, in the order the settled transcript already uses. The dots survive only where they are
+  the only thing to see, before the first call opens. **The list is not capped** — a call pushed
+  out of a full window is still running and cannot enter a fold whose line counts what finished,
+  so a cap buys a shorter block by claiming a call ended when it did not, and the author refused
+  the `+3 more running` that would have made it honest. Bounded by a **status** rather than by
+  looseness (`isInFlight`, which deliberately excludes `responding`), so a batch stays together
+  when its first member returns, a lone finished call does not hold a face over it forever, and a
+  block and a streaming message are never mounted at once — which is how there is only ever one
+  face. The one that really did draw twice was a *settled* caption above the block, one item short
+  of the fold's threshold, and `continuesAgent` groups the block under it. And the mock can
+  finally produce any of this: `MockAgentRuntime` played `for (const step of scenario.steps)` and
+  awaited each one, so no scenario could ever put two calls in flight and every review of the live
+  transcript had been conducted against a queue. `.parallel([tool(...), …])` forks with
+  `Promise.all`; `works-through-a-list` carries two batches whose durations **disagree with their
+  order**, because the case that matters is calls finishing out of order and nothing serial can
+  spring that trap.
+
+  **And the block stands for the turn, not for the call, 2026-09-05.** It existed only while a
+  call was open, so between two batches an agent's steps folded, the block came off the screen,
+  and the pending bubble reappeared at the foot grouped under the fold and therefore faceless:
+  three dots in a gutter for as long as the agent reasons, which on a reasoning runtime is most
+  of a turn. `rowsOf` emits the live row while the principal is in flight and the run is the last
+  one, open call or not; **an empty block is the point**, the face carries it, and a block with no
+  steps keeps its blobatar however it is grouped, because grouped means the face is already on
+  screen a line up and a fold header has no face. The **reasoning itself is not drawn**: it was
+  built that way first (`agent_thought_delta` as a sans step) and refused on sight by the author,
+  *"i don't need the thinking tokens, only the thinking state"* — which is `StatusWord`'s own
+  standing rule, that which kind of busy is answered by tool lines and text arriving rather than
+  as an abstraction over them. The tokens stay dropped in the reducer and the store's `thought`
+  rows stay unread. And **a folded step stays folded**, the author's second rule: `liveRunIn`'s
+  batch walk reaches backwards over contiguous calls to keep an open batch together and cannot
+  tell three opened at once from two that merely had nothing said between them, so every new call
+  hauled the settled, folded run back onto the screen — and reasoning is not narration, which is
+  what made that corner case the common one. The model states the rule and the renderer keeps the
+  memory, the way a reply's news already worked.
+
+- **The third column is gone, and its head is a popover.** 2026-09-05, at the author's direction.
+  The activity column carried a log of finished tool calls and ended turns under a pinned head of
+  `CONTEXT` and `WORKSPACE`. The log lost its reason the day before, when a settled call stopped
+  leaving the transcript: the turn's own fold holds it now, attributed and in place, so the column
+  was the same events listed a second time in a flank nobody reads while something is happening.
+  The head is what was worth keeping, and it is **not a column-shaped thing** — two blocks of one
+  row per agent, read on purpose rather than watched, which is a popover's shape and not worth a
+  fifth of the window. `components/Details.tsx` hangs it off one glyph in the chrome exactly where
+  the column's own toggle stood, on a press rather than the ring's hover, taking `.wspop`'s shape
+  and the column's 288px. `--screen=details` opens it at launch, because it is now a surface a
+  screenshot cannot click to. What is **not** removed is the model's `feed`: nothing draws it, and
+  `useWorkspaces` still reads local git whenever something settles, which is the
+  cheapest honest signal that a worktree may have changed. DESIGN.md's activity-column entry is
+  rewritten rather than deleted, and the flanks rule now has one subject instead of two.
+  *Both halves of that last sentence were overtaken the same day by the file sidebar below: the
+  signal was `state.feed.length`, which saturates, and the rule has two subjects again.*
+
+- **The folder the agent is working in, on screen.** `.scratch/file-sidebar/`, seven tickets, all
+  resolved and built. A resizable right panel holding a **file tree of one AgentWorkspace**,
+  decorated with what git says has changed in it. It exists because blobot's whole claim is that
+  **an agent's real state is a git worktree, not a conversation**, and every surface built so far
+  reads that worktree as a *figure* — `+412 −7 · 9 files`, a branch, a percent — while **not one
+  of them can say which nine files**. It restores the third column that came off the day it was
+  raised, and it is not the activity column in a new costume: that column drew what the transcript
+  was already drawing, and this draws what the transcript cannot, which is now the **test a future
+  flank has to pass** in `DESIGN.md`'s own text (*is this the only rendering of this fact?*). It
+  **draws the pane's agent, full stop** — no selection of its own, because a tree quietly showing a
+  different checkout than the diff line above it is the `STOPPED`-on-every-rail-row failure again —
+  and in the team pane the **empty state is the chooser**, the members' faces with no line over
+  them, clicking one being the same act as its rail row. The head is the face and the name, never
+  the branch, which the tray forty pixels away already says, and **pressing it is the way back to
+  the team**: the face took you in, so the panel must not be one-way.
+  **A window onto the work, never an editor.** Read-only in every direction, a click opens the file
+  in the user's own editor, and no runtime is told any of it. Three cheap reads and **no walk
+  anywhere**: one `git status --porcelain=v2 -unormal` per refresh for the whole worktree (3 ms,
+  and flat in what is on disk, because git does not descend into an ignored directory), a `readdir`
+  per expansion (0.06 ms, against 535 ms and 123,021 entries to walk the same folder), and one
+  batched `check-ignore` per directory as it opens — which **cannot be derived away**, since an
+  ignored directory and an *empty untracked* one are both absent from `ls-files` and `status`.
+  The roll-up on a collapsed folder is free at every level and nothing walks to get it. It follows
+  the work off `useWorkspaces`' own signal and on **no timer**, and while it is a second behind it
+  **says nothing**: a timestamp or a dimming would be a second moving thing in a flank, which is
+  what the activity column died of. `targetOf` is refused too, and it is the interesting one —
+  blobot knows the path of every tool call, and using it would draw a mark from *the announcement
+  of an edit rather than from the filesystem*, so a cancelled or permission-refused call would
+  leave a file marked when nothing moved.
+  **The row is chevron, mark, name, and a status column parked at the panel's right edge** carrying
+  `M`, `?` and a count in mono. **Decoration is weight and a mono mark, never hue, and the two say
+  different things** — ticket 01's amendment, made the day it shipped, from the author reporting
+  that the folders had no marks. They did not, and the panel was right: measured on the worktree in
+  the screenshot, `git status` returned one line and the branch was three commits ahead, so every
+  folder really was clean. The **measure** was wrong, inherited from ticket 03's *the tree reports
+  what git measured*. blobot has a commit control in the tray, so an agent committing is the
+  **ordinary** case, and a tree that empties the moment it does fails this effort's own sentence.
+  So a fourth read joins the three — `git diff --name-only <base>...HEAD`, against the base `ahead`
+  is already counted from — and the two facts split across the two channels the row already had:
+  the **weight** is *part of what this agent did on this branch*, committed or not, and the **mark**
+  is unchanged, *and it is not committed yet*. A committed file lifts with nothing in the column,
+  a collapsed directory counts the union, and **no third letter was invented**, so 01's vocabulary
+  stays closed — what changed is that weight stopped being a restatement of the mark. An ignored
+  row dims and is shown rather than hidden, because it is in the folder the agent can see. Colour splits on authorship — blobot drew the tree, so the tree is monochrome. The mark
+  is **Material Icon Theme greyed to one `currentColor`**, `DESIGN.md`'s Icons rule taking its
+  second and last exception, because Lucide cannot do per-extension (`.ts`, `.tsx`, `.js`, `.mjs`
+  and `.css` all collapse onto `file-code`, so `Blob.tsx` and `styles.css` draw identically). It
+  ships as a **generated subset** — 81 glyphs, +5.5% of the renderer bundle, bundled and never
+  fetched — from an allowlist that grows from what people open, and a miss is the generic page,
+  which is the set's resting state rather than a new failure.
+  **It never draws an absence it did not verify.** On a copy the status column is **absent, not
+  empty**, because an empty column reads as *nothing changed*, and the head says `a copy`. In a
+  `nested` Workspace the loose files beside the repositories are a copy too, so the marks stop —
+  and the seam needed one fix ticket 05 did not foresee: the root of a nested Workspace is in no
+  repository, so every row there is silent until each repository's own changed set is read for its
+  root. After that the prediction holds and the seam needs no device, because the rows carrying a
+  count are exactly the repositories. `folder not found` and `no folder` are the short form; core's
+  full sentence stays at the launch refusal, where the fix is. It never draws nothing, which is
+  indistinguishable from a panel that has not finished reading.
+  The IPC takes **many directories at once**, because the status is per worktree and a refresh
+  re-reads every open folder; the open handler takes a **relative** path and refuses anything that
+  escapes the workspace, which is `blobot:openLink`'s guard pointed at a folder instead of a
+  scheme. And the build fixed **a shipped defect the map found**: `pushFeed` caps the feed at 200,
+  so `state.feed.length` saturated and local git was never re-read again for the rest of a session
+  once a team had settled its two hundredth tool call. `AppState.settled` is a counter now.
+  `.scratch/file-sidebar/build.md` has what was decided at the keyboard.
+
 Next: **the dictation done-when by hand** — a Spanish sentence with identifiers into a real
 agent, locally and through one provider (the `whisper-cli` workflow ran and its hashes are
 pinned; the engine's release URL is private for now, on `build.md`). Then **brief a real
@@ -621,6 +784,56 @@ whether ticket 04's empty-state block actually opens the conversation, and do it
 well, since it is the runtime that confabulated. Then surfacing whether an agent resumed or
 started fresh, and a ticket for fx's diagnostics in the message voice. Each effort's `build.md`
 has the order and the reasons.
+
+**Charted but not built:** `.scratch/agent-media/` — **an agent showing the user a picture**, ten
+tickets, four resolved, frontier 03, 05 and 06. Raised 2026-09-05 and narrowed by the author to one
+arrow and one payload: *a coding agent that sends me back screenshots of how my app looks*. It
+starts from a defect rather than a want. `adapters/acp/session-updates.ts:76` takes the text of a
+content block and drops the update when there is none, so an image from a runtime becomes **no
+event at all** — which is happening today to any operator with a browser MCP server installed,
+since ADR-0003 loads their servers on all five runtimes. ADR-0004 does not decide this: every
+reason it gives is about what blobot puts *into* an agent's context from outside its
+AgentWorkspace, and none survives the reversal. Agent to agent is out and ticket 02 records why.
+The two things that make it more than a rendering change are that a picture is a **claim about the
+world** with no defeaters, where text has always carried its own, and that the agent has to be
+allowed to take one at all — which found a live defect on the way in: `npx` is on `TRUSTING_BASH`,
+so `npx playwright screenshot` already runs unprompted at `trusting` and `unattended`, a prefix
+rule hiding an arbitrary verb, which is what `gh api` was removed for. Ticket 02 is resolved:
+ADR-0004's three reasons are inapplicable to the reversal one at a time, so **do not cite it
+against this map**, and the risk of this arrow is **credibility, not confidentiality** — an
+AgentWorkspace isolates agents from each other and never an agent from the user who owns the
+repository. Agent to agent is deferred rather than refused, blocked on provenance, because a peer
+has no frame to read one off. The protocol half of ticket 01 is answered at desk
+(`research/01-the-protocol-half.md`): both shapes are legal, forwarding an MCP tool's image output
+untransformed is what ACP's content design is *for*, there is **no client capability for receiving
+content** so the drop is ungated on all five, and `ImageContent.annotations` already carries
+`audience` and `lastModified`, which is why ticket 07 must not design a frame before the live half
+measures whether anyone sets them. **The live half is now run** against four of the five
+(`cursor-agent` is not installed here), one turn each, harness in `research/probe/` and raw wire in
+`research/transcripts/`: **four runtimes, four different shapes, and no two put a picture in the
+same place.** Claude sends it canonically and **three times over**; Codex sends it **only** in
+`rawOutput.result.content`, MCP's envelope rather than ACP's; OpenCode sends it canonically plus a
+`data:` URL of its own; **fx stringifies the whole result into a text block and truncates it at 200
+characters mid-base64, saying nothing.** So `adapters/acp/` does not cover this, the first measured
+thing that it does not. `annotations` are stripped, so `audience` and `lastModified` are
+unavailable and every fact on a frame is one blobot measured or one an agent claimed. And on
+OpenCode the picture arrived byte-exact while the **model** refused it, which also means
+`AgentRuntime.accepts` may be lying there — a shipped-behaviour defect against ADR-0004, on the
+map's *Found on the way* list rather than in it. Tickets 04 and 07 followed. **The envelope
+cannot be filled**: an MCP tool's arguments are generated by the model, so an agent can never hand
+blobot bytes, only a **reference** — a structural fact, not a cost. So observing the tool result is
+**the silent drop fixed and not the feature** (it needs a server the operator installed, dies on
+fx, and knows only a tool name and an arrival time), while **one loopback tool taking a path inside
+the agent's own AgentWorkspace is the objective**: a deliberate act, working on all five runtimes
+because the picture never touches the ACP wire, and the only source that can be vouched for. Its
+containment check protects **the permission posture and not confidentiality** — blobot must not
+become a read primitive that goes around ticket 14 — and the accepted cost is stated rather than
+dodged, since screenshots pile up as untracked files in a checkout that can be committed home. And
+the frame carries **only what blobot measured**, with the agent's caption left in the agent's own
+voice where it cannot borrow blobot's credibility: the file's name, the dimensions, and **whether
+it was written during this turn or was already there**, which is the fact that turns a screenshot
+of a stale build from an unfalsifiable claim into a weighable one. The branch is refused there, and
+the two sources draw differently on purpose.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that
 reproduces every observed trap on purpose — ragged deltas, a cancelled tool reporting

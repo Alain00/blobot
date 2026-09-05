@@ -6,6 +6,8 @@ import type {
   AttachmentSupport,
   CompactionSetting,
   Message,
+  PictureNotDrawn,
+  PictureSource,
   RoutineOutcome,
   Schedule,
   StopReason,
@@ -56,6 +58,7 @@ export interface UiRoutine {
   readonly agentId: string;
   readonly agentName?: string;
   readonly agentHue?: number;
+  readonly agentShape?: string;
   readonly teamName?: string;
   /** When it next comes due. Absent while it is disarmed, because a disarmed Routine has none. */
   readonly nextRunAt?: number;
@@ -140,6 +143,7 @@ export interface UiRoutineTarget {
   readonly agentId: string;
   readonly agentName: string;
   readonly agentHue?: number;
+  readonly agentShape?: string;
   readonly teamName: string;
 }
 
@@ -171,6 +175,8 @@ export interface UiAgent {
   readonly branch?: string;
   /** The blobatar's hue, when the user chose one. Absent means the name derives it. */
   readonly hue?: number;
+  /** The blobatar's silhouette, when the user chose one. Absent means the name gives it. */
+  readonly shape?: string;
   /**
    * What this agent's runtime takes attached to a prompt.
    *
@@ -261,6 +267,8 @@ export interface UiTeamMember {
   readonly name: string;
   /** The blobatar's hue, when the user chose one. Absent means the name derives it. */
   readonly hue?: number;
+  /** The blobatar's silhouette, when the user chose one. Absent means the name gives it. */
+  readonly shape?: string;
 }
 
 /** A row in the rail's team list. Every team the user has created, running or not. */
@@ -346,6 +354,28 @@ export interface UiLog {
   readonly turns: readonly UiTurnLog[];
   /** Sessions blobot replaced, or decided to keep. Ticket 10. */
   readonly compactions: readonly UiCompaction[];
+  /** Pictures an agent showed, and the ones that could not be shown. */
+  readonly pictures: readonly UiPicture[];
+}
+
+/**
+ * One Picture as a restored transcript rebuilds it.
+ *
+ * The record and never the bytes: the pane asks for one picture at a time by id, the way a chip
+ * asks for an attachment, because an agent decides how many Pictures a transcript has. A row with
+ * `notDrawn` set has no bytes anywhere -- nothing was kept -- and this event is the only record
+ * that it happened at all.
+ */
+export interface UiPicture {
+  readonly agentId: string;
+  readonly at: number;
+  readonly source: PictureSource;
+  readonly pictureId?: string;
+  readonly notDrawn?: PictureNotDrawn;
+  readonly toolName?: string;
+  readonly name?: string;
+  readonly writtenAt?: number;
+  readonly turnStartedAt?: number;
 }
 
 /**
@@ -663,6 +693,101 @@ export interface UiWorkspaceStatus {
   readonly unavailable?: string;
 }
 
+/**
+ * One changed file in an AgentWorkspace, for the git panel.
+ *
+ * The rows behind the tray's `+412 −7`, kept rather than summed. `untracked` is the half you
+ * commit blind, so it draws in its own section; `from` is a rename's old path, which a commit
+ * has to take along with the new one or the deletion stays behind.
+ */
+export interface UiChangedFile {
+  readonly path: string;
+  readonly added: number;
+  readonly removed: number;
+  readonly untracked?: true;
+  readonly from?: string;
+}
+
+/**
+ * What the git panel draws: one agent's uncommitted work, file by file.
+ *
+ * **Never draws an absence it did not verify**, the file tree's own rule: `present: false` is a
+ * folder that is gone, a `plain` copy has no git to ask and says so, and a `nested` Workspace
+ * has no single HEAD, so it answers with its repositories and the panel commits one at a time.
+ */
+export interface UiWorkspaceChanges {
+  readonly present: boolean;
+  readonly kind: 'git' | 'nested' | 'plain';
+  /** The repositories to choose between, on a `nested` Workspace. */
+  readonly repos?: readonly string[];
+  /** Which of them these rows came from, relative to the workspace. */
+  readonly repo?: string;
+  readonly rows: readonly UiChangedFile[];
+  readonly added: number;
+  readonly removed: number;
+  /** More untracked files than blobot will count, so the figures are a floor. */
+  readonly partial?: boolean;
+}
+
+/**
+ * Which files a commit takes, where the user picked some of them.
+ *
+ * Absent is *everything here*, which is what the tray does. The ticks are blobot's own selection
+ * and never the git index: `git commit -- <paths>` leaves the index alone. `untracked` is the
+ * exception git forces, because a pathspec cannot name a file git has never seen.
+ */
+export interface UiCommitSelection {
+  readonly paths?: readonly string[];
+  readonly untracked?: readonly string[];
+  /** The repository inside a `nested` Workspace, relative to it. */
+  readonly repo?: string;
+}
+
+/**
+ * One row of the file sidebar: a file or a directory in an AgentWorkspace, and what git says.
+ *
+ * Decoration is weight and a mono mark, never hue: `touched` lifts the row, `mark` is a value
+ * drawn in the status column at the panel's edge, and `ignored` dims the row rather than hiding
+ * it. `changes` is the roll-up a collapsed directory carries, which costs nothing because the
+ * changed set is flat.
+ */
+export interface UiTreeEntry {
+  readonly name: string;
+  readonly kind: 'file' | 'directory';
+  readonly ignored?: boolean;
+  /**
+   * Part of what this agent did on this branch, committed or not. Two facts and two channels:
+   * this is the row's **weight**, and `mark` is the status column. An agent that commits its
+   * work keeps its files lifted and loses their marks, which is the whole distinction.
+   */
+  readonly touched?: boolean;
+  /** Uncommitted, and how. Absent on work that has already been committed. */
+  readonly mark?: 'M' | '?';
+  readonly changes?: number;
+  /** Where git starts again inside a `nested` Workspace, and the seam the marks stop at. */
+  readonly repoRoot?: boolean;
+}
+
+export interface UiTreeDirectory {
+  /** Relative to the AgentWorkspace. `''` is its root. */
+  readonly path: string;
+  readonly entries: readonly UiTreeEntry[];
+  /** More entries than the listing's ceiling, stated rather than truncated silently. */
+  readonly partial?: boolean;
+  /**
+   * Whether git can answer for this directory. False on a copy and on the loose files of a
+   * nested Workspace, where the status column is **absent rather than empty** — an empty column
+   * reads as *nothing changed*, which is an absence nobody verified.
+   */
+  readonly tracked: boolean;
+}
+
+export interface UiWorkspaceTree {
+  /** False is `folder not found`: the folder has been moved or deleted, and nothing is read. */
+  readonly present: boolean;
+  readonly directories: readonly UiTreeDirectory[];
+}
+
 export interface UiPullRequest {
   readonly number: number;
   readonly state: 'open' | 'draft' | 'merged' | 'closed';
@@ -686,6 +811,8 @@ export interface UiBranch {
     readonly agentName?: string;
     /** Their own hue, so the row draws that agent's face and not a second one. */
     readonly agentHue?: number;
+    /** And their own silhouette, for the same reason: half a face is still a second Bob. */
+    readonly agentShape?: string;
     readonly isWorkspace?: boolean;
   };
 }
@@ -885,6 +1012,8 @@ export interface UiAgentProfile {
   readonly instructions?: string;
   /** The blobatar's hue, when the user chose one. Absent means the name derives it. */
   readonly hue?: number;
+  /** The blobatar's silhouette, when the user chose one. Absent means the name gives it. */
+  readonly shape?: string;
   /** What it is set to among its runtime's options, so the edit form opens on the truth. */
   readonly runtimeOptions?: Readonly<Record<string, string>>;
   /**
@@ -922,6 +1051,8 @@ export interface NewAgentSpec {
   readonly instructions?: string;
   /** 0 to 359. Omitted when the user kept the face the name gave it. */
   readonly hue?: number;
+  /** A silhouette by name. Omitted when the user kept the one the name gave it. */
+  readonly shape?: string;
   /**
    * What the user chose among the options the runtime advertises, keyed by the provider's own
    * group id. An absent key is the runtime's default, and an empty map is a form where the
@@ -1140,6 +1271,8 @@ export interface BlobotApi {
    * picture, and for an id nothing wrote.
    */
   attachmentUrl(id: string): Promise<string | undefined>;
+  /** One Picture's bytes, for the pane about to draw it. Undefined for an id nothing wrote. */
+  pictureUrl(id: string): Promise<string | undefined>;
   /**
    * The window of transcript above the one the pane is holding.
    *
@@ -1268,6 +1401,37 @@ export interface BlobotApi {
    */
   workspaceStatus(teamId: string, forge?: boolean): Promise<readonly UiWorkspaceStatus[]>;
   /**
+   * The directories of one agent's AgentWorkspace that the sidebar has open.
+   *
+   * Several at once because `git status` is per worktree and the refresh re-reads every open
+   * folder: one call per directory would run the same status once for each of them. Lazy in the
+   * other direction — nothing walks, and an unexpanded folder costs nothing.
+   */
+  workspaceTree(
+    teamId: string,
+    agentId: string,
+    paths: readonly string[],
+  ): Promise<UiWorkspaceTree>;
+  /**
+   * Open a file from that tree in whatever the user opens files with.
+   *
+   * A **relative** path, resolved against that agent's own workspace on the far side and
+   * refused if it escapes it. The renderer never holds an absolute path, which is what keeps
+   * this from becoming a way to read the disk.
+   */
+  openInWorkspace(teamId: string, agentId: string, path: string): Promise<void>;
+  /**
+   * One agent's uncommitted work, file by file, for the git panel.
+   *
+   * `repo` picks one repository inside a `nested` Workspace; everywhere else it is the whole
+   * worktree. Read on the same signal the tree is and on no timer.
+   */
+  workspaceChanges(
+    teamId: string,
+    agentId: string,
+    repo?: string,
+  ): Promise<UiWorkspaceChanges>;
+  /**
    * Every branch this agent's worktree could be on, read when the menu opens.
    *
    * Local branches only, so this never touches the network, and it is asked on opening the menu
@@ -1287,14 +1451,24 @@ export interface BlobotApi {
     options?: { create?: boolean },
   ): Promise<UiSwitchResult>;
   /** The exact commands a commit would run, shown before the user agrees to them. */
-  commitPlan(teamId: string, agentId: string, message: string): Promise<readonly string[]>;
+  commitPlan(
+    teamId: string,
+    agentId: string,
+    message: string,
+    selection?: UiCommitSelection,
+  ): Promise<readonly string[]>;
   /**
    * Commit what is in this agent's workspace. The user's own git, at the user's own click.
    *
    * No runtime is told, nothing enters a session, and no agent has a path to it: `git commit`
    * prompts at every trust level and is on no allowlist.
    */
-  commitWork(teamId: string, agentId: string, message: string): Promise<UiCommitResult>;
+  commitWork(
+    teamId: string,
+    agentId: string,
+    message: string,
+    selection?: UiCommitSelection,
+  ): Promise<UiCommitResult>;
   /** The exact commands `publishBranch` would run, for the confirm to show before it does. */
   publishPlan(
     teamId: string,

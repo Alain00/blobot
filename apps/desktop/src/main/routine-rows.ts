@@ -55,6 +55,7 @@ function toRow(store: SqliteStore, routine: Routine, now: number): UiRoutine {
     agentId: routine.agentId,
     ...(agent === undefined ? {} : { agentName: agent.name }),
     ...(agent?.hue === undefined ? {} : { agentHue: agent.hue }),
+    ...(agent?.shape === undefined ? {} : { agentShape: agent.shape }),
     ...(team === undefined ? {} : { teamName: team.name }),
     // A disarmed Routine has no next run, and saying one would be the screen promising a firing
     // that is not coming. The whole of what arming grants is that this line exists.
@@ -99,6 +100,7 @@ export function routineTargets(store: SqliteStore): UiRoutineTarget[] {
       agentId: agent.id,
       agentName: agent.name,
       ...(agent.hue === undefined ? {} : { agentHue: agent.hue }),
+      ...(agent.shape === undefined ? {} : { agentShape: agent.shape }),
       teamName: team.name,
     })),
   );

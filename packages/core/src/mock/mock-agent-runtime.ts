@@ -13,6 +13,7 @@ import type {
   RecordEntryHandler,
   RoutineProposalHandler,
   PermissionHandler,
+  PictureStore,
   Prompt,
   RuntimeLifecycle,
   RuntimeOptionGroup,
@@ -50,6 +51,14 @@ export interface MockAgentRuntimeOptions {
   readonly proposeRoutine?: RoutineProposalHandler;
   /** Ticket 03's `record_entry`, the same way again. */
   readonly recordEntry?: RecordEntryHandler;
+  /**
+   * Where a Picture's bytes go, exactly as a real adapter takes it.
+   *
+   * Demo mode passes the app's own store, so a scripted picture is measured and refused by the
+   * same code a real runtime's would be. Absent, a Picture the scenario wanted drawn reports
+   * that blobot could not keep it, which is true and is the sentence for it.
+   */
+  readonly pictures?: PictureStore;
   readonly startupMs?: number;
   /** When set, `start()` rejects with this message: the spawn-failure path. */
   readonly spawnFailure?: string;
@@ -101,6 +110,7 @@ export class MockAgentRuntime implements AgentRuntime {
   readonly #peerMessageHandler: PeerMessageHandler | undefined;
   readonly #proposeRoutine: RoutineProposalHandler | undefined;
   readonly #recordEntry: RecordEntryHandler | undefined;
+  readonly #pictures: PictureStore | undefined;
   readonly #startupMs: number;
   readonly #spawnFailure: string | undefined;
   readonly #restartFailure: string | undefined;
@@ -116,6 +126,7 @@ export class MockAgentRuntime implements AgentRuntime {
   #messageCounter = 0;
   #toolCounter = 0;
   #used = 0;
+
   #turn: { queue: AsyncQueue<AgentEvent>; abort: AbortController } | undefined;
   #permissionHandler: PermissionHandler | undefined;
   #eventListeners = new Set<(event: AgentEvent) => void>();
@@ -131,6 +142,7 @@ export class MockAgentRuntime implements AgentRuntime {
     this.#peerMessageHandler = options.peerMessageHandler;
     this.#proposeRoutine = options.proposeRoutine;
     this.#recordEntry = options.recordEntry;
+    this.#pictures = options.pictures;
     this.#startupMs = options.startupMs ?? 250;
     this.#spawnFailure = options.spawnFailure;
     this.#restartFailure = options.restartFailure;
@@ -367,6 +379,18 @@ export class MockAgentRuntime implements AgentRuntime {
           messageId = this.#nextMessageId();
           break;
         }
+        case 'parallel': {
+          // Every call starts before the first one sleeps, because `#runTool` emits its
+          // `started` and its `in_progress` before its first await — which is what a real
+          // batch looks like on the wire — and then they return on their own durations, in
+          // whatever order those put them.
+          const cancelled = await Promise.all(
+            step.tools.map((tool) => this.#runTool(queue, tool, abort.signal)),
+          );
+          if (cancelled.some(Boolean)) return this.#endCancelled(queue, turnId);
+          messageId = this.#nextMessageId();
+          break;
+        }
         case 'message_agent': {
           await this.#runPeerMessage(queue, step, turnId);
           break;
@@ -381,6 +405,36 @@ export class MockAgentRuntime implements AgentRuntime {
         }
         case 'commands': {
           this.#setCommands(step.commands);
+          break;
+        }
+        case 'picture': {
+          // No store here, so a Picture the scenario wanted drawn is kept in memory under an id
+          // the pane can fetch. That is the whole of the mock's obligation: the store's refusals
+          // are the store's own and are scripted with `notDrawn`.
+          const kept =
+            step.notDrawn !== undefined || step.data === undefined
+              ? undefined
+              : this.#pictures?.keep({
+                  agentId: this.agentId,
+                  source: step.source,
+                  data: step.data,
+                  at: this.#clock.now(),
+                  ...(step.name === undefined ? {} : { name: step.name }),
+                });
+          const notDrawn =
+            step.notDrawn ??
+            (kept === undefined ? 'not_kept' : 'notDrawn' in kept ? kept.notDrawn : undefined);
+          this.#emitTo(queue, {
+            type: 'picture_arrived',
+            source: step.source,
+            ...(kept !== undefined && 'pictureId' in kept ? { pictureId: kept.pictureId } : {}),
+            ...(notDrawn === undefined ? {} : { notDrawn }),
+            ...(step.toolName === undefined ? {} : { toolName: step.toolName }),
+            ...(step.name === undefined ? {} : { name: step.name }),
+            ...(kept !== undefined && 'width' in kept
+              ? { width: kept.width, height: kept.height, bytes: kept.bytes }
+              : {}),
+          });
           break;
         }
         case 'usage': {

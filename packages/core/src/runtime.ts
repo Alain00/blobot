@@ -1,5 +1,6 @@
 import type { AgentEvent } from './events.js';
 import type { RuntimeImageDefinition } from './machines/runtime-image.js';
+import type { PictureNotDrawn, PictureSource } from './pictures.js';
 
 /** One prompt handed to a session. Peer messages arrive here too, already enveloped. */
 export interface Prompt {
@@ -249,6 +250,49 @@ export type Unsubscribe = () => void;
  * The interface every provider sits behind. Nothing outside an adapter may know which
  * provider an Agent is.
  */
+/**
+ * Where a Picture's bytes go, from the side that has them.
+ *
+ * Declared here and implemented in main over SQLite, the same shape `main/attachments.ts` already
+ * has for the inbound direction: core never touches the store, and `@blobot/core/domain` takes no
+ * Node dependency, which is why it is `Uint8Array` and never `Buffer`.
+ *
+ * It is **synchronous**, because the events it sits between are: an adapter translating one
+ * `session/update` emits in order, and an await in the middle of that would let a later update
+ * overtake this one and put a picture under the wrong tool call.
+ *
+ * `keep` measures the bytes, refuses what it cannot draw and returns why, so an adapter never
+ * decides what a Picture is -- it only says where it found one. See `.scratch/agent-media/06`.
+ */
+export interface PictureStore {
+  keep(picture: KeptPicture): PictureKept;
+}
+
+/** One Picture on its way into the store, as the thing that found it knows it. */
+export interface KeptPicture {
+  readonly agentId: string;
+  readonly source: PictureSource;
+  readonly data: Uint8Array;
+  readonly at: number;
+  /** The tool that produced it, when blobot observed rather than was handed it. */
+  readonly toolName?: string;
+  /** The file's own name. Shown only, and never invented for an observed one. */
+  readonly name?: string;
+  readonly writtenAt?: number;
+}
+
+/** What came of that: an id to draw, or the reason there is nothing to draw. */
+export type PictureKept =
+  | { readonly pictureId: string; readonly width: number; readonly height: number; readonly bytes: number }
+  | { readonly notDrawn: PictureNotDrawn; readonly bytes: number };
+
+/** A Picture's bytes on their way back out, which is the one thing they are fetched for. */
+export interface PictureContent {
+  readonly id: string;
+  readonly mimeType: string;
+  readonly data: Uint8Array;
+}
+
 export interface AgentRuntime {
   readonly agentId: string;
   readonly sessionId: string;

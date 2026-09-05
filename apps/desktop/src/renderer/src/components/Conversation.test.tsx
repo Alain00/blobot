@@ -17,7 +17,7 @@ import { createRoot } from 'react-dom/client';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AgentStatus } from '@blobot/core/domain';
 import type { UiAgent } from '../../../shared/api.js';
-import type { Item, Pane } from '../model.js';
+import { itemsFor, type Item, type Pane } from '../model.js';
 import { stubGazeHost } from '../test-dom.js';
 
 // React's own flag for "these updates are being driven by a test", which is what lets `act`
@@ -43,7 +43,7 @@ vi.mock('./Markdown.js', () => ({
   },
 }));
 
-const { Conversation } = await import('./Conversation.js');
+const { Conversation, REPLY_STANDS } = await import('./Conversation.js');
 
 const AGENTS: readonly UiAgent[] = [
   { id: 'a', name: 'Alice', role: 'builds', runtimeLabel: 'mock', workspacePath: '/w/a', accepts: { images: true, textFiles: true } },
@@ -169,41 +169,22 @@ function draw(
 describe('the voices, after the roster stopped being passed down', () => {
   const at = 1_700_000_000_000;
 
-  it('names the recipient of your message, in the team pane only', () => {
+  // The `to Bob` caption under every prompt is gone, 2026-09-04. What it was guarding against is
+  // the reader losing which reply is whose, and the fold answers that where it happens.
+  it('says what you typed and nothing about where it went', () => {
     const items: Item[] = [{ kind: 'user', id: 'u', at, agentIds: ['b'], text: 'have a look' }];
-    expect(draw(items, { kind: 'team' })).toContain('to Bob');
+    expect(draw(items, { kind: 'team' })).toContain('have a look');
+    expect(draw(items, { kind: 'team' })).not.toContain('to Bob');
     expect(draw(items, { kind: 'agent', agentId: 'b' })).not.toContain('to Bob');
   });
 
-  // The composer names the lead in its own placeholder and on its own button, so a prompt that
-  // went there did not go anywhere the reader has to be told about. A fan-out still is.
-  it('says nothing when the message went where the composer says it goes', () => {
-    const host = document.createElement('div');
-    document.body.append(host);
-    const root = createRoot(host);
-    const render = (agentIds: readonly string[]): string => {
-      act(() => {
-        root.render(
-          React.createElement(Conversation, {
-            pane: { kind: 'team' } as Pane,
-            agents: AGENTS,
-            statuses: { a: 'idle', b: 'idle' },
-            items: [{ kind: 'user', id: 'u', at, agentIds: [...agentIds], text: 'have a look' }],
-            lead: 'a',
-            onAnswerPermission: () => {},
-            routineArmed: {},
-            onDisarmRoutine: () => {},
-            onRemoveHandbookEntry: () => {},
-          }),
-        );
-      });
-      return host.querySelector('.col')?.textContent ?? '';
-    };
-    expect(render(['a'])).not.toContain('to Alice');
-    expect(render(['b'])).toContain('to Bob');
-    expect(render(['a', 'b'])).toContain('to Alice, Bob');
-    act(() => root.unmount());
-    host.remove();
+  // A fan-out went to both, and used to say so under the bubble. The bubble's own words carry it
+  // now, because addressing is typed with an `@` and the reader is the one who typed it.
+  it('says nothing about a fan-out either', () => {
+    const items: Item[] = [
+      { kind: 'user', id: 'u', at, agentIds: ['a', 'b'], text: '@Alice @Bob have a look' },
+    ];
+    expect(draw(items, { kind: 'team' })).not.toContain('to Alice, Bob');
   });
 
   // An agent that put itself on a schedule. The block is the price of issue 05's amendment, so
@@ -255,6 +236,182 @@ describe('the voices, after the roster stopped being passed down', () => {
     host.remove();
     expect(text).toContain('have a look');
     expect(text).not.toContain('to Alice');
+  });
+
+  /*
+   * The screenshot this change came from: the user asked Alice about Bob, Alice mailed Bob, and
+   * Bob's whole answer to Alice was drawn in the user's column with nothing marking it as
+   * somebody else's mail. Shut, the pane says a teammate was involved and names them; the turn
+   * itself is one click away.
+   */
+  it('folds a teammate the prompt did not address, and names them on the line', () => {
+    const at = 1_700_000_000_000;
+    const items: Item[] = [
+      { kind: 'user', id: 'u', at, agentIds: ['a'], text: 'can you check on Bob' },
+      { kind: 'peer', id: 'p', at: at + 1000, fromId: 'a', toId: 'b', text: 'what are you on?' },
+      { kind: 'agent', id: 'm', at: at + 2000, agentId: 'b', text: 'NOTHING RUNNING MY END', live: false },
+    ];
+
+    // Idle on purpose: while Alice is still in her turn the same reply is a live step instead,
+    // which is the test below this one.
+    const shut = draw(items, { kind: 'team' }, { a: 'idle', b: 'idle' });
+    expect(shut).toContain('2 messages');
+    expect(shut).toContain('Bob');
+    expect(shut).not.toContain('NOTHING RUNNING MY END');
+
+    const opened = draw(items, { kind: 'team' }, { a: 'idle', b: 'idle' }, (host) =>
+      host.querySelector<HTMLButtonElement>('.ran .route')?.click(),
+    );
+    expect(opened).toContain('NOTHING RUNNING MY END');
+  });
+
+  /*
+   * Past two, the far ends are a stack of faces and nothing else: `17 messages with 3 teammates`
+   * said in words what the faces beside it were already saying, and the count of mail is the half
+   * of it a reader can do nothing with.
+   */
+  /*
+   * And the same reply while the turn it belongs to is still running. The author, 2026-09-05:
+   * drawn at the top level it streamed a paragraph nobody in the room was addressed in over the
+   * agent they did ask, and then vanished into the fold the instant it stopped. It is a step
+   * now -- a call's altitude, Bob's own face, his words clipped to the row -- and it leaves when
+   * the fold takes the whole block.
+   */
+  it('draws a teammate reply as a step while the principal is still working', () => {
+    const at = 1_700_000_000_000;
+    const items: Item[] = [
+      { kind: 'user', id: 'u', at, agentIds: ['a'], text: 'can you check on Bob' },
+      { kind: 'peer', id: 'p', at: at + 1000, fromId: 'a', toId: 'b', text: 'what are you on?' },
+      { kind: 'agent', id: 'm', at: at + 2000, agentId: 'b', text: 'NOTHING RUNNING MY END', live: false },
+    ];
+
+    const live = draw(items, { kind: 'team' }, { a: 'working', b: 'idle' });
+    expect(live).toContain('NOTHING RUNNING MY END');
+
+    // And it keeps standing while the principal works on, because by position it is already
+    // behind that work: an agent message is timestamped at its first delta, so a reply that took
+    // a few seconds to write settles into the transcript behind everything done meanwhile.
+    const worked: Item[] = [
+      ...items,
+      { kind: 'tool', id: 't1', at: at + 3000, agentId: 'a', title: 'npm run one', toolKind: 'execute', status: 'completed' },
+      { kind: 'tool', id: 't2', at: at + 4000, agentId: 'a', title: 'npm run two', toolKind: 'execute', status: 'running' },
+    ];
+    const moved = draw(worked, { kind: 'team' }, { a: 'working', b: 'idle' });
+    expect(moved).toContain('npm run two');
+    expect(moved).toContain('NOTHING RUNNING MY END');
+
+    // Still being written, it is in neither place: not a paragraph at the top level, and not a
+    // line in the block. `when it finished` is the whole of the instruction.
+    const writing: Item[] = [
+      items[0] as Item,
+      items[1] as Item,
+      { kind: 'agent', id: 'm', at: at + 2000, agentId: 'b', text: 'NOTHING RUNNING MY END', live: true },
+    ];
+    expect(draw(writing, { kind: 'team' }, { a: 'working', b: 'responding' })).not.toContain(
+      'NOTHING RUNNING MY END',
+    );
+  });
+
+  /*
+   * The author, from the built thing: *"it's not that is visible for a short time, the thing it's
+   * never visible"*. A batch is usually one call opened after the reply landed, so by the strict
+   * rule the reply's life on screen is not short, it is zero. The model stays strict and the
+   * render holds anything dropped inside `DWELL`, in place.
+   */
+  it('stands a reply on its own clock, and takes it away when that runs out', () => {
+    vi.useFakeTimers();
+    const at = 1_700_000_000_000;
+    const reply: Item = { kind: 'agent', id: 'm', at: at + 2000, agentId: 'b', text: 'NOTHING RUNNING MY END', live: false };
+    const call = (id: string, when: number, status: 'running' | 'completed'): Item => ({
+      kind: 'tool', id, at: when, agentId: 'a', title: `npm run ${id}`, toolKind: 'execute', status,
+    });
+    const base: Item[] = [
+      { kind: 'user', id: 'u', at, agentIds: ['a'], text: 'can you check on Bob' },
+      { kind: 'peer', id: 'p', at: at + 1000, fromId: 'a', toId: 'b', text: 'what are you on?' },
+      reply,
+    ];
+    const statuses: Record<string, AgentStatus> = { a: 'working', b: 'idle' };
+
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const show = (items: readonly Item[]): void => {
+      act(() => {
+        root.render(
+          React.createElement(Conversation, {
+            pane: { kind: 'team' } as Pane,
+            agents: AGENTS,
+            statuses,
+            items,
+            onAnswerPermission: () => {},
+            routineArmed: {},
+            onDisarmRoutine: () => {},
+            onRemoveHandbookEntry: () => {},
+          }),
+        );
+      });
+    };
+    const text = (): string => host.querySelector('.col')?.textContent ?? '';
+
+    show(base);
+    expect(text()).toContain('NOTHING RUNNING MY END');
+
+    // Alice works on, and the reply keeps standing: it is news by arrival, not by position.
+    show([...base, call('t1', at + 2100, 'running')]);
+    expect(text()).toContain('NOTHING RUNNING MY END');
+
+    // Its own clock takes it away, and the work in progress stays.
+    act(() => {
+      vi.advanceTimersByTime(REPLY_STANDS + 100);
+    });
+    expect(text()).not.toContain('NOTHING RUNNING MY END');
+    expect(text()).toContain('npm run t1');
+
+    act(() => root.unmount());
+    host.remove();
+    vi.useRealTimers();
+
+  });
+
+  it('stacks the faces past two partners, and counts nothing in words', () => {
+    const at = 1_700_000_000_000;
+    const items: Item[] = [
+      { kind: 'user', id: 'u', at, agentIds: ['a'], text: 'can u ping the team?' },
+      { kind: 'peer', id: 'p1', at: at + 1000, fromId: 'a', toId: 'b', text: 'what are you on?' },
+      { kind: 'peer', id: 'p2', at: at + 2000, fromId: 'a', toId: 'c', text: 'what are you on?' },
+      { kind: 'peer', id: 'p3', at: at + 3000, fromId: 'a', toId: 'd', text: 'what are you on?' },
+      { kind: 'agent', id: 'mb', at: at + 4000, agentId: 'b', text: 'nothing in flight', live: false },
+      { kind: 'agent', id: 'mc', at: at + 5000, agentId: 'c', text: 'unbriefed', live: false },
+      { kind: 'agent', id: 'md', at: at + 6000, agentId: 'd', text: 'idle here', live: false },
+    ];
+
+    let faces = 0;
+    const shut = draw(items, { kind: 'team' }, { a: 'idle', b: 'idle' }, undefined, (host) => {
+      faces = host.querySelectorAll('.ran .route .stack > span').length;
+    });
+
+    expect(faces).toBe(3);
+    expect(shut).not.toContain('teammates');
+    expect(shut).not.toContain('messages with');
+  });
+
+  /*
+   * An agent's own pane holds that agent's items and the mail at either end of them, and never
+   * another agent's turn -- `itemsFor` has already taken those out, which is what App hands this
+   * component. So swallowing a teammate is a team-pane shape by arithmetic rather than by a
+   * pane check, and
+   * the filter is in this test for the same reason it is in App: without it the component would
+   * be being asked to draw a pane that cannot occur.
+   */
+  it('makes no aside in an agent own pane', () => {
+    const at = 1_700_000_000_000;
+    const items: Item[] = [
+      { kind: 'user', id: 'u', at, agentIds: ['a'], text: 'can you check on Bob' },
+      { kind: 'peer', id: 'p', at: at + 1000, fromId: 'a', toId: 'b', text: 'what are you on?' },
+      { kind: 'agent', id: 'm', at: at + 2000, agentId: 'b', text: 'nothing running', live: false },
+    ];
+    const pane: Pane = { kind: 'agent', agentId: 'a' };
+    expect(draw(itemsFor(items, pane), pane)).not.toContain('message with');
   });
 
   it('labels a turn once and drops the name from what continues it', () => {

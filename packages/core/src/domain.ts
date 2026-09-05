@@ -16,6 +16,7 @@ export type {
   AgentMessageSent,
   AgentThoughtDelta,
   ContextCompacted,
+  PictureArrived,
   StopReason,
   ToolCallStarted,
   ToolCallStatus,
@@ -36,6 +37,12 @@ export type {
 } from './orchestrator/domain.js';
 export { DEFAULT_COMPACTION } from './orchestrator/domain.js';
 export type { AttachmentKind, AttachmentSupport } from './runtime.js';
+/**
+ * A Picture and the reasons one is not on screen. In the domain entry point because the
+ * transcript draws the refusal, and drawing it must not mean importing a store.
+ */
+export type { PictureNotDrawn, PictureSource } from './pictures.js';
+export { PICTURE_LIMIT, pictureNotDrawnBecause } from './pictures.js';
 export { findAgentByName } from './orchestrator/roster.js';
 export { AgentStatusTracker, statusAfter } from './status.js';
 export type { TrustLevel } from './trust.js';

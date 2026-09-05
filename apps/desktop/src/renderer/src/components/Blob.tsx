@@ -1,8 +1,9 @@
+import { useEffect, useRef } from 'react';
 import { Blobatar } from '@blobatar/react';
-import { useGaze, type GazeTarget } from '@blobatar/react/gaze';
+import { useGaze, type GazeTarget, type UseGazeResult } from '@blobatar/react/gaze';
 import { idle, sleepy, surprised, thinking, type Expression } from 'blobatar/expression';
 import type { AgentStatus } from '@blobot/core/domain';
-import { SHAPE_TRAITS } from '../blobatar-shapes';
+import { traitsFor } from '../blobatar-shapes';
 
 /**
  * A blobatar, wrapped in the one element that carries status as motion. There is **one** body
@@ -31,17 +32,21 @@ import { SHAPE_TRAITS } from '../blobatar-shapes';
  * colour picker already says out loud that the name gives the face; this is that sentence
  * enforced.
  *
- * `hue` is the one thing here the name does not decide. It is absent for every agent that kept
- * the face its name gave it, which is most of them, and set for one the user recoloured while
- * hiring. Passing `undefined` through is deliberate: the library derives the hue from the name,
- * and a default of our own would silently override every agent that never asked for one.
+ * `hue` and `shape` are the two things here the name does not decide. Both are absent for every
+ * agent that kept the face its name gave it, which is most of them, and set for one the user
+ * recoloured or reshaped while hiring. Passing `undefined` through is deliberate: the library
+ * derives both from the name, and a default of our own would silently override every agent that
+ * never asked for one. They are stored on the agent rather than on a screen, because one agent
+ * has one face wherever it is drawn.
  */
 export function Blob({
   name,
   size = 22,
   status,
   hue,
+  shape,
   animated = false,
+  wander = false,
   lookAt,
   travel = TRAVEL,
 }: {
@@ -49,6 +54,13 @@ export function Blob({
   size?: number;
   status?: AgentStatus | undefined;
   hue?: number | undefined;
+  /**
+   * Which of the nine silhouettes this face wears, when the user chose one.
+   *
+   * Absent means the name picks among all nine, which is the default and what almost every
+   * agent has. A name the app does not know is the same as absent — see `traitsFor`.
+   */
+  shape?: string | undefined;
   /**
    * Whether this surface's blobatars are alive: inline SVG, breathing at rest, and wearing the
    * pose for the states that have one.
@@ -61,6 +73,15 @@ export function Blob({
    * grows all day, which is the case the `<img>` default was chosen for.
    */
   animated?: boolean;
+  /**
+   * Whether this face glances around the room on its own. Ignored unless `animated`, and
+   * ignored while anything else is aiming it.
+   *
+   * See `useWander`. Off by default and on in the rail alone: it is ambient motion, which is the
+   * expensive kind, and the rail is the one column where a face is a creature you sit beside all
+   * day rather than a label on a record.
+   */
+  wander?: boolean;
   /**
    * Where this face looks. Ignored unless `animated`, because the gaze layer writes onto the
    * `.mo-eyes` group and an `<img>` has no eyes.
@@ -88,7 +109,7 @@ export function Blob({
           <Blobatar
             name={name}
             size={size}
-            traits={SHAPE_TRAITS}
+            traits={traitsFor(shape)}
             {...(hue === undefined ? {} : { hue })}
           />
         </span>
@@ -102,6 +123,8 @@ export function Blob({
       size={size}
       status={status}
       hue={hue}
+      shape={shape}
+      wander={wander}
       lookAt={lookAt}
       travel={travel}
     />
@@ -122,6 +145,8 @@ function LiveBlob({
   size,
   status,
   hue,
+  shape,
+  wander,
   lookAt,
   travel,
 }: {
@@ -129,17 +154,22 @@ function LiveBlob({
   size: number;
   status: AgentStatus | undefined;
   hue: number | undefined;
+  shape: string | undefined;
+  wander: boolean;
   lookAt: GazeTarget | undefined;
   travel: number;
 }): React.JSX.Element {
-  const gaze = useGaze({ travel, lookAt: aimOf(status, lookAt) });
+  const aim = aimOf(status, lookAt);
+  const gaze = useGaze({ travel, lookAt: aim });
+  const face = useRef<HTMLSpanElement | null>(null);
+  useWander(gaze, face, wander && aim === null);
 
   return (
     <span
       className={`b-${status ?? 'still'}`}
       style={{ width: size, height: size }}
     >
-      <span className="blob" style={{ width: size, height: size }}>
+      <span className="blob" ref={face} style={{ width: size, height: size }}>
         {/* `always` raises the library's `--mo-amp` to 1, which is the one variable every idle
             behaviour multiplies through: breathe, bob, blink and the glance, each phased off the
             agent's name so a roster reads as a crowd rather than a drill team.
@@ -159,7 +189,7 @@ function LiveBlob({
           ref={gaze.ref}
           name={name}
           size={size}
-          traits={SHAPE_TRAITS}
+          traits={traitsFor(shape)}
           animate="always"
           expression={poseFor(status) ?? idle}
           {...(hue === undefined ? {} : { hue })}
@@ -167,6 +197,187 @@ function LiveBlob({
       </span>
     </span>
   );
+}
+
+/**
+ * How far from a face's own centre a glance lands, in CSS pixels.
+ *
+ * The driver takes a *point* and works out the direction itself, so what a wander has to choose
+ * is somewhere in the room to look at. Anything past the near field is the full excursion —
+ * `DEADZONE` eases the amplitude to zero over the face's own footprint and nowhere else — so
+ * these two numbers do not set how far the eyes travel. They set how varied the *directions*
+ * are: a point 140px away from a 44px face is a wide angle off centre, and one at 480px is
+ * nearly the same direction for two faces one row apart, which is a rail glancing in unison.
+ * The near end is what keeps them apart.
+ */
+const REACH_MIN = 140;
+const REACH_MAX = 420;
+
+/**
+ * How long a face holds one glance before choosing another, in milliseconds.
+ *
+ * The library's own idle saccade runs a period drawn from the agent's name between 4.2s and
+ * 7.6s. This is faster because it is doing a different thing: that one is a floor under a face
+ * at rest, this is a creature looking around a room, and at a six second beat the movement
+ * reads as a twitch every so often rather than as attention.
+ *
+ * Random per beat rather than a fixed interval, and phased by a random first beat, so a column
+ * of faces never settles into a rhythm. Two blobatars flicking together once is a coincidence;
+ * doing it every four seconds is a drill team, which is the thing the rail must never look like.
+ */
+const BEAT_MIN = 1_500;
+const BEAT_MAX = 4_000;
+
+/** How often a beat is spent looking at nothing instead, holding the centre. */
+const REST_IN = 4;
+
+/**
+ * The widest turn between one glance and the next, in radians.
+ *
+ * The driver decides for itself whether a new target is pursued or jumped to, and it decides on
+ * the angle: `step` compares the new aim against where the eyes are, both unit vectors, so the
+ * distance between them is `2 sin(turn / 2)` and `SNAP` at 1.6 is a turn of 106 degrees. Past
+ * that the driver takes the smoothing off and the eyes arrive in one frame, which is right for
+ * the thing `SNAP` was written for -- a pointer that was replaced by a scroll or by re-entering
+ * the window -- and wrong for this. A wander is a creature looking around a room, and a room
+ * does not teleport.
+ *
+ * A free angle every beat put roughly two in five glances past the threshold, so the same
+ * behaviour drew as a glide most of the time and as a snap the rest, at random, every few
+ * seconds. That is not a channel saying two things; it is one channel that looks broken.
+ *
+ * So the turn is bounded here rather than `snap` being raised on the driver. Raising `snap`
+ * would disarm the saccade for `waiting` too, which is the one aim in the app where a target
+ * really is replaced rather than moved. Ninety degrees leaves a distance of 1.41 against the
+ * threshold's 1.6, which is margin enough that no rounding in the projection can reach it, and
+ * a walk of quarter turns still reaches every direction within a beat or two -- what it can no
+ * longer do is cross the room in one.
+ */
+const TURN_MAX = Math.PI / 2;
+
+/**
+ * Somewhere in the room, from this face's own box.
+ *
+ * A distance in `[REACH_MIN, REACH_MAX)`, and an angle that is a bounded turn from the last one
+ * -- see `TURN_MAX`. It is client coordinates because that is the only thing the driver takes,
+ * and off the live box rather than off a remembered one because the rail scrolls.
+ *
+ * `from` is the angle this face last glanced along, and `null` means there is nothing to turn
+ * from: the first glance of a face, and the one after a beat spent at rest. Both are free
+ * choices rather than exceptions, because the eyes are at the centre in both cases and the
+ * distance from the centre to any aim is at most 1, which is under the threshold whatever the
+ * angle. A rest is where the walk gets to start over, and it costs nothing to let it.
+ *
+ * The angle comes back with the point because it is the state the next call needs and this
+ * function owns no state. Pure, and `roll` is injected, which is what makes it the part of this
+ * that a test can hold still. Everything around it is a timer and a driver and neither has
+ * anything assertable in jsdom, where there is no layout and no `getBBox`.
+ */
+export function wanderPoint(
+  face: DOMRect,
+  roll: () => number,
+  from: number | null = null,
+): { x: number; y: number; angle: number } {
+  const angle = from === null ? roll() * 2 * Math.PI : from + (roll() * 2 - 1) * TURN_MAX;
+  const reach = REACH_MIN + roll() * (REACH_MAX - REACH_MIN);
+  return {
+    x: face.left + face.width / 2 + Math.cos(angle) * reach,
+    y: face.top + face.height / 2 + Math.sin(angle) * reach,
+    angle,
+  };
+}
+
+/**
+ * A face that looks around the room on its own.
+ *
+ * The library already runs an idle glance — `mo-saccade`, six fixations on a per-name clock —
+ * and this is deliberately **not** that turned up. The saccade's amplitude is a plain translate
+ * of the eye pair, and the foreshortening keyframe beside it multiplies `--mo-look-x` by
+ * `--mo-look-y`: raising the pair far enough to be seen at 44px puts tens of degrees of rotation
+ * on each eye, because the coefficient is quadratic in something that was tuned around 1.4. That
+ * layer is a floor and cannot be a channel.
+ *
+ * So a wander goes through the gaze driver instead, which is the thing built for an excursion
+ * this size: the mark is lifted onto a sphere, rotated and projected, so the foreshortening, the
+ * convergence tilt and the limb clamp all come out of the geometry and an eye cannot leave the
+ * head however far it is asked to look. `SEEN` is the excursion the rail already passes, and it
+ * was chosen for exactly this — a head turning to follow you.
+ *
+ * **It glides, and that took bounding the turn rather than retuning the driver.** `SNAP` is a
+ * threshold on how far the *aim* moved, so the driver's own answer to a new target is smooth
+ * pursuit below 106 degrees of turn and a saccade above it. A freely chosen angle straddles
+ * that, which is why this used to snap on some beats and glide on others with nothing to tell
+ * them apart. `TURN_MAX` keeps every glance on the pursuit side; `snap` is left at the
+ * library's default, because `waiting`'s pointer is a target that really does get replaced.
+ *
+ * `from` is that walk's one piece of state and it lives here, in the closure the timer already
+ * needs, rather than in a ref: nothing renders on it and a face that remounts is a face
+ * starting over, which is the honest answer anyway.
+ *
+ * `active` is false whenever anything else is aiming the face, which today is `waiting` claiming
+ * the pointer. Two systems writing one pair of eyes is the failure `--mo-track-hold` exists to
+ * prevent one level down, and a face that owes the user an answer must not be caught looking
+ * out of the window.
+ *
+ * Reduced motion is the driver's own to honour and it halts entirely there, but the timer is
+ * ours: it is stood down on the same query, live, so turning the setting on mid-session stops
+ * the scheduling too and not only what it would have drawn.
+ */
+function useWander(
+  gaze: UseGazeResult,
+  face: React.RefObject<HTMLSpanElement | null>,
+  active: boolean,
+): void {
+  const { lookAt } = gaze;
+
+  useEffect(() => {
+    if (!active) return;
+
+    const still = matchMedia('(prefers-reduced-motion: reduce)');
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    /** The angle of the last glance, and `null` for eyes that are home. See `wanderPoint`. */
+    let from: number | null = null;
+
+    const beat = (): void => {
+      const box = face.current?.getBoundingClientRect();
+      // A face with no box is one that has not been laid out, or is scrolled out of the rail's
+      // own overflow. Nothing to look out of, and nothing to measure a direction from. The walk
+      // keeps its angle across a skipped beat, since the eyes kept theirs.
+      if (box !== undefined && box.width > 0) {
+        if (Math.random() < 1 / REST_IN) {
+          lookAt('rest');
+          from = null;
+        } else {
+          const point = wanderPoint(box, Math.random, from);
+          from = point.angle;
+          lookAt(point);
+        }
+      }
+      timer = setTimeout(beat, BEAT_MIN + Math.random() * (BEAT_MAX - BEAT_MIN));
+    };
+
+    const sync = (): void => {
+      clearTimeout(timer);
+      timer = undefined;
+      from = null;
+      if (still.matches) {
+        lookAt(null);
+        return;
+      }
+      // The first beat is a fraction of one, so faces mounting together do not start together.
+      timer = setTimeout(beat, Math.random() * BEAT_MAX);
+    };
+
+    sync();
+    still.addEventListener('change', sync);
+    return () => {
+      still.removeEventListener('change', sync);
+      clearTimeout(timer);
+      // Home, and the library's own glance comes back with it — `null` is the empty target and
+      // `rest` is a pose. A face this stops driving should go back to being a creature.
+      lookAt(null);
+    };
+  }, [active, face, lookAt]);
 }
 
 /**

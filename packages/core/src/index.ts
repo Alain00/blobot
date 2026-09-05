@@ -8,6 +8,7 @@ export type {
   AgentMessageSent,
   AgentThoughtDelta,
   ContextCompacted,
+  PictureArrived,
   StopReason,
   ToolCallStarted,
   ToolCallStatus,
@@ -36,15 +37,23 @@ export type {
   MachineTransport,
 } from './machines/machine.js';
 
+/** A Picture, and every way one fails to be on screen. `.scratch/agent-media/`. */
+export type { PictureNotDrawn, PictureSource, PictureMeasurement } from './pictures.js';
+export { PICTURE_LIMIT, measurePicture, pictureNotDrawnBecause } from './pictures.js';
+
 export type {
   AgentRuntime,
   AvailableCommand,
+  KeptPicture,
   PeerMessageAck,
   PeerMessageCall,
   PeerMessageHandler,
   PermissionHandler,
   PermissionOption,
   PermissionRequest,
+  PictureContent,
+  PictureKept,
+  PictureStore,
   Prompt,
   RuntimeLifecycle,
   RuntimeOptionChoices,
@@ -86,7 +95,7 @@ export type { AgentStatus, StatusListener } from './status.js';
 export { AsyncQueue } from './mock/async-queue.js';
 export { raggedFragments } from './mock/ragged.js';
 export type { Fragment } from './mock/ragged.js';
-export { Scenario, scenario } from './mock/scenario.js';
+export { Scenario, scenario, tool } from './mock/scenario.js';
 export type {
   CallToolOptions,
   ScenarioStep,
@@ -226,6 +235,18 @@ export {
   type SwitchOutcome,
 } from './workspace/branches.js';
 export { readChurn, type Churn } from './workspace/churn.js';
+export {
+  readChanges,
+  type ChangedFile,
+  type WorkspaceChanges,
+} from './workspace/changes.js';
+export {
+  readWorkspaceTree,
+  type DirectoryReading,
+  type TreeEntry,
+  type TreeMark,
+  type WorkspaceTree,
+} from './workspace/tree.js';
 export {
   commitPlan,
   commitWorktree,

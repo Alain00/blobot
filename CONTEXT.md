@@ -61,6 +61,16 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
 - **Attachment** — bytes the user attached to a Message: an image or a text file, embedded in
   the Prompt and stored with the Message. Only the user attaches; a peer Message never carries
   one. A file that is already in the Workspace is not an Attachment — the Agent opens it itself.
+- **Picture** — something an Agent shows the user in the transcript. The counterpart to an
+  Attachment and the contrast is the whole of the word: **an Attachment is picked up, a Picture is
+  shown.** Nobody attached it, there is no composer near it, and the one who decides it exists is
+  the Agent. The verb is the Agent's — it **shows** — and the user performs none. A **shown**
+  Picture was handed over deliberately, as a path inside the Agent's own AgentWorkspace, so blobot
+  opened the file and measured it; an **observed** Picture was lifted out of a tool result blobot
+  was merely watching, and blobot knows only the tool and the moment. Never called an attachment,
+  never *media*, never named after the tool that made it, and never a word implying blobot knows
+  what is in it: it provides no inference. One that arrived and could not be drawn is **not drawn**,
+  always with the reason said. See `.scratch/agent-media/`.
 - **Envelope** — the framing wrapped around a peer Message: sender, their role, their optional
   context line, and the note that a peer carries no operator authority.
 - **Handbook** — what an Agent knows about *this team's* work. Held at `<team>/<agent>`, the

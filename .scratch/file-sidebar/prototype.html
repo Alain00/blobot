@@ -1,0 +1,266 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>file sidebar — what a row says</title>
+<style>
+:root{
+  --ground:#1a1c1e; --raised:#282a2e; --ink:#c5c8c6; --muted:#969896; --line:#373b41;
+  --tray:#212326; --recessed:#1d1f21;
+  --added:#b5bd68; --removed:#cc6666;
+  --sans:"Geist Sans","Geist",ui-sans-serif,system-ui,sans-serif;
+  --mono:"Geist Mono",ui-monospace,monospace;
+  color-scheme:dark;
+}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);font-size:14px;
+     line-height:1.5;-webkit-font-smoothing:antialiased;padding:28px 24px 60px}
+h1{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+   color:var(--muted);font-weight:400;margin:0 0 24px}
+h2{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+   color:var(--muted);font-weight:400;margin:0 0 10px}
+.note{color:var(--muted);font-size:12.5px;max-width:280px;margin:10px 0 0;line-height:1.55}
+.lab{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--muted);
+     text-transform:uppercase;margin:0 0 8px}
+.deck{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+.card{display:flex;flex-direction:column}
+
+/* the panel itself: the flank, per the ramp */
+.panel{background:var(--recessed);border-left:1px solid var(--line);padding:8px 0;
+       height:520px;overflow:hidden}
+.w240{width:240px} .w320{width:320px}
+
+/* one row, shared by every variant */
+.row{position:relative;display:flex;align-items:center;height:24px;padding:0 10px 0 0;cursor:default;
+     font-size:13px;white-space:nowrap;color:var(--muted)}
+.row:hover{background:var(--raised)}
+.row .chev{flex:0 0 16px;display:flex;align-items:center;justify-content:center;color:var(--muted);opacity:.7}
+.row .chev svg{width:11px;height:11px;transition:transform 120ms}
+.row.open .chev svg{transform:rotate(90deg)}
+.chev.o{transform:rotate(90deg)}
+.row .ext{flex:0 0 26px;font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;color:var(--muted);opacity:.7;text-transform:lowercase;margin-right:5px}
+.row.changed .ext{opacity:1}
+.row .ic{flex:0 0 auto;margin-right:7px;color:var(--muted);opacity:.85}
+.row.changed .ic{opacity:1}
+.row .nm{overflow:hidden;text-overflow:ellipsis}
+.row.dir .nm{color:var(--ink)}
+.row.changed .nm{color:var(--ink)}
+.row.ignored .nm{opacity:.42}
+.row.sel{background:var(--raised)}
+
+/* B: fixed status column, right */
+.st{flex:0 0 auto;margin-left:auto;padding-left:10px;font-family:var(--mono);font-size:10px;
+    letter-spacing:.06em;color:var(--muted)}
+/* C: status immediately after the name, ragged */
+.stfix{position:absolute;left:186px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--muted)}
+.stx{flex:0 0 auto;margin-left:7px;font-family:var(--mono);font-size:10px;
+     letter-spacing:.06em;color:var(--muted)}
+/* D: a bar in a gutter before the chevron */
+.gut{flex:0 0 3px;height:13px;margin-right:5px;background:transparent;border-radius:1px}
+.gut.on{background:var(--muted)}
+.gut.faint{background:var(--line)}
+
+.head{display:flex;align-items:center;gap:8px;padding:6px 12px 10px;font-family:var(--mono);
+      font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.foot{padding:8px 12px;font-family:var(--mono);font-size:10px;color:var(--muted);opacity:.75}
+hr{border:0;border-top:1px solid var(--line);margin:38px 0 26px}
+.cap{font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--muted);margin:16px 0 6px;text-transform:uppercase}
+</style>
+<h1>file sidebar · ticket 01 · what a row says, once the badge is gone</h1>
+
+<p class="note" style="max-width:640px">Real data: this repository right now, at
+<span style="font-family:var(--mono);font-size:12px">git status --porcelain=v2 -unormal</span> —
+five modified files across two directories, one untracked directory, <span
+style="font-family:var(--mono);font-size:12px">node_modules</span> ignored. Same tokens as
+<span style="font-family:var(--mono);font-size:12px">styles.css</span>. No colour anywhere:
+<span style="font-family:var(--mono);font-size:12px">--added</span> and <span
+style="font-family:var(--mono);font-size:12px">--removed</span> exist but the stylesheet says
+<em>nothing else may use them</em>.</p>
+
+<div class="deck" style="margin-top:26px">
+
+<!-- ================= A ================= -->
+<div class="card">
+  <div class="lab">A · weight only</div>
+  <div class="panel w240">
+    <div class="head"><span>alice</span><span style="opacity:.5">·</span><span>blobot/demo/alice</span></div>
+    <div class="row dir open"><span class="chev">&#9656;</span><span class="nm">apps</span></div>
+    <div class="row dir open" style="padding-left:14px"><span class="chev">&#9656;</span><span class="nm">desktop</span></div>
+    <div class="row changed" style="padding-left:42px"><span class="nm">Blob.tsx</span></div>
+    <div class="row changed" style="padding-left:42px"><span class="nm">styles.css</span></div>
+    <div class="row" style="padding-left:42px"><span class="nm">Composer.tsx</span></div>
+    <div class="row dir" style="padding-left:14px"><span class="chev">&#9656;</span><span class="nm">docs</span></div>
+    <div class="row dir ignored"><span class="chev">&#9656;</span><span class="nm">node_modules</span></div>
+    <div class="row dir"><span class="chev">&#9656;</span><span class="nm">packages</span></div>
+    <div class="row dir changed"><span class="chev">&#9656;</span><span class="nm">.scratch</span></div>
+    <div class="row changed"><span class="nm">CLAUDE.md</span></div>
+    <div class="row changed"><span class="nm">DESIGN.md</span></div>
+    <div class="row"><span class="nm">package.json</span></div>
+    <div class="row"><span class="nm">tsconfig.base.json</span></div>
+  </div>
+  <p class="note">Changed is <em>bright</em>, unchanged is <span style="font-family:var(--mono);font-size:12px">--muted</span>,
+  ignored is dimmer still. One channel, no new glyph. It cannot tell modified from untracked, and
+  three levels of dimness is the whole vocabulary.</p>
+</div>
+
+<!-- ================= B ================= -->
+<div class="card">
+  <div class="lab">B · fixed status column, right</div>
+  <div class="panel w240">
+    <div class="head"><span>alice</span><span style="opacity:.5">·</span><span>blobot/demo/alice</span></div>
+    <div class="row dir open"><span class="chev">&#9656;</span><span class="nm">apps</span><span class="st">2</span></div>
+    <div class="row dir open" style="padding-left:14px"><span class="chev">&#9656;</span><span class="nm">desktop</span><span class="st">2</span></div>
+    <div class="row changed" style="padding-left:42px"><span class="nm">Blob.tsx</span><span class="st">M</span></div>
+    <div class="row changed" style="padding-left:42px"><span class="nm">styles.css</span><span class="st">M</span></div>
+    <div class="row" style="padding-left:42px"><span class="nm">Composer.tsx</span></div>
+    <div class="row dir" style="padding-left:14px"><span class="chev">&#9656;</span><span class="nm">docs</span></div>
+    <div class="row dir ignored"><span class="chev">&#9656;</span><span class="nm">node_modules</span></div>
+    <div class="row dir"><span class="chev">&#9656;</span><span class="nm">packages</span></div>
+    <div class="row dir changed"><span class="chev">&#9656;</span><span class="nm">.scratch</span><span class="st">?</span></div>
+    <div class="row changed"><span class="nm">CLAUDE.md</span><span class="st">M</span></div>
+    <div class="row changed"><span class="nm">DESIGN.md</span><span class="st">M</span></div>
+    <div class="row"><span class="nm">package.json</span></div>
+    <div class="row"><span class="nm">tsconfig.base.json</span></div>
+  </div>
+  <p class="note">The mark is a <em>value</em>, which is what mono is for. A fixed right column
+  makes the marks a scannable edge. A collapsed directory rolls up as a count, an untracked one
+  as <span style="font-family:var(--mono);font-size:12px">?</span> — 03 says both are free.
+  The gap between a short name and its letter is the cost.</p>
+</div>
+
+<!-- ================= C ================= -->
+<div class="card">
+  <div class="lab">C · status after the name, ragged</div>
+  <div class="panel w240">
+    <div class="head"><span>alice</span><span style="opacity:.5">·</span><span>blobot/demo/alice</span></div>
+    <div class="row dir open"><span class="chev">&#9656;</span><span class="nm">apps</span><span class="stx">2</span></div>
+    <div class="row dir open" style="padding-left:14px"><span class="chev">&#9656;</span><span class="nm">desktop</span><span class="stx">2</span></div>
+    <div class="row changed" style="padding-left:42px"><span class="nm">Blob.tsx</span><span class="stx">M</span></div>
+    <div class="row changed" style="padding-left:42px"><span class="nm">styles.css</span><span class="stx">M</span></div>
+    <div class="row" style="padding-left:42px"><span class="nm">Composer.tsx</span></div>
+    <div class="row dir" style="padding-left:14px"><span class="chev">&#9656;</span><span class="nm">docs</span></div>
+    <div class="row dir ignored"><span class="chev">&#9656;</span><span class="nm">node_modules</span></div>
+    <div class="row dir"><span class="chev">&#9656;</span><span class="nm">packages</span></div>
+    <div class="row dir changed"><span class="chev">&#9656;</span><span class="nm">.scratch</span><span class="stx">?</span></div>
+    <div class="row changed"><span class="nm">CLAUDE.md</span><span class="stx">M</span></div>
+    <div class="row changed"><span class="nm">DESIGN.md</span><span class="stx">M</span></div>
+    <div class="row"><span class="nm">package.json</span></div>
+    <div class="row"><span class="nm">tsconfig.base.json</span></div>
+  </div>
+  <p class="note">The mark stays with the thing it is about, and survives any panel width.
+  But the marks no longer line up, so <em>which files changed</em> stops being a glance down an
+  edge and becomes a read of every row.</p>
+</div>
+
+<!-- ================= D ================= -->
+<div class="card">
+  <div class="lab">D · a bar in a gutter</div>
+  <div class="panel w240">
+    <div class="head"><span>alice</span><span style="opacity:.5">·</span><span>blobot/demo/alice</span></div>
+    <div class="row dir open"><span class="gut faint"></span><span class="chev">&#9656;</span><span class="nm">apps</span></div>
+    <div class="row dir open" style="padding-left:14px"><span class="gut faint"></span><span class="chev">&#9656;</span><span class="nm">desktop</span></div>
+    <div class="row changed" style="padding-left:42px"><span class="gut on"></span><span class="nm">Blob.tsx</span></div>
+    <div class="row changed" style="padding-left:42px"><span class="gut on"></span><span class="nm">styles.css</span></div>
+    <div class="row" style="padding-left:42px"><span class="gut"></span><span class="nm">Composer.tsx</span></div>
+    <div class="row dir" style="padding-left:14px"><span class="gut"></span><span class="chev">&#9656;</span><span class="nm">docs</span></div>
+    <div class="row dir ignored"><span class="gut"></span><span class="chev">&#9656;</span><span class="nm">node_modules</span></div>
+    <div class="row dir"><span class="gut"></span><span class="chev">&#9656;</span><span class="nm">packages</span></div>
+    <div class="row dir changed"><span class="gut faint"></span><span class="chev">&#9656;</span><span class="nm">.scratch</span></div>
+    <div class="row changed"><span class="gut on"></span><span class="nm">CLAUDE.md</span></div>
+    <div class="row changed"><span class="gut on"></span><span class="nm">DESIGN.md</span></div>
+    <div class="row"><span class="gut"></span><span class="nm">package.json</span></div>
+    <div class="row"><span class="gut"></span><span class="nm">tsconfig.base.json</span></div>
+  </div>
+  <p class="note">Every mark on one vertical line at the far left, whatever the depth — the
+  strongest glance of the four. It has no vocabulary at all: modified, added and untracked are
+  one bar, and a directory containing changes is the same bar fainter.</p>
+</div>
+
+</div>
+
+<hr>
+
+<div class="cap">the same tree at 320px, variant B — does the gap get worse</div>
+<div class="deck">
+<div class="card">
+  <div class="panel w320">
+    <div class="head"><span>alice</span><span style="opacity:.5">·</span><span>blobot/demo/alice</span></div>
+    <div class="row dir open"><span class="chev">&#9656;</span><span class="nm">apps</span><span class="st">2</span></div>
+    <div class="row dir open" style="padding-left:14px"><span class="chev">&#9656;</span><span class="nm">desktop</span><span class="st">2</span></div>
+    <div class="row changed" style="padding-left:42px"><span class="nm">Blob.tsx</span><span class="st">M</span></div>
+    <div class="row changed" style="padding-left:42px"><span class="nm">styles.css</span><span class="st">M</span></div>
+    <div class="row" style="padding-left:42px"><span class="nm">Composer.tsx</span></div>
+    <div class="row dir changed"><span class="chev">&#9656;</span><span class="nm">.scratch</span><span class="st">?</span></div>
+    <div class="row changed"><span class="nm">CLAUDE.md</span><span class="st">M</span></div>
+    <div class="row"><span class="nm">package.json</span></div>
+  </div>
+  <p class="note">At 320px <span style="font-family:var(--mono);font-size:12px">CLAUDE.md</span>
+  and its <span style="font-family:var(--mono);font-size:12px">M</span> are 200px apart. This is
+  the objection to B, and it gets worse every time you widen the panel.</p>
+</div>
+
+<div class="card">
+  <div class="lab">B′ · the column follows the deepest name, not the panel edge</div>
+  <div class="panel w320">
+    <div class="head"><span>alice</span><span style="opacity:.5">·</span><span>blobot/demo/alice</span></div>
+    <div class="row dir open"><span class="chev">&#9656;</span><span class="nm">apps</span><span class="stfix">2</span></div>
+    <div class="row dir open" style="padding-left:14px"><span class="chev">&#9656;</span><span class="nm">desktop</span><span class="stfix">2</span></div>
+    <div class="row changed" style="padding-left:42px"><span class="nm">Blob.tsx</span><span class="stfix">M</span></div>
+    <div class="row changed" style="padding-left:42px"><span class="nm">styles.css</span><span class="stfix">M</span></div>
+    <div class="row" style="padding-left:42px"><span class="nm">Composer.tsx</span></div>
+    <div class="row dir changed"><span class="chev">&#9656;</span><span class="nm">.scratch</span><span class="stfix">?</span></div>
+    <div class="row changed"><span class="nm">CLAUDE.md</span><span class="stfix">M</span></div>
+    <div class="row"><span class="nm">package.json</span></div>
+  </div>
+  <p class="note">Sketch only. A column parked at a measured offset rather than at the panel's
+  right edge keeps the glance and kills the gap — at the price of a column whose position moves
+  when the tree does.</p>
+</div>
+</div>
+
+
+<hr>
+<div class="cap">B, with a lucide glyph per extension — 13px, --muted, monochrome</div>
+<div class="deck">
+  <div class="card"><div class="lab">240px</div><div class="panel w240"><div class="head"><span>alice</span><span style="opacity:.5">·</span><span>blobot/demo/alice</span></div><div class="row dir" style="padding-left:10px"><span class="chev o">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg><span class="nm">apps</span><span class="st">2</span></div><div class="row dir" style="padding-left:24px"><span class="chev o">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg><span class="nm">desktop</span><span class="st">2</span></div><div class="row changed" style="padding-left:52px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12.5 8 15l2 2.5"/><path d="m14 12.5 2 2.5-2 2.5"/></svg><span class="nm">Blob.tsx</span><span class="st">M</span></div><div class="row changed" style="padding-left:52px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12.5 8 15l2 2.5"/><path d="m14 12.5 2 2.5-2 2.5"/></svg><span class="nm">styles.css</span><span class="st">M</span></div><div class="row " style="padding-left:52px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12.5 8 15l2 2.5"/><path d="m14 12.5 2 2.5-2 2.5"/></svg><span class="nm">Composer.tsx</span></div><div class="row " style="padding-left:52px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12.5 8 15l2 2.5"/><path d="m14 12.5 2 2.5-2 2.5"/></svg><span class="nm">blob.test.ts</span></div><div class="row dir" style="padding-left:24px"><span class="chev">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">docs</span></div><div class="row dir ignored" style="padding-left:10px"><span class="chev">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">node_modules</span></div><div class="row dir" style="padding-left:10px"><span class="chev">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">packages</span></div><div class="row dir changed" style="padding-left:10px"><span class="chev">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">.scratch</span><span class="st">?</span></div><div class="row changed" style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span class="nm">CLAUDE.md</span><span class="st">M</span></div><div class="row changed" style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span class="nm">DESIGN.md</span><span class="st">M</span></div><div class="row " style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"/><path d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"/></svg><span class="nm">package.json</span></div><div class="row " style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8a1 1 0 0 1-1-1V2a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8z"/><path d="M20 8v12a2 2 0 0 1-2 2h-4.182"/><path d="m3.305 19.53.923-.382"/><path d="M4 10.592V4a2 2 0 0 1 2-2h8"/><path d="m4.228 16.852-.924-.383"/><path d="m5.852 15.228-.383-.923"/><path d="m5.852 20.772-.383.924"/><path d="m8.148 15.228.383-.923"/><path d="m8.53 21.696-.382-.924"/><path d="m9.773 16.852.922-.383"/><path d="m9.773 19.148.922.383"/><circle cx="7" cy="18" r="3"/></svg><span class="nm">pnpm-workspace.yaml</span></div><div class="row " style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"/><path d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"/></svg><span class="nm">tsconfig.base.json</span></div><div class="row " style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8a1 1 0 0 1-1-1V2a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8z"/><path d="M20 8v12a2 2 0 0 1-2 2h-4.182"/><path d="m3.305 19.53.923-.382"/><path d="M4 10.592V4a2 2 0 0 1 2-2h8"/><path d="m4.228 16.852-.924-.383"/><path d="m5.852 15.228-.383-.923"/><path d="m5.852 20.772-.383.924"/><path d="m8.148 15.228.383-.923"/><path d="m8.53 21.696-.382-.924"/><path d="m9.773 16.852.922-.383"/><path d="m9.773 19.148.922.383"/><circle cx="7" cy="18" r="3"/></svg><span class="nm">lefthook.yml</span></div></div></div>
+  <div class="card"><div class="lab">320px</div><div class="panel w320"><div class="head"><span>alice</span><span style="opacity:.5">·</span><span>blobot/demo/alice</span></div><div class="row dir" style="padding-left:10px"><span class="chev o">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg><span class="nm">apps</span><span class="st">2</span></div><div class="row dir" style="padding-left:24px"><span class="chev o">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg><span class="nm">desktop</span><span class="st">2</span></div><div class="row changed" style="padding-left:52px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12.5 8 15l2 2.5"/><path d="m14 12.5 2 2.5-2 2.5"/></svg><span class="nm">Blob.tsx</span><span class="st">M</span></div><div class="row changed" style="padding-left:52px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12.5 8 15l2 2.5"/><path d="m14 12.5 2 2.5-2 2.5"/></svg><span class="nm">styles.css</span><span class="st">M</span></div><div class="row " style="padding-left:52px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12.5 8 15l2 2.5"/><path d="m14 12.5 2 2.5-2 2.5"/></svg><span class="nm">Composer.tsx</span></div><div class="row " style="padding-left:52px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12.5 8 15l2 2.5"/><path d="m14 12.5 2 2.5-2 2.5"/></svg><span class="nm">blob.test.ts</span></div><div class="row dir" style="padding-left:24px"><span class="chev">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">docs</span></div><div class="row dir ignored" style="padding-left:10px"><span class="chev">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">node_modules</span></div><div class="row dir" style="padding-left:10px"><span class="chev">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">packages</span></div><div class="row dir changed" style="padding-left:10px"><span class="chev">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">.scratch</span><span class="st">?</span></div><div class="row changed" style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span class="nm">CLAUDE.md</span><span class="st">M</span></div><div class="row changed" style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span class="nm">DESIGN.md</span><span class="st">M</span></div><div class="row " style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"/><path d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"/></svg><span class="nm">package.json</span></div><div class="row " style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8a1 1 0 0 1-1-1V2a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8z"/><path d="M20 8v12a2 2 0 0 1-2 2h-4.182"/><path d="m3.305 19.53.923-.382"/><path d="M4 10.592V4a2 2 0 0 1 2-2h8"/><path d="m4.228 16.852-.924-.383"/><path d="m5.852 15.228-.383-.923"/><path d="m5.852 20.772-.383.924"/><path d="m8.148 15.228.383-.923"/><path d="m8.53 21.696-.382-.924"/><path d="m9.773 16.852.922-.383"/><path d="m9.773 19.148.922.383"/><circle cx="7" cy="18" r="3"/></svg><span class="nm">pnpm-workspace.yaml</span></div><div class="row " style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"/><path d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"/></svg><span class="nm">tsconfig.base.json</span></div><div class="row " style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8a1 1 0 0 1-1-1V2a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8z"/><path d="M20 8v12a2 2 0 0 1-2 2h-4.182"/><path d="m3.305 19.53.923-.382"/><path d="M4 10.592V4a2 2 0 0 1 2-2h8"/><path d="m4.228 16.852-.924-.383"/><path d="m5.852 15.228-.383-.923"/><path d="m5.852 20.772-.383.924"/><path d="m8.148 15.228.383-.923"/><path d="m8.53 21.696-.382-.924"/><path d="m9.773 16.852.922-.383"/><path d="m9.773 19.148.922.383"/><circle cx="7" cy="18" r="3"/></svg><span class="nm">lefthook.yml</span></div></div></div>
+  <div class="card">
+    <div class="lab">the whole vocabulary lucide has</div>
+    <div class="panel w320" style="height:auto;padding-bottom:16px"><div class="row" style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12.5 8 15l2 2.5"/><path d="m14 12.5 2 2.5-2 2.5"/></svg><span class="nm">.ts  .tsx  .js  .mjs  .css</span></div><div class="row" style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"/><path d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"/></svg><span class="nm">.json</span></div><div class="row" style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span class="nm">.md  .txt</span></div><div class="row" style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8a1 1 0 0 1-1-1V2a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8z"/><path d="M20 8v12a2 2 0 0 1-2 2h-4.182"/><path d="m3.305 19.53.923-.382"/><path d="M4 10.592V4a2 2 0 0 1 2-2h8"/><path d="m4.228 16.852-.924-.383"/><path d="m5.852 15.228-.383-.923"/><path d="m5.852 20.772-.383.924"/><path d="m8.148 15.228.383-.923"/><path d="m8.53 21.696-.382-.924"/><path d="m9.773 16.852.922-.383"/><path d="m9.773 19.148.922.383"/><circle cx="7" cy="18" r="3"/></svg><span class="nm">.yaml  .yml  .toml</span></div><div class="row" style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><circle cx="10" cy="12" r="2"/><path d="m20 17-1.296-1.296a2.41 2.41 0 0 0-3.408 0L9 22"/></svg><span class="nm">.png  .jpg  .svg</span></div><div class="row" style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="m8 16 2-2-2-2"/><path d="M12 18h4"/></svg><span class="nm">.sh</span></div><div class="row" style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/></svg><span class="nm">everything else</span></div><div class="row" style="padding-left:10px"><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">a directory</span></div></div>
+    <p class="note" style="max-width:300px">Seven glyphs, and five extensions collapse onto the
+    first one. Lucide has no css, no ts, no tsx, no lockfile, no image-format distinctions — its
+    file family is <em>one page outline with a small motif inside</em>, so at 13px what separates
+    <span style="font-family:var(--mono);font-size:12px">.json</span> from
+    <span style="font-family:var(--mono);font-size:12px">.md</span> is about four pixels of stroke
+    in the middle of an identical rectangle.</p>
+  </div>
+</div>
+<div class="cap" style="margin-top:26px">the same glyphs at 24px, so you can see what is actually different</div>
+<div class="deck">
+  <div class="panel w320" style="height:auto;padding:14px 10px;display:flex;gap:18px;align-items:center;width:auto">
+    <svg class="ic" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12.5 8 15l2 2.5"/><path d="m14 12.5 2 2.5-2 2.5"/></svg><svg class="ic" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 12a1 1 0 0 0-1 1v1a1 1 0 0 1-1 1 1 1 0 0 1 1 1v1a1 1 0 0 0 1 1"/><path d="M14 18a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1 1 1 0 0 1-1-1v-1a1 1 0 0 0-1-1"/></svg><svg class="ic" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><svg class="ic" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8a1 1 0 0 1-1-1V2a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8z"/><path d="M20 8v12a2 2 0 0 1-2 2h-4.182"/><path d="m3.305 19.53.923-.382"/><path d="M4 10.592V4a2 2 0 0 1 2-2h8"/><path d="m4.228 16.852-.924-.383"/><path d="m5.852 15.228-.383-.923"/><path d="m5.852 20.772-.383.924"/><path d="m8.148 15.228.383-.923"/><path d="m8.53 21.696-.382-.924"/><path d="m9.773 16.852.922-.383"/><path d="m9.773 19.148.922.383"/><circle cx="7" cy="18" r="3"/></svg><svg class="ic" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><circle cx="10" cy="12" r="2"/><path d="m20 17-1.296-1.296a2.41 2.41 0 0 0-3.408 0L9 22"/></svg><svg class="ic" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="m8 16 2-2-2-2"/><path d="M12 18h4"/></svg><svg class="ic" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/></svg><svg class="ic" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+  </div>
+</div>
+
+
+<div class="cap" style="margin-top:30px">E · the extension itself, in mono, in the same fixed column</div>
+<div class="deck">
+  <div class="card"><div class="lab">240px</div><div class="panel w240"><div class="head"><span>alice</span><span style="opacity:.5">·</span><span>blobot/demo/alice</span></div><div class="row dir" style="padding-left:10px"><span class="chev o">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg><span class="nm">apps</span><span class="st">2</span></div><div class="row dir" style="padding-left:24px"><span class="chev o">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg><span class="nm">desktop</span><span class="st">2</span></div><div class="row changed" style="padding-left:52px"><span class="ext">tsx</span><span class="nm">Blob.tsx</span><span class="st">M</span></div><div class="row changed" style="padding-left:52px"><span class="ext">css</span><span class="nm">styles.css</span><span class="st">M</span></div><div class="row " style="padding-left:52px"><span class="ext">tsx</span><span class="nm">Composer.tsx</span></div><div class="row " style="padding-left:52px"><span class="ext">ts</span><span class="nm">blob.test.ts</span></div><div class="row dir" style="padding-left:24px"><span class="chev">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">docs</span></div><div class="row dir ignored" style="padding-left:10px"><span class="chev">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">node_modules</span></div><div class="row dir" style="padding-left:10px"><span class="chev">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">packages</span></div><div class="row dir changed" style="padding-left:10px"><span class="chev">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">.scratch</span><span class="st">?</span></div><div class="row changed" style="padding-left:10px"><span class="ext">md</span><span class="nm">CLAUDE.md</span><span class="st">M</span></div><div class="row changed" style="padding-left:10px"><span class="ext">md</span><span class="nm">DESIGN.md</span><span class="st">M</span></div><div class="row " style="padding-left:10px"><span class="ext">jsn</span><span class="nm">package.json</span></div><div class="row " style="padding-left:10px"><span class="ext">yml</span><span class="nm">pnpm-workspace.yaml</span></div><div class="row " style="padding-left:10px"><span class="ext">jsn</span><span class="nm">tsconfig.base.json</span></div><div class="row " style="padding-left:10px"><span class="ext">yml</span><span class="nm">lefthook.yml</span></div></div></div>
+  <div class="card"><div class="lab">320px</div><div class="panel w320"><div class="head"><span>alice</span><span style="opacity:.5">·</span><span>blobot/demo/alice</span></div><div class="row dir" style="padding-left:10px"><span class="chev o">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg><span class="nm">apps</span><span class="st">2</span></div><div class="row dir" style="padding-left:24px"><span class="chev o">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg><span class="nm">desktop</span><span class="st">2</span></div><div class="row changed" style="padding-left:52px"><span class="ext">tsx</span><span class="nm">Blob.tsx</span><span class="st">M</span></div><div class="row changed" style="padding-left:52px"><span class="ext">css</span><span class="nm">styles.css</span><span class="st">M</span></div><div class="row " style="padding-left:52px"><span class="ext">tsx</span><span class="nm">Composer.tsx</span></div><div class="row " style="padding-left:52px"><span class="ext">ts</span><span class="nm">blob.test.ts</span></div><div class="row dir" style="padding-left:24px"><span class="chev">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">docs</span></div><div class="row dir ignored" style="padding-left:10px"><span class="chev">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">node_modules</span></div><div class="row dir" style="padding-left:10px"><span class="chev">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">packages</span></div><div class="row dir changed" style="padding-left:10px"><span class="chev">&#9656;</span><svg class="ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg><span class="nm">.scratch</span><span class="st">?</span></div><div class="row changed" style="padding-left:10px"><span class="ext">md</span><span class="nm">CLAUDE.md</span><span class="st">M</span></div><div class="row changed" style="padding-left:10px"><span class="ext">md</span><span class="nm">DESIGN.md</span><span class="st">M</span></div><div class="row " style="padding-left:10px"><span class="ext">jsn</span><span class="nm">package.json</span></div><div class="row " style="padding-left:10px"><span class="ext">yml</span><span class="nm">pnpm-workspace.yaml</span></div><div class="row " style="padding-left:10px"><span class="ext">jsn</span><span class="nm">tsconfig.base.json</span></div><div class="row " style="padding-left:10px"><span class="ext">yml</span><span class="nm">lefthook.yml</span></div></div></div>
+  <div class="card">
+    <p class="note" style="max-width:330px">Per extension in the literal sense: every extension
+    that exists gets its own mark, with no vocabulary to run out of and no second icon set. It is
+    a <em>value</em>, which is what mono is for, and it is what the reference's badges are
+    actually doing — <span style="font-family:var(--mono);font-size:12px">MD</span> inside a
+    coloured square is a two-letter tag, not a picture.<br><br>
+    The objection is that it is the extension said twice, three characters from the end of the
+    name it sits beside. Directories keep the folder glyph, because a directory has no extension
+    and <em>there is something inside this</em> is the fact the name cannot carry.</p>
+  </div>
+</div>
+
+<hr>
+<div class="cap">the argument this overrules, and why</div>
+<p class="note" style="max-width:640px">
+No file-type glyph on any variant. <em>An icon beside the word it denotes is the same claim twice
+in the narrowest place in the app</em> — and a filename ends in its own extension, which is the
+badge, already there, costing nothing. Directories get the chevron and nothing else: <em>there is
+something inside this</em> is the one fact a name cannot carry, and the chevron carries it.
+</p>

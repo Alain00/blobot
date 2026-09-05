@@ -3817,3 +3817,75 @@ settings file), and the loopback carries a per-agent bearer token to `message_ag
 - **Whether fx's own compaction collides with `.scratch/transcript-scale/10`.** fx has a
   `/compact` command and blobot owns the session boundary; nobody has measured whether fx compacts
   on its own the way Hermes does. Worth knowing before an fx agent runs a long team.
+
+## 2026-09-05 — ticket 12's creation flow is a bar, not a page
+
+At the author's direction. The editorial page — a display line in the hand face, a standfirst,
+four numbered steps that folded, a lead picker, a turn budget, an icon control and a full-width
+disclosure — is replaced by a **bar over the working surface** in the shape of opening a direct
+message. Two questions: a field that is a search and a multi-select at once, then a name and a
+folder icon. `DESIGN.md`'s *creation flow* bullet is rewritten and keeps the old paragraph struck
+through underneath, because the reasoning that built the page is what has to be argued with if
+anybody wants it back.
+
+What decided what came off was **whether the answer is recoverable a minute later**. The turn
+budget is ten; the icon
+is offered by the edit dialog from the same detection this screen ran; the roster and the name are
+edited on that row. **Ticket 14's disclosure stayed**, reduced to two sentences, because it is the
+only thing here that is *not* recoverable: by the time a user goes looking for it, agents are
+already running in a copy of their folder.
+
+Three things that bit:
+
+- **`creating` no longer replaces the app.** `App.tsx` early-returns only on the genuine empty
+  state, and otherwise renders the bar beside the navigator, inside `.vA`. A team you are forming
+  does not stop the team you are on.
+- **cmdk had highlighted the wrong row all along, and only this made it visible.** The roster
+  arrives a frame after the first paint, so *hire an agent* was briefly the only item in the list,
+  cmdk selected it, and it kept that selection when the agents landed. Hiring is out of the list
+  now, under it — which is also the truer place for it, since it is not somebody you can put on
+  the team.
+- **The navigator's rules win on equal specificity**, because they are later in the stylesheet.
+  Every `.pickbar` rule carries `.navsheet` too, or `[cmdk-input]` keeps the navigator's padding
+  and its own underline inside a field that already has one.
+
+`NewTeam.test.tsx` is rewritten around the keyboard, which is where the whole risk of this shape
+lives: Enter means *this one* while you are typing and *go on* when you are not.
+
+**Space takes the highlighted row too**, and only with the field empty, where a space is a
+character that could not have been meant: a query cannot begin with one. Inside a query it stays
+a space, because `Compaign Auditor` has one in the middle of it. So Space and Tab pick, Enter
+moves on. An agent in the field is a **badge and not a pill**: the pill is the composer's shape,
+for the one thing on a surface you put words into, and a round end beside a round face was two
+circles in a row saying nothing about each other.
+
+**The bar does not wait for the team, 2026-09-05.** It closed only after `createTeam` resolved,
+which is an Agent per member, a worktree each and a session in every one — seconds of a modal
+sitting over a window that has nothing wrong with it. It hands the spec to `App` now and goes:
+`startTeam` fires the call and nothing on screen awaits it. There was already a loader for
+exactly this and it was being covered up — `switchTo` sets `opening` and sends `blobot:team`
+*before* the work, so the rail and the panes draw the team coming up as soon as main has it, and
+a failure lands in the strip above the panes where *the team you clicked would not open* already
+goes. The one thing the bar still waits for is `prepareWorkspace`, because a folder that cannot
+be made is the last failure with a sentence belonging in the bar rather than beside the rail.
+A first launch has no window behind the bar to hand back to, so it shows the same blank the app
+shows before its first snapshot, which is exactly what it is.
+
+**The lead came back the same day.** It shipped as `chosen[0]` with nothing on screen saying so,
+which is a rank assigned by the order somebody happened to press two rows in — and *the team's own
+row edits it afterwards* is not an answer to a control that was never offered. It is on the badge
+now: pressing an agent in the field makes them the lead and the badge says `LEAD` in mono, the ×
+takes them off and is revealed on hover the way *your agents* reveals retiring. That also puts the
+two gestures the right way round. The badge used to remove on any press, argued from *a target
+inside a small target is a mis-click on the destructive half* — which is the argument **for** this
+arrangement once there are two things to do here, not against it: the press that is easy to hit is
+the one that changes nothing you cannot see.
+
+**The name step draws the team, and it is the way back.** Up to four faces overlapped at the head
+of the field, then `+N`, and pressing them returns to question one with the field as it was left.
+Two reasons, and the second is the one that made it worth the pixels: a name is easier to choose
+while looking at who it is for, and a two-step flow with no way back is a flow you restart by
+pressing Escape and starting again. The stack is the transcript's, halo and all -- four
+drop-shadows of the surface's own ground rather than a border, because a blobatar is a silhouette
+and a rounded outline would cut its edge. Four rather than three, because these are 20px against a
+field rather than 11px inside a folder.

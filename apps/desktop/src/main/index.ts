@@ -51,8 +51,11 @@ import {
   publishPlanFor,
   commitAgentWork,
   commitPlanFor,
+  readAgentChanges,
   readAgentBranches,
+  readAgentTree,
   readTeamWorkspaces,
+  resolveInWorkspace,
   switchAgentBranch,
   editAgentProfile,
   editTeamRoster,
@@ -116,8 +119,11 @@ import type {
   UiTeamIcon,
   UiTeamDiskUsage,
   UiWorkspaceStatus,
+  UiWorkspaceTree,
   UiBranches,
   UiCommitResult,
+  UiCommitSelection,
+  UiWorkspaceChanges,
   UiPublishResult,
   UiSwitchResult,
   UiTeamSummary,
@@ -394,6 +400,7 @@ function teamSummaries(): UiTeamSummary[] {
         name: agent.name,
         ...(agent.profileId === undefined ? {} : { profileId: agent.profileId }),
         ...(agent.hue === undefined ? {} : { hue: agent.hue }),
+        ...(agent.shape === undefined ? {} : { shape: agent.shape }),
       })),
       // The lead as a *profile* id, because the roster dialog is a set of ticks on profiles and
       // this is the tick it has to draw marked. Absent on a team formed before there were
@@ -435,6 +442,7 @@ function agentProfiles(): UiAgentProfile[] {
     runtimeLabel: runtimeLabel(profile.runtimeId),
     ...(profile.instructions === undefined ? {} : { instructions: profile.instructions }),
     ...(profile.hue === undefined ? {} : { hue: profile.hue }),
+    ...(profile.shape === undefined ? {} : { shape: profile.shape }),
     ...(profile.runtimeOptions === undefined ? {} : { runtimeOptions: profile.runtimeOptions }),
     ...(profile.trust === undefined ? {} : { trust: profile.trust }),
     ...(profile.compaction === undefined ? {} : { compaction: profile.compaction }),
@@ -482,6 +490,7 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
       workspacePath: team.workspacePath,
       ...(record.branch === undefined ? {} : { branch: record.branch }),
       ...(record.hue === undefined ? {} : { hue: record.hue }),
+      ...(record.shape === undefined ? {} : { shape: record.shape }),
       // Nothing has advertised anything yet, so the paperclip is closed with the composer.
       accepts: { images: false, textFiles: false },
       ...ceiling(record.runtimeId, record.runtimeOptions),
@@ -499,7 +508,7 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
     // The gauge is a persisted fact, so it is drawn while the team is still coming up: what
     // these agents were carrying when they were last awake is what they will resume with.
     usage: store?.lastUsageOfTeam(team.id) ?? {},
-    log: store?.logOfTeam(team.id) ?? { running: [], tools: [], turns: [], compactions: [] },
+    log: store?.logOfTeam(team.id) ?? { running: [], tools: [], turns: [], compactions: [], pictures: [] },
     // Read while the processes are still coming up, like the roster and the transcript: a
     // Handbook is a persisted fact and nothing about it waits on a session.
     handbooks: store === undefined ? {} : handbooksOf(store, team.id, records),
@@ -638,7 +647,7 @@ function snapshot(): UiSnapshot {
       commands: {},
       usage: {},
       handbooks: {},
-      log: { running: [], tools: [], turns: [], compactions: [] },
+      log: { running: [], tools: [], turns: [], compactions: [], pictures: [] },
       injection: {},
       messages: [],
       answers: [],
@@ -651,6 +660,31 @@ function snapshot(): UiSnapshot {
       ...(openError === undefined ? {} : { openError }),
     };
   }
+  /**
+   * Each agent's face as the *store* holds it, not as the running team was launched with it.
+   *
+   * An edit restates the face onto every membership the moment it is saved, and the rail draws
+   * its rows straight out of those rows — so reading the open team's faces off the in-memory
+   * Agent put the new face on the rail and the old one in the transcript beside it. One agent,
+   * two faces, which is the failure the whole face rule exists to prevent, and this time inside
+   * one window.
+   *
+   * The face is the one part of an edit with nothing to restart. A role and standing
+   * instructions wait for the next start because they are composed into a persona and the
+   * session in flight was composed from the old one; a hue is drawn, and there is no session
+   * for it to disagree with.
+   */
+  const faces = new Map(
+    team.store.agentsOfTeam(team.team.id).map((row) => [
+      row.id,
+      {
+        ...(row.hue === undefined ? {} : { hue: row.hue }),
+        ...(row.shape === undefined ? {} : { shape: row.shape }),
+      },
+    ]),
+  );
+  const faceOf = (agentId: string): { hue?: number; shape?: string } => faces.get(agentId) ?? {};
+
   return {
     team: {
       id: team.team.id,
@@ -670,7 +704,7 @@ function snapshot(): UiSnapshot {
             members: team.agents.map((agent) => ({
               id: agent.id,
               name: agent.name,
-              ...(agent.hue === undefined ? {} : { hue: agent.hue }),
+              ...faceOf(agent.id),
             })),
           },
         ]
@@ -682,7 +716,7 @@ function snapshot(): UiSnapshot {
       runtimeLabel: team.runtimeLabels[agent.id] ?? 'unknown',
       ...(team.powerOf === undefined ? {} : { machinePower: team.powerOf(agent.id) }),
       workspacePath: agent.workspacePath,
-      ...(agent.hue === undefined ? {} : { hue: agent.hue }),
+      ...faceOf(agent.id),
       ...(team.branches[agent.id] === undefined ? {} : { branch: team.branches[agent.id] }),
       accepts: team.orchestrator.acceptsOf(agent.id),
       ...(team.contextCeilings[agent.id] === undefined
@@ -957,7 +991,7 @@ async function createWindow(): Promise<void> {
     width: 1360,
     height: 860,
     // Near-black, not #000: against true black the blobatar silhouettes read as cut out.
-    backgroundColor: '#0a0a0b',
+    backgroundColor: '#1a1c1e',
     title: 'blobot',
     webPreferences: {
       preload: join(here, '../preload/index.mjs'),
@@ -1095,6 +1129,10 @@ void app.whenReady().then(async () => {
     // re-encrypted here, and never the reverse.
     speechKeys.migrate();
     store = new SqliteStore(opened.db);
+    // Before anything reads. A call cannot outlive the runtime that owned it, and this is the
+    // one moment that is knowable: nothing is attached yet, so every row still claiming to be
+    // in flight was orphaned by however the last process ended.
+    store.closeOrphanedCalls();
     routines = new RoutineRunner({
       store,
       clock,
@@ -1215,6 +1253,19 @@ void app.whenReady().then(async () => {
   ipcMain.handle('blobot:attachmentUrl', (_event, id: string) => {
     const found = (current()?.orchestrator.store ?? store)?.attachment(id);
     return found === undefined ? undefined : dataUrlOf(found);
+  });
+
+  // One Picture's bytes, asked for by the pane about to draw it. The snapshot carries the record
+  // and never the picture: an agent decides how many Pictures a transcript has, so carrying them
+  // would put every screenshot of the session through here on every team switch.
+  ipcMain.handle('blobot:pictureUrl', (_event, id: string) => {
+    // The one store, not the team's: the orchestrator holds a `MessageStore & AttachmentStore`
+    // and pictures are deliberately not on it. Nothing an agent can reach knows this table
+    // exists, which is `.scratch/agent-media/02`'s invariant and has a test named for it.
+    const found = store?.picture(id);
+    return found === undefined
+      ? undefined
+      : `data:${found.mimeType};base64,${Buffer.from(found.data).toString('base64')}`;
   });
   ipcMain.handle('blobot:resume', () => current()?.orchestrator.resumeAfterBudget());
 
@@ -1681,6 +1732,72 @@ void app.whenReady().then(async () => {
   );
 
   /**
+   * The directories of one agent's AgentWorkspace the sidebar has open.
+   *
+   * Local reads only, and no walk: one `git status` for the worktree and a `readdir` plus a
+   * `check-ignore` per open folder. Nothing here reaches the network and no runtime is told it
+   * happened, which is what makes this observation in the same sense the context gauge is.
+   */
+  ipcMain.handle(
+    'blobot:workspaceTree',
+    async (
+      _event,
+      teamId: string,
+      agentId: string,
+      paths: readonly string[],
+    ): Promise<UiWorkspaceTree> => {
+      if (store === undefined) return { present: false, directories: [] };
+      const asked = Array.isArray(paths) ? paths.filter((path) => typeof path === 'string') : [];
+      return readAgentTree(teamId, agentId, asked, { store, clock }).catch(() => ({
+        present: false,
+        directories: [],
+      }));
+    },
+  );
+
+  /**
+   * A file from that tree, opened in whatever the user opens files with.
+   *
+   * Guarded the way `blobot:openLink` is, and for the same kind of reason. That one refuses any
+   * scheme but `http`; this one takes a **relative** path, resolves it against this agent's own
+   * workspace, and refuses anything that escapes it. blobot must not become a read primitive
+   * that goes around ticket 14's permission posture, and an absolute path from the renderer
+   * would be exactly that.
+   */
+  ipcMain.handle(
+    'blobot:openInWorkspace',
+    (_event, teamId: string, agentId: string, path: unknown) => {
+      if (store === undefined || typeof path !== 'string') return;
+      const target = resolveInWorkspace(teamId, agentId, path, { store, clock });
+      if (target === undefined) return;
+      void shell.openPath(target);
+    },
+  );
+
+  /**
+   * One agent's uncommitted work, file by file: the git panel's rows.
+   *
+   * Local reads only, and the same two commands the tray's figure already runs, kept as rows
+   * instead of summed. Nothing here reaches the network, and no runtime is told it happened.
+   */
+  ipcMain.handle(
+    'blobot:workspaceChanges',
+    async (
+      _event,
+      teamId: string,
+      agentId: string,
+      repo?: string,
+    ): Promise<UiWorkspaceChanges> => {
+      const nothing = { present: false, kind: 'git' as const, rows: [], added: 0, removed: 0 };
+      if (store === undefined) return nothing;
+      return readAgentChanges(teamId, agentId, typeof repo === 'string' ? repo : undefined, {
+        store,
+        clock,
+      }).catch(() => nothing);
+    },
+  );
+
+  /**
    * The branches an agent's worktree could be on, and the user moving it onto one.
    *
    * Local git only: the list is `for-each-ref` and the move is `git switch`, so neither reaches
@@ -1718,20 +1835,31 @@ void app.whenReady().then(async () => {
    */
   ipcMain.handle(
     'blobot:commitPlan',
-    async (_event, teamId: string, agentId: string, message: string): Promise<readonly string[]> => {
+    async (
+      _event,
+      teamId: string,
+      agentId: string,
+      message: string,
+      selection: UiCommitSelection = {},
+    ): Promise<readonly string[]> => {
       if (store === undefined) return [];
-      return commitPlanFor(teamId, agentId, message, { store, clock });
+      return commitPlanFor(teamId, agentId, message, { store, clock }, selection);
     },
   );
 
   ipcMain.handle(
     'blobot:commitWork',
-    async (_event, teamId: string, agentId: string, message: string): Promise<UiCommitResult> => {
+    async (
+      _event,
+      teamId: string,
+      agentId: string,
+      message: string,
+      selection: UiCommitSelection = {},
+    ): Promise<UiCommitResult> => {
       if (store === undefined) return { ok: false, error: 'No database is open.' };
-      return commitAgentWork(teamId, agentId, message, { store, clock }).catch((error: unknown) => ({
-        ok: false as const,
-        error: describe(error),
-      }));
+      return commitAgentWork(teamId, agentId, message, { store, clock }, selection).catch(
+        (error: unknown) => ({ ok: false as const, error: describe(error) }),
+      );
     },
   );
 

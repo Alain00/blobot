@@ -15,7 +15,7 @@ teams, one is a Rust service, one is a folder of documents, she leads on the thi
 context**, which is the permanent rule, rather than the full copy the rule forbids.
 
 **But a map is a document blobot writes into a place an agent can read, and this repo has
-refused that shape twice** — ticket 14 refused a settings file in an AgentWorkspace because a
+refused that shape twice** — `first-demo` ticket 14 refused a settings file in an AgentWorkspace because a
 file left in a checkout can be committed home, and ADR-0004 refused handing an agent a
 `resource_link` to a path because `Read`, `Glob` and `Grep` never prompt, so a path handed to an
 agent is an ungated read. A `map.md` that names `/home/alain/work/acme-api` is that second

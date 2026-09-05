@@ -98,6 +98,8 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       // colour while every other surface drew the one the user picked. The hue is the only
       // part of a face that is stored rather than derived; losing it is one agent, two faces.
       ...(record.hue === undefined ? {} : { hue: record.hue }),
+      // And the silhouette beside it, which is the other half of the same face.
+      ...(record.shape === undefined ? {} : { shape: record.shape }),
       // Dropped here the same way the hue was, and with teeth: the orchestrator reads
       // `agent.compaction ?? DEFAULT_COMPACTION`, so an agent the user had switched *off*
       // arrived as undefined and was compacted anyway. The setting was on screen, stored, and
@@ -200,6 +202,9 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
         },
       ],
       onStderr: (line) => log(`[runtime:${agent.id}] ${line}`),
+      // The store measures the bytes and decides whether there is anything to draw, so no two
+      // runtimes can disagree about what blobot will keep. `.scratch/agent-media/06`.
+      pictures: { keep: (picture) => store.keepPicture(picture) },
       }),
     });
     executions.set(agent.id, runtime);

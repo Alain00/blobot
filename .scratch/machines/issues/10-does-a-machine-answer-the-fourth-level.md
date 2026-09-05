@@ -18,7 +18,7 @@ unprompted: bypass is *"recommended only for sandboxes with no internet access."
 
 ## What to establish
 
-- **Does the fence actually cover what the ceiling was protecting?** Go through ticket 14's
+- **Does the fence actually cover what the ceiling was protecting?** Go through `first-demo` ticket 14's
   refused list one at a time against a real policy. `rm` inside a bind-mounted workspace is a
   worktree the user can recover with git. `sudo` inside a userns is not the host's root.
   `git push` is a network operation and dies to an egress allowlist. `chmod` is contained.
@@ -43,7 +43,7 @@ permissions system than three ever was, and this ticket should say so if it conc
 
 This was `.scratch/sandboxing/04`, and it is the ticket four places in the codebase point at:
 `packages/core/src/trust.ts:46`, `packages/core/src/adapters/claude/permissions.ts:162`,
-`.scratch/mcp-permissions/spec.md`, and ticket 14 of `first-demo`. Those pointers have been
+`.scratch/mcp-permissions/spec.md`, and `first-demo` ticket 14. Those pointers have been
 updated to `.scratch/machines/10`; the question is unchanged.
 
 One addition from the wider destination. The argument above is that inside a fence, three of the

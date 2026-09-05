@@ -75,6 +75,32 @@ export const BASH_PERMISSIONS: Readonly<Record<string, 'ask' | 'allow'>> = {
   'pnpm add*': 'ask',
   'yarn add*': 'ask',
   'bun add*': 'ask',
+  // Anything that reaches the display server, at every level and never on `TRUSTED_ANYWAY`.
+  // Everything else blobot vouches for at `normal` acts on the agent's own copy of the user's
+  // repository; that containment is why editing is vouched unconditionally. The screen is in no
+  // workspace, is not per agent, and is the one place *the recipient owns the repository* stops
+  // working: a user owns their screen, not everything visible on it. Capture and input injection
+  // are one class because they are one reach. `ffmpeg` is here for `gh api`'s reason exactly:
+  // `-f x11grab` and `-f avfoundation` are invisible to a pattern on the head of the command.
+  //
+  // These were absent, and absence means the opposite on the two runtimes: Claude's posture is an
+  // allowlist, where an unlisted command prompts, and this one is a denylist, where it runs. So
+  // `grim` ran unprompted at `normal` here while the same command prompted there. A rule that is
+  // safe by omission on one runtime is unsafe by omission on the other.
+  'import *': 'ask',
+  'scrot*': 'ask',
+  'grim*': 'ask',
+  'maim*': 'ask',
+  'spectacle*': 'ask',
+  'screencapture*': 'ask',
+  'gnome-screenshot*': 'ask',
+  'flameshot*': 'ask',
+  'wayshot*': 'ask',
+  'xwd*': 'ask',
+  'xdotool*': 'ask',
+  'wmctrl*': 'ask',
+  'ydotool*': 'ask',
+  'ffmpeg*': 'ask',
 };
 
 /**
@@ -87,6 +113,10 @@ export const BASH_PERMISSIONS: Readonly<Record<string, 'ask' | 'allow'>> = {
  * keep asking at every level. `gh *` is absent too, and for a different reason: its reads are
  * already allowed at `normal` by the rules that follow it above, and its writes are allowed at
  * no level, so lifting the blanket rule here would only lift `gh pr create`.
+ *
+ * The display-server class is absent for the same permanence: it never reaches `trusting`, and
+ * so never reaches `unattended`, which takes `trusting`'s list unchanged and is the level where
+ * nobody is watching.
  */
 const TRUSTED_ANYWAY = [
   'curl *', 'wget *', 'npm install*', 'npx *', 'pnpm add*', 'yarn add*', 'bun add*',

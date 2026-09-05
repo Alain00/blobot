@@ -1,4 +1,5 @@
 import type { StopReason, ToolKind } from '../events.js';
+import type { PictureNotDrawn, PictureSource } from '../pictures.js';
 import type { AvailableCommand, HandbookEntryInput } from '../runtime.js';
 
 /**
@@ -46,6 +47,13 @@ export type ScenarioStep =
   | { readonly kind: 'say'; readonly text: string; readonly overMs?: number }
   | { readonly kind: 'wait'; readonly ms: number }
   | { readonly kind: 'tool'; readonly tool: ToolStep }
+  /**
+   * One batch of calls, in flight at the same time.
+   *
+   * A separate step rather than an option on `tool` because the player has to fork here: a
+   * scenario is a `for…await` and everything else in this union is one thing after another.
+   */
+  | { readonly kind: 'parallel'; readonly tools: readonly ToolStep[] }
   | {
       readonly kind: 'message_agent';
       readonly to: string;
@@ -74,6 +82,26 @@ export type ScenarioStep =
       readonly code?: string;
       /** Whether the process is gone afterwards, or only this turn is lost. */
       readonly dies: boolean;
+    }
+  /**
+   * A Picture arrives, or does not and says why.
+   *
+   * The mock is a shipped demo mode and it is what the transcript was reviewed against, so it has
+   * to be able to reach the ugly cases as well as the happy one: two in a turn, one whose bytes
+   * will not decode, one the store would not take. `.scratch/live-steps/` was the last effort to
+   * find a review conducted against a mock that could not produce the case that mattered.
+   */
+  | {
+      readonly kind: 'picture';
+      readonly source: PictureSource;
+      readonly notDrawn?: PictureNotDrawn;
+      readonly toolName?: string;
+      readonly name?: string;
+      readonly width?: number;
+      readonly height?: number;
+      readonly bytes?: number;
+      /** The bytes, when the scenario wants a real picture on screen rather than a refusal. */
+      readonly data?: Uint8Array;
     }
   | { readonly kind: 'commands'; readonly commands: readonly AvailableCommand[] }
   | { readonly kind: 'end'; readonly stopReason: StopReason };
@@ -128,16 +156,22 @@ export class Scenario {
   }
 
   callTool(title: string, kind: ToolKind, options: CallToolOptions = {}): Scenario {
-    const tool: ToolStep = {
-      title,
-      kind,
-      durationMs: options.durationMs ?? 400,
-      outcome: options.outcome ?? { status: 'completed', exit: 0 },
-      ...(options.asks === undefined ? {} : { asks: options.asks }),
-      ...(options.rawInput === undefined ? {} : { rawInput: options.rawInput }),
-      ...(options.diff === undefined ? {} : { diff: options.diff }),
-    };
-    return this.#with({ kind: 'tool', tool });
+    return this.#with({ kind: 'tool', tool: tool(title, kind, options) });
+  }
+
+  /**
+   * A batch: every call starts together and each returns on its own `durationMs`.
+   *
+   * The player is a `for…await` over the steps, so before this existed no scenario could put
+   * two calls in flight and the demo was structurally incapable of the one shape a real turn
+   * has that a queue does not. `.scratch/live-steps/issues/02`.
+   *
+   * **Give them different durations.** The case worth checking is calls finishing *out of
+   * order*: anything that quietly assumes completion order is call order passes every serial
+   * scenario in this file and fails on the first real batch.
+   */
+  parallel(tools: readonly ToolStep[]): Scenario {
+    return this.#with({ kind: 'parallel', tools });
   }
 
   /**
@@ -191,6 +225,38 @@ export class Scenario {
     return this.#with({ kind: 'commands', commands });
   }
 
+  /**
+   * A Picture, drawn or refused.
+   *
+   * `data` is what makes the happy path real: the mock has no store, so the runtime keeps it in
+   * memory and hands the same id out, which is enough for a pane to draw one and exactly nothing
+   * more. Without `data` this is a refusal, which is the case worth scripting most.
+   */
+  picture(
+    source: PictureSource,
+    options: {
+      readonly notDrawn?: PictureNotDrawn;
+      readonly toolName?: string;
+      readonly name?: string;
+      readonly data?: Uint8Array;
+      readonly width?: number;
+      readonly height?: number;
+      readonly bytes?: number;
+    } = {},
+  ): Scenario {
+    return this.#with({
+      kind: 'picture',
+      source,
+      ...(options.notDrawn === undefined ? {} : { notDrawn: options.notDrawn }),
+      ...(options.toolName === undefined ? {} : { toolName: options.toolName }),
+      ...(options.name === undefined ? {} : { name: options.name }),
+      ...(options.data === undefined ? {} : { data: options.data }),
+      ...(options.width === undefined ? {} : { width: options.width }),
+      ...(options.height === undefined ? {} : { height: options.height }),
+      ...(options.bytes === undefined ? {} : { bytes: options.bytes }),
+    });
+  }
+
   usage(used: number, size = 200_000, costUsd?: number): Scenario {
     return this.#with(
       costUsd === undefined
@@ -228,6 +294,24 @@ export class Scenario {
   end(stopReason: StopReason = 'end_turn'): Scenario {
     return this.#with({ kind: 'end', stopReason });
   }
+}
+
+/**
+ * One call, as data rather than as a step — what `parallel` takes a list of.
+ *
+ * `callTool` is this plus the appending, and is still the way to write a lone call: a batch of
+ * one is a batch a reader has to notice is a batch.
+ */
+export function tool(title: string, kind: ToolKind, options: CallToolOptions = {}): ToolStep {
+  return {
+    title,
+    kind,
+    durationMs: options.durationMs ?? 400,
+    outcome: options.outcome ?? { status: 'completed', exit: 0 },
+    ...(options.asks === undefined ? {} : { asks: options.asks }),
+    ...(options.rawInput === undefined ? {} : { rawInput: options.rawInput }),
+    ...(options.diff === undefined ? {} : { diff: options.diff }),
+  };
 }
 
 export function scenario(name: string): Scenario {

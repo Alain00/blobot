@@ -1,10 +1,12 @@
+import type { PictureNotDrawn, PictureSource } from './pictures.js';
+
 /**
  * blobot's normalized event vocabulary.
  *
  * This is *our* type, never an ACP passthrough — see
  * `.scratch/first-demo/issues/04-the-normalized-agentevent-vocabulary.md`.
  * `packages/core` exports no ACP type; every provider quirk dies inside an adapter and
- * emerges as one of these ten members.
+ * emerges as one of these eleven members.
  */
 
 /** Every event carries agent and session identity — the orchestrator multiplexes many agents. */
@@ -184,6 +186,57 @@ export interface ContextCompacted extends AgentEventBase {
 }
 
 /**
+ * A **Picture** reached blobot, and either it is on screen or it is not and here is why.
+ *
+ * `.scratch/agent-media/06`. An eleventh member rather than blocks on `agent_message_completed`,
+ * on an argument stronger than the ripple through the assembler and the `NOT NULL` text column:
+ * under the objective there is **no message to hang them on**, because a shown Picture arrives as
+ * a loopback tool call while the agent is saying nothing at all. So it is a sibling of
+ * `agent_message_sent` and `context_compacted`, both of which are already news that is not prose.
+ *
+ * The name is neutral on purpose. *Shown* is the Agent's verb and half of these were not shown by
+ * anybody, so `picture_shown` would assert of every one the single thing the two sources disagree
+ * about.
+ *
+ * **It never carries bytes.** The event is persisted by the recorder and streamed to a renderer
+ * that replays it on every team switch, so bytes here would be every picture of the session
+ * crossing the boundary twice. They are written to the store *before* the event exists and this
+ * carries the id -- `Attached.tsx`'s precedent, and it holds harder here, because the user knows
+ * how many attachments they picked up and an agent in a screenshot loop decides how many Pictures
+ * a transcript has.
+ */
+export interface PictureArrived extends AgentEventBase {
+  readonly type: 'picture_arrived';
+  /** Which of the two frames it gets. Required, so nothing arrives uncommitted about it. */
+  readonly source: PictureSource;
+  /** The store's row. Absent exactly when `notDrawn` is present. */
+  readonly pictureId?: string;
+  /** Why there is nothing to look at. Absent exactly when `pictureId` is present. */
+  readonly notDrawn?: PictureNotDrawn;
+  /**
+   * The call it belongs to. On both sources, which looked like a second discriminator while
+   * charting and is not: an observed Picture comes off a `tool_call_update` and a shown one off
+   * the agent calling blobot's own tool, so both belong to a run.
+   */
+  readonly toolCallId?: string;
+  /** The tool that produced it. Observed only, and never drawn as a filename. */
+  readonly toolName?: string;
+  /** The file's own name, relative to the AgentWorkspace. Shown only. */
+  readonly name?: string;
+  /** Measured by reading the header, never taken from the runtime's word for it. */
+  readonly width?: number;
+  readonly height?: number;
+  /** The size, for the refusal that names it and for nothing on the frame. */
+  readonly bytes?: number;
+  /** The file's mtime, and what `turnStartedAt` is compared against. Shown only. */
+  readonly writtenAt?: number;
+  /**
+   * Carried rather than re-derived, so a replay compares the same two numbers a live draw did.
+   */
+  readonly turnStartedAt?: number;
+}
+
+/**
  * Fatal only: protocol errors and process death. An **event, not a thrown rejection**, so a
  * partial turn's transcript survives intact.
  */
@@ -204,6 +257,7 @@ export type AgentEvent =
   | AgentMessageSent
   | UsageUpdated
   | ContextCompacted
+  | PictureArrived
   | TurnEnded
   | AgentError;
 

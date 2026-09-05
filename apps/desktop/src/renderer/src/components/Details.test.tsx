@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * The context gauge at the head of the activity column.
+ * The context gauge in the details panel, behind the chrome's gauge glyph.
  *
  * The claims worth holding are the ones a screenshot would not catch: that both numbers are
  * drawn and not only the percent, because the two runtimes' windows differ by five times and a
@@ -12,35 +12,66 @@
 import React from 'react';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { describe, expect, it } from 'vitest';
-import type { UiAgent, UiHandbookEntry, UiInjection } from '../../../shared/api.js';
-import { Feed } from './Feed.js';
+import { afterEach, describe, expect, it } from 'vitest';
+import type {
+  UiAgent,
+  UiHandbookEntry,
+  UiInjection,
+  UiWorkspaceStatus,
+} from '../../../shared/api.js';
+import { Details } from './Details.js';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+// The panel is a Radix popover, and Radix measures. jsdom has no ResizeObserver, which is the
+// same stub the workspace tests take for the same reason.
+globalThis.ResizeObserver ??= class {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+} as unknown as typeof ResizeObserver;
+
+/** Every root drawn by a test, torn down after it: the panel portals into `document.body`. */
+const drawn: { unmount: () => void; host: HTMLElement }[] = [];
+afterEach(() => {
+  for (const one of drawn.splice(0)) {
+    act(() => one.unmount());
+    one.host.remove();
+  }
+});
 
 const AGENTS: readonly UiAgent[] = [
   { id: 'alice', name: 'Alice', role: 'builds the UI', runtimeLabel: 'claude code', workspacePath: '/w', accepts: { images: true, textFiles: true } },
   { id: 'bob', name: 'Bob', role: 'reviews it', runtimeLabel: 'opencode', workspacePath: '/w', accepts: { images: true, textFiles: true } },
 ];
 
+/**
+ * The panel, open.
+ *
+ * Opened by pressing the trigger rather than by a prop, because that press is the whole of how
+ * a person reaches these two blocks now — a test that rendered the content directly would pass
+ * with the door bricked up. What comes back is `document`, since Radix portals the content out
+ * of the host and into the body.
+ */
 function render(
   usage: Record<string, { used: number; size: number }>,
   injection: Record<string, UiInjection> = {},
   agents: readonly UiAgent[] = AGENTS,
   handbooks: Record<string, readonly UiHandbookEntry[]> = {},
-): HTMLElement {
+  workspaces: readonly UiWorkspaceStatus[] = [],
+): Document {
   const host = document.createElement('div');
   document.body.append(host);
+  const root = createRoot(host);
+  drawn.push({ unmount: () => root.unmount(), host });
   act(() => {
-    createRoot(host).render(
-      <Feed
-        entries={[]}
+    root.render(
+      <Details
         agents={agents}
         usage={usage}
         injection={injection}
         handbooks={handbooks}
-        pane={{ kind: 'team' }}
-        workspaces={[]}
+        workspaces={workspaces}
         looking={false}
         onRefreshWorkspaces={() => undefined}
         onPublish={async () => ({ ok: false, step: 'create', error: 'not in this test' })}
@@ -48,15 +79,18 @@ function render(
       />,
     );
   });
-  return host;
+  act(() => {
+    (host.querySelector('.paneltoggle') as HTMLButtonElement).click();
+  });
+  return document;
 }
 
-function click(host: HTMLElement, index: number): void {
+function click(host: Document, index: number): void {
   const row = host.querySelectorAll('.ctxrow')[index] as HTMLButtonElement;
   act(() => row.dispatchEvent(new MouseEvent('click', { bubbles: true })));
 }
 
-const rows = (host: HTMLElement): string[] =>
+const rows = (host: Document): string[] =>
   [...host.querySelectorAll('.ctxrow')].map((row) => row.textContent ?? '');
 
 describe('the context gauge', () => {
@@ -93,10 +127,12 @@ describe('the context gauge', () => {
     ]);
   });
 
-  it('says nothing at all when nobody has reported', () => {
+  it('says nothing at all when nobody has reported, and the panel says what will be here', () => {
     const host = render({});
     expect(host.querySelector('.ctx')).toBeNull();
-    expect(host.querySelector('.feed')).not.toBeNull();
+    // Both blocks withhold themselves rather than drawing a header over nothing, so without
+    // this line the panel would open onto an empty box.
+    expect(host.querySelector('.detailsempty')).not.toBeNull();
   });
 });
 
@@ -202,34 +238,39 @@ describe('what blobot sent', () => {
   });
 });
 
-/**
- * The head is pinned, and jsdom performs no layout, so `position:sticky` itself is not
- * testable here. What is testable is the thing the stylesheet depends on and a screenshot
- * would not catch: that CONTEXT and WORKSPACE are inside one wrapper, and that the log is
- * outside it. Put a log line into `.feedtop` by accident and it pins to the top of the column
- * forever; take the gauge out of it and it scrolls away again, which is the bug this fixed.
- */
-describe('the head of the column', () => {
+describe('the panel', () => {
   const workspaces = [
     { agentId: 'alice', agentName: 'Alice', kind: 'git' as const, branch: 'blobot/t/alice', present: true },
   ];
-  const entries = [
-    { id: 'e1', at: 1, agentId: 'alice', text: 'read src/index.ts' },
-    { id: 'e2', at: 2, agentId: 'bob', text: 'ran the tests' },
-  ];
 
-  function renderFull(): HTMLElement {
+  it('holds both blocks, and nothing else', () => {
+    const panel = render(
+      { alice: { used: 1000, size: 200_000 } },
+      {},
+      AGENTS,
+      {},
+      workspaces,
+    ).querySelector('.detailspop') as HTMLElement;
+    expect(panel.querySelector('.ctx')).not.toBeNull();
+    expect(panel.querySelector('.ws')).not.toBeNull();
+    // The activity log was the third thing here until 2026-09-05, and it is not coming back
+    // through this door: what settles is drawn in the transcript's own fold.
+    expect(panel.querySelectorAll('.fev')).toHaveLength(0);
+    expect(panel.querySelector('.detailsempty')).toBeNull();
+  });
+
+  it('is not on screen until the glyph is pressed', () => {
     const host = document.createElement('div');
     document.body.append(host);
+    const root = createRoot(host);
+    drawn.push({ unmount: () => root.unmount(), host });
     act(() => {
-      createRoot(host).render(
-        <Feed
-          entries={entries}
+      root.render(
+        <Details
           agents={AGENTS}
           usage={{ alice: { used: 1000, size: 200_000 } }}
           injection={{}}
           handbooks={{}}
-          pane={{ kind: 'team' }}
           workspaces={workspaces}
           looking={false}
           onRefreshWorkspaces={() => undefined}
@@ -238,23 +279,7 @@ describe('the head of the column', () => {
         />,
       );
     });
-    return host;
-  }
-
-  it('holds both blocks that are one row per agent, and nothing else', () => {
-    const top = renderFull().querySelector('.feedtop') as HTMLElement;
-    expect(top.querySelector('.ctx')).not.toBeNull();
-    expect(top.querySelector('.ws')).not.toBeNull();
-    expect(top.querySelectorAll('.fev')).toHaveLength(0);
-  });
-
-  it('leaves the log outside it, after it', () => {
-    const feed = renderFull().querySelector('.feed') as HTMLElement;
-    const children = [...feed.children];
-    expect(children[0]?.className).toBe('feedtop');
-    expect(feed.querySelectorAll('.fev')).toHaveLength(2);
-    for (const line of feed.querySelectorAll('.fev')) {
-      expect(line.closest('.feedtop')).toBeNull();
-    }
+    expect(document.querySelector('.detailspop')).toBeNull();
+    expect(host.querySelector('.paneltoggle')).not.toBeNull();
   });
 });

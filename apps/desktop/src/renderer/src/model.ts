@@ -4,6 +4,8 @@ import type {
   AgentEvent,
   AgentStatus,
   Message,
+  PictureNotDrawn,
+  PictureSource,
   StopReason,
   ToolKind,
 } from '@blobot/core/domain';
@@ -68,7 +70,14 @@ export type Item =
        * and a tool that says `running` while nothing is running is the exact lie ticket 08
        * spent a mock on.
        */
-      status: 'asking' | 'running' | 'completed' | 'failed';
+      /**
+       * `unfinished` is blobot never having learned how the call ended -- the process that owned
+       * it went away mid-flight and the launch reconcile closed the row. It is deliberately not
+       * `failed`: the tool may have done its work perfectly and only the answer was lost. It
+       * counts as settled, because nothing more is coming, and it is not counted as a failure,
+       * because that is a claim nobody can make.
+       */
+      status: 'asking' | 'running' | 'completed' | 'failed' | 'unfinished';
       exit?: number | null;
       /**
        * What the edit changed, in lines. Absent is not zero, and the three ways it can be
@@ -104,6 +113,36 @@ export type Item =
       handoff?: string;
       handoffPath?: string;
       reason?: string;
+    }
+  /**
+   * A Picture, or the fact that there was one and it is not here.
+   *
+   * `.scratch/agent-media/`. One item for both outcomes, because they are one event: a Picture
+   * that arrived and could not be shown is *not drawn*, always with the reason in the same line,
+   * and never a noun on its own -- a noun would let a session ship the noun without the reason.
+   *
+   * `count` is what stops a screenshot loop drawing a column of identical apologies. It collapses
+   * by turn, by agent **and by reason**, in that order, so two different reasons in one turn are
+   * two lines: a reason that is averaged away is not a reason.
+   */
+  | {
+      kind: 'picture';
+      id: string;
+      at: number;
+      agentId: string;
+      /** Which frame it gets. The two sources must never draw the same. */
+      source: PictureSource;
+      /** The store's row, and what the pane fetches bytes by. Absent when `notDrawn` is set. */
+      pictureId?: string;
+      notDrawn?: PictureNotDrawn;
+      /** How many identical refusals this line stands for. Only ever above one when not drawn. */
+      count?: number;
+      /** The tool that produced it, for an observed Picture's frame. */
+      toolName?: string;
+      /** The file's own name, for a shown one. */
+      name?: string;
+      /** Whether the file was written during this turn or was already there. Shown only. */
+      writtenThisTurn?: boolean;
     }
   /**
    * An agent put itself on a schedule, and it is already running.
@@ -175,7 +214,17 @@ export type Item =
 export function continuesSpeaker(item: Item, previous: Item | undefined): boolean {
   if (previous === undefined) return false;
   if (item.kind !== 'agent') return false;
-  return previous.kind === 'agent' && previous.agentId === item.agentId;
+  return continuesAgent(item.agentId, previous);
+}
+
+/**
+ * The same rule for something that is not an item: a live block whose steps sit under a caption
+ * the same agent has just finished writing. That caption is settled prose with running calls
+ * beneath it, which is one item short of the fold's threshold and therefore a loose row, so
+ * without this the face and the name are drawn twice with one sentence between them.
+ */
+export function continuesAgent(agentId: string, previous: Item | undefined): boolean {
+  return previous?.kind === 'agent' && previous.agentId === agentId;
 }
 
 /**
@@ -194,8 +243,109 @@ export function isPending(
   items: readonly Item[],
   agentId: string,
 ): boolean {
-  if (status !== 'starting' && status !== 'thinking' && status !== 'working') return false;
+  if (!isInFlight(status)) return false;
   return !items.some((item) => item.kind === 'agent' && item.agentId === agentId && item.live);
+}
+
+/**
+ * Whether this agent is inside a turn, which is what {@link LiveNow} is asked and what bounds
+ * the live half of a run.
+ *
+ * `responding` is not in here and that is the whole of what keeps one face on screen: while an
+ * agent is streaming prose there is no live block, so the message's own face is the only one,
+ * and the two are never mounted at the same time.
+ */
+export function isInFlight(status: AgentStatus): boolean {
+  return status === 'starting' || status === 'thinking' || status === 'working';
+}
+
+/**
+ * One agent's turn while it is still a turn: its face, and the calls that have not returned.
+ *
+ * `.scratch/live-steps/issues/03`. The transcript used to draw running calls as loose mono lines
+ * in the shared column with nothing on them saying whose they were, and a pending bubble under
+ * all of them. In a team pane that is unreadable the moment two agents run at once: six lines
+ * interleaved in call-start order, attributable to nobody. A block is the only shape that
+ * survives more than one of them, and it is the shape the settled transcript already uses — a
+ * face, a name, and then the thing being done.
+ *
+ * **One per principal, not one per agent** (`issues/08`, narrowing 03). A teammate's open calls
+ * are inside the run its mail caused, the same place they go the instant they return; the block
+ * that says it is working is the principal's. Empty items is the other legal shape: an agent
+ * asked something with nothing to show for it yet, which is where the dots survive.
+ */
+export interface LiveBlock {
+  readonly agentId: string;
+  /** In flight, in the order they were called. Empty is legal: that is the block with the dots. */
+  readonly items: readonly Item[];
+}
+
+
+/**
+ * Whether this agent is inside a turn right now, asked of the status record the renderer holds.
+ *
+ * It has to be a status rather than a property of the items. A call whose row still says
+ * `running` in a transcript nobody is watching is a call whose end was never learned, and a lone
+ * completed call never reaches the fold's threshold, so it stays a loose row for the rest of the
+ * session — either one, read off the items alone, would hold a live face over a dead turn.
+ */
+export type LiveNow = (agentId: string) => boolean;
+
+/**
+ * What {@link rowsOf} assumes when it is handed no status record: a settled transcript, where
+ * nothing is in flight and every row is a record of something that already happened.
+ */
+const NOBODY_LIVE: LiveNow = () => false;
+
+/**
+ * Steps that have already been inside a fold, and so may never come back out of one.
+ *
+ * The author's rule, 2026-09-05: *"any folded step should stay folded"*. It is not a preference,
+ * it is the other end of the bug that put a thought on screen. {@link liveRunIn}'s batch walks
+ * **backwards** over contiguous calls until it meets the principal's own narration, so that a
+ * call finishing while its siblings run does not drop out of the block as a loose unattributed
+ * line. Two calls that ran one after the other with nothing said between them are indis-
+ * tinguishable, from the items alone, from two calls that were opened together — so the walk
+ * reached back over work that had already settled, already folded, and already been counted,
+ * and hauled it back onto the screen the instant the next call opened. Thinking makes this the
+ * common case rather than the corner one, because reasoning is not narration: an agent that
+ * works quietly through a list produces no prose at all to bound a batch with.
+ *
+ * It cannot be decided from the items, for the same reason a reply's news cannot be
+ * ({@link liveRunIn}): nothing on a call records *when* it settled, only that it has. What the
+ * renderer can see is one render following another, so it keeps the set and hands it back in —
+ * the shape `useSwallowed` and `useDwell` already have.
+ *
+ * The default is the empty set, which is a transcript nobody has watched fold anything.
+ */
+const NOTHING_FOLDED: ReadonlySet<string> = new Set();
+
+/**
+ * Everyone the last thing the user said was addressed to, which is who a run may belong to.
+ *
+ * Read off the items and stored nowhere, exactly as {@link rowsOf} reads it, so that the two
+ * halves of the transcript cannot disagree about whose turn is being drawn.
+ */
+export function addressedIn(items: readonly Item[]): ReadonlySet<string> {
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const item = items[index] as Item;
+    if (item.kind === 'user') return new Set(item.agentIds);
+  }
+  return new Set();
+}
+
+/**
+ * Whether this agent is one the reader asked, which is what earns a voice of its own.
+ *
+ * `.scratch/live-steps/issues/07`. Everybody else in the turn is machinery the principal
+ * arranged, and folds. An empty set is the honest failure and not a guess: above the top of a
+ * bounded transcript blobot does not know who was asked, so everybody is a candidate — which is
+ * also, for free, why an agent's own pane is unchanged by any of this. {@link itemsFor} filters
+ * the user's `@alice` bubble out of Bob's pane, so nothing is addressed there and Bob is his own
+ * principal.
+ */
+export function isPrincipal(addressed: ReadonlySet<string>, agentId: string): boolean {
+  return addressed.size === 0 || addressed.has(agentId);
 }
 
 /** What an agent last said, for the rail's preview line. Undefined until it has spoken. */
@@ -236,7 +386,26 @@ export interface AppState {
   /** The slash menu each agent offers, by agent id. Per session, so it is not on `UiAgent`. */
   commands: Record<string, readonly UiCommand[]>;
   items: Item[];
+  /**
+   * The log of settled work: finished tool calls, ended turns, errors, compactions.
+   *
+   * **Nothing draws it since 2026-09-05**, when the activity column it was the body of came off
+   * and its two heads moved into a popover (`components/Details.tsx`). It is kept because a
+   * settled event arriving here is the cheapest honest signal that a worktree may have changed,
+   * and `useWorkspaces` re-reads local git off its length. Restored from the persisted rows on
+   * every snapshot, so that signal survives a team switch the same way it always did.
+   */
   feed: FeedEntry[];
+  /**
+   * How many settled entries have ever arrived. Monotonic, and never the feed's length.
+   *
+   * `useWorkspaces` re-reads local git off this. The length was the signal until 2026-09-05 and
+   * it is capped at 200, so once a team had settled its two hundredth tool call the number
+   * stopped moving and the worktree was never read again for the rest of the session: the
+   * tray's `+412 -7 - 9 files` silently froze. A counter cannot saturate. The feed's own cap
+   * stays, because the cap is about memory and this is about liveness.
+   */
+  settled: number;
   budget: { used: number; budget: number } | undefined;
   /** How full each agent's context is, by agent id. Absent means it has never reported. */
   usage: Record<string, UiUsage>;
@@ -331,6 +500,7 @@ export const initialState: AppState = {
   commands: {},
   items: [],
   feed: [],
+  settled: 0,
   budget: undefined,
   usage: {},
   injection: {},
@@ -513,7 +683,12 @@ export function reduce(state: AppState, action: Action): AppState {
               // Only the two terminal words reach here: `logOfTeam` returns finished calls.
               // Anything else would be a call claiming to be in flight in a pane that was
               // rebuilt after it ended.
-              status: tool.status === 'failed' ? 'failed' : 'completed',
+              status:
+                tool.status === 'failed'
+                  ? 'failed'
+                  : tool.status === 'unfinished'
+                    ? 'unfinished'
+                    : 'completed',
               ...(tool.exit === undefined ? {} : { exit: tool.exit }),
               ...(tool.changed === undefined ? {} : { changed: tool.changed }),
             })),
@@ -522,6 +697,13 @@ export function reduce(state: AppState, action: Action): AppState {
           // why, is the exact shape of a bug report nobody can act on.
           ...action.snapshot.log.compactions.map((compaction) =>
             compactionItem(`${compaction.agentId}:${compaction.at}:compacted`, compaction),
+          ),
+          // A Picture comes back from the store, and a Picture that was **not** drawn comes back
+          // too: that event is the only record it ever happened, so losing it on a team switch
+          // would put the silent drop back one screen further along. The bytes are not here --
+          // the pane fetches one at a time by id.
+          ...action.snapshot.log.pictures.map((picture) =>
+            pictureItem(`${picture.agentId}:${picture.at}:picture`, picture),
           ),
           // Restored from the rows, so the disclosure survives a relaunch and a team switch. A
           // block that only existed while the app happened to be watching would be one the user
@@ -929,7 +1111,7 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
       return {
         ...state,
         items,
-        feed: pushFeed(state.feed, {
+        ...settle(state, {
           id: `${event.toolCallId}:done`,
           at: event.at,
           agentId: event.agentId,
@@ -959,7 +1141,7 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
               },
             ]
           : state.items,
-        feed: pushFeed(state.feed, {
+        ...settle(state, {
           id: `${event.turnId}:${event.agentId}:${event.at}`,
           at: event.at,
           agentId: event.agentId,
@@ -981,7 +1163,7 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
             text: event.message,
           },
         ],
-        feed: pushFeed(state.feed, {
+        ...settle(state, {
           id: `${event.agentId}:${event.at}:error`,
           at: event.at,
           agentId: event.agentId,
@@ -1012,7 +1194,7 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
       return {
         ...state,
         items: [...state.items, compactionItem(id, event)],
-        feed: pushFeed(state.feed, {
+        ...settle(state, {
           id,
           at: event.at,
           agentId: event.agentId,
@@ -1030,12 +1212,91 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
         }),
       };
     }
-    // Thinking has no pane of its own yet, and the peer message is rendered from its record
-    // rather than from this announcement.
+    case 'picture_arrived': {
+      const id = `${event.agentId}:${event.at}:picture`;
+      if (state.items.some((item) => item.id === id)) return state;
+      return { ...state, items: withPicture(state.items, id, event) };
+    }
+    // Reasoning is not drawn and is not kept. The *state* is on screen -- the live block stands
+    // with its agent's face while the turn is in flight -- and `.scratch/live-steps/issues/01`'s
+    // amendment has why the tokens themselves are not: the author's, having seen them drawn.
+    // The peer message is rendered from its record rather than from this announcement.
     case 'agent_thought_delta':
     case 'agent_message_sent':
       return state;
   }
+}
+
+/**
+ * A Picture into the transcript, counting rather than repeating.
+ *
+ * A Picture that was drawn is always its own item: they are different pictures and the reader is
+ * looking at them. A Picture that was **not** drawn folds into the last one from the same agent
+ * with the same reason, and the fold is deliberately shallow -- only the trailing item, so a
+ * refusal from before the agent said something is not silently absorbed into a later run.
+ *
+ * That asymmetry is the whole rule: an agent in a screenshot loop produces `4 pictures from bob`
+ * and not four apologies, and two reasons in one turn stay two lines.
+ */
+function withPicture(
+  items: readonly Item[],
+  id: string,
+  event: {
+    agentId: string;
+    at: number;
+    source: PictureSource;
+    pictureId?: string;
+    notDrawn?: PictureNotDrawn;
+    toolName?: string;
+    name?: string;
+    writtenAt?: number;
+    turnStartedAt?: number;
+  },
+): Item[] {
+  const item = pictureItem(id, event);
+  const last = items[items.length - 1];
+  if (
+    item.notDrawn !== undefined &&
+    last?.kind === 'picture' &&
+    last.agentId === item.agentId &&
+    last.notDrawn === item.notDrawn
+  ) {
+    return [...items.slice(0, -1), { ...last, count: (last.count ?? 1) + 1 }];
+  }
+  return [...items, item];
+}
+
+/** One `picture_arrived` as the transcript holds it. Shared by the live and restored paths. */
+function pictureItem(
+  id: string,
+  event: {
+    agentId: string;
+    at: number;
+    source: PictureSource;
+    pictureId?: string;
+    notDrawn?: PictureNotDrawn;
+    toolName?: string;
+    name?: string;
+    writtenAt?: number;
+    turnStartedAt?: number;
+  },
+): Extract<Item, { kind: 'picture' }> {
+  return {
+    kind: 'picture',
+    id,
+    at: event.at,
+    agentId: event.agentId,
+    source: event.source,
+    ...(event.pictureId === undefined ? {} : { pictureId: event.pictureId }),
+    ...(event.notDrawn === undefined ? {} : { notDrawn: event.notDrawn }),
+    ...(event.toolName === undefined ? {} : { toolName: event.toolName }),
+    ...(event.name === undefined ? {} : { name: event.name }),
+    // Compared here rather than at the draw, so a replay weighs the same two numbers a live draw
+    // did instead of re-deriving one of them from a clock that has moved on.
+    ...(event.writtenAt === undefined || event.turnStartedAt === undefined
+      ? {}
+      : { writtenThisTurn: event.writtenAt >= event.turnStartedAt }),
+  };
 }
 
 /** One `context_compacted` as the transcript holds it. Shared by the live and restored paths. */
@@ -1201,6 +1462,20 @@ function pushFeed(feed: FeedEntry[], entry: FeedEntry): FeedEntry[] {
   return [entry, ...feed].slice(0, 200);
 }
 
+/**
+ * The feed and the revision, together, so they can never disagree.
+ *
+ * A re-delivered event is not a new settlement: `pushFeed` refuses it, and the counter has to
+ * refuse it too, or a reconnect would re-read every worktree for work that had already been
+ * counted.
+ */
+function settle(state: AppState, entry: FeedEntry): Pick<AppState, 'feed' | 'settled'> {
+  const feed = pushFeed(state.feed, entry);
+  return feed === state.feed
+    ? { feed, settled: state.settled }
+    : { feed, settled: state.settled + 1 };
+}
+
 function lastIndexOf(items: readonly Item[], predicate: (item: Item) => boolean): number {
   for (let index = items.length - 1; index >= 0; index -= 1) {
     if (predicate(items[index] as Item)) return index;
@@ -1272,13 +1547,60 @@ export function itemsFor(items: readonly Item[], pane: Pane): Item[] {
  *   stopped agent behind a chevron is the modal problem wearing a chevron;
  * - a live answer, and any prose long enough to be one.
  *
- * Trailing prose is trimmed off the end of a block for the same reason: the last thing said in
- * a turn has no call after it, so it is the answer, and the answer never folds.
+ * And a fourth, which is the same rule read one turn wider (2026-09-04): **everything the agent
+ * said to you** is outside, not only the paragraph the run ends on. It is drawn under the block
+ * in the order it was said, where consecutive rows from one agent group into one turn. An agent
+ * that pings three teammates writes a paragraph after every reply, and its last paragraph is the
+ * last increment rather than a summary, so keeping only that one would throw away what it learned
+ * about the other two. blobot provides no inference: it cannot summarise them and must not drop
+ * them.
+ *
+ * A short caption is what stays in, and it is barely an exception. It introduces the call beneath
+ * it and means nothing away from it, which is what {@link CAPTION} has always measured. Prose is
+ * a caption only while the agent has more of its own work to come.
  */
 export type Row =
   | { readonly kind: 'item'; readonly at: number; readonly item: Item }
   | {
       readonly kind: 'steps';
+      readonly id: string;
+      readonly at: number;
+      /**
+       * Whose turn this is: the agent the last prompt addressed. A run never spans two of them,
+       * so an answer inside a fold is never ambiguous about who wrote it.
+       */
+      readonly agentId: string;
+      /**
+       * Everyone else who is in here, in the order they first appear: agents the prompt did not
+       * address, and the far end of any mail. Empty for the ordinary run of one agent's own work.
+       */
+      readonly partnerIds: readonly string[];
+      readonly items: readonly Item[];
+    }
+  /**
+   * The half of a run that has not finished becoming a record: the principal's face over the
+   * calls that are still open. It sits where its run sits rather than at the foot of the column,
+   * so a fan-out with two agents working draws each block under its own fold instead of stacking
+   * both of them below everybody's history.
+   */
+  | ({ readonly kind: 'live'; readonly id: string; readonly at: number } & LiveBlock)
+  /**
+   * Every Picture one agent showed in a turn, on one line.
+   *
+   * A turn that takes four screenshots drew four column-width pictures, one under the other with
+   * a name and a caption between each, and the answer they were taken for ended up a screen and
+   * a half below the question. The fold already makes this call for the same turn's *calls*; a
+   * row makes it for what those calls produced.
+   *
+   * **Only ever more than one.** A single Picture is the thing you are being shown and it keeps
+   * the column, because shrinking one picture to half width buys no scroll at all and costs the
+   * detail the picture exists to carry.
+   *
+   * A Picture that could **not** be drawn never joins one. It is a sentence, it already counts
+   * rather than repeating, and a row of them would be a row of nothing.
+   */
+  | {
+      readonly kind: 'pictures';
       readonly id: string;
       readonly at: number;
       readonly agentId: string;
@@ -1304,17 +1626,70 @@ function speakerOf(item: Item): string | undefined {
   return item.kind === 'user' || item.kind === 'peer' ? undefined : item.agentId;
 }
 
-function settledWork(item: Item): boolean {
+/**
+ * Whether a run may hold this item at all.
+ *
+ * One predicate for the principal and for a teammate, which is `.scratch/live-steps/issues/07`
+ * arriving in the code: what admits a line is what the line *is*, and who spoke it decides only
+ * where it comes back out — {@link runFrom}'s lifted set. There were two of these and they had
+ * been identical since the day length stopped deciding admission; the comment on the second one
+ * still described a difference that was no longer there.
+ *
+ * A **running call is admitted**, and that is ticket 08's whole change. It used to end the run,
+ * which was harmless while one agent worked and false the moment two did: a teammate's open call
+ * cut the principal's turn in half, so one turn drew as two folds with an unattributed mono line
+ * between them. It is taken straight back out by {@link liveRunIn} and drawn under its agent's
+ * face, so the run is computed once over both halves and rendered at two altitudes.
+ *
+ * Admitted only while the agent is **in a turn**. Without a status record — a persisted
+ * transcript nobody is watching — a row that still says `running` is a record of a call whose
+ * end was never learned, and lifting it into a live block would put a face over a dead turn.
+ *
+ * What is still refused is what has to reach the person: a question nobody has answered, and the
+ * disclosures that exist *because* something happened off screen.
+ *
+ * **Prose is admitted whether or not it has finished**, which is the author's, 2026-09-05, from
+ * watching it: a teammate's reply streamed at the top level for as long as it took to write and
+ * then vanished into the fold the instant it stopped, while the agent the reader had actually
+ * asked was working underneath it. Two costs and no benefit. The words were never addressed to
+ * the reader, so they are noise while they arrive; and the reader watches a paragraph appear and
+ * be taken away for a reason nothing on screen explains. Folded from the first delta, the same
+ * reply simply is where it belongs from the start and never moves.
+ *
+ * Nothing is hidden by it. The **principal's** prose is lifted straight back out by
+ * {@link runFrom} — all of it, live included — so letting a run reach past a sentence being
+ * written changes only where the run ends. A **teammate's** was never going to stay on screen:
+ * it folds a second later regardless, so refusing it here only chose which second.
+ */
+function runWork(item: Item, live: LiveNow): boolean {
   switch (item.kind) {
     case 'tool':
-      return item.status === 'completed' || item.status === 'failed';
+      if (item.status === 'asking') return false;
+      return item.status !== 'running' || live(item.agentId);
     case 'permission':
       return item.outcome !== undefined;
     case 'agent':
-      return !item.live && item.text.trim().length <= CAPTION;
+      return true;
     default:
       return false;
   }
+}
+
+/**
+ * Prose long enough to be an answer rather than a caption on a call.
+ *
+ * It used to be part of {@link settledWork}, which meant a paragraph *broke* the run outright.
+ * That was right while a block was one agent's own work and is wrong across an exchange: an
+ * agent that pings three teammates writes a paragraph after each reply, and every one of those
+ * broke the run, so one prompt came back as four blocks with four of the agent's reports
+ * standing between them. Only the last of those is an answer to you. The others are the agent
+ * telling you what it has arranged so far, which is what a block is *for*.
+ *
+ * So length no longer decides admission. It decides where a run **ends**, in {@link runFrom},
+ * and only in the stretch of the run that nobody else is in.
+ */
+function isAnswerLength(item: Item): boolean {
+  return item.kind === 'agent' && item.text.trim().length > CAPTION;
 }
 
 /** How many calls a block actually stands for, which is what its header counts. */
@@ -1342,12 +1717,30 @@ export function failuresIn(items: readonly Item[]): number {
  * `Steps` draws every `agent` item in the run inside the fold, and a reader deciding whether to
  * open one wants to know there is prose behind the count and not only calls.
  *
- * They are `notes` and never `messages`. A message in blobot is what an agent says to you or
- * mails to a peer, and neither of those is ever folded — `rowsOf` trims the answer off the end
- * and a peer item is nobody's turn. Borrowing the word here would name two different things.
+ * They are `notes` and never `messages`, and the principal's alone. The word `messages` is spent
+ * on {@link messagesIn} for what the fold now also holds — mail, and a teammate's own turn —
+ * which is exactly what it always meant: what an agent says to you, or mails to a peer.
+ *
+ * That is a reversal, and worth naming as one. The rule here used to be that a message is
+ * *never* folded, which was true while a block could only hold one voice. A teammate's reply to
+ * your agent is a message and it does fold now, because it was never addressed to you.
  */
-export function notesIn(items: readonly Item[]): number {
-  return items.filter((item) => item.kind === 'agent').length;
+export function notesIn(items: readonly Item[], principal?: string): number {
+  return items.filter((item) => item.kind === 'agent' && item.agentId === principal).length;
+}
+
+/**
+ * Mail, and turns taken by somebody other than the principal. What the header counts as messages.
+ *
+ * With **no** principal — a block made entirely of a teammate's work — every turn in it is
+ * somebody else's and all of them count. Written the other way round this returned zero there,
+ * and the header drew a chevron with an empty label beside it: a fold that said nothing at all
+ * about what it was holding.
+ */
+export function messagesIn(items: readonly Item[], principal?: string): number {
+  return items.filter(
+    (item) => item.kind === 'peer' || (item.kind === 'agent' && item.agentId !== principal),
+  ).length;
 }
 
 /**
@@ -1403,44 +1796,430 @@ function fileName(path: string): string {
   return tail.length === 0 ? path : tail;
 }
 
-/** The transcript's rows: every item as itself, except settled runs of work, which fold. */
-export function rowsOf(items: readonly Item[]): Row[] {
+/**
+ * The run of work starting at `index`, and where it ends. Undefined when nothing starts here.
+ *
+ * One run holds three things now: the addressed agent's own settled steps, the mail it sent or
+ * received, and the whole turn a teammate took because of that mail. They were two folds for
+ * half a day — `ran 2 tools` and a separate `aside` — and that was one fold too many, by the
+ * author: what the reader wants demoted is *everything the turn had to arrange*, and splitting
+ * it by whether blobot classed a given line as a call or as a message is a distinction the
+ * reader never asked about.
+ *
+ * A run has one **principal**, so two agents the user addressed never merge into one block: an
+ * unattributed paragraph inside a fold would be read as the principal's, and on a fan-out that
+ * would be blobot putting Bob's words under Alice's name.
+ *
+ * With nothing addressed — the top of a bounded transcript — every speaker is a principal
+ * candidate, which is exactly the single-speaker rule this had before the addressed set existed.
+ * That is the honest failure rather than a guess: blobot does not know who was asked above the
+ * window it holds.
+ */
+function runFrom(
+  items: readonly Item[],
+  index: number,
+  addressed: ReadonlySet<string>,
+  live: LiveNow,
+  folded: ReadonlySet<string>,
+): {
+  end: number;
+  principal: string | undefined;
+  said: readonly number[];
+  live: readonly number[];
+} | undefined {
+  let principal: string | undefined;
+  let end = index;
+
+  while (end < items.length) {
+    const item = items[end] as Item;
+    // Mail belongs to whichever run it is sitting in. It is nobody's turn -- `speakerOf` says so
+    // -- and it is the hinge between the principal's work and the teammate's, so a run that
+    // stopped at it would put the outbound line between two folds of one exchange.
+    if (item.kind === 'peer') {
+      // Mail is nobody's turn, but it is somebody's act: an outbound line from an addressed
+      // agent settles whose run this is, which is how a run that opens on the mail itself knows
+      // the sender is the principal rather than one more partner.
+      if (principal === undefined && addressed.has(item.fromId)) principal = item.fromId;
+      end += 1;
+      continue;
+    }
+    const speaker = speakerOf(item);
+    if (speaker === undefined) break;
+
+    if (isPrincipal(addressed, speaker)) {
+      if (principal !== undefined && principal !== speaker) break;
+      if (!runWork(item, live)) break;
+      principal = speaker;
+    } else if (!runWork(item, live)) {
+      break;
+    }
+    end += 1;
+  }
+
+  if (end === index) return undefined;
+
+  // The live half, taken out before anything else is decided about the run, so that everything
+  // below reads as though the run ended where the work still happening begins. That is what
+  // keeps the caption above a running batch lifted out as a loose row for the block to group
+  // under, which is what it did when an open call ended the run outright.
+  const inFlight = liveRunIn(items, index, end, principal, live, folded);
+  const isLive = new Set(inFlight);
+
+  /*
+   * What the principal actually said to you, which is never inside the block.
+   *
+   * The rule arrived in four steps in one day and the last step is the author's, from a real
+   * transcript. Popping trailing prose off the *end* was right while a block held one voice: the
+   * teammate's reply lands after your agent's words, so trimming the end folds away the only
+   * thing addressed to you. Cutting the run at that prose stranded whatever the teammate did
+   * afterwards below it as a second, unattributed block. Lifting only the *last* prose out then
+   * looked right and was worse than either: an agent that pings three teammates writes a
+   * paragraph after every reply, and its last paragraph is the last increment, not a summary --
+   * so folding the earlier ones threw away everything it had learned about the other two.
+   *
+   * So the line is drawn by **who it was addressed to** and by nothing else. Everything the
+   * principal said to you comes out and is drawn under the block, in order; the mail, the calls
+   * and the teammates' own turns stay in. A short caption is the one exception, and it is not
+   * really one: it introduces the call beneath it, is meaningless away from it, and is the
+   * reading this block was built on.
+   *
+   * Prose is a caption only while the principal has more of its own work to come. The last thing
+   * it says is its answer at any length, which is what {@link CAPTION} was always guarding, and a
+   * paragraph is an answer wherever it stands.
+   */
+  const lifted: number[] = [];
+  let trailing = true;
+  for (let back = end - 1; back >= index; back -= 1) {
+    const item = items[back] as Item;
+    if (item.kind === 'peer' || speakerOf(item) !== principal) continue;
+    // Skipped without clearing `trailing`: these are leaving the run, and the prose above them
+    // is the caption on work the reader can still see.
+    if (isLive.has(back)) continue;
+    if (item.kind !== 'agent') {
+      trailing = false;
+      continue;
+    }
+    if (trailing || isAnswerLength(item)) lifted.push(back);
+  }
+  lifted.reverse();
+
+  return { end, principal, said: lifted, live: inFlight };
+}
+
+/**
+ * The principal's calls that have not finished, and the settled ones that will leave with them.
+ *
+ * A step leaves the block for exactly one reason, it finished (`issues/04`) — so a call that
+ * returns while its neighbours are still open must not jump out of the block and back into the
+ * column above it as a lone unattributed line. Its **batch** is what it leaves with, and a batch
+ * is a run of calls with none of the agent's own narration between them: the walk starts at the
+ * earliest still-open call and extends backwards over contiguous calls until it meets a caption.
+ *
+ * A teammate's items are stepped over rather than stopping it, because they are somebody else's
+ * work happening in the middle of this one's batch and say nothing about where the batch begins.
+ *
+ * Only the principal's calls. A teammate has no live block of its own in a team pane
+ * (`issues/08`): its open calls stay inside the run they were caused by, and what says it is
+ * working is that block. In its own pane it *is* the principal — {@link itemsFor} filters the
+ * other agents out before any of this runs, so nothing is addressed there and
+ * {@link isPrincipal} answers yes.
+ *
+ * **A teammate's reply, once it has finished, is a step in here too.** The author's, 2026-09-05,
+ * and it is the middle of three positions rather than a return to the first. Drawn at the top
+ * level while it streams, it is a paragraph nobody in the room was addressed in taking the column
+ * from the agent the reader did ask; dropped straight into the shut fold, it is a reply the
+ * reader never sees arrive at all. As a step it sits where the rest of the turn's machinery sits,
+ * at the altitude of a call and clipped to the one line a glance can use, and it leaves the way a
+ * call leaves — when the turn ends and the fold takes the whole block. Live prose is not in here:
+ * *when it finished* is the whole of the instruction.
+ */
+function liveRunIn(
+  items: readonly Item[],
+  index: number,
+  end: number,
+  principal: string | undefined,
+  live: LiveNow,
+  folded: ReadonlySet<string>,
+): number[] {
+  if (principal === undefined || !live(principal)) return [];
+
+  const calls: number[] = [];
+  const replies: number[] = [];
+  let open = -1;
+  let lastOwn = -1;
+  for (let at = index; at < end; at += 1) {
+    const item = items[at] as Item;
+    const speaker = speakerOf(item);
+    if (speaker === undefined) continue;
+    if (speaker !== principal) {
+      if (item.kind === 'agent' && !item.live) replies.push(at);
+      continue;
+    }
+    lastOwn = at;
+    if (item.kind !== 'tool') continue;
+    calls.push(at);
+    if (open === -1 && item.status === 'running') open = at;
+  }
+
+  let batch: number[] = [];
+  if (open !== -1) {
+    let from = calls.indexOf(open);
+    while (from > 0) {
+      if (narratedBetween(items, calls[from - 1] as number, calls[from] as number, principal)) break;
+      from -= 1;
+    }
+    batch = calls.slice(from);
+  }
+
+  /*
+   * Every settled reply in the run, and **how long each stands is not decided here.**
+   *
+   * Two rules were tried and both were wrong for the same reason, which the third attempt
+   * measured. Collecting every reply left a teammate's line standing for the rest of the turn
+   * with a second stacked under it. Bounding it by position — after the open batch's first call,
+   * or after the last thing the principal did — made it never appear at all.
+   *
+   * From a real run: Bob's reply is item **21** while Alice is already at item 25 and climbing.
+   * An agent message takes its `at` from its **first delta**, so a reply that took a few seconds
+   * to write is inserted at the moment it *began*, and by the time it settles the principal has
+   * moved past that position. It is new, and it is behind. No comparison of positions can call it
+   * news, because by position it is not.
+   *
+   * What is new is the **transition**, a live message becoming a settled one, and nothing in the
+   * item records when that happened. The only place that sees one render follow another is the
+   * renderer, so this hands over everything that has settled and `useDwell` decides how long a
+   * reply stands.
+   */
+  // In the order they happened: a reply that came back between two calls belongs between them,
+  // because this is the turn as it is being lived rather than two lists stacked.
+  //
+  // Minus anything a fold has already taken. {@link NOTHING_FOLDED} has the reason: the
+  // backwards walk above cannot tell a batch opened together from two calls that merely had
+  // nothing said between them, and only the renderer knows which of them the reader has already
+  // watched being filed away. A step leaves the block once.
+  return [...batch, ...replies]
+    .filter((at) => !folded.has((items[at] as Item).id))
+    .sort((left, right) => left - right);
+}
+
+/** Whether the principal said anything of its own between two of its calls, which ends a batch. */
+function narratedBetween(
+  items: readonly Item[],
+  after: number,
+  before: number,
+  principal: string,
+): boolean {
+  for (let at = after + 1; at < before; at += 1) {
+    const item = items[at] as Item;
+    if (speakerOf(item) === principal) return true;
+  }
+  return false;
+}
+
+/** Everyone in a run who is not the principal: teammates who spoke, and the far end of mail. */
+function partnersOf(run: readonly Item[], principal: string | undefined): string[] {
+  const partners: string[] = [];
+  const add = (id: string): void => {
+    if (id !== principal && !partners.includes(id)) partners.push(id);
+  };
+  for (const item of run) {
+    if (item.kind === 'peer') {
+      add(item.fromId);
+      add(item.toId);
+      continue;
+    }
+    const speaker = speakerOf(item);
+    if (speaker !== undefined) add(speaker);
+  }
+  return partners;
+}
+
+/** Whether anybody but the principal actually took a turn in here, rather than only being mailed. */
+function partnerSpoke(run: readonly Item[], principal: string | undefined): boolean {
+  return run.some((item) => {
+    const speaker = speakerOf(item);
+    return speaker !== undefined && speaker !== principal;
+  });
+}
+
+/**
+ * The transcript's rows: every item as itself, except settled runs of work, which fold.
+ *
+ * The addressed set is read off the last thing the user said and off nothing else. Nothing new is
+ * stored for any of this, and nothing is reordered: where a runtime narrates after its call, the
+ * agent's mail out stays on its own line above its own answer and only what came back folds.
+ */
+export function rowsOf(
+  items: readonly Item[],
+  live: LiveNow = NOBODY_LIVE,
+  folded: ReadonlySet<string> = NOTHING_FOLDED,
+): Row[] {
   const rows: Row[] = [];
   let index = 0;
+  let addressed: ReadonlySet<string> = new Set();
 
   while (index < items.length) {
     const start = items[index] as Item;
-    const speaker = speakerOf(start);
 
-    if (speaker !== undefined && settledWork(start)) {
-      let end = index;
-      while (end < items.length) {
-        const item = items[end] as Item;
-        if (speakerOf(item) !== speaker || !settledWork(item)) break;
-        end += 1;
-      }
-      // The answer is whatever prose the run ends on, so it comes back out.
-      while (end > index && (items[end - 1] as Item).kind === 'agent') end -= 1;
+    // Whose thread this is now. A fan-out addresses several, and then several agents are
+    // answering the user directly and none of them is anybody's aside.
+    if (start.kind === 'user') addressed = new Set(start.agentIds);
 
-      const run = items.slice(index, end);
-      if (toolsIn(run) >= WORTH_FOLDING) {
+    const found = runFrom(items, index, addressed, live, folded);
+    if (found !== undefined) {
+      // The run with everything the principal said to you taken out of it. What is left holds
+      // its own order, and so does what came out.
+      const said = new Set(found.said);
+      const inFlight = new Set(found.live);
+      const run = items
+        .slice(index, found.end)
+        .filter((_, at) => !said.has(index + at) && !inFlight.has(index + at));
+      const answer = found.said.map((at) => items[at] as Item);
+      const open = found.live.map((at) => items[at] as Item);
+      const principal = found.principal;
+      const partnerIds = partnersOf(run, principal);
+      /*
+       * Two ways in. The ordinary one is the tool threshold: below it a fold is a line replaced
+       * by a line, plus a click. The other is a teammate having taken a turn in here, which
+       * always folds however short it is, because that turn is the thing the reader did not ask
+       * for and the whole reason any of this exists.
+       *
+       * Mail with no turn behind it is neither: one outbound line nobody has answered yet is
+       * already one line, and it is the addressed agent's own act rather than somebody else's.
+       */
+      if (run.length > 0 && (partnerSpoke(run, principal) || toolsIn(run) >= WORTH_FOLDING)) {
         rows.push({
           kind: 'steps',
           id: `steps:${(run[0] as Item).id}`,
           at: (run[0] as Item).at,
-          agentId: speaker,
+          // Empty when nobody in here was addressed, which is a run made entirely of a teammate's
+          // work. Then there is no principal, everybody in it is a partner, and every line of it
+          // is drawn under its own name rather than as the block's own narration.
+          agentId: principal ?? '',
+          partnerIds,
           items: run,
         });
-        index = end;
-        continue;
+      } else {
+        /*
+         * Below the threshold a fold costs more than it saves, so the remainder is drawn flat.
+         * The whole remainder rather than one item and another attempt: both ways in are
+         * monotonic over a prefix, so a run that does not qualify has no sub-run that does, and
+         * re-entering here would only re-derive the same answer one item at a time.
+         */
+        for (const item of run) rows.push({ kind: 'item', at: item.at, item });
       }
+      for (const said of answer) rows.push({ kind: 'item', at: said.at, item: said });
+      /*
+       * The block stands for as long as the turn does, and **not only while a call is open**.
+       *
+       * `.scratch/live-steps/issues/01`, second amendment. Between two batches an agent goes
+       * back to `thinking`: its calls settle, its steps fold, and the block had nothing left in
+       * it, so it came off the screen and the pending bubble reappeared at the foot of the
+       * column, grouped under the fold and therefore faceless. Three dots in a gutter under a
+       * shut fold is what *"nothing is shown"* looks like, and it is the state a reasoning model
+       * spends most of a turn in.
+       *
+       * So the emptiness is the point rather than the reason to stop drawing: the face is the
+       * carrier, standing at the end of its own run, and the dots are the same device the rail
+       * and the pending bubble already use. Only on the last run, because a turn in flight is
+       * the tail of the transcript and an earlier run by the same agent is finished history.
+       */
+      const turning = open.length > 0 || (principal !== undefined && live(principal) && found.end === items.length);
+      if (turning) {
+        rows.push({
+          kind: 'live',
+          /*
+           * Keyed by the agent and never by what is in it. The block is one thing for the length
+           * of a turn -- steps arrive and leave inside it -- and keying it by its first item made
+           * React unmount and remount the whole block every time that item changed, which threw
+           * away the face's animation state and, with it, `useDwell`'s memory of what had just
+           * been on screen. One live block per agent at a time, because one turn is.
+           */
+          id: `live:${principal as string}`,
+          // Where the run ends when there is nothing open: the block is the turn continuing, so
+          // it sits after everything the turn has settled rather than at its first open call.
+          at: open[0]?.at ?? (items[found.end - 1] as Item).at,
+          agentId: principal as string,
+          items: open,
+        });
+      }
+      index = found.end;
+      continue;
     }
 
     rows.push({ kind: 'item', at: start.at, item: start });
     index += 1;
   }
 
-  return rows;
+  return oneRowPerTurnsPictures(rows);
+}
+
+/**
+ * A turn's Pictures, gathered onto one row.
+ *
+ * The window is the runs and the Pictures between them, and it closes on anything else: prose,
+ * a user message, a system line, a block still in flight. So Pictures are only ever gathered
+ * across the turn's own **demoted** work -- the folds -- and never across something somebody
+ * said. That is the same editorial call the fold itself makes, applied to what the calls
+ * produced rather than to the calls: the mechanics go first, and what came of them is the thing
+ * you are left looking at.
+ *
+ * It is the one place in this column that moves a row past another. What it moves past is a shut
+ * fold, and it keeps the folds in their own order, so nothing that is legible on screen changes
+ * position relative to anything else that is.
+ *
+ * One agent, because a row of pictures under one face has to be that face's work.
+ */
+function oneRowPerTurnsPictures(rows: readonly Row[]): Row[] {
+  const grouped: Row[] = [];
+  let index = 0;
+  while (index < rows.length) {
+    const window = pictureWindowFrom(rows, index);
+    if (window === undefined) {
+      grouped.push(rows[index] as Row);
+      index += 1;
+      continue;
+    }
+    for (const row of window.others) grouped.push(row);
+    const last = window.pictures[window.pictures.length - 1] as Item;
+    grouped.push({
+      kind: 'pictures',
+      id: `pictures:${(window.pictures[0] as Item).id}`,
+      at: last.at,
+      agentId: window.agentId,
+      items: window.pictures,
+    });
+    index = window.end;
+  }
+  return grouped;
+}
+
+/** The longest run of folds and one agent's drawn Pictures starting here, if it holds two. */
+function pictureWindowFrom(
+  rows: readonly Row[],
+  from: number,
+): { others: Row[]; pictures: Item[]; agentId: string; end: number } | undefined {
+  const others: Row[] = [];
+  const pictures: Item[] = [];
+  let agentId: string | undefined;
+  let index = from;
+  while (index < rows.length) {
+    const row = rows[index] as Row;
+    if (row.kind === 'steps') {
+      others.push(row);
+      index += 1;
+      continue;
+    }
+    const item = row.kind === 'item' ? row.item : undefined;
+    if (item?.kind !== 'picture' || item.notDrawn !== undefined) break;
+    if (agentId !== undefined && agentId !== item.agentId) break;
+    agentId = item.agentId;
+    pictures.push(item);
+    index += 1;
+  }
+  return pictures.length > 1 && agentId !== undefined
+    ? { others, pictures, agentId, end: index }
+    : undefined;
 }
 
 /**

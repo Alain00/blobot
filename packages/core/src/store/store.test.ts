@@ -8,6 +8,7 @@ import type { Agent, Team } from '../orchestrator/domain.js';
 import type { Routine, RoutineOutcome, Schedule } from '../routines/domain.js';
 import { Orchestrator } from '../orchestrator/orchestrator.js';
 import type { AgentRuntime } from '../runtime.js';
+import { PICTURE_LIMIT } from '../pictures.js';
 import { openDatabase, type OpenedDatabase } from './database.js';
 import { SqliteRecorder } from './recorder.js';
 import { SqliteStore } from './sqlite-store.js';
@@ -84,6 +85,7 @@ describe('the schema', () => {
         'role',
         'runtime_id',
         'runtime_options',
+        'shape',
         'team_id',
         'trust',
         'verbosity',
@@ -105,6 +107,7 @@ describe('the schema', () => {
         'role',
         'runtime_id',
         'runtime_options',
+        'shape',
         'trust',
         'verbosity',
       ].sort(),
@@ -538,6 +541,45 @@ describe('what a turn leaves behind', () => {
     expect(dropped.every((at) => at <= oldestKept)).toBe(true);
   });
 
+  it('closes a call the process died holding, and concludes nothing about it', async () => {
+    await runDemoTurn();
+    // What a hard close leaves behind: a row that started and never reported. `running` is
+    // `ended_at IS NULL`, so without the reconcile every restore from here on draws this with
+    // the in-flight dots under an agent the status fold calls idle.
+    opened.db.run(
+      sql.raw(
+        `insert into tool_calls (id, turn_id, agent_id, provider_tool_call_id, name, kind, status, started_at)
+         select 'orphan', turn_id, agent_id, 'orphan', 'python3 - <<EOF', 'execute', 'in_progress', started_at
+         from tool_calls limit 1`,
+      ),
+    );
+    expect(store.logOfTeam(team.id).running.map((tool) => tool.toolCallId)).toEqual(['orphan']);
+
+    expect(store.closeOrphanedCalls()).toBe(1);
+
+    const log = store.logOfTeam(team.id);
+    expect(log.running).toEqual([]);
+    // Not `failed` and not `completed`. The tool may have done its work perfectly and only the
+    // answer was lost, so the row says the one thing that is actually known.
+    expect(log.tools.find((tool) => tool.toolCallId === 'orphan')?.status).toBe('unfinished');
+  });
+
+  it('leaves a call that is genuinely in flight alone', async () => {
+    await runDemoTurn();
+    opened.db.run(
+      sql.raw(
+        `insert into tool_calls (id, turn_id, agent_id, provider_tool_call_id, name, kind, status, started_at, ended_at)
+         select 'done', turn_id, agent_id, 'done', 'read x', 'read', 'completed', started_at, started_at
+         from tool_calls limit 1`,
+      ),
+    );
+    // Nothing dangling, so the reconcile is a no-op and no settled row is rewritten.
+    expect(store.closeOrphanedCalls()).toBe(0);
+    expect(store.logOfTeam(team.id).tools.find((tool) => tool.toolCallId === 'done')?.status).toBe(
+      'completed',
+    );
+  });
+
   it('says nothing for a team that has never run', () => {
     store.createTeam({
       id: 'team_2',
@@ -547,7 +589,13 @@ describe('what a turn leaves behind', () => {
       turnBudget: 10,
       createdAt: 0,
     });
-    expect(store.logOfTeam('team_2')).toEqual({ running: [], tools: [], turns: [], compactions: [] });
+    expect(store.logOfTeam('team_2')).toEqual({
+      running: [],
+      tools: [],
+      turns: [],
+      compactions: [],
+      pictures: [],
+    });
   });
 });
 
@@ -1193,5 +1241,50 @@ describe('dictation settings', () => {
     store.saveDictationSettings({ ...store.dictationSettings(), enabled: false, at: 6 });
     expect(store.dictationSettings().enabled).toBe(false);
     expect(store.dictationSettings().measuredRtf).toBe(0.12);
+  });
+});
+
+/**
+ * A Picture's bytes, and the one place they are decided about.
+ *
+ * The measuring is the store's rather than an adapter's on purpose: what the bytes are has one
+ * answer whatever runtime asked, so no two runtimes can disagree about what blobot will draw.
+ */
+describe('keeping a picture', () => {
+  const PNG = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64',
+  );
+
+  it('measures the bytes and hands back an id, never the runtime word for what they are', () => {
+    const kept = store.keepPicture({ agentId: alice.id, source: 'observed', data: PNG, at: 5 });
+    expect(kept).toEqual({ pictureId: expect.any(String), width: 1, height: 1, bytes: PNG.byteLength });
+    const back = 'pictureId' in kept ? store.picture(kept.pictureId) : undefined;
+    expect(back?.mimeType).toBe('image/png');
+    expect(Buffer.from(back?.data ?? new Uint8Array())).toEqual(PNG);
+  });
+
+  it('says its bytes did not arrive whole for a file that stopped early', () => {
+    const kept = store.keepPicture({
+      agentId: alice.id,
+      source: 'observed',
+      data: PNG.subarray(0, 12),
+      at: 5,
+    });
+    expect(kept).toEqual({ notDrawn: 'unreadable', bytes: 12 });
+  });
+
+  it('refuses one past the ceiling without reading it', () => {
+    const kept = store.keepPicture({
+      agentId: alice.id,
+      source: 'observed',
+      data: new Uint8Array(PICTURE_LIMIT + 1),
+      at: 5,
+    });
+    expect(kept).toEqual({ notDrawn: 'too_large', bytes: PICTURE_LIMIT + 1 });
+  });
+
+  it('has nothing to fetch for an id nothing wrote, which is the replay case', () => {
+    expect(store.picture('pic_nothing')).toBeUndefined();
   });
 });

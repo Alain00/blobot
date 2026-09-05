@@ -62,6 +62,16 @@ amended, and it is not to be worked around quietly.
 
 ## Notes
 
+**Main integration, 2026-09-05.** The incoming September 4 planning fork predates the
+accepted local/box scope and uses the numbers now held by the image and engine tickets.
+Its two questions are preserved under unique identities:
+[Is remoteness a place to execute, or a blobot instance?](issues/23-is-remoteness-a-place-or-an-instance.md)
+is outside the already narrowed destination;
+[A per-agent composition root: config, MCP servers, skills](issues/24-a-per-agent-composition-root.md)
+remains open alongside the existing inheritance/home decisions. This merge neither reopens
+resolved Machines tickets nor adopts a server model. References to the original permission
+posture use `first-demo` ticket 14; the current Machines ticket 14 owns the engine interface.
+
 **Pause to integrate main, 2026-09-05 (Guillermo).** Finish the current implementation
 checkpoint, commit it, fetch and integrate Alain's latest `main`, resolve any conflicts and
 validate the combined branch. Then stop before starting further work or UI. This temporarily
@@ -192,6 +202,11 @@ author and agreed, or follows from a permanent rule:
 - **The user brings the box.** blobot never provides, hosts, provisions or pays for
   infrastructure. This rules the whole hosted-sandbox category out on the rules rather than on
   the merits, and it is recorded so it is not re-asked (`research/01` §1).
+- **The three axes are separate and were tangled.** Location, reach and composition all appeared
+  at once because they all show up when you ask *what if the agent is not here*, and they answer
+  to different objects. Recorded because collapsing them again is the most likely way this map
+  goes wrong — and because conflating **composition** with **reach** is specifically how `09`'s
+  third and worst overstatement gets made.
 - **A DM is wanted enough to be worth deciding.** `map.md` exists to serve it: the author's
   proposal is a profile that knows it has more projects, which only means anything if the profile
   can be spoken to.
@@ -290,6 +305,10 @@ In scope, not yet sharp enough to ticket. Graduates as the frontier advances.
 ## Out of scope
 
 Ruled beyond this destination. These do not graduate; they return only as a fresh effort.
+
+- [Is remoteness a place to execute, or a blobot instance?](issues/23-is-remoteness-a-place-or-an-instance.md):
+  the server/client fork from main is retained as a future question; this effort already fixes
+  local and box execution on this computer.
 
 - **Hosted sandboxes and cloud VM providers** — Vercel Sandbox, E2B, Daytona, Modal, Fly
   Machines. Refused on *local-first* and *no cloud dependencies*, and because they would ship the

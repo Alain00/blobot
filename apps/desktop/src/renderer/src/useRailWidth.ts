@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 
 const KEY = 'blobot.railWidth';
-const DEFAULT = 232;
+const DEFAULT = 280;
 /** Narrow enough to be a strip of names, wide enough that a long team name still reads. */
 const MIN = 180;
 const MAX = 460;

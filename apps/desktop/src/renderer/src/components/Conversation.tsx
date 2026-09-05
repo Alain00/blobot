@@ -4,20 +4,27 @@ import type { AgentStatus, ToolKind } from '@blobot/core/domain';
 import type { PermissionChoice, UiAgent, UiPermissionOutcome } from '../../../shared/api.js';
 import {
   compactionLine,
+  continuesAgent,
   continuesSpeaker,
   failuresIn,
   filesChangedIn,
+  addressedIn,
+  isInFlight,
   isPending,
+  isPrincipal,
+  messagesIn,
   notesIn,
   rowsOf,
   toolsIn,
   type Item,
+  type LiveBlock,
   type Pane,
   type Row,
 } from '../model.js';
 import { timeRule } from '../time.js';
 import { useComposerFocus } from '../useComposerFocus.js';
 import { Attached } from './Attached.js';
+import { Picture } from './Picture.js';
 import { Blob } from './Blob.js';
 import { Markdown } from './Markdown.js';
 
@@ -31,7 +38,6 @@ export function Conversation({
   routineArmed,
   onDisarmRoutine,
   onRemoveHandbookEntry,
-  lead,
   opening = false,
   chrome,
   moreAbove = false,
@@ -58,13 +64,6 @@ export function Conversation({
    * persona at all is that you see it happen and can undo it here.
    */
   onRemoveHandbookEntry: (entryId: string) => void;
-  /**
-   * The team's lead, when it has one: who the team pane addresses when the user names nobody.
-   *
-   * Here for one caption. A prompt that went to the lead went where the composer says it goes,
-   * so it is the case the `to` tag has nothing to add to.
-   */
-  lead?: string;
   /** Whether the team said anything above this window. False means this is the beginning. */
   moreAbove?: boolean;
   /** Fetch the window above. Resolves when the pane has it, which is what ends the wait. */
@@ -87,10 +86,64 @@ export function Conversation({
   const answer = useLatest(onAnswerPermission);
   const disarm = useLatest(onDisarmRoutine);
   const removeEntry = useLatest(onRemoveHandbookEntry);
-  const rows = rowsOf(items);
+  /*
+   * One pass over the items for both halves of the transcript. `rowsOf` computes the run
+   * boundary over settled and unsettled work together and hands back the live half as a row of
+   * its own, standing where its run stands — `.scratch/live-steps/issues/08`. It used to be a
+   * second pass that took the *trailing* loose calls off the end, which is true of one agent
+   * working and false the moment two are: a teammate's open call with the principal's later
+   * rows after it was stranded above them as exactly the unattributed mono line the block exists
+   * to abolish.
+   */
+  /*
+   * Every step a fold has taken, so that none of them can be taken back — the author's rule,
+   * 2026-09-05. `NOTHING_FOLDED` in the model has the whole argument; the part that belongs
+   * here is why it is a ref read during render rather than state. The set is an input to the
+   * rows and is written from the rows, so as state it would cost a second render pass, and the
+   * frame in between is the one frame in which a settled call is back on screen — which is the
+   * thing being fixed. A ref is read on the next render instead, and a step can only ever
+   * re-enter the block on a render after the one that folded it.
+   */
+  const folded = useRef<Set<string>>(new Set());
+  const rows = rowsOf(items, (agentId) => isInFlight(statuses[agentId] ?? 'idle'), folded.current);
+  useFolded(rows, folded);
+  const flying = useSwallowed(rows);
+  const inPane = agents.filter((agent) => pane.kind === 'team' || pane.agentId === agent.id);
+  /*
+   * The agents that are in a turn with nothing to show for it yet — `starting` and `thinking`,
+   * where the dots are the only sign the message landed. Same shape as a live row so the face
+   * does not unmount and remount the instant the first call opens.
+   *
+   * Principals only, which is 08 in the one place `rowsOf` cannot say it: a woken teammate is
+   * `thinking` too, and dots under its own face at the top level is the top-level voice this
+   * ticket took away from it. Not while the team is starting either: on a cold start nobody has
+   * said anything to anybody, and a face under an empty transcript claims an answer is on its way.
+   */
+  const addressed = addressedIn(items);
+  const pending: LiveBlock[] = opening
+    ? []
+    : inPane
+        .filter((agent) => isPrincipal(addressed, agent.id))
+        .filter((agent) => !rows.some((row) => row.kind === 'live' && row.agentId === agent.id))
+        .filter((agent) => isPending(statuses[agent.id] ?? 'idle', items, agent.id))
+        .map((agent) => ({ agentId: agent.id, items: [] }));
   const earlier = useLoadEarlier(stream, onLoadEarlier);
   // Where the pending faces look, and null whenever the user is not in the composer.
   const composer = useComposerFocus();
+  // Everything a row needs that is not the row itself. Bundled rather than spread, because a
+  // block draws items of its own now -- mail, and a teammate's turn -- and would otherwise take
+  // seven props to hand straight back down. It is rebuilt on every render and that is
+  // deliberate: `ItemView` is the memoized thing, and it takes primitives.
+  const cast: RowCast = {
+    pane,
+    byId,
+    statuses,
+    composer,
+    routineArmed,
+    onAnswerPermission: answer,
+    onDisarmRoutine: disarm,
+    onRemoveHandbookEntry: removeEntry,
+  };
 
   // The pane's own chrome only: App owns the column, so the composer sits under this in the
   // same flex container.
@@ -140,81 +193,327 @@ export function Conversation({
               </button>
             </div>
           )}
-          {rows.map((row, index) => {
-            // A fold is *inside* a turn, so what the row after it groups against is the last
-            // item the fold swallowed, not the fold. Otherwise every block would reopen the
-            // turn under it and one answer would wear its name three times.
-            const previous = lastItemOf(rows[index - 1]);
-            const rule = timeRule(row.at, previous?.at);
-            // A rule reopens the turn: after "Yesterday" the reader needs the name again.
-            return (
-              <React.Fragment key={row.kind === 'steps' ? row.id : row.item.id}>
-                {rule !== undefined && <div className="timerule">{rule}</div>}
-                {row.kind === 'steps' ? (
-                  <Steps row={row} teamPane={pane.kind === 'team'} />
-                ) : (
-                  <ItemView
-                    item={row.item}
-                    grouped={rule === undefined && continuesSpeaker(row.item, previous)}
-                    teamPane={pane.kind === 'team'}
-                    onAnswerPermission={answer}
-                    onDisarmRoutine={disarm}
-                    onRemoveHandbookEntry={removeEntry}
-                    {...castOf(row.item, pane, byId, statuses, routineArmed, lead)}
-                  />
-                )}
-              </React.Fragment>
-            );
-          })}
+          <Rows rows={rows} cast={cast} flying={flying} />
 
-          {/* Whoever is about to speak, under the last thing said. In the team pane that can be
-              two agents at once, which is the claim the demo makes. */}
-          {/* Not while the team is starting. `starting` is a pending status because an agent
-              whose runtime is still coming up has usually just been sent something and the dots
-              are the only sign of it — but on a cold start nobody has said anything to anybody,
-              and three dots under an empty transcript claim an answer is on its way. The rail
-              and the header carry the state there. */}
-          {(opening ? [] : agents)
-            .filter((agent) => pane.kind === 'team' || pane.agentId === agent.id)
-            .filter((agent) => isPending(statuses[agent.id] ?? 'idle', items, agent.id))
-            .map((agent) => (
-              <div className="msg pending" key={agent.id}>
-                {/* The one face in the transcript that is drawn live, and the only one that may
-                    be. `animated` is off in here because a settled message must not wear a pose
-                    or move — both would be a claim about *now* on a record of *then* — and
-                    because a transcript grows all day and this switches a blobatar to a dozen
-                    SVG nodes. Neither applies to this block: it is not a record of anything, it
-                    exists only while a turn is in flight, and there are at most as many of them
-                    as there are agents on the team.
+          {/* Asked, and nothing to show for it yet. At the foot rather than in the rows, because
+              there is no run for it to be the live half of: the prompt has landed and the agent
+              has not answered a word of it. */}
+          {pending.map((block) => (
+            <Live
+              key={block.agentId}
+              block={block}
+              agent={byId.get(block.agentId)}
+              byId={byId}
+              composer={composer}
+              status={statuses[block.agentId] ?? 'idle'}
+              grouped={continuesAgent(block.agentId, lastItemOf(rows.at(-1)))}
+            />
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
 
-                    So it can look at the composer while the user is in it. `isPending` excludes
-                    `waiting` and `failed`, which is why this never argues with the rule that
-                    gives `waiting` the pointer: the two faces are never the same face. */}
-                <Blob
-                  name={agent.name}
-                  size={28}
-                  status={statuses[agent.id] ?? 'idle'}
-                  hue={agent.hue}
-                  animated
-                  lookAt={composer}
-                />
+/**
+ * One agent's turn while it is still one: its face, its name, and the calls in flight under it.
+ *
+ * `.scratch/live-steps/issues/01` and `03`. Two things were wrong with what this replaces. The
+ * running call drew three dots at the end of its line and the pending bubble drew three more
+ * forty pixels below it — the same glyph, the same keyframes, saying the same thing twice, which
+ * is the duplicate `DESIGN.md` has already ruled against twice in this column. And the calls
+ * themselves were loose lines in the shared column with nothing on them saying whose they were,
+ * so two agents running at once in a team pane was an unreadable interleave.
+ *
+ * The face answers both. It carries the attribution the lines never had, and it takes the dots
+ * back for the one case where they are the only thing there is to see — `starting` and
+ * `thinking`, before the first call opens. Under a running call the dots are gone from here,
+ * because the line's own are already saying it.
+ *
+ * **The list is not capped.** A call pushed out of a full window would still be running, and it
+ * could not go into the fold above, whose whole line is a count of what *finished* — so a cap
+ * buys a shorter block by making the interface claim a call ended when it did not. A batch is
+ * two to five calls; the length of this list is how many are open, which is a fact worth being
+ * able to read rather than a quantity to manage. `.scratch/live-steps/issues/04`.
+ */
+function Live({
+  block,
+  agent,
+  byId,
+  composer,
+  status,
+  grouped,
+}: {
+  block: LiveBlock;
+  agent: UiAgent | undefined;
+  /** For the steps that are not this agent's: a teammate's reply carries its own face. */
+  byId: Map<string, UiAgent>;
+  composer: Element | null;
+  status: AgentStatus;
+  /**
+   * The row above is this same agent still talking, so the face and the name are already on
+   * screen a line up. The caption an agent writes before a call is the ordinary case — it is
+   * settled prose with running calls under it, which is below the fold's threshold and stays a
+   * loose row — and drawn ungrouped it put the same face twice in a row with one sentence
+   * between them. `continuesSpeaker`'s rule, applied to a block instead of to a message.
+   */
+  grouped: boolean;
+}): React.JSX.Element {
+  const shown = useDwell(block.items);
+  /*
+   * A block with nothing in it keeps its face, whatever it is grouped under.
+   *
+   * `.scratch/live-steps/issues/01`, second amendment, and it is the other half of the block
+   * standing between two batches. Grouped means *the face is already on screen a line up*, which
+   * is true of a caption and false of a shut fold: the fold's own header carries a count and a
+   * chevron and no blobatar. So an empty block grouped under one drew a gutter and three dots
+   * with nothing on screen saying whose turn was still running — which is the report this
+   * answers. With steps under it the grouping is right and stays.
+   */
+  const bare = shown.length === 0;
+  return (
+    <div className={grouped && !bare ? 'msg live grouped' : 'msg live'}>
+      {/* The one face in the transcript that is drawn live, and the only one that may be.
+          `animated` is off on a settled message because a record of *then* must not wear a pose
+          or move, and because a transcript grows all day and this switches a blobatar to a dozen
+          SVG nodes. Neither applies here: this is not a record of anything, it exists only while
+          a turn is in flight, and there are at most as many of them as there are agents.
+
+          So it can look at the composer while the user is in it. The block never coexists with a
+          live message — `isInFlight` leaves `responding` out — so the two faces an agent could
+          wear are never on screen together. */}
+      {grouped && !bare ? (
+        <div className="gutter" />
+      ) : (
+        <Blob
+          name={agent?.name ?? block.agentId}
+          size={28}
+          status={status}
+          hue={agent?.hue}
+          shape={agent?.shape}
+          animated
+          lookAt={composer}
+        />
+      )}
+      <div className="body">
+        {!grouped && (
+          <div className="hdr">
+            <span className="nm">{agent?.name ?? block.agentId}</span>
+          </div>
+        )}
+        {shown.length === 0 ? (
+          <div
+            className="dots"
+            aria-label={`${agent?.name ?? block.agentId} is ${status}`}
+          >
+            <i />
+            <i />
+            <i />
+          </div>
+        ) : (
+          <div className="steps">
+            {shown.map((item) =>
+              item.kind === 'tool' ? (
+                <ToolLine key={item.id} item={item} />
+              ) : (
+                <Reply key={item.id} item={item as Extract<Item, { kind: 'agent' }>} byId={byId} />
+              ),
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The block's steps, with anything the model dropped inside {@link DWELL} held in place.
+ *
+ * The timer owns the removal, exactly as it does for the swallow: the model is free to be strict
+ * about what is happening now, and this is the only thing standing between strictness and a line
+ * that is never drawn. A step that comes back before its timer fires simply stays — it is matched
+ * by id, so a call that finishes and a call that returns are the same row throughout.
+ */
+function useDwell(items: readonly Item[]): readonly Item[] {
+  const [held, setHeld] = useState<readonly Item[]>([]);
+  const [withdrawn, setWithdrawn] = useState<ReadonlySet<string>>(() => new Set());
+  const previous = useRef<readonly Item[]>([]);
+  const shownAt = useRef(new Map<string, number>());
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    const running = timers.current;
+    return () => {
+      for (const timer of running) clearTimeout(timer);
+    };
+  }, []);
+
+  // A reply's own clock, started the first time it is seen settled and never restarted. The model
+  // goes on offering it for the rest of the run, so this is the thing that takes it away.
+  useEffect(() => {
+    const fresh = items.filter((item) => item.kind === 'agent' && !shownAt.current.has(item.id));
+    if (fresh.length === 0) return;
+    const gone = new Set(fresh.map((item) => item.id));
+    timers.current.push(
+      setTimeout(() => setWithdrawn((current) => new Set([...current, ...gone])), REPLY_STANDS),
+    );
+  }, [items]);
+
+  useEffect(() => {
+    const now = Date.now();
+    for (const item of items) if (!shownAt.current.has(item.id)) shownAt.current.set(item.id, now);
+    const present = new Set(items.map((item) => item.id));
+    const early = previous.current.filter(
+      (item) => !present.has(item.id) && now - (shownAt.current.get(item.id) ?? now) < DWELL,
+    );
+    previous.current = items;
+
+    setHeld((current) => {
+      const kept = current.filter(
+        (item) => !present.has(item.id) && !early.some((gone) => gone.id === item.id),
+      );
+      if (kept.length === current.length && early.length === 0) return current;
+      return [...kept, ...early];
+    });
+    if (early.length === 0) return;
+
+    const wait = Math.max(
+      ...early.map((item) => DWELL - (now - (shownAt.current.get(item.id) ?? now))),
+    );
+    const gone = new Set(early.map((item) => item.id));
+    timers.current.push(
+      setTimeout(() => setHeld((current) => current.filter((item) => !gone.has(item.id))), wait),
+    );
+  }, [items]);
+
+  const standing = withdrawn.size === 0 ? items : items.filter((item) => !withdrawn.has(item.id));
+  if (held.length === 0) return standing;
+  // Back where it stood: a line that jumps to the end on its way out is a move the reader did
+  // not cause, on top of the removal they also did not cause.
+  return [...held, ...standing].sort((left, right) => left.at - right.at);
+}
+
+/**
+ * A teammate's finished reply, standing in the live block as a step.
+ *
+ * `.scratch/live-steps/issues/08`, amended by the author 2026-09-05. It is at a call's altitude
+ * and wears a call's register — the same row, the same muted ink, the same one-line clamp — with
+ * the teammate's own face where a call has its verb, because the one thing a reader needs off it
+ * at a glance is *who answered*. Clipped rather than summarised: blobot provides no inference, so
+ * the line is the reply's own first words and stops where the row does. The whole of it is one
+ * click away in the fold, the moment the turn ends and this block is taken.
+ */
+function Reply({
+  item,
+  byId,
+}: {
+  item: Extract<Item, { kind: 'agent' }>;
+  byId: Map<string, UiAgent>;
+}): React.JSX.Element {
+  const who = byId.get(item.agentId);
+  return (
+    <div className="tool reply">
+      <span className="v">
+        <Blob name={who?.name ?? item.agentId} size={16} hue={who?.hue} shape={who?.shape} />
+      </span>
+      <span className="nm">{who?.name ?? item.agentId}</span>
+      <span className="k">{item.text.replace(/\s+/g, " ").trim()}</span>
+    </div>
+  );
+}
+
+/**
+ * Everything the rows need that is not a row: who is on the team, where they are being drawn,
+ * and the three things a block can do about what it is disclosing.
+ *
+ * It exists because a fold draws more than mono lines now. A block that swallows mail and a
+ * teammate's turn has to draw them as themselves, so it needs the cast the transcript has, and
+ * the alternative to one bundle is seven props threaded through two components whose only
+ * interest in most of them is handing them down.
+ */
+interface RowCast {
+  pane: Pane;
+  byId: Map<string, UiAgent>;
+  statuses: Record<string, AgentStatus>;
+  /** Where a live face looks, and null whenever the user is not in the composer. */
+  composer: Element | null;
+  routineArmed: Record<string, boolean>;
+  onAnswerPermission: (requestId: string, choice: PermissionChoice) => void;
+  onDisarmRoutine: (routineId: string) => void;
+  onRemoveHandbookEntry: (entryId: string) => void;
+}
+
+/** The transcript itself: every row of it, with the time rules between them. */
+function Rows({
+  rows,
+  cast,
+  flying,
+}: {
+  rows: readonly Row[];
+  cast: RowCast;
+  /** Measured over the whole row list by the parent, which owns the effect that tracks it. */
+  flying: readonly Flight[];
+}): React.JSX.Element {
+  return (
+    <>
+      {rows.map((row, index) => {
+        // A fold is *inside* a turn, so what the row after it groups against is the last
+        // item the fold swallowed, not the fold. Otherwise every block would reopen the
+        // turn under it and one answer would wear its name three times.
+        const previous = lastItemOf(rows[index - 1]);
+        const rule = timeRule(row.at, previous?.at);
+        // A rule reopens the turn: after "Yesterday" the reader needs the name again.
+        return (
+          <React.Fragment key={row.kind === 'item' ? row.item.id : row.id}>
+            {rule !== undefined && <div className="timerule">{rule}</div>}
+            {row.kind === 'live' ? (
+              <Live
+                block={row}
+                agent={cast.byId.get(row.agentId)}
+                byId={cast.byId}
+                composer={cast.composer}
+                status={cast.statuses[row.agentId] ?? 'idle'}
+                grouped={rule === undefined && continuesAgent(row.agentId, previous)}
+              />
+            ) : row.kind === 'steps' ? (
+              <Steps
+                row={row}
+                cast={cast}
+                flying={flying.filter((flight) => flight.rowId === row.id).map((flight) => flight.item)}
+              />
+            ) : row.kind === 'pictures' ? (
+              // Every Picture one agent showed in a turn, side by side. Only ever more than one:
+              // a single Picture keeps the column, because half a column buys no scroll and
+              // costs the detail it exists to carry.
+              <div className="msg pictrow">
+                <div className="gutter" />
                 <div className="body">
-                  <div className="hdr">
-                    <span className="nm">{agent.name}</span>
-                  </div>
-                  {/* Three dots rather than the status word: the word is already on this agent
-                      in the header and the rail, and what is missing here is the reassurance
-                      that the message landed, which is a shape, not a reading task. */}
-                  <div className="dots" aria-label={`${agent.name} is ${statuses[agent.id] ?? 'idle'}`}>
-                    <i />
-                    <i />
-                    <i />
+                  {cast.pane.kind === 'team' && (
+                    <div className="hdr">
+                      <span className="nm">{cast.byId.get(row.agentId)?.name}</span>
+                    </div>
+                  )}
+                  <div className="picts">
+                    {row.items.map((item) => (
+                      <Picture key={item.id} item={item as Extract<Item, { kind: 'picture' }>} />
+                    ))}
                   </div>
                 </div>
               </div>
-            ))}
-        </div>
-      </div>
+            ) : (
+              <ItemView
+                item={row.item}
+                grouped={rule === undefined && continuesSpeaker(row.item, previous)}
+                teamPane={cast.pane.kind === 'team'}
+                onAnswerPermission={cast.onAnswerPermission}
+                onDisarmRoutine={cast.onDisarmRoutine}
+                onRemoveHandbookEntry={cast.onRemoveHandbookEntry}
+                {...castOf(row.item, cast.pane, cast.byId, cast.statuses, cast.routineArmed)}
+              />
+            )}
+          </React.Fragment>
+        );
+      })}
     </>
   );
 }
@@ -232,9 +531,11 @@ interface Cast {
   /** The voice: the agent speaking, or the sender of a peer message. */
   fromName?: string | undefined;
   fromHue?: number | undefined;
+  fromShape?: string | undefined;
   /** The addressed agent: who a message from you went to, or who a peer wrote to. */
   toName?: string | undefined;
   toHue?: number | undefined;
+  toShape?: string | undefined;
   /** This pane is the recipient of a peer message, so it reads as mail rather than as a copy. */
   received?: boolean | undefined;
   /**
@@ -259,29 +560,27 @@ function castOf(
   byId: Map<string, UiAgent>,
   statuses: Record<string, AgentStatus>,
   routineArmed: Record<string, boolean>,
-  lead: string | undefined,
 ): Cast {
   switch (item.kind) {
+    // Nothing. The bubble says what you typed and the transcript says who answered, and between
+    // those two the caption had nothing left to add.
+    //
+    // It was already suppressed twice over — on a team of one, and on a prompt to the lead —
+    // which was the shape of the argument arriving in instalments: a `to Alice` under words that
+    // begin `@Alice` is the address said twice, once by the user and once back at them in mono.
+    // Removed by the author, 2026-09-04, at the same time as the fold learned to swallow a
+    // teammate's turn, and the two go together: what the tag was really guarding against is the
+    // reader losing track of whose reply is whose in a team pane, and folding the turns nobody
+    // addressed answers that where it happens rather than by labelling every prompt in the
+    // history.
     case 'user':
-      // Everybody it went to, in the order they were addressed. One name is the ordinary case.
-      //
-      // Nothing at all on a team of one. The tag's rule is "only where a message could have gone
-      // somewhere else", and on a one-agent team the team pane has exactly the same single
-      // recipient the agent pane does — so `to Alice` under every message the user sends is a
-      // caption restating the only fact on screen that was never in question.
-      //
-      // Nothing either when the one recipient is the lead, which is the same rule read one turn
-      // deeper: the composer names the lead in its own placeholder and its own send button, so a
-      // prompt that went there did not go somewhere else. What survives is the two cases the
-      // composer cannot be read off afterwards — a fan-out, and an agent the user named instead.
-      if (byId.size < 2) return {};
-      if (item.agentIds.length === 1 && item.agentIds[0] === lead) return {};
-      return { toName: item.agentIds.map((id) => byId.get(id)?.name ?? id).join(', ') };
+      return {};
     case 'agent': {
       const agent = byId.get(item.agentId);
       return {
         fromName: agent?.name ?? item.agentId,
         fromHue: agent?.hue,
+        fromShape: agent?.shape,
         ...(item.live ? { status: statuses[item.agentId] ?? 'idle' } : {}),
       };
     }
@@ -292,8 +591,10 @@ function castOf(
       return {
         fromName: from?.name ?? item.fromId,
         fromHue: from?.hue,
+        fromShape: from?.shape,
         toName: to?.name ?? item.toId,
         toHue: to?.hue,
+        toShape: to?.shape,
         received,
       };
     }
@@ -307,6 +608,8 @@ function castOf(
         fromName: pane.kind === 'team' ? byId.get(item.agentId)?.name : undefined,
         armed: routineArmed[item.routineId] ?? false,
       };
+    // A Picture is one agent's, so the team pane has to say whose. Same rule again.
+    case 'picture':
     case 'system':
     // Same rule for a compaction, which is a system line that opens: in an agent's pane the
     // agent is the pane, and in the team pane the line has to say whose session it was.
@@ -324,7 +627,7 @@ function castOf(
 /** The item a row ends on, which is what the next row groups and times itself against. */
 function lastItemOf(row: Row | undefined): Item | undefined {
   if (row === undefined) return undefined;
-  return row.kind === 'steps' ? row.items.at(-1) : row.item;
+  return row.kind === 'item' ? row.item : row.items.at(-1);
 }
 
 /**
@@ -335,11 +638,23 @@ function lastItemOf(row: Row | undefined): Item | undefined {
  * `rowsOf` has already guaranteed there is nothing live in here, so nothing is being hidden
  * that anybody is waiting on.
  *
+ * **It holds the back and forth too**, by the author, 2026-09-04. You ask Alice, Alice mails a
+ * teammate, the teammate answers *Alice* -- and the team pane drew that answer in your own column
+ * at your own altitude, usually as the longest thing on screen and the least addressed to anybody
+ * in the room. It shipped that morning as a second fold of its own, `aside`, and became this one
+ * the same day: what the reader wants demoted is everything the turn had to arrange, and
+ * splitting that by whether blobot classed a line as a call or as a message is a distinction the
+ * reader never asked about. The far end is named on the shut line, with its face, because a fold
+ * that swallows somebody else's turn has to say whose.
+ *
  * The header counts calls, not seconds. A duration would be a claim about effort blobot cannot
  * make honestly across a permission wait, and the count is the thing a reader wants before
- * deciding whether to open it. It counts the captions too, as `notes`, because they really are
- * folded in here — and never as `messages`, which is a word already spent on what an agent says
- * to you and on what it mails a peer, neither of which a block ever swallows.
+ * deciding whether to open it. It counts the captions too, as `notes`, and the mail and the
+ * teammate's turn as `messages` -- which is the word's ordinary meaning and not a new one. The
+ * old rule that a message never folds was true while a block could hold one voice; a teammate's
+ * reply to your agent folds now, because it was never addressed to you. The message count is
+ * drawn only when it is the whole label: beside `ran 6 tools` and three faces, `17 messages with`
+ * is the same fact a third time, and the number is the half of it nobody acts on.
  *
  * No ticks. The pattern this borrows from puts a checkmark on every finished step, and ticket
  * 08 exists because a cancelled call reports `completed` with `exit: null` — a tick beside one
@@ -347,26 +662,233 @@ function lastItemOf(row: Row | undefined): Item | undefined {
  * nothing, a line that did not says what happened.
  *
  * It borrows `.route`'s chevron and mono label outright rather than inventing a second
- * disclosure, but not the dashed edge: dashed is the peer voice saying "refusable, lower
- * authority", and this is the agent's own work in its own turn.
+ * disclosure. It borrows the dashed edge only for what is somebody else's: mail and a teammate's
+ * turn keep their own voices inside the fold, because dashed-against-solid is the contrast that
+ * says *refusable, lower authority* and it is not this block's to flatten.
  */
-function Steps({ row, teamPane }: { row: Extract<Row, { kind: 'steps' }>; teamPane: boolean }): React.JSX.Element {
+/**
+ * How many steps may be in the air at once, and how long the flight lasts.
+ *
+ * Two, because that is the whole of the claim: one line arriving under the fold while the one
+ * before it is still leaving. A third would be a queue, and a queue on this path is a slot
+ * machine -- a run of fast calls would have the reader watching a column of text scroll rather
+ * than reading the line that is live. Past two the oldest is dropped, which is the same answer
+ * `.stack` gives four faces on one label.
+ */
+export const IN_THE_AIR = 2;
+/**
+ * Kept equal to the `filed` keyframe's duration in the stylesheet, deliberately in two places.
+ * The timer owns the removal and the animation is cosmetic, so the two cannot drift: shorter
+ * and the collapse is cut off mid-shut, longer and a finished, empty box holds the column open.
+ */
+export const FLIGHT = 260;
+/**
+ * The shortest a live step may be on screen, however briefly the model held it.
+ *
+ * The author, 2026-09-05: *"it's not that is visible for a short time, the thing it's never
+ * visible, i think each live step should have a min screen time, for example 300ms"* — and the
+ * diagnosis is better than the rule it corrects. A teammate's reply leaves the block when the
+ * principal's current batch does, and a batch is usually one call opened *after* the reply
+ * landed, so the reply's natural life on screen was not short, it was **zero**.
+ *
+ * Bounding it by time rather than by widening the rule is the honest split. Whether a step is
+ * still what is happening now is a question about the turn; whether the reader got to see that
+ * it happened at all is a question about the screen, and answering the first with the second is
+ * how the block ends up holding stale work again. So the model stays strict and the render holds
+ * anything it drops too early, in place, for the rest of this.
+ *
+ * The author's own number. It is a floor on *noticing* and not on reading — a clipped reply is
+ * not readable in 300ms and is not meant to be, since the whole of it is in the fold the moment
+ * the turn ends. It sits above `FLIGHT`, which matters: a step must not be born and taken away
+ * inside one swallow.
+ */
+export const DWELL = 800;
+/**
+ * How long a teammate's reply stands in the live block before it is withdrawn into the fold.
+ *
+ * A call's time on screen is its own: it is there while it is open and while its batch stands,
+ * and {@link DWELL} is only a floor under that. A reply has no such life — it has already
+ * happened — so something has to say when it stops being news, and two attempts to say it in the
+ * model failed. The measurement is on `liveRunIn`: an agent message takes its `at` from its first
+ * delta, so a reply is inserted into the transcript at the moment it *began* and settles behind
+ * work the principal has since done. It is new and it is positionally old, so nothing about where
+ * it sits can date it.
+ *
+ * What can is the transition the renderer watches — a live message becoming a settled one — and
+ * the clock starts there. Eight seconds is long enough to read a clipped line and short enough
+ * that a turn with three replies in it is not three lines of history stacked over the work in
+ * progress. The whole of it is in the fold the moment the turn ends, so nothing is lost when it
+ * goes.
+ */
+export const REPLY_STANDS = 4_000;
+
+/** A step caught mid-file, and the fold that is taking it. */
+interface Flight {
+  readonly rowId: string;
+  readonly item: Item;
+}
+
+/**
+ * The steps a fold has just swallowed, held for one flight so the swallow can be seen.
+ *
+ * A completed call moves out of its own row and into a `steps` row the moment a second one
+ * lands, because {@link rowsOf} regroups on every delta and `WORTH_FOLDING` is 2. That is a real
+ * transition in the data and it has always been drawn as a cut: the line the reader was looking
+ * at is replaced between two frames by a count one higher. This is that cut, made travellable.
+ * The line is not deleted, it is *filed*, and the fold header above it is where it goes -- so
+ * the motion states a fact the interface was already asserting, which is the only kind
+ * `DESIGN.md` admits. Miss it and the count still says everything.
+ *
+ * **It lives here rather than in `Steps`, and it has to.** The obvious place is the fold itself,
+ * diffing its own `items` and ghosting what is new. It was written that way and it drew nothing,
+ * because the ordinary swallow is the one that *creates* the fold: below the threshold there is
+ * no `steps` row at all, so the component seeing the arrival is mounting for the first time and
+ * has no previous set to diff against. The signal is only legible one level up, where the same
+ * pass can see a row stop being loose and an item start being folded.
+ *
+ * That diff is also what keeps settled data still. A ghost is drawn for exactly one shape: an
+ * item that was a top-level tool row on the previous render and is inside a fold on this one.
+ * A restored transcript, a team switch and `load earlier` all arrive with their calls already
+ * folded and never loose, so they mount perfectly still -- which is `DESIGN.md`'s *nothing that
+ * moves what the user is reading*, kept rather than argued around.
+ *
+ * The timer is the authority and the animation is cosmetic, for the reason the entrance rules
+ * already give: a window that is not painting can starve a keyframe for seconds, and a ghost
+ * whose removal hung on `animationend` would sit on top of live text until it got a frame.
+ */
+/**
+ * Remember every step that has been inside a fold, for as long as this pane is open.
+ *
+ * The counterpart to `NOTHING_FOLDED` in the model, and deliberately the dumbest half of it:
+ * the rule is the model's, the memory is the renderer's, because the transition a fold makes is
+ * only ever visible from one render to the next. It never forgets within a pane — a step that
+ * folded stays folded for the rest of the session — and it is per mount, so switching teams and
+ * coming back starts from a transcript that is already entirely folded anyway.
+ *
+ * A ref rather than state on purpose: nothing here should cause a render, because everything it
+ * decides is already decided by the render it is watching.
+ */
+function useFolded(rows: readonly Row[], seen: React.MutableRefObject<Set<string>>): void {
+  useEffect(() => {
+    for (const row of rows) {
+      if (row.kind !== 'steps') continue;
+      for (const item of row.items) seen.current.add(item.id);
+    }
+  }, [rows, seen]);
+}
+
+function useSwallowed(rows: readonly Row[]): readonly Flight[] {
+  const loose = useRef<Map<string, Item> | undefined>(undefined);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [flying, setFlying] = useState<readonly Flight[]>([]);
+
+  useEffect(() => {
+    const running = timers.current;
+    return () => {
+      for (const timer of running) clearTimeout(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    const before = loose.current;
+    const now = new Map<string, Item>();
+    for (const row of rows) {
+      // Everything drawn outside a fold, which is what a fold can be seen taking: a loose line,
+      // and a call standing in a live block. Both travel into the same place when they settle.
+      if (row.kind === 'item' && row.item.kind === 'tool') now.set(row.item.id, row.item);
+      if (row.kind === 'live') {
+        for (const item of row.items) if (item.kind === 'tool') now.set(item.id, item);
+      }
+    }
+    loose.current = now;
+    if (before === undefined) return;
+
+    const taken: Flight[] = [];
+    for (const row of rows) {
+      if (row.kind !== 'steps') continue;
+      for (const item of row.items) {
+        // Loose a moment ago, folded now. Drawn in the state it was last seen in, which is the
+        // completed one: the reader watched it finish and then watched it go.
+        const was = before.get(item.id);
+        if (was !== undefined && !now.has(item.id)) taken.push({ rowId: row.id, item: was });
+      }
+    }
+    if (taken.length === 0) return;
+
+    const gone = new Set(taken.map((flight) => flight.item.id));
+    setFlying((air) => [...air, ...taken].slice(-IN_THE_AIR));
+    timers.current.push(
+      setTimeout(() => setFlying((air) => air.filter((flight) => !gone.has(flight.item.id))), FLIGHT),
+    );
+  }, [rows]);
+
+  return flying;
+}
+
+function Steps({
+  row,
+  cast,
+  flying,
+}: {
+  row: Extract<Row, { kind: 'steps' }>;
+  cast: RowCast;
+  /** What this fold has just taken, on its way in. Empty for every settled fold on screen. */
+  flying: readonly Item[];
+}): React.JSX.Element {
   const [open, setOpen] = useState(false);
+  const teamPane = cast.pane.kind === 'team';
   const calls = toolsIn(row.items);
   const failed = failuresIn(row.items);
-  const notes = notesIn(row.items);
+  const notes = notesIn(row.items, row.agentId);
+  const messages = messagesIn(row.items, row.agentId);
   const touched = filesChangedIn(row.items);
+  const partners = row.partnerIds.map((id) => ({ id, agent: cast.byId.get(id) }));
 
   return (
     <div className="ran">
       <button className="route" aria-expanded={open} onClick={() => setOpen(!open)}>
         <ChevronDown size={12} className={open ? '' : 'shut'} aria-hidden />
         <span className="lbl">
-          ran {calls} {calls === 1 ? 'tool' : 'tools'}
-          {/* Failure takes the second slot whenever there is one. The caption count is trivia
-              beside it, and two qualifiers on a ten-pixel label is a sentence nobody reads. */}
-          {failed > 0 ? ` · ${failed} failed` : notes > 0 && ` · ${notes} ${notes === 1 ? 'note' : 'notes'}`}
+          {/* A run with no calls in it is here because a teammate took a turn, so the count that
+              leads is the one that is not zero. `ran 0 tools · 2 messages` would be leading with
+              the thing that did not happen. */}
+          {calls > 0 && (
+            <>
+              ran {calls} {calls === 1 ? 'tool' : 'tools'}
+              {/* One qualifier, and the caption count is the one that loses every tie. Failure
+                  takes the slot whenever there is one; a teammate's turn takes it next, because
+                  somebody else having spoken in here outranks how many sentences the principal
+                  wrote. Two qualifiers on a ten-pixel label is a sentence nobody reads, and
+                  `ran 2 tools · 2 notes · 3 messages with Bob` is three. */}
+              {failed > 0
+                ? ` · ${failed} failed`
+                : messages === 0 && notes > 0 && ` · ${notes} ${notes === 1 ? 'note' : 'notes'}`}
+            </>
+          )}
+          {/* The count of messages is drawn only when there is nothing else in the label, because
+              the faces beside it already say the turn had mail in it. `17 messages with` in front
+              of three blobatars is the same fact twice, and the number is the half a reader can
+              do nothing with. */}
+          {calls === 0 && messages > 0 && `${messages} ${messages === 1 ? 'message' : 'messages'}`}
         </span>
+        {/* Whose turn got swallowed, said on the line that swallowed it. Past two they overlap
+            into one stack and drop their names: four names on a ten-pixel label is a sentence
+            nobody reads, and the faces are the part that identifies anybody at a glance. */}
+        {messages > 0 &&
+          (partners.length > 2 ? (
+            <span className="stack">
+              {partners.map(({ id, agent }) => (
+                <Blob key={id} name={agent?.name ?? id} size={20} hue={agent?.hue} shape={agent?.shape} />
+              ))}
+            </span>
+          ) : (
+            partners.map(({ id, agent }) => (
+              <React.Fragment key={id}>
+                <Blob name={agent?.name ?? id} size={20} hue={agent?.hue} shape={agent?.shape} />
+                <span className="nm">{agent?.name ?? id}</span>
+              </React.Fragment>
+            ))
+          ))}
       </button>
       {/* What the run touched, at the altitude where nothing else answers it. Shut only: opened,
           every one of these numbers is on the call that made it, next to which call that was.
@@ -384,12 +906,25 @@ function Steps({ row, teamPane }: { row: Extract<Row, { kind: 'steps' }>; teamPa
           ))}
         </div>
       )}
+      {/* On its way in, under the header rather than over it, because that is where the line was
+          standing when it was taken. One shutting box per line rather than one holding all of
+          them: two calls swallowed in the same frame were standing as two rows and each closes
+          on its own, which is also what keeps a second swallow arriving mid-flight from
+          restarting the first one's collapse. */}
+      {flying.map((item) => (
+        <div className="went" aria-hidden key={item.id}>
+          <div>
+            <ToolLine item={item as Extract<Item, { kind: 'tool' }>} />
+          </div>
+        </div>
+      ))}
       {open && (
         <div className="did">
           {row.items.map((item) => {
-            // `rowsOf` admits three kinds and no others; the guard is here so the narrowing is
-            // the compiler's rather than a comment's.
-            if (item.kind === 'agent')
+            // The principal's own captions, unattributed on purpose: the block is its turn, and a
+            // name on every line of a turn already labelled is the repetition `grouped` exists to
+            // avoid.
+            if (item.kind === 'agent' && item.agentId === row.agentId)
               return (
                 <div className="said" key={item.id}>
                   {item.text}
@@ -397,7 +932,21 @@ function Steps({ row, teamPane }: { row: Extract<Row, { kind: 'steps' }>; teamPa
               );
             if (item.kind === 'tool' || item.kind === 'permission')
               return <ToolLine key={item.id} item={item} />;
-            return null;
+            // Mail, and a teammate's own turn. Drawn as themselves rather than as another
+            // caption: inside a block that is Alice's turn, an unattributed paragraph is read as
+            // Alice's, and this one is not hers.
+            return (
+              <ItemView
+                key={item.id}
+                item={item}
+                grouped={false}
+                teamPane={teamPane}
+                onAnswerPermission={cast.onAnswerPermission}
+                onDisarmRoutine={cast.onDisarmRoutine}
+                onRemoveHandbookEntry={cast.onRemoveHandbookEntry}
+                {...castOf(item, cast.pane, cast.byId, cast.statuses, cast.routineArmed)}
+              />
+            );
           })}
         </div>
       )}
@@ -422,8 +971,12 @@ function ToolLine({ item }: { item: Extract<Item, { kind: 'tool' | 'permission' 
   const changed = item.kind === 'permission' ? undefined : item.changed;
   const kind = item.kind === 'permission' ? undefined : item.toolKind;
   const Glyph = kind === undefined ? undefined : GLYPH[kind];
+  // Only a call that is still running arrives, which is the whole of the gate: every other
+  // `.tool` on screen is settled data, and settled data does not move. A restored transcript
+  // mounts dozens of these and must sit perfectly still while it does.
+  const running = item.kind === 'tool' && item.status === 'running';
   return (
-    <div className="tool">
+    <div className={running ? 'tool now' : 'tool'}>
       {/* The glyph took the verb's column, 2026-08-31, and did not join it: an icon beside the
           word it denotes is the same claim twice in the narrowest place in the app, which is
           what took WORKING out from beside the dots. The column itself is untouched and is the
@@ -494,6 +1047,9 @@ const GLYPH: Record<ToolKind, React.ComponentType<{ size?: number; role?: string
 function toolSaid(item: Extract<Item, { kind: 'tool' }>): string | undefined {
   if (item.exit === null) return 'exit null';
   if (item.status === 'failed') return 'failed';
+  // Not a failure and not a success. The process that owned the call went away before it
+  // reported, so the one true thing to say is that blobot never found out.
+  if (item.status === 'unfinished') return 'unfinished';
   return undefined;
 }
 
@@ -535,8 +1091,10 @@ const ItemView = React.memo(function ItemView({
   onAnswerPermission,
   fromName,
   fromHue,
+  fromShape,
   toName,
   toHue,
+  toShape,
   received = false,
   status,
   armed = false,
@@ -568,12 +1126,6 @@ const ItemView = React.memo(function ItemView({
             </div>
           )}
           <div className="bubble">{item.text}</div>
-          {/* Only where the message went somewhere other than the pane's own default recipient:
-              a fan-out, or an agent the user named instead of the lead. In an agent's pane the
-              recipient is the pane, and in the team pane a message to the lead is the composer's
-              standing answer — a caption under every prompt saying the thing the composer
-              already says is a line the reader stops seeing by the second screen. */}
-          {teamPane && toName !== undefined && <div className="tag">to {toName}</div>}
         </div>
       );
 
@@ -587,7 +1139,13 @@ const ItemView = React.memo(function ItemView({
             // Holds the gutter so a continued turn stays on the same left edge as its header.
             <div className="gutter" />
           ) : (
-            <Blob name={fromName ?? ''} size={28} status={status} hue={fromHue} />
+            <Blob
+              name={fromName ?? ''}
+              size={28}
+              status={status}
+              hue={fromHue}
+              shape={fromShape}
+            />
           )}
           <div className="body">
             {!grouped && (
@@ -619,6 +1177,7 @@ const ItemView = React.memo(function ItemView({
             received={received}
             name={(received ? fromName : toName) ?? ''}
             hue={received ? fromHue : toHue}
+            shape={received ? fromShape : toShape}
           >
             {item.context !== undefined && <div className="ctx">{item.context}</div>}
             <Markdown text={item.text} />
@@ -659,6 +1218,29 @@ const ItemView = React.memo(function ItemView({
       return (
         <div className="sysline">
           <span>{fromName === undefined ? item.text : `${fromName} · ${item.text}`}</span>
+        </div>
+      );
+
+    // A Picture, at the agent's own altitude in the agent's own column, because it is one of the
+    // things the agent said. In the team pane the name goes with it for the same reason every
+    // other per-agent line carries one. It does not animate.
+    case 'picture':
+      // A Picture that could not be shown is one mono line and nothing else, so it takes no
+      // gutter and no header: the name is in the sentence, where the only thing there is to
+      // say has to fit.
+      return item.notDrawn !== undefined ? (
+        <Picture item={item} fromName={fromName} />
+      ) : (
+        <div className="msg pictrow">
+          <div className="gutter" />
+          <div className="body">
+            {fromName !== undefined && (
+              <div className="hdr">
+                <span className="nm">{fromName}</span>
+              </div>
+            )}
+            <Picture item={item} />
+          </div>
         </div>
       );
 
@@ -1087,11 +1669,13 @@ function PeerNote({
   received,
   name,
   hue,
+  shape,
   children,
 }: {
   received: boolean;
   name: string;
   hue?: number | undefined;
+  shape?: string | undefined;
   children: React.ReactNode;
 }): React.JSX.Element {
   const [open, setOpen] = useState(false);
@@ -1101,7 +1685,7 @@ function PeerNote({
       <button className="route" aria-expanded={open} onClick={() => setOpen(!open)}>
         <ChevronDown size={12} className={open ? '' : 'shut'} aria-hidden />
         <span className="lbl">{received ? 'message received from' : 'message sent to'}</span>
-        <Blob name={name} size={20} hue={hue} />
+        <Blob name={name} size={20} hue={hue} shape={shape} />
         <span className="nm">{name}</span>
       </button>
       {open && <div className="note">{children}</div>}

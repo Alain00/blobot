@@ -1,0 +1,37 @@
+runtime=fx annotate=false uriOnly=false
+workspace=/tmp/blobot-picture-probe-5G67jA
+picture server on 127.0.0.1:33927
+picture server http://127.0.0.1:33927/
+initialize ok: {"protocolVersion":1,"agentCapabilities":{"loadSession":true,"promptCapabilities":{"image":false,"audio":false,"embeddedContext":true},"mcpCapabilities":{"http":true,"sse":true},"sessionCapabilities":{"list":{},"resume":{},"close":{}}},"agentInfo":{"name":"fx","title":"fx","version":"0.0.7"},"authMethods":[]}
+mcp <- server/discover
+mcp <- initialize
+mcp <- notifications/initialized
+mcp <- tools/list
+update available_commands_update
+session 1788607959781-1788607959781640058-c668a6705073a846
+update agent_message_chunk [text(skill discovery warning: candidate "/hom)]
+update tool_call
+update tool_call_update
+update tool_call_update [text({"skills":[{"name":"animation-vocabulary)]
+update tool_call
+update tool_call_update
+update tool_call_update [text(Selected dynamic MCP tool `mcp_picture_s)]
+update tool_call
+permission asked, answering allow_always
+update tool_call_update
+mcp <- tools/call
+TOOL CALLED: show_text
+update tool_call_update [text({"server":"picture","tool":"mcp_picture_)]
+update tool_call
+update tool_call_update
+update tool_call_update [text(Selected dynamic MCP tool `mcp_picture_s)]
+update tool_call
+permission asked, answering allow_always
+update tool_call_update
+mcp <- tools/call
+TOOL CALLED: show_picture
+update tool_call_update [text({"server":"picture","tool":"mcp_picture_)]
+update agent_message_chunk [text(DONE)]
+prompt result {"stopReason":"end_turn"}
+wire  -> /home/alain/Projects/personal/blobot/.scratch/agent-media/research/transcripts/fx-2026-09-05T11-32-39-094Z.jsonl
+notes -> /home/alain/Projects/personal/blobot/.scratch/agent-media/research/transcripts/fx-2026-09-05T11-32-39-094Z.log

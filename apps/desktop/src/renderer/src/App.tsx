@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { PanelRight, PanelRightClose } from 'lucide-react';
+import { PanelRight } from 'lucide-react';
 import { Agents } from './components/Agents.js';
 import { Composer } from './components/Composer.js';
 import { Conversation } from './components/Conversation.js';
-import { Feed } from './components/Feed.js';
+import { Details } from './components/Details.js';
+import { FileTree } from './components/FileTree.js';
+import { GitPanel } from './components/GitPanel.js';
 import { ComposerFooter, HandbookNotice } from './components/Handbook.js';
 import { Navigator } from './components/Navigator.js';
 import { NewTeam } from './components/NewTeam.js';
@@ -12,13 +14,15 @@ import { Routines } from './components/Routines.js';
 import { Settings } from './components/Settings.js';
 import { DeleteTeam, EditTeam } from './components/TeamEdits.js';
 import { initialState, itemsFor, paneAfterSnapshot, reduce, type Pane } from './model.js';
-import { useFeedVisible } from './useFeedVisible.js';
 import { useWorkspaces } from './useWorkspaces.js';
 import { useRailWidth } from './useRailWidth.js';
+import { useSidebarPanel } from './useSidebarPanel.js';
+import { useSidebarWidth } from './useSidebarWidth.js';
 import { useDictation } from './useDictation.js';
 import { settingsSectionOf } from './components/Settings.js';
 import { useComposerRoom } from './useComposerRoom.js';
 import { usePlaySound } from './sound/useSound.js';
+import type { NewTeamSpec } from '../../shared/api.js';
 
 export function App(): React.JSX.Element {
   const [state, dispatch] = useReducer(reduce, initialState);
@@ -39,6 +43,15 @@ export function App(): React.JSX.Element {
   // `--screen=new-team` opens it, for the same reason `--screen=agents` exists: the flow is a
   // surface a screenshot cannot click its way to, and now one of its steps decides who leads.
   const [creating, setCreating] = useState(opened.get('screen') === 'new-team');
+  /**
+   * A team handed over and not yet on screen.
+   *
+   * The bar closes the moment the spec is complete, so the seconds that follow — an Agent per
+   * member, a worktree each, a session in every one — happen behind the ordinary window instead
+   * of under a modal saying *creating…*. It only shows on a first launch, where there is no
+   * window behind it to go back to.
+   */
+  const [starting, setStarting] = useState(false);
   /** *Your agents*, over the working surface. Not a modal: it is a place, not a decision. */
   // `--screen=hire` is the same place with its one dialog open, because the runtime picker and
   // what it now offers to do about a runtime live in there and nowhere a screenshot can reach.
@@ -70,9 +83,13 @@ export function App(): React.JSX.Element {
    */
   const [suggest, setSuggest] = useState<{ text: string; at: number } | undefined>(undefined);
   const rail = useRailWidth();
+  /* The file sidebar. Closed by default, and `--screen=files` opens it at launch, because it is
+     a surface a screenshot cannot click to — the same affordance `--screen=details` is. */
+  const sidebar = useSidebarWidth(rail.width, opened.get('screen') === 'files');
+  /* Which panel it is showing. One global preference, remembered beside the width. */
+  const [panel, setPanel] = useSidebarPanel();
   /** The composer floats over the transcript; this keeps the transcript's last line clear of it. */
   const convRoom = useComposerRoom();
-  const feed = useFeedVisible();
 
   /**
    * The team these streams are allowed to be about.
@@ -264,7 +281,8 @@ export function App(): React.JSX.Element {
   // than as it was when it was built.
   oldest.current = state.oldest;
   /**
-   * Where each agent's work is. Local git follows the feed, so the count moves as the agents do;
+   * Where each agent's work is. Local git follows the settled log, so the count moves as the
+   * agents do;
    * GitHub is asked on opening the team and on the user's own refresh, and never on a timer.
    *
    * Read up here, above every early return, because this component has two of them — no
@@ -272,7 +290,28 @@ export function App(): React.JSX.Element {
    * called. It takes the id as an optional and answers with nothing when there is no team.
    */
   const openTeamId = state.snapshot?.team?.id;
-  const workspaces = useWorkspaces(openTeamId, state.feed.length);
+  const workspaces = useWorkspaces(openTeamId, state.settled);
+  /**
+   * Take the creation bar's spec, close it, and let the rail report what happens.
+   *
+   * Nothing awaits this on screen. A failure lands in the strip above the panes, which is where
+   * *the team you clicked would not open* already goes, because it is the same kind of news
+   * about the same kind of thing. On success the snapshot brings the team in as the open one,
+   * `switchTo` having already made it current in main.
+   */
+  const startTeam = useCallback(
+    (spec: NewTeamSpec) => {
+      setCreating(false);
+      setStarting(true);
+      void window.blobot.createTeam(spec).then((result) => {
+        setStarting(false);
+        if (result.ok) refresh(true);
+        else setOpenError(result.error ?? 'The team could not be created.');
+      });
+    },
+    [refresh],
+  );
+
   const refreshWorkspaces = workspaces.refresh;
   const publish = useCallback(
     (agentId: string, options: { title?: string; draft?: boolean }) => {
@@ -316,8 +355,13 @@ export function App(): React.JSX.Element {
     snapshot.teams.find((row) => row.id === deleting) ??
     (opened.get('screen') === 'delete-team' ? snapshot.teams[0] : undefined);
 
-  // The genuine empty state: a first launch, before any team exists.
-  if (snapshot.team === undefined || creating) {
+  // The genuine empty state: a first launch, before any team exists. Creating a team when one
+  // already exists no longer comes here: the bar floats over the working surface, below, the
+  // way the navigator does, because a team you are forming does not replace the team you are on.
+  if (snapshot.team === undefined) {
+    // The bar has gone and the first team is being made. The same blank the app shows before
+    // its first snapshot, because that is exactly what this is: a window waiting for one.
+    if (starting) return <div className="app" />;
     return (
       // No strip across the top. It said the product's own name and counted the teams, on the
       // one screen where neither is a thing the reader can act on, and it put a second
@@ -325,13 +369,7 @@ export function App(): React.JSX.Element {
       // header for the same reason.
       <div className="app">
         {openError !== undefined && <div className="openerror">{openError}</div>}
-        <NewTeam
-          {...(snapshot.team === undefined ? {} : { onCancel: () => setCreating(false) })}
-          onCreated={() => {
-            setCreating(false);
-            refresh(true);
-          }}
-        />
+        <NewTeam onCreate={startTeam} />
       </div>
     );
   }
@@ -364,9 +402,13 @@ export function App(): React.JSX.Element {
         </div>
       )}
       <div
-        className="vA"
+        /* A drag animates nothing and tracks the pointer exactly: an animated drag is a panel
+           that lags your hand, which reads as the app being slow rather than as motion. The
+           snap shut below the floor is the one animated part of a drag, because that is the app
+           acting rather than the hand — and it lands here, once the pointer is up. */
+        className={`vA${rail.dragging || sidebar.dragging ? ' dragging' : ''}`}
         style={{
-          gridTemplateColumns: `${rail.width}px minmax(0,1fr)${feed.visible ? ' 288px' : ''}`,
+          gridTemplateColumns: `${rail.width}px minmax(0,1fr) ${sidebar.width}px`,
         }}
       >
         <Rail
@@ -402,9 +444,6 @@ export function App(): React.JSX.Element {
             statuses={state.statuses}
             items={items}
             opening={snapshot.opening === true}
-            {...(snapshot.team.leadAgentId === undefined
-              ? {}
-              : { lead: snapshot.team.leadAgentId })}
             moreAbove={state.moreAbove}
             onLoadEarlier={loadEarlier}
             onAnswerPermission={(requestId, choice) => {
@@ -445,18 +484,33 @@ export function App(): React.JSX.Element {
                     turn budget spent · continue
                   </button>
                 )}
+                {/* Where the activity column's toggle stood, and the same two blocks behind
+                    it: the column is gone and `CONTEXT` and `WORKSPACE` are read on purpose
+                    now rather than watched. */}
+                <Details
+                  agents={snapshot.agents}
+                  usage={state.usage}
+                  injection={state.injection}
+                  handbooks={state.handbooks}
+                  workspaces={pane.kind === 'team' ? workspaces.statuses : []}
+                  looking={workspaces.looking}
+                  onRefreshWorkspaces={workspaces.refresh}
+                  onPublish={publish}
+                  onPlan={plan}
+                  startOpen={opened.get('screen') === 'details'}
+                />
+                {/* The second glyph in this chrome, beside the details one, where the activity
+                    column's own toggle stood. Two is not a row of switches; a third would be,
+                    and that is the standing limit for a chrome that has been pruned twice. */}
                 <button
+                  type="button"
                   className="paneltoggle"
-                  onClick={feed.toggle}
-                  title={feed.visible ? 'Hide activity' : 'Show activity'}
-                  aria-label={feed.visible ? 'Hide activity' : 'Show activity'}
-                  aria-pressed={feed.visible}
+                  onClick={sidebar.toggle}
+                  aria-pressed={sidebar.open}
+                  title="Files"
+                  aria-label="Files"
                 >
-                  {feed.visible ? (
-                    <PanelRightClose size={16} aria-hidden />
-                  ) : (
-                    <PanelRight size={16} aria-hidden />
-                  )}
+                  <PanelRight size={16} aria-hidden />
                 </button>
                 {/* The budget is per prompt and the pips fill as the team spends it, so it
                     belongs above the transcript it is being spent in. */}
@@ -520,7 +574,12 @@ export function App(): React.JSX.Element {
                       teamId={openTeamId}
                       busy={(state.statuses[pane.agentId] ?? 'idle') !== 'idle'}
                       onSwitched={workspaces.refresh}
-                      onCommitted={workspaces.refresh}
+                      onOpenChanges={() => {
+                        // The tray's figure is a door to the panel that can act on it, and the
+                        // sidebar may be shut when it is pressed.
+                        setPanel('git');
+                        if (!sidebar.open) sidebar.toggle();
+                      }}
                       onPublish={(options) => publish(pane.agentId, options)}
                       onPlan={(options) => plan(pane.agentId, options)}
                       entries={state.handbooks[pane.agentId] ?? []}
@@ -536,19 +595,45 @@ export function App(): React.JSX.Element {
                 })}
           />
         </div>
-        {feed.visible && (
-          <Feed
-            entries={state.feed}
-            agents={snapshot.agents}
-            usage={state.usage}
-            injection={state.injection}
-            handbooks={state.handbooks}
-            pane={pane}
-            workspaces={pane.kind === 'team' ? workspaces.statuses : []}
-            looking={workspaces.looking}
-            onRefreshWorkspaces={workspaces.refresh}
-            onPublish={publish}
-            onPlan={plan}
+        {/* The third column, restored. `DESIGN.md`'s flanks rule takes an amendment for it and
+            the test in that amendment is what it passes: this is the only rendering of which
+            files an agent has touched, where the activity column drew what the transcript was
+            already drawing. Its expansion memory is per `<team>/<agent>` and lives here for as
+            long as the panel is open, which is what makes switching agents and coming back
+            cheap; closing it is a person putting it away, and it starts fresh. */}
+        {sidebar.open &&
+          (() => {
+            // Two panels, one shell, one set of props: the head, the chooser and the short true
+            // sentences about a folder are the shell's, so the panels differ only in the body.
+            const shared = {
+              teamId: openTeamId,
+              pane,
+              agents: snapshot.agents,
+              workspaces: workspaces.statuses,
+              demoMode: snapshot.demoMode === true,
+              revision: state.settled,
+              panel,
+              onPanel: setPanel,
+              onSelectAgent: (agentId: string) => openPane({ kind: 'agent', agentId }),
+              onSelectTeam: () => openPane({ kind: 'team' }),
+            };
+            return panel === 'git' ? (
+              <GitPanel
+                {...shared}
+                busy={pane.kind === 'agent' && (state.statuses[pane.agentId] ?? 'idle') !== 'idle'}
+                onCommitted={workspaces.refresh}
+              />
+            ) : (
+              <FileTree {...shared} />
+            );
+          })()}
+        {sidebar.open && (
+          <div
+            className={`sidebargrab${sidebar.dragging ? ' on' : ''}`}
+            style={{ right: sidebar.width }}
+            onPointerDown={sidebar.onPointerDown}
+            onPointerMove={sidebar.onPointerMove}
+            onPointerUp={sidebar.onPointerUp}
           />
         )}
         {editingTeam !== undefined && (
@@ -566,6 +651,7 @@ export function App(): React.JSX.Element {
         {browsingAgents && (
           <Agents
             onClose={() => setBrowsingAgents(false)}
+            onChanged={refresh}
             hiringAtOnce={opened.get('screen') === 'hire'}
           />
         )}
@@ -593,6 +679,11 @@ export function App(): React.JSX.Element {
             onClose={() => setDeleting(undefined)}
             onDeleted={() => refresh(true)}
           />
+        )}
+        {/* The same layer the navigator takes, and for the same reason: forming a team is a
+            door, not a place, and the team you are on is still running behind it. */}
+        {creating && (
+          <NewTeam onCancel={() => setCreating(false)} onCreate={startTeam} />
         )}
         {/* Over every other layer, because it is how you leave the one you are on. It is the
             only surface in the app that is not a place: it opens on a key, answers, and goes. */}

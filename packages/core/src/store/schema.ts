@@ -126,6 +126,17 @@ export const agentProfiles = sqliteTable('agent_profiles', {
    * follow it onto every team it joins — so it lives here and not in `localStorage`.
    */
   hue: integer('hue'),
+  /**
+   * The blobatar's silhouette, by name — `round`, `boxy`, `capsule` and so on — when the user
+   * has chosen one. NULL means the name derives it, which is the default and is what every
+   * agent hired before this column had.
+   *
+   * Beside the hue, and for the same reason: a face is a fact about the agent, so it has to
+   * follow it onto every team it joins. The **name** is stored rather than the number the
+   * renderer feeds the library, because that number is a position inside a band the library
+   * owns and a retune of those bands would silently move every stored face.
+   */
+  shape: text('shape'),
   createdAt: integer('created_at').notNull(),
   /** Tombstone, like an agent: teams that used it keep pointing at the row. */
   deletedAt: integer('deleted_at'),
@@ -165,6 +176,8 @@ export const agents = sqliteTable(
      * the thing the hue exists to prevent. See ADR-0002.
      */
     hue: integer('hue'),
+    /** Copied and restated exactly as the hue is, and for the same reason. NULL is the name's. */
+    shape: text('shape'),
     runtimeId: text('runtime_id').notNull(),
     /** Ticket 07 pins CLAUDE_CODE_EXECUTABLE to the user's own binary. */
     executablePath: text('executable_path'),
@@ -292,6 +305,50 @@ export const messageAttachments = sqliteTable(
     index('message_attachments_message').on(table.messageId),
   ],
 );
+
+/**
+ * A **Picture**: something an Agent showed the user, or that blobot caught it being handed.
+ *
+ * A table of its own rather than `attachments`, and the reason is not tidiness. That join's whole
+ * purpose is a fan-out -- one thing typed once, three messages, one copy of the bytes -- and a
+ * Picture is never fanned out: it belongs to one turn by one agent. The columns are not the same
+ * either. A Picture has a `source`, a `tool_name`, a measured `width` and `height` and the file's
+ * own `written_at`; an Attachment has an `ordinal`, which is the user's pickup order. Reusing one
+ * table would put both directions in one place under a name that says one of them, which is the
+ * confusion `.scratch/agent-media/03` exists to prevent.
+ *
+ * **The bytes are here and not on disk**, ADR-0004's rule surviving the reversal for ticket 02's
+ * reason: nothing hands an Agent a path or an id into this table, and a directory of every
+ * screenshot from every team is the one thing that would be worth walking. The id crosses to the
+ * renderer and nowhere else.
+ *
+ * Rows for a Picture that could **not** be drawn do not exist: nothing was kept. That fact lives
+ * in the `events` row instead, which is why the transcript can restore it and this table stays
+ * exactly what it says it is -- the bytes.
+ *
+ * Append-only and never updated, so a future retention policy is `DELETE WHERE at < ?`.
+ */
+export const pictures = sqliteTable('pictures', {
+  id: text('id').primaryKey(),
+  agentId: text('agent_id')
+    .notNull()
+    .references(() => agents.id),
+  /** `shown` was handed over deliberately; `observed` was lifted out of a tool result. */
+  source: text('source', { enum: ['shown', 'observed'] }).notNull(),
+  /** Measured from the bytes, never taken from the runtime's word for what it sent. */
+  mimeType: text('mime_type').notNull(),
+  width: integer('width').notNull(),
+  height: integer('height').notNull(),
+  bytes: integer('bytes').notNull(),
+  /** The file's own name, relative to the AgentWorkspace. NULL for an observed Picture. */
+  name: text('name'),
+  /** The tool that produced it. NULL for a shown Picture, which blobot was handed by name. */
+  toolName: text('tool_name'),
+  /** The file's mtime, which is what the frame compares against the turn's start. Shown only. */
+  writtenAt: integer('written_at'),
+  data: blob('data', { mode: 'buffer' }).notNull(),
+  at: integer('at').notNull(),
+});
 
 export const turns = sqliteTable(
   'turns',

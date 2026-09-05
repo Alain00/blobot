@@ -20,7 +20,7 @@ interface OpenTurn {
 }
 
 /**
- * Persists the **durable subset** of the ten-member vocabulary: completed messages, tool calls
+ * Persists the **durable subset** of the eleven-member vocabulary: completed messages, tool calls
  * with terminal state, turn outcomes, errors and usage snapshots. Deltas are the wire format —
  * a row per delta would mean three rows in one observed millisecond.
  */
@@ -159,6 +159,18 @@ export class SqliteRecorder implements TurnRecorder {
       // means a team switched away from and back to loses the record that its agent is on a
       // different session than the one it was answering with an hour ago.
       case 'context_compacted': {
+        this.#appendEvent(event);
+        return;
+      }
+      /**
+       * Durable, and the bytes are already elsewhere.
+       *
+       * The row in `pictures` is written before this event exists, so what is appended here is
+       * the *news* -- an id, or the reason there is nothing to fetch. A Picture that could not be
+       * kept has no row anywhere else, and this is the only record that it happened at all, which
+       * is the whole of `.scratch/agent-media/10`: an absence is not an acceptable failure mode.
+       */
+      case 'picture_arrived': {
         this.#appendEvent(event);
         return;
       }

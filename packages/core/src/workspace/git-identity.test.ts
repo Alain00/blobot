@@ -26,8 +26,23 @@ it('authors runtime and button commits as separate Agents without signing or cha
   const outcome = await commitWorktree({ path: dir, message: 'button', agentName: 'Bob' }, (cmd, args, options) =>
     spawnCommand(cmd, args, { ...options, env: { ...env, ...options?.env } }));
   expect(outcome.ok).toBe(true);
+  // The new file panel selects paths independently of the Agent's existing staged work.
+  // Both that selection and the unsigned Agent identity must survive the merge.
+  await writeFile(join(dir, 'work'), 'selected edit\n');
+  await writeFile(join(dir, 'selected-new'), 'selected addition\n');
+  await writeFile(join(dir, 'not-selected'), 'the Agent staged this separately\n');
+  expect((await git(['add', 'not-selected'])).code).toBe(0);
+  const stagedBefore = await git(['diff', '--cached', '--binary']);
+  const selected = await commitWorktree({
+    path: dir, message: 'selected', agentName: 'Cara',
+    paths: ['work', 'selected-new'], untracked: ['selected-new'],
+  }, (cmd, args, options) => spawnCommand(cmd, args, { ...options, env: { ...env, ...options?.env } }));
+  expect(selected.ok).toBe(true);
+  expect((await git(['diff', '--cached', '--binary'])).stdout).toBe(stagedBefore.stdout);
+  expect((await git(['show', '--format=', '--name-only', 'HEAD'])).stdout.trim().split('\n')).toEqual(['selected-new', 'work']);
   const log = await git(['log', '--format=%an|%ae|%cn|%ce|%G?']);
   expect(log.stdout.trim().split('\n')).toEqual([
+    'Cara|cara@agents.blobot.invalid|Cara|cara@agents.blobot.invalid|N',
     'Bob|bob@agents.blobot.invalid|Bob|bob@agents.blobot.invalid|N',
     'Alice|alice@agents.blobot.invalid|Alice|alice@agents.blobot.invalid|N',
   ]);
