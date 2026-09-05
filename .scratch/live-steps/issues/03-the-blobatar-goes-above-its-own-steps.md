@@ -100,3 +100,18 @@ Bob's own cyan face while Alice's turn sits above it. Before this it was an anon
 in the shared column, and with two agents running it was an unreadable interleave. The
 two-blocks-at-once case is covered by `liveTailOf`'s test rather than by a screenshot, because no
 demo script yet puts two agents in flight in the same frame — a leftover, on `build.md`.
+
+## Amendment, 2026-09-05 — *one block per agent* is narrowed to *one block per principal*
+
+Raised by the author the same day, looking at the enriched demo: *"subsequent bots that are not
+the main one should be part of the turns flow, not a main thinking state."*
+
+This decision was taken with one agent in flight, where the principal and the speaker are the
+same thing, so nothing in it distinguished them. With two agents genuinely overlapping they come
+apart, and the version built here is wrong in the team pane: it gives a woken teammate a
+top-level face, dots and a block of its own for the seconds its calls are running, and then
+swallows the same calls into the principal's fold the moment they settle. One call, classed two
+ways, by whether it happened to have finished.
+
+The block, the face and the answer to the two dot sets all stand. What is narrowed is *whose*
+block: in a team pane, a principal's. Ticket 07 settles the axis and 08 carries the change.

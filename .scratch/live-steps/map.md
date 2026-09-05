@@ -81,10 +81,19 @@ arrive and shut transitions exist. The team pane already draws one pending bubbl
 agent. The fold already counts and names what it swallowed.
 
 **Reached and reopened the same day, 2026-09-05.** The five tickets it was chartered with are
-resolved and built. **Ticket 06 is open and is the frontier**: enriching the demo so two agents
-really overlap — which is what ticket 03 was built for and what nothing could produce until 02
-existed — showed that `liveTailOf`'s tail is the *trailing* run of loose calls, so a running call
-with another agent's rows after it is stranded above them with no face on it. Decisions are binding; if one
+resolved and built, and then two agents really overlapped for the first time — which is what
+ticket 03 was built for and what nothing could produce until 02 existed. It found a stranded call
+(06) and, behind it, a decision this map never made.
+
+**The frontier is 07.** The author's framing: *there are two kinds of message, internal from bot
+to bot, which folds and is part of the turn, and public for the user, which the user must see.*
+The settled transcript already does this — `runFrom` folds a teammate's whole turn into the
+principal's block and lifts the principal's own words back out — and the live path built here
+does none of it, so the same call is internal once it finishes and top-level while it runs. 07
+settles the axis (it is *who it was addressed to*, not a property of the message), 08 narrows
+03's *one block per agent* to *one block per principal*, 09 is the bill for that (a folded
+teammate makes the team pane quiet during real work), and 10 is the guard rail (what a teammate
+can still say to the person, the unanswered permission hardest). Decisions are binding; if one
 is wrong, reopen its ticket and say so on it rather than quietly contradicting it. What was
 decided *while* building, and what is left over, is on `build.md`.
 
@@ -113,6 +122,10 @@ decided *while* building, and what is left over, is on `build.md`.
 ## Fog
 
 - Whether the activity column should show concurrency at all, or stays a flat chronological feed.
-  Out of scope until the transcript's answer is settled.
+  Out of scope until the transcript's answer is settled — and 09 may make it load-bearing, since
+  it is one of the places a reader could be sent instead of the transcript.
+- Whether a lead's turn is a third case. `composeLeadBrief` says a lead is not a pipe and mail to
+  it lands on it, so a lead holding a turn is an ordinary principal — but nobody has checked what
+  the fold does when the principal *is* the lead and the teammates it woke are answering it.
 - Whether a step should ever say how long it has been running. Nobody has asked; a duration on a
   live line is a second moving thing.

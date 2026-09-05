@@ -59,3 +59,16 @@ behind splits a batch across two places on screen.
 
 Every call in flight is under the face of the agent running it, in every frame of
 `--demo-scenario=many-steps`, with a screenshot on this ticket.
+
+## Note, 2026-09-05 — both candidates above are wrong, and 07 says why
+
+Written a few hours before the author's framing, and it shows: *"lift it wherever it is"* and
+*"put a face back on the loose line"* both take for granted that the stranded call is a top-level
+thing and argue about where to put it.
+
+It is not top-level. It is a teammate's call, made because of the principal's mail, and it belongs
+inside the principal's run — which is exactly where the same call goes the instant it returns.
+Ticket 07 settles the axis, 08 does the work, and the question this ticket asks stops arising.
+
+Left open rather than resolved, because the screenshot in it is the evidence and the *done when*
+is still the right test.
