@@ -1,5 +1,5 @@
 Type: research
-Status: open
+Status: resolved
 
 # Can a sandboxed agent still reach the mailbox?
 
@@ -73,3 +73,50 @@ ticket did not have.
 **Note the collision with what already ships**: `adapters/cursor` sets a sandbox *and* keeps the
 mailbox, on the same machine. Whatever this ticket concludes has to explain that case rather
 than contradict it.
+
+## Answer, 2026-09-04
+
+Yes, on every kind of boundary, and by a different door each time. The evidence is
+`research/02` (macOS, measured) and `research/03` (Linux read from srt's source, Docker Sandboxes
+read from its docs, ssh from the manuals), with `research/03-linux-mailbox-probe.mjs` for Alain.
+
+**What survives unchanged is the mailbox's shape.** Stateless HTTP, a bearer token that *is* the
+caller, the agent dialling blobot: all three constants hold on every kind. **What changes per kind
+is the carrier** — the hostname blobot mints in `endpointFor` and the one door that kind opens —
+so the carrier is a property of the Machine kind, and ticket 15 is not reopened.
+
+| kind | the door | what else it admits |
+|---|---|---|
+| srt fence, macOS | `allowLocalBinding: true`; measured `mailbox-ok` | every loopback service on the host; a per-port SBPL rule is expressible but not offered (the upstream question, reframed) |
+| srt fence, Linux | `allowedDomains: ['127.0.0.1:<port>']` through the host-side proxy, which has **no SSRF guard** and dials with a bare `net.connect`; research/01 saw BLOCKED only because srt sets `NO_PROXY=localhost,127.0.0.1,…` and curl obeyed | one port, port-exact; **unmeasured** whether each runtime's MCP client honours `HTTP_PROXY` for a loopback URL. The alternative, `allowAllUnixSockets`, opens every host socket, `docker.sock` included, and is refused |
+| Docker Sandbox | `http://host.docker.internal:<port>/agents/<id>/mcp` plus `sbx policy allow network --sandbox <name> localhost:<port>`; `127.0.0.1` is not reachable from inside | that one port for that one sandbox; the host proxy sees the plaintext bearer, as srt's does. The MCP gateway is **refused**: no header flag, so bearer-is-identity breaks |
+| remote box, ssh | `ssh -o ExitOnForwardFailure=yes -R 0:127.0.0.1:<port> <box>`: blobot's port appears on the far side's loopback, the bearer travels only inside the channel | any process on the remote box. A public endpoint is refused on ticket 15's own comment |
+| the runtimes' own sandboxes | none needed: all five fence commands, and `message_agent` is a call the CLI process makes | ticket 02's "collision" with Cursor is not one |
+
+**Grain, for ticket 01**: a Docker Sandbox is per *(agent kind, directory)* by default and per
+`--name` on request; blobot would name one per Agent, `blobot-<team>-<agent>`, mounting its own
+worktree at the same absolute path — and a worktree mounted alone has no git, because its `.git`
+points into the main repository, so the repository comes in as a second workspace (ticket 05).
+
+**Still unmeasured, in order**: the Linux probe (Alain); Docker after `sbx login` (the commands
+are in `research/03` (c)); a real `claude` under srt on macOS (Keychain, `_meta` sandbox); the
+ssh reverse forward against any Linux box; and the per-port loopback question upstream.
+
+## Comment, 2026-09-05 — the Docker door is run
+
+`research/08` §2 and §5 ran the row the answer marked *read; unrun*: from inside a shell sandbox
+the bearer arrived intact and the SSE stream stayed open; `127.0.0.1` is refused inside; the rule
+is exactly `sbx policy allow network --sandbox <name> localhost:<port>`, scoped, surviving a stop
+and dying with `rm`; and a real `claude` from Docker's own template dialled the mailbox on
+`session/new` with the header set. One thing the run added to *still unmeasured*:
+`host.docker.internal` resolves to `fe80::1` in the guest's `/etc/hosts` and is not in `NO_PROXY`,
+so a runtime whose MCP client ignores `HTTPS_PROXY` — fx is Zig, OpenCode is Bun — may dial
+link-local directly; measured for Claude only, and `16` carries the other four.
+
+## Amendment, 2026-09-05 — the box's name
+
+The *Grain, for ticket 01* paragraph above sketched the box's name as `blobot-<team>-<agent>`. That
+was a sketch and not this ticket's decision, and `17` amends it by name: a team's name is released
+on delete and an agent's name recurs, while the engine reattaches the same name to the same
+volumes, so a name would hand a new Alice the old Alice's login. The box and its volumes are named
+by **Agent id** (`17` for the box object, `05` §8 for the volumes and the adopt-or-refuse marker).

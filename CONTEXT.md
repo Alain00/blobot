@@ -30,6 +30,18 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
 - **Scope** — for a `nested` Workspace, the repositories the user put in. A repository out of
   scope is **absent** from the AgentWorkspace, not present and off limits.
 
+## Execution
+
+- **Machine** — the place an Agent's Turn executes. One per Agent and never shared: a Team gives
+  each Agent a Machine the way it gives it an AgentWorkspace, and deleting the Agent deletes it.
+  It is one of a closed set of **kinds**, chosen when the Team is formed — once for the Team, and
+  per Agent for the exception: **this computer**, or **a sandbox on this computer**, a small
+  virtual machine holding the Agent's own copy of its runtime, its own login and its own copy of
+  the Workspace, and reaching nothing else on the computer but the mailbox, the hosts it is
+  allowed and, read-only, the operator's own skills. A Machine is **not** a home: what an AgentProfile keeps for itself across teams is a
+  different object. On screen a Machine is said by kind and in plain words; the mechanism behind
+  a kind is never named. See `.scratch/machines/`.
+
 ## Runtimes
 
 - **AgentRuntime** — the interface every provider sits behind. Nothing outside an adapter may
@@ -128,5 +140,11 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
   told something. **The exception is the user's own mouth**: *remember that* is a plain
   instruction to an Agent and must keep working. It is wrong in blobot's mouth, on screen or in a
   persona, and never wrong in theirs.
+- **"Sandbox"** for any Machine — it is the name of one kind, *a sandbox on this computer*, and
+  nothing else; *this computer* is not a sandbox and must not be called a weaker one. And
+  **"Docker"**, **"VM"**, **"container"**, **"image"** anywhere a user reads: the mechanism behind
+  a kind is invisible infrastructure. One exception, and only one: the **account** is named, once each,
+  on the onboarding screen, where a sandbox is offered, and where the engine's readiness is shown
+  in Settings, because a sign-in cannot be anonymous.
 - **"Cron"** — it names a mechanism blobot does not implement and promises a guarantee it cannot
   keep: a Routine does not fire while the app is closed, and a missed firing is never run late. Say *Routine*, and say *every day at 09:00* rather than a schedule expression.

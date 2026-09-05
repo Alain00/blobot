@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 01
 
 # How a remote Machine is reached, without blobot holding a credential
@@ -38,3 +38,12 @@ and keys do the work.** blobot holds a hostname, which is not a credential.
 blobot never provides infrastructure. The user brings the box, the same way the user brings the
 CLI and the login. If a design here starts to require blobot to run, host, provision or pay for
 anything, it has left the product.
+
+## Closed, 2026-09-04 — out of scope
+
+The author narrowed the destination to **this computer**: the kinds decided here are `local` and
+`box`. A Machine of the user's own over ssh is a later effort, not a resumption of this one. What
+this ticket had already established is kept as a constraint on ticket `14`'s interface: blobot
+stores a hostname and never a credential; the transport is the user's own `ssh`, spawned; the
+mailbox rides a reverse forward (`research/03` (d)); and the Machine is a `spawn` provider, so
+`ssh <box> ...` is one implementation of the same seam `sbx exec -i` implements.
