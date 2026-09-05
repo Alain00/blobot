@@ -371,3 +371,60 @@ Implementation and its verification are committed as **`65aece0`**. Guillermo th
 a commit and handoff to continue in another session. The next session resumes the claimed
 image ticket and the pending base choice above; the request does not answer that choice.
 This closing update changes documentation only, with no additional test/build result claimed.
+
+## 2026-09-05 — image resumed; synthetic local snapshot boundary measured
+
+Resumed from `/private/tmp/blobot-machines-handoff.UJNCQo/handoff.md` at `d9215bd`.
+The image-base question was presented again and remains unanswered. Independent research and
+a bounded RC5 fixture are recorded in
+[Local templates and private Docker](research/22-local-template-and-private-docker.md),
+including the implications for the image ticket's persistence gate and the distinction between
+root filesystem snapshots and private volumes. The fixture passed; its two boxes and private
+template were removed with no cleanup errors. No host data mounts, provider login, paid turn,
+tar export or shared-daemon changes were used.
+
+Only research and tracker artifacts changed in this resumption. Application tests/builds were
+not rerun or newly claimed; the implementation checkpoint at `65aece0` still stands. The image
+ticket is claimed and incomplete, and production activation/resource-replacement guards remain.
+
+The author subsequently answered **“si acepto”** to the pending common-base proposal.
+[The image: one per runtime](issues/13-the-image-one-per-runtime.md#base-decision-2026-09-05-guillermo)
+owns that answer. Continue implementation using its pinned base; the pending-choice state above
+is historical, and this acceptance alone does not close the remaining image outputs.
+
+## 2026-09-05 — continuous implementation goal; image checkpoint
+
+Guillermo requested completion of all Machines implementation as a goal, validation throughout,
+one commit per ticket, and a checkpoint at each issue boundary for context recovery. The latest
+map Notes supersede the older stop-after-two/handoff scope. Non-obvious choices still use
+`grill-with-docs`; basic implementation choices are delegated.
+
+Resume the claimed [The image: one per runtime](issues/13-the-image-one-per-runtime.md#implementation-checkpoint--continuous-goal-2026-09-05).
+That checkpoint links the build/distribution code and acceptance evidence without treating
+unpublished download pins or incomplete preservation as complete. The image implementation and
+evidence form a dedicated checkpoint on `feat/machines` after `d9215bd`; Workspace remains
+committed at `65aece0`. This checkpoint does not resolve the image ticket.
+
+Completed acceptance evidence is indexed in the image ticket's **Acceptance results
+before publication** section: research29 covers all five runtime images, research30 preserves
+private state but retains a failing whole-state gate, and research33 validates the final
+image-store code against real sbx. Latest full core validation is **849 passed, 46 skipped**,
+with types/build passing; affected download/image/storage suites pass **29 tests**. Desktop
+types/build were rechecked after the final core changes; its unchanged UI suite remains
+**506 passed, 1 skipped**. Draft-release aggregation adds **3 passing Node tests** for ten
+verified pins, corrupt bytes, missing architecture and failed smoke acceptance. Workflow YAML,
+script syntax and `git diff --check` pass. Nothing enables production box launch or real Agent
+snapshotting. Native amd64 builds, anonymous release downloads, provider sign-in, mailbox
+acceptance and complete state preservation remain outstanding.
+
+The next human decision is whether to create the separate public artifact repository
+`guillermolg00/blobot-machine-images`. The private application repository remains `Alain00/blobot`.
+The reviewable publisher tree is `/private/tmp/blobot-machine-publisher.bl_0auk9`; its exact
+15-file, 107,462-byte manifest is
+`/private/tmp/blobot-machine-images.040Rvi/publisher-review.json`. It contains build recipes,
+lockfiles, documentation and the native CI workflow, without application source or Agent data.
+No remote repository, push, workflow run or public release has been created. After an affirmative
+answer, record it on the image ticket, create/push only this reviewed tree, validate all ten
+native builds, review and publish verified assets, then test anonymous downloads before filling
+adapter pins. Do not treat publication success as whole-state preservation acceptance.
+Keep the continuous goal active and the image claimed while awaiting this non-obvious decision.

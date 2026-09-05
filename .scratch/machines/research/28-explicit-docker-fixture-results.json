@@ -1,0 +1,429 @@
+{
+  "date": "2026-09-05T18:49:49.065Z",
+  "candidate": "blobot-machine-probe:explicit-docker-20260905",
+  "expectedManifest": "sha256:1cd3184fceaf6d60c0f364c81bdb26f3359bab91efc666cd172fb75c68ed974c",
+  "commands": [
+    {
+      "label": "load-candidate",
+      "ms": 2761.006417,
+      "code": 0
+    },
+    {
+      "label": "create-explicit-Docker",
+      "ms": 3006.261875,
+      "code": 0
+    },
+    {
+      "label": "inventory",
+      "ms": 1248.7055830000008,
+      "code": 0
+    },
+    {
+      "label": "quiesce-private-daemons",
+      "ms": 1327.145124999999,
+      "code": 0
+    },
+    {
+      "label": "independent-warm-exec",
+      "ms": 899.2875000000004,
+      "code": 0
+    },
+    {
+      "label": "remove-owned-box",
+      "ms": 380.0527920000004,
+      "code": 0
+    },
+    {
+      "label": "remove-loaded-candidate",
+      "ms": 292.47812499999964,
+      "code": 0
+    }
+  ],
+  "checks": {
+    "/home/agentSingleMount": true,
+    "/home/agentExactBlockCapacity": true,
+    "/var/lib/dockerSingleMount": true,
+    "/var/lib/dockerExactBlockCapacity": true,
+    "allRootCapabilities": true,
+    "rootSeccompDisabled": true,
+    "DockerReadyWithoutStartupHook": true,
+    "sameVmAcrossWarmExec": true,
+    "independentWarmExecKeepsDockerStopped": false
+  },
+  "cleanup": {
+    "errors": [],
+    "remainingBoxes": [],
+    "remainingImages": []
+  },
+  "version": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "loaded": {
+    "id": "1cd3184fceaf",
+    "repository": "docker.io/library/blobot-machine-probe",
+    "tag": "explicit-docker-20260905",
+    "flavor": "shell-docker",
+    "created_at": "2026-09-05T18:49:52Z",
+    "size": 588690428
+  },
+  "kit": {
+    "schemaVersion": "2",
+    "kind": "sandbox",
+    "name": "blobot",
+    "sandbox": {
+      "image": "blobot-machine-probe:explicit-docker-20260905",
+      "entrypoint": [
+        "/usr/bin/node"
+      ],
+      "command": {
+        "default": [
+          "--version"
+        ]
+      }
+    },
+    "credentials": [],
+    "permissions": {
+      "network": {
+        "allow": [],
+        "deny": []
+      }
+    },
+    "setup": {
+      "install": [
+        {
+          "user": "0",
+          "command": "chown 1000:1000 /home/agent /workspace && chmod 0700 /home/agent /workspace"
+        }
+      ]
+    },
+    "volumes": [
+      {
+        "path": "/home/agent",
+        "size": "8589934592",
+        "mode": "0700"
+      },
+      {
+        "path": "/workspace",
+        "size": "536870912",
+        "mode": "0700"
+      },
+      {
+        "path": "/var/lib/docker",
+        "size": "21474836480",
+        "mode": "0700"
+      }
+    ],
+    "security": {
+      "privileged": true
+    }
+  },
+  "box": {
+    "name": "blobot-explicit-19a68f26-9519-44c1-a5c4-4832790ada7e",
+    "id": "08be4a40-a288-4b66-a64a-23f8ba2a450a"
+  },
+  "initial": {
+    "boot": {
+      "id": "8875a8d5-726d-4197-810f-a48297797f72",
+      "pid1": "8"
+    },
+    "processes": [
+      {
+        "pid": 112,
+        "comm": "dockerd",
+        "args": [
+          "dockerd"
+        ],
+        "start": "87"
+      },
+      {
+        "pid": 119,
+        "comm": "containerd",
+        "args": [
+          "containerd",
+          "--config",
+          "/var/run/docker/containerd/containerd.toml"
+        ],
+        "start": "116"
+      }
+    ],
+    "configs": [
+      {
+        "comm": "dockerd",
+        "path": "/etc/docker/daemon.json",
+        "text": null
+      },
+      {
+        "comm": "containerd",
+        "path": "/var/run/docker/containerd/containerd.toml",
+        "text": "version = 2\nroot = '/var/lib/docker/containerd/daemon'\nstate = '/var/run/docker/containerd/daemon'\ntemp = ''\ndisabled_plugins = ['io.containerd.grpc.v1.cri']\nrequired_plugins = []\noom_score = 0\nimports = []\n\n[debug]\nlevel = ''\nformat = 'text'\nlog_trace_id = false\naddress = '/var/run/docker/containerd/containerd-debug.sock'\n\n[cgroup]\npath = ''\n\n[grpc]\naddress = '/var/run/docker/containerd/containerd.sock'\nmax_recv_message_size = 16777216\nmax_send_message_size = 16777216\n"
+      }
+    ],
+    "docker": {
+      "running": true,
+      "root": "/var/lib/docker",
+      "driver": "overlayfs",
+      "driverStatus": [
+        [
+          "driver-type",
+          "io.containerd.snapshotter.v1"
+        ]
+      ],
+      "version": "29.7.2",
+      "liveRestore": false,
+      "security": [
+        "name=seccomp,profile=builtin",
+        "name=cgroupns"
+      ]
+    },
+    "mounts": [
+      "101 69 0:29 / / rw,relatime - overlay overlay rw,lowerdir=/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/1:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/2:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/3:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/4:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/5:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/6:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/7:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/8:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/9:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/10:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/11:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/12:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/13:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/14:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/15,upperdir=/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/0/upper,workdir=/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/0/work,uuid=on,nouserxattr",
+      "102 101 0:47 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw",
+      "103 101 0:48 / /dev rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "104 103 0:49 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=5,mode=620,ptmxmode=666",
+      "105 103 0:50 / /dev/shm rw,nosuid,nodev,noexec,relatime - tmpfs shm rw,size=65536k",
+      "106 103 0:46 / /dev/mqueue rw,nosuid,nodev,noexec,relatime - mqueue mqueue rw",
+      "107 101 0:51 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw",
+      "108 101 0:52 / /run rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "109 107 0:23 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup2 rw",
+      "110 108 0:53 / /run/secrets rw,nosuid,noexec,relatime - tmpfs tmpfs rw",
+      "111 101 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+      "112 101 254:64 / /workspace rw,relatime - ext4 /dev/vde rw",
+      "113 101 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+      "114 101 0:27 /resolv.conf /etc/resolv.conf ro,relatime - virtiofs bind-95f03ffa45a7d998 rw",
+      "115 101 0:28 /hosts /etc/hosts ro,relatime - virtiofs bind-4a666ea3a3b04a24 rw"
+    ],
+    "capacity": {
+      "/home/agent": {
+        "mounts": [
+          {
+            "mountinfo": "111 101 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+            "device": "254:48",
+            "sectors": "16777216",
+            "blockBytes": "8589934592"
+          }
+        ],
+        "filesystem": {
+          "bsize": "4096",
+          "blocks": "2038647",
+          "bfree": "2038636",
+          "bavail": "1929683",
+          "files": "524288",
+          "ffree": "524273"
+        },
+        "filesystemBytes": "8350298112",
+        "availableBytes": "7903981568"
+      },
+      "/var/lib/docker": {
+        "mounts": [
+          {
+            "mountinfo": "113 101 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+            "device": "254:80",
+            "sectors": "41943040",
+            "blockBytes": "21474836480"
+          }
+        ],
+        "filesystem": {
+          "bsize": "4096",
+          "blocks": "5116564",
+          "bfree": "5116350",
+          "bavail": "4850110",
+          "files": "1310720",
+          "ffree": "1310666"
+        },
+        "filesystemBytes": "20957446144",
+        "availableBytes": "19866050560"
+      }
+    },
+    "uid": 0,
+    "groups": [
+      0
+    ],
+    "privileges": {
+      "capLastCap": "40",
+      "status": [
+        "CapInh:\t0000000000000000",
+        "CapPrm:\t000001ffffffffff",
+        "CapEff:\t000001ffffffffff",
+        "CapBnd:\t000001ffffffffff",
+        "CapAmb:\t0000000000000000",
+        "NoNewPrivs:\t0",
+        "Seccomp:\t0",
+        "Seccomp_filters:\t0"
+      ]
+    }
+  },
+  "policyAtCleanBoot": {
+    "blocked_hosts": [],
+    "allowed_hosts": []
+  },
+  "quiescence": {
+    "before": [
+      {
+        "pid": 112,
+        "comm": "dockerd",
+        "args": [
+          "dockerd"
+        ],
+        "start": "87"
+      },
+      {
+        "pid": 119,
+        "comm": "containerd",
+        "args": [
+          "containerd",
+          "--config",
+          "/var/run/docker/containerd/containerd.toml"
+        ],
+        "start": "116"
+      }
+    ],
+    "after": [],
+    "boot": {
+      "id": "8875a8d5-726d-4197-810f-a48297797f72",
+      "pid1": "8"
+    }
+  },
+  "warm": {
+    "boot": {
+      "id": "8875a8d5-726d-4197-810f-a48297797f72",
+      "pid1": "8"
+    },
+    "processes": [
+      {
+        "pid": 377,
+        "comm": "dockerd",
+        "args": [
+          "dockerd"
+        ],
+        "start": "495"
+      },
+      {
+        "pid": 385,
+        "comm": "containerd",
+        "args": [
+          "containerd",
+          "--config",
+          "/var/run/docker/containerd/containerd.toml"
+        ],
+        "start": "497"
+      }
+    ],
+    "configs": [
+      {
+        "comm": "dockerd",
+        "path": "/etc/docker/daemon.json",
+        "text": null
+      },
+      {
+        "comm": "containerd",
+        "path": "/var/run/docker/containerd/containerd.toml",
+        "text": "version = 2\nroot = '/var/lib/docker/containerd/daemon'\nstate = '/var/run/docker/containerd/daemon'\ntemp = ''\ndisabled_plugins = ['io.containerd.grpc.v1.cri']\nrequired_plugins = []\noom_score = 0\nimports = []\n\n[debug]\nlevel = ''\nformat = 'text'\nlog_trace_id = false\naddress = '/var/run/docker/containerd/containerd-debug.sock'\n\n[cgroup]\npath = ''\n\n[grpc]\naddress = '/var/run/docker/containerd/containerd.sock'\nmax_recv_message_size = 16777216\nmax_send_message_size = 16777216\n"
+      }
+    ],
+    "docker": {
+      "running": true,
+      "root": "/var/lib/docker",
+      "driver": "overlayfs",
+      "driverStatus": [
+        [
+          "driver-type",
+          "io.containerd.snapshotter.v1"
+        ]
+      ],
+      "version": "29.7.2",
+      "liveRestore": false,
+      "security": [
+        "name=seccomp,profile=builtin",
+        "name=cgroupns"
+      ]
+    },
+    "mounts": [
+      "101 69 0:29 / / rw,relatime - overlay overlay rw,lowerdir=/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/1:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/2:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/3:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/4:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/5:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/6:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/7:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/8:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/9:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/10:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/11:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/12:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/13:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/14:/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/15,upperdir=/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/0/upper,workdir=/run/bundles/276765909069b2debf07dc70b9d012f245574a0d3373191e0ea44e0a0a3120cd/mounts/0/work,uuid=on,nouserxattr",
+      "102 101 0:47 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw",
+      "103 101 0:48 / /dev rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "104 103 0:49 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=5,mode=620,ptmxmode=666",
+      "105 103 0:50 / /dev/shm rw,nosuid,nodev,noexec,relatime - tmpfs shm rw,size=65536k",
+      "106 103 0:46 / /dev/mqueue rw,nosuid,nodev,noexec,relatime - mqueue mqueue rw",
+      "107 101 0:51 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw",
+      "108 101 0:52 / /run rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "109 107 0:23 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup2 rw",
+      "110 108 0:53 / /run/secrets rw,nosuid,noexec,relatime - tmpfs tmpfs rw",
+      "111 101 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+      "112 101 254:64 / /workspace rw,relatime - ext4 /dev/vde rw",
+      "113 101 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+      "114 101 0:27 /resolv.conf /etc/resolv.conf ro,relatime - virtiofs bind-95f03ffa45a7d998 rw",
+      "115 101 0:28 /hosts /etc/hosts ro,relatime - virtiofs bind-4a666ea3a3b04a24 rw"
+    ],
+    "capacity": {
+      "/home/agent": {
+        "mounts": [
+          {
+            "mountinfo": "111 101 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+            "device": "254:48",
+            "sectors": "16777216",
+            "blockBytes": "8589934592"
+          }
+        ],
+        "filesystem": {
+          "bsize": "4096",
+          "blocks": "2038647",
+          "bfree": "2038636",
+          "bavail": "1929683",
+          "files": "524288",
+          "ffree": "524273"
+        },
+        "filesystemBytes": "8350298112",
+        "availableBytes": "7903981568"
+      },
+      "/var/lib/docker": {
+        "mounts": [
+          {
+            "mountinfo": "113 101 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+            "device": "254:80",
+            "sectors": "41943040",
+            "blockBytes": "21474836480"
+          }
+        ],
+        "filesystem": {
+          "bsize": "4096",
+          "blocks": "5116564",
+          "bfree": "5116350",
+          "bavail": "4850110",
+          "files": "1310720",
+          "ffree": "1310666"
+        },
+        "filesystemBytes": "20957446144",
+        "availableBytes": "19866050560"
+      }
+    },
+    "uid": 0,
+    "groups": [
+      0
+    ],
+    "privileges": {
+      "capLastCap": "40",
+      "status": [
+        "CapInh:\t0000000000000000",
+        "CapPrm:\t000001ffffffffff",
+        "CapEff:\t000001ffffffffff",
+        "CapBnd:\t000001ffffffffff",
+        "CapAmb:\t0000000000000000",
+        "NoNewPrivs:\t0",
+        "Seccomp:\t0",
+        "Seccomp_filters:\t0"
+      ]
+    }
+  },
+  "measurementCompleted": true,
+  "preservationGatePassed": false
+}

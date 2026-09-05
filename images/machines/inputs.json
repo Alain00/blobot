@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "base": "docker/sandbox-templates@sha256:5fc81bc7a127e59d81b244a06831ae3212a0310b2e5a0349c54e29249e45e919",
+  "nodeVersion": "22.22.1",
+  "runtimes": {
+    "claude": {
+      "version": "2.1.260",
+      "arm64": {
+        "url": "https://downloads.claude.ai/claude-code-releases/2.1.260/linux-arm64/claude",
+        "sha256": "9811afb5f97224c2c5d3d0ee1e8c316117d298d5ec3e095d5ff0c1dd0e889ca5",
+        "bytes": 214228392
+      },
+      "amd64": {
+        "url": "https://downloads.claude.ai/claude-code-releases/2.1.260/linux-x64/claude",
+        "sha256": "7a2fdc74b6836ea3d183f665b869f0ee3baebc9713cbebffe5838da4ea7bd82e",
+        "bytes": 214687216
+      },
+      "maxArchiveBytes": 1073741824
+    },
+    "codex": {
+      "version": "0.151.0",
+      "arm64": {
+        "url": "https://github.com/openai/codex/releases/download/rust-v0.151.0/codex-package-aarch64-unknown-linux-musl.tar.gz",
+        "sha256": "c64ad6e4f82609552a37069365b50528ef49e986aeab24a538781a18a402773d",
+        "bytes": 122432916
+      },
+      "amd64": {
+        "url": "https://github.com/openai/codex/releases/download/rust-v0.151.0/codex-package-x86_64-unknown-linux-musl.tar.gz",
+        "sha256": "6e35ac60b86c0e8c7f8bcf797be8b92206199f6253200b66ff0547276f8cfa5c",
+        "bytes": 131450621
+      },
+      "maxArchiveBytes": 1073741824
+    },
+    "opencode": {
+      "version": "1.18.4",
+      "arm64": {
+        "url": "https://github.com/anomalyco/opencode/releases/download/v1.18.4/opencode-linux-arm64.tar.gz",
+        "sha256": "eba87efba3976d533a24cca0316f8ef375b5f8e797c0a95c25ee919700b7ba35",
+        "bytes": 59079134
+      },
+      "amd64": {
+        "url": "https://github.com/anomalyco/opencode/releases/download/v1.18.4/opencode-linux-x64-baseline.tar.gz",
+        "sha256": "4d87e414607b77fef940256021e42fbbf37b8c62b06ced76b69e26c5dcbfbabc",
+        "bytes": 59265643
+      },
+      "maxArchiveBytes": 1073741824
+    },
+    "fx": {
+      "version": "0.0.7",
+      "arm64": {
+        "url": "https://github.com/vercel-labs/fx/releases/download/v0.0.7/fx-linux-aarch64.tar.gz",
+        "sha256": "4a3fb1b0114b8a4f933de64f85fb2288095c17631a0c3ca897aa05601d049974",
+        "bytes": 5161076
+      },
+      "amd64": {
+        "url": "https://github.com/vercel-labs/fx/releases/download/v0.0.7/fx-linux-x86_64.tar.gz",
+        "sha256": "c5787ea041d3b5521ec675f1ada78f30cf1b11021ffcac48b4969cf5beb65c45",
+        "bytes": 5232632
+      },
+      "maxArchiveBytes": 1073741824
+    },
+    "cursor": {
+      "version": "2026.09.02-c22c1a3",
+      "arm64": {
+        "url": "https://downloads.cursor.com/lab/2026.09.02-c22c1a3/linux/arm64/agent-cli-package.tar.gz",
+        "sha256": "fb7bc635be6172ebcf68f907fd9217e3614da51916455c6d7fdb66690997884c",
+        "bytes": 177647834
+      },
+      "amd64": {
+        "url": "https://downloads.cursor.com/lab/2026.09.02-c22c1a3/linux/x64/agent-cli-package.tar.gz",
+        "sha256": "b73b59854762535c0fc20d7ccc51c3b5a356a851491088d60a362be48750f53c",
+        "bytes": 179684142
+      },
+      "maxArchiveBytes": 1073741824
+    }
+  }
+}

@@ -1,0 +1,92 @@
+name: machine-images
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Optional new machines-* tag: assemble a draft release for review'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime: [claude, codex, opencode, fx, cursor]
+        platform:
+          - { runner: ubuntu-24.04, arch: amd64 }
+          - { runner: ubuntu-24.04-arm, arch: arm64 }
+    runs-on: ${{ matrix.platform.runner }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.1'
+      # The archive and sbx inventory identify the OCI manifest, not a classic config ID.
+      - uses: docker/setup-docker-action@v5
+        with:
+          version: v29.6.1
+          set-host: true
+          daemon-config: '{"features":{"containerd-snapshotter":true}}'
+      - uses: docker/setup-buildx-action@v4
+        with:
+          driver: docker
+          version: v0.35.0
+      - name: Build and export pinned runtime
+        env:
+          RUNTIME: ${{ matrix.runtime }}
+          ARCH: ${{ matrix.platform.arch }}
+        run: node images/machines/build.mjs --runtime "$RUNTIME" --arch "$ARCH" --out out --cache "$RUNNER_TEMP/runtime-inputs"
+      - name: Check UID, empty home, version and ACP without credentials or network
+        env:
+          RUNTIME: ${{ matrix.runtime }}
+          ARCH: ${{ matrix.platform.arch }}
+        run: node images/machines/smoke.mjs --runtimes "$RUNTIME" --arch "$ARCH" --receipts out --results "out/$RUNTIME-$ARCH-smoke.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: machine-${{ matrix.runtime }}-${{ matrix.platform.arch }}
+          path: out/*
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+  draft-release:
+    if: inputs.release_tag != ''
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.1'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: machine-*
+          path: assets
+          merge-multiple: true
+      - name: Verify every asset and assemble download pins
+        run: |
+          node --test images/machines/release-manifest.test.mjs
+          node images/machines/release-manifest.mjs --assets assets --repository "$GITHUB_REPOSITORY" --tag "$RELEASE_TAG"
+      - name: Create a new draft; never overwrite a published version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo 'This release already exists; choose a new machines-* tag.' >&2
+            exit 1
+          fi
+          gh release create "$RELEASE_TAG" assets/* --draft --target "$GITHUB_SHA" \
+            --title "Machine runtimes $RELEASE_TAG" --notes-file images/machines/release-notes.md

@@ -33,6 +33,7 @@ import type {
 } from '../acp/wire.js';
 import { offerableNames, offeredName } from './palette.js';
 import { LocalMachine } from '../../machines/local-machine.js';
+import { CODEX_MACHINE_IMAGE } from './image.js';
 import { requireLocalMachine, type Machine } from '../../machines/machine.js';
 import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
 import { CODEX_POSTURE_MODE, codexModeFor } from './permissions.js';
@@ -146,6 +147,7 @@ const NO_SUBAGENTS =
  * title. What is left here is only what is Codex's own.
  */
 export class CodexAgentRuntime implements AgentRuntime {
+  readonly machineImage = CODEX_MACHINE_IMAGE;
   readonly agentId: string;
 
   readonly #options: CodexAgentRuntimeOptions;

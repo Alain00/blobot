@@ -27,6 +27,9 @@ export { DEFAULT_MACHINE_LIMITS, machineLimits } from './machines/resources.js';
 export type { MachineLimits } from './machines/resources.js';
 export { machineFor } from './machines/machine-for.js';
 export { MachineUnavailableError } from './machines/machine.js';
+export { SbxImageStore, verifyRuntimeImageArchive } from './machines/sbx/image-store.js';
+export { runtimeImageBuild } from './machines/runtime-image.js';
+export type { RuntimeImageBuild, RuntimeImageDefinition } from './machines/runtime-image.js';
 export type {
   Machine, MachineKind, MachineCommand, MachineIdentity, MachineLocation, MachineReadiness,
   MachineReconcileOutcome, MachineRuntimeRequirements, MachineSpawnRequest, MachineStartRequest,

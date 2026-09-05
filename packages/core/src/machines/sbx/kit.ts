@@ -1,11 +1,16 @@
 import { validateBoxWorkspaceMounts, type BoxWorkspaceMounts } from '../../workspace/box-mounts.js';
 import { prepareSharedSkillsCommand } from './skills.js';
 
+/** Initial ceilings accepted by the author; allocated host bytes are measured separately. */
+export const SBX_INITIAL_STORAGE = { homeBytes: 8 * 1024 ** 3, dockerBytes: 20 * 1024 ** 3 } as const;
+
 /** A root kit, never a mixin over a vendor's permissive agent kit. */
 export interface SbxKitOptions {
   readonly image: string;
   readonly guestNode: string;
   readonly dataBytes: number;
+  /** Requires a verified image with start-docker=false, avoiding sbx's automatic volume. */
+  readonly dockerBytes?: number;
   /** Legacy private workspace used only by the isolated lifecycle fixtures. */
   readonly workspaceBytes?: number;
   readonly workspace?: BoxWorkspaceMounts;
@@ -23,7 +28,8 @@ export function sbxKit(options: SbxKitOptions) {
   if (options.image.trim() === '' || /[\s\0]/.test(options.image)) throw new Error('Invalid Machine image');
   if (!options.guestNode.startsWith('/') || options.guestNode.includes('\0')) throw new Error('Invalid guest Node path');
   if (options.workspace !== undefined) validateBoxWorkspaceMounts(options.workspace);
-  for (const size of [options.dataBytes, ...(options.workspace === undefined ? [options.workspaceBytes] : [])]) {
+  for (const size of [options.dataBytes, ...(options.workspace === undefined ? [options.workspaceBytes] : []),
+    ...(options.dockerBytes === undefined ? [] : [options.dockerBytes])]) {
     if (size === undefined || !Number.isSafeInteger(size) || size < 512 * 1024 * 1024) throw new Error('Invalid Machine volume size');
   }
   return {
@@ -37,6 +43,8 @@ export function sbxKit(options: SbxKitOptions) {
       command: { default: ['--version'] },
     },
     credentials: [],
+    // Required by the private daemon inside the microVM, never host Docker access.
+    ...(options.dockerBytes === undefined ? {} : { security: { privileged: true } }),
     permissions: { network: { allow: [], deny: [] } },
     // Block volumes arrive owned by root. This synchronous setup must finish before any
     // user process writes a login or configuration; startup hooks do not gate exec.
@@ -48,6 +56,7 @@ export function sbxKit(options: SbxKitOptions) {
       }]) ] },
     volumes: [
       { path: '/home/agent', size: String(options.dataBytes), mode: '0700' },
+      ...(options.dockerBytes === undefined ? [] : [{ path: '/var/lib/docker', size: String(options.dockerBytes), mode: '0700' }]),
       ...(options.workspace === undefined ? [{ path: '/workspace', size: String(options.workspaceBytes), mode: '0700' }] : []),
     ],
   } as const;

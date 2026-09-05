@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { renderSbxKit, sbxKit, sbxNameFor } from './kit.js';
+import { renderSbxKit, sbxKit, sbxNameFor, SBX_INITIAL_STORAGE } from './kit.js';
 
 describe('a root blobot kit', () => {
   const options = { image: 'blobot-probe:fixture', guestNode: '/usr/bin/node', dataBytes: 1073741824, workspaceBytes: 2147483648 };
@@ -26,6 +26,15 @@ describe('a root blobot kit', () => {
   it('requires explicit bounded volumes', () => {
     for (const size of [0, -1, Infinity, 512.5, Number.MAX_SAFE_INTEGER + 1]) {
       expect(() => sbxKit({ ...options, dataBytes: size })).toThrow();
+      expect(() => sbxKit({ ...options, dockerBytes: size })).toThrow();
     }
+  });
+
+  it('sizes private Docker explicitly with the accepted home capacity and no startup race', () => {
+    const kit = sbxKit({ ...options, dataBytes: SBX_INITIAL_STORAGE.homeBytes, dockerBytes: SBX_INITIAL_STORAGE.dockerBytes });
+    expect(kit.security).toEqual({ privileged: true });
+    expect(kit.volumes.filter(volume => volume.path === '/home/agent')).toEqual([{ path: '/home/agent', size: '8589934592', mode: '0700' }]);
+    expect(kit.volumes.filter(volume => volume.path === '/var/lib/docker')).toEqual([{ path: '/var/lib/docker', size: '21474836480', mode: '0700' }]);
+    expect(kit).not.toHaveProperty('startup');
   });
 });

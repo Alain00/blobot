@@ -1,0 +1,20 @@
+{
+  "date": "2026-09-05T19:15:05.658Z",
+  "build": {
+    "arch": "arm64",
+    "reference": "blobot-machine-fx:74d888efe94fb1544ae5a275964cfa5ba00dd96de9b4bd50bd1e8c7d917a19df-arm64",
+    "imageId": "sha256:74d888efe94fb1544ae5a275964cfa5ba00dd96de9b4bd50bd1e8c7d917a19df",
+    "url": "https://example.invalid/synthetic-release.tar",
+    "sha256": "8feb4175aba84883f955a17484b02af33528e6fafc11acf6c59fa805ea66e204",
+    "bytes": 594126848
+  },
+  "scope": "Local cache validation and real engine load, no release download",
+  "cleanup": {
+    "readiness": {
+      "state": "not_installed",
+      "detail": "Runtime is not installed in the sandbox engine."
+    }
+  },
+  "installMs": 2486.6026669999997,
+  "passed": true
+}

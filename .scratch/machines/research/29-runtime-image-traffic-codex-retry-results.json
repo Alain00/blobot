@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-09-05T19:05:28.441Z",
+  "receiptPath": "/private/tmp/blobot-machine-images.040Rvi/final/codex-arm64.json",
+  "receipt": {
+    "schemaVersion": 1,
+    "runtime": "codex",
+    "arch": "arm64",
+    "version": "0.151.0",
+    "recipe": "7d78c9d89189a3a43e10ae58dd35fb474c3ee67178749238fc5bd110717a6e6e",
+    "reference": "blobot-machine-codex:7d78c9d89189a3a43e10-arm64",
+    "imageId": "sha256:ad2a973ec98f7f7ec07e0991347381d609af3069fcf2797600dd559c8f77137b",
+    "imageBytes": 719319010,
+    "versionOutput": "codex-cli 0.151.0",
+    "base": "docker/sandbox-templates@sha256:5fc81bc7a127e59d81b244a06831ae3212a0310b2e5a0349c54e29249e45e919",
+    "guestNode": "/usr/bin/node",
+    "moduleRoot": "/opt/blobot",
+    "executable": "/opt/blobot/bin/codex"
+  },
+  "scope": "One credential-free local build in sbx deny-all; idle boot, version, signed-out status, ACP initialize only.",
+  "candidate": "blobot-traffic-probe:codex-2425727a-186a-49fb-a4ba-ea27bc5910c7",
+  "commands": [
+    {
+      "label": "daemon status",
+      "tool": "sbx",
+      "ms": 115.51054199999999,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "version --json",
+      "tool": "sbx",
+      "ms": 124.42237499999999,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "settings get",
+      "tool": "sbx",
+      "ms": 255.67225000000002,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 134.27495900000008,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "template ls",
+      "tool": "sbx",
+      "ms": 119.74466700000005,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 176.42208299999993,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "verify-built-image",
+      "tool": "docker",
+      "ms": 63.93004199999996,
+      "code": 1,
+      "killed": false
+    }
+  ],
+  "policySnapshots": [],
+  "phases": [],
+  "cleanup": {
+    "errors": [],
+    "remainingBoxes": [],
+    "remainingImages": []
+  },
+  "observationWindowsMs": {
+    "idleBoot": 15000,
+    "afterVersion": 3000,
+    "afterStatus": 10000,
+    "initializeAfterResponse": 10000
+  },
+  "engine": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "policyBeforeCreate": {
+    "global": {
+      "rules": [
+        {
+          "id": "default-deny-all",
+          "name": "default-deny-all",
+          "policy_name": "default-deny-all",
+          "scope": "global",
+          "applies_to": "all",
+          "resource_type": "network",
+          "decision": "deny",
+          "resources": [
+            "**"
+          ],
+          "origin": "local",
+          "layer": "local",
+          "status": "active",
+          "editable": false
+        }
+      ]
+    }
+  },
+  "hostSpace": {
+    "availableBytes": "7601913856",
+    "requiredBytes": "2512379844"
+  },
+  "measurementCompleted": false,
+  "error": "verify-built-image failed (1): Error response from daemon: No such image: blobot-machine-codex:7d78c9d89189a3a43e10-arm64\n",
+  "finishedAt": "2026-09-05T19:05:29.437Z"
+}

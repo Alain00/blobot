@@ -60,6 +60,7 @@ export class SleepingRuntime implements AgentRuntime {
   get availableCommands() { return this.#runtime.availableCommands; }
   get accepts() { return this.#runtime.accepts; }
   get optionGroups() { return this.#runtime.optionGroups; }
+  get machineImage() { return this.#runtime.machineImage; }
 
   async start(): Promise<void> {
     if (this.#lifecycle !== 'created') throw new Error('Agent execution has already started.');

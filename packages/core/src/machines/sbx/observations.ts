@@ -43,11 +43,15 @@ export function verifySbxStopped(value: unknown, expected: SbxReference): void {
 /** Fixed code, no application paths or payload values. Run as root and the Agent UID. */
 export const SBX_BOUNDARY_PROBE = String.raw`
 const fs=require('node:fs'),os=require('node:os');
+const mountinfo=fs.readFileSync('/proc/self/mountinfo','utf8');
 let sshAbsent=false;try{fs.lstatSync('/run/ssh-agent.sock')}catch(e){if(e.code!=='ENOENT')throw e;sshAbsent=true}
 console.log(JSON.stringify({uid:process.getuid(),cpus:os.cpus().length,
  memoryKiB:Number(/^MemTotal:\s+(\d+) kB$/m.exec(fs.readFileSync('/proc/meminfo','utf8'))?.[1]),
- sshAbsent,mountinfo:fs.readFileSync('/proc/self/mountinfo','utf8'),
- roots:JSON.parse(process.argv[1]||'["/home/agent","/workspace"]').map(path=>{const s=fs.lstatSync(path);return {path,uid:s.uid,gid:s.gid,mode:s.mode&4095,directory:s.isDirectory(),device:s.dev}})}));
+ sshAbsent,mountinfo,
+ roots:JSON.parse(process.argv[1]||'["/home/agent","/workspace"]').map(path=>{const s=fs.lstatSync(path);
+ const mounts=mountinfo.trim().split('\n').map(line=>line.split(' ')).filter(fields=>fields[4]===path);
+ let blockBytes; if(mounts.length===1){try{blockBytes=Number(fs.readFileSync('/sys/dev/block/'+mounts[0][2]+'/size','utf8'))*512}catch{}}
+ return {path,uid:s.uid,gid:s.gid,mode:s.mode&4095,directory:s.isDirectory(),device:s.dev,blockBytes}})}));
 `;
 
 export interface SbxBoundaryBaseline {
@@ -61,9 +65,11 @@ export interface SbxBoundaryBaseline {
  * these checks cannot establish immutable image/config identity against out-of-band changes.
  */
 export function verifySbxBoundary(value: unknown, limits: MachineLimits, uid: 0 | 1000,
-  baseline?: SbxBoundaryBaseline, workspace?: BoxWorkspaceMounts): SbxBoundaryBaseline {
+  baseline?: SbxBoundaryBaseline, workspace?: BoxWorkspaceMounts,
+  storage?: { readonly homeBytes: number; readonly dockerBytes: number }): SbxBoundaryBaseline {
   if (workspace !== undefined) validateBoxWorkspaceMounts(workspace);
-  const privatePaths = workspace === undefined ? ['/home/agent', '/workspace'] : ['/home/agent'];
+  const privatePaths = [...(workspace === undefined ? ['/home/agent', '/workspace'] : ['/home/agent']),
+    ...(storage === undefined ? [] : ['/var/lib/docker'])];
   const data = object(value);
   if (data['uid'] !== uid || data['sshAbsent'] !== true || data['cpus'] !== limits.maxCpus) {
     throw new Error('Sandbox identity, CPU ceiling or SSH isolation could not be verified.');
@@ -88,9 +94,13 @@ export function verifySbxBoundary(value: unknown, limits: MachineLimits, uid: 0 
   for (const path of privatePaths) {
     const roots = data['roots'].map(object).filter((root) => root['path'] === path);
     const root = roots[0];
-    if (roots.length !== 1 || root?.['uid'] !== 1000 || root['gid'] !== 1000 || root['mode'] !== 0o700 || root['directory'] !== true) {
+    const docker = path === '/var/lib/docker';
+    if (roots.length !== 1 || root?.['uid'] !== (docker ? 0 : 1000) || root['gid'] !== (docker ? 0 : 1000) ||
+        root['mode'] !== (docker ? 0o710 : 0o700) || root['directory'] !== true) {
       throw new Error('Sandbox private volume permissions do not match.');
     }
+    const capacity = path === '/home/agent' ? storage?.homeBytes : docker ? storage?.dockerBytes : undefined;
+    if (capacity !== undefined && root['blockBytes'] !== capacity) throw new Error('Sandbox private volume capacity does not match.');
     const mounted = mounts.filter((mount) => mount.path === path);
     if (mounted.length !== 1 || mounted[0]?.kind !== 'ext4' || !mounted[0].mode?.includes('rw')) {
       throw new Error('Sandbox private volume mount does not match.');
@@ -109,7 +119,10 @@ export function verifySbxBoundary(value: unknown, limits: MachineLimits, uid: 0 
   }
   const kinds = new Set(['overlay', 'ext4', 'proc', 'tmpfs', 'devtmpfs', 'sysfs', 'cgroup2', 'devpts', 'mqueue', 'virtiofs']);
   if (mounts.some((mount) => !kinds.has(mount.kind ?? ''))) throw new Error('Unknown sandbox filesystem boundary.');
-  const normalized = JSON.stringify(mounts.map((mount) => [mount.path, mount.kind, [...mount.mode ?? []].sort()]).sort());
+  // Inner containers can add mounts below their own data root. The top-level private
+  // device and every host mount remain checked; their workload does not change that boundary.
+  const normalized = JSON.stringify(mounts.filter(mount => storage === undefined || !mount.path?.startsWith('/var/lib/docker/'))
+    .map((mount) => [mount.path, mount.kind, [...mount.mode ?? []].sort()]).sort());
   if (baseline !== undefined && normalized !== baseline.mounts) throw new Error('Sandbox mounts changed.');
   const roots = data['roots'].map(object);
   if (roots.some((root) => typeof root['device'] !== 'number') || new Set(roots.map((root) => root['device'])).size !== roots.length) {

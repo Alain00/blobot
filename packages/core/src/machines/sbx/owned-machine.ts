@@ -269,7 +269,9 @@ export class OwnedSbxMachine implements Machine {
       if (sameMachineLimits(original.limits, desired)) return;
       // A mounted Workspace needs no copy. The remaining private system/Docker state must
       // be preserved by the image contract before replacement is admitted.
-      if (this.#options.kit.workspace !== undefined) throw new Error('Resource changes await complete Machine state preservation. The Machine was kept.');
+      if (this.#options.kit.workspace !== undefined || this.#options.kit.dockerBytes !== undefined) {
+        throw new Error('Resource changes await complete Machine state preservation. The Machine was kept.');
+      }
       this.#started = false;
       await this.#identity(original);
       record = await this.#revokeMailbox(record);
@@ -346,7 +348,7 @@ export class OwnedSbxMachine implements Machine {
       await this.#options.registry.save({ ...record, pending: { ...pending, id: reference.id } });
       await this.#identity(reference);
       const rootProbe = await this.#json(['exec', '-u', '0', name, record.kit.guestNode, '-e', SBX_BOUNDARY_PROBE, this.#privatePaths()]);
-      const baseline = verifySbxBoundary(rootProbe, limits, 0, undefined, record.kit.workspace);
+      const baseline = verifySbxBoundary(rootProbe, limits, 0, undefined, record.kit.workspace, this.#storage());
       const active: OwnedSbx = { ...reference, limits, baseline };
       await this.#boundary(active);
       verifySbxNetworkRules(await this.#rules(active));
@@ -374,12 +376,17 @@ export class OwnedSbxMachine implements Machine {
     await this.#identity(reference);
     for (const uid of [0, 1000] as const) {
       verifySbxBoundary(await this.#json(['exec', '-u', String(uid), reference.name, this.#options.kit.guestNode, '-e', SBX_BOUNDARY_PROBE, this.#privatePaths()]),
-        reference.limits, uid, reference.baseline, this.#options.kit.workspace);
+        reference.limits, uid, reference.baseline, this.#options.kit.workspace, this.#storage());
     }
     await this.#identity(reference);
   }
   #privatePaths(): string {
-    return JSON.stringify(this.#options.kit.workspace === undefined ? ['/home/agent', '/workspace'] : ['/home/agent']);
+    return JSON.stringify([...(this.#options.kit.workspace === undefined ? ['/home/agent', '/workspace'] : ['/home/agent']),
+      ...(this.#options.kit.dockerBytes === undefined ? [] : ['/var/lib/docker'])]);
+  }
+  #storage(): { homeBytes: number; dockerBytes: number } | undefined {
+    return this.#options.kit.dockerBytes === undefined ? undefined
+      : { homeBytes: this.#options.kit.dataBytes, dockerBytes: this.#options.kit.dockerBytes };
   }
   async #stopOwned(reference: SbxReference): Promise<void> {
     await this.#identity(reference);

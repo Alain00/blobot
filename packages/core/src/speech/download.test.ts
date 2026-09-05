@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import * as fs from 'node:fs/promises';
 import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { CHECKSUM_MISMATCH, downloadVerified } from './download.js';
 
 const BODY = Buffer.from('x'.repeat(50_000) + 'y'.repeat(50_000));
@@ -116,5 +117,25 @@ describe('a verified download', () => {
     const to = join(await dir(), 'whisper-cli');
     await downloadVerified({ url: `${base}/b`, sha256: SHA, to, executable: true });
     expect((await stat(to)).mode & 0o111).not.toBe(0);
+  });
+
+  it('returns a disk write failure without publishing an incomplete file, then permits retry', async () => {
+    const to = join(await dir(), 'runtime.tar');
+    const handle = await fs.open(`${to}.probe`, 'w');
+    const writeSpy = vi.spyOn(Object.getPrototypeOf(handle), 'writeFile')
+      .mockRejectedValueOnce(new Error('ENOSPC: no space left on device'));
+    try {
+      const outcome = await downloadVerified({ url: `${base}/w`, sha256: SHA, to });
+      expect(outcome).toMatchObject({ ok: false, error: 'ENOSPC: no space left on device', received: 0 });
+      await expect(stat(to)).rejects.toThrow();
+    } finally { writeSpy.mockRestore(); await handle.close(); }
+    expect(await downloadVerified({ url: `${base}/w`, sha256: SHA, to })).toEqual({ ok: true, bytes: BODY.length });
+  });
+
+  it('refuses an incorrect pinned length even when the checksum matches', async () => {
+    const to = join(await dir(), 'runtime.tar');
+    expect(await downloadVerified({ url: `${base}/w`, sha256: SHA, bytes: BODY.length + 1, to }))
+      .toEqual({ ok: false, kind: 'checksum', error: CHECKSUM_MISMATCH });
+    await expect(stat(to)).rejects.toThrow();
   });
 });

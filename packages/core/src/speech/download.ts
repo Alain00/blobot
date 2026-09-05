@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { createWriteStream } from 'node:fs';
 import { mkdir, open, rename, rm, stat, chmod } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
@@ -84,36 +83,35 @@ export async function downloadVerified(request: DownloadRequest): Promise<Downlo
   const total = totalOf(response, received, request.bytes);
   const freshHash = append ? hash : createHash('sha256');
 
-  const out = createWriteStream(part, { flags: append ? 'a' : 'w' });
+  let out: Awaited<ReturnType<typeof open>> | undefined;
   try {
+    out = await open(part, append ? 'a' : 'w');
     for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
+      request.signal?.throwIfAborted();
+      // Await disk writes too: ENOSPC must reject the download, never emit an unhandled
+      // stream error or leave a promise waiting forever for a drain that cannot happen.
+      await out.writeFile(chunk);
       freshHash.update(chunk);
       received += chunk.byteLength;
-      if (!out.write(chunk)) await new Promise<void>((resolve) => out.once('drain', resolve));
       request.onProgress?.(received, total);
     }
+    request.signal?.throwIfAborted();
+    await out.close();
+    out = undefined;
   } catch (error) {
-    // What arrived is kept on disk, flushed, so the retry resumes from exactly this byte.
-    await finish(out);
+    await out?.close().catch(() => {});
     if (request.signal?.aborted === true) return cancelled(part);
-    return { ok: false, kind: 'network', error: describe(error), received };
+    // A failed write can be partial. Resume from bytes actually on disk, not bytes fetched.
+    return { ok: false, kind: 'network', error: describe(error), received: (await stat(part).catch(() => undefined))?.size ?? 0 };
   }
-  await finish(out);
 
-  if (freshHash.digest('hex') !== request.sha256.toLowerCase()) {
+  if ((request.bytes !== undefined && received !== request.bytes) || freshHash.digest('hex') !== request.sha256.toLowerCase()) {
     await rm(part, { force: true });
     return { ok: false, kind: 'checksum', error: CHECKSUM_MISMATCH };
   }
   await rename(part, request.to);
   if (request.executable === true) await chmod(request.to, 0o755);
   return { ok: true, bytes: received };
-}
-
-function finish(out: ReturnType<typeof createWriteStream>): Promise<void> {
-  return new Promise<void>((resolve) => {
-    out.once('error', () => resolve());
-    out.end(() => resolve());
-  });
 }
 
 async function cancelled(part: string): Promise<DownloadOutcome> {

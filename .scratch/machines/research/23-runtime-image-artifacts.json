@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "retrievedAt": "2026-09-05",
+  "purpose": "Build inputs only; these are not built/released image digests or ACP acceptance evidence.",
+  "node": {
+    "version": "22.22.1",
+    "arm64": {
+      "url": "https://nodejs.org/dist/v22.22.1/node-v22.22.1-linux-arm64.tar.xz",
+      "sha256": "0f3550d58d45e5d3cf7103d9e3f69937f09fe82fb5dd474c66a5d816fa58c9ee"
+    },
+    "amd64": {
+      "url": "https://nodejs.org/dist/v22.22.1/node-v22.22.1-linux-x64.tar.xz",
+      "sha256": "9a6bc82f9b491279147219f6a18add1e18424dce90d41d2a5fcd69d4924ba3aa"
+    },
+    "source": "https://nodejs.org/dist/v22.22.1/SHASUMS256.txt"
+  },
+  "runtimes": {
+    "claude": {
+      "version": "2.1.260",
+      "arm64": {
+        "url": "https://downloads.claude.ai/claude-code-releases/2.1.260/linux-arm64/claude",
+        "sha256": "9811afb5f97224c2c5d3d0ee1e8c316117d298d5ec3e095d5ff0c1dd0e889ca5",
+        "bytes": 214228392,
+        "source": "https://downloads.claude.ai/claude-code-releases/2.1.260/manifest.json",
+        "verification": "publisher versioned manifest; binary not downloaded in this research",
+        "compressed": {
+          "url": "https://downloads.claude.ai/claude-code-releases/2.1.260/linux-arm64/claude.zst",
+          "sha256": "cfd17d6812c2bd7c2e9c4bc028786e5619db2962a17ac10b77667a3ff1148877",
+          "bytes": 74961889,
+          "source": "https://downloads.claude.ai/claude-code-releases/2.1.260/manifest.zst.json"
+        }
+      },
+      "amd64": {
+        "url": "https://downloads.claude.ai/claude-code-releases/2.1.260/linux-x64/claude",
+        "sha256": "7a2fdc74b6836ea3d183f665b869f0ee3baebc9713cbebffe5838da4ea7bd82e",
+        "bytes": 214687216,
+        "source": "https://downloads.claude.ai/claude-code-releases/2.1.260/manifest.json",
+        "verification": "publisher versioned manifest; binary not downloaded in this research",
+        "compressed": {
+          "url": "https://downloads.claude.ai/claude-code-releases/2.1.260/linux-x64/claude.zst",
+          "sha256": "ad1c0b3f2de334f4bcb4a783c275b1af7a5945c0c955a9c7352cf4fa0666a7ec",
+          "bytes": 75589735,
+          "source": "https://downloads.claude.ai/claude-code-releases/2.1.260/manifest.zst.json"
+        }
+      }
+    },
+    "codex": {
+      "version": "0.151.0",
+      "arm64": {
+        "url": "https://github.com/openai/codex/releases/download/rust-v0.151.0/codex-package-aarch64-unknown-linux-musl.tar.gz",
+        "sha256": "c64ad6e4f82609552a37069365b50528ef49e986aeab24a538781a18a402773d",
+        "bytes": 122432916,
+        "verification": "publisher GitHub release asset digest; binary not downloaded in this research",
+        "source": "https://api.github.com/repos/openai/codex/releases/tags/rust-v0.151.0"
+      },
+      "amd64": {
+        "url": "https://github.com/openai/codex/releases/download/rust-v0.151.0/codex-package-x86_64-unknown-linux-musl.tar.gz",
+        "sha256": "6e35ac60b86c0e8c7f8bcf797be8b92206199f6253200b66ff0547276f8cfa5c",
+        "bytes": 131450621,
+        "verification": "publisher GitHub release asset digest; binary not downloaded in this research",
+        "source": "https://api.github.com/repos/openai/codex/releases/tags/rust-v0.151.0"
+      },
+      "layout": "Preserve complete package: bin/codex, bin/codex-code-mode-host, codex-resources, codex-path, codex-package.json"
+    },
+    "opencode": {
+      "version": "1.18.4",
+      "arm64": {
+        "url": "https://github.com/anomalyco/opencode/releases/download/v1.18.4/opencode-linux-arm64.tar.gz",
+        "sha256": "eba87efba3976d533a24cca0316f8ef375b5f8e797c0a95c25ee919700b7ba35",
+        "bytes": 59079134,
+        "verification": "publisher GitHub release asset digest; binary not downloaded in this research",
+        "source": "https://api.github.com/repos/anomalyco/opencode/releases/tags/v1.18.4"
+      },
+      "amd64": {
+        "url": "https://github.com/anomalyco/opencode/releases/download/v1.18.4/opencode-linux-x64-baseline.tar.gz",
+        "sha256": "4d87e414607b77fef940256021e42fbbf37b8c62b06ced76b69e26c5dcbfbabc",
+        "bytes": 59265643,
+        "verification": "publisher GitHub release asset digest; binary not downloaded in this research",
+        "source": "https://api.github.com/repos/anomalyco/opencode/releases/tags/v1.18.4"
+      },
+      "amd64Avx2Alternative": {
+        "url": "https://github.com/anomalyco/opencode/releases/download/v1.18.4/opencode-linux-x64.tar.gz",
+        "sha256": "bab463c3fb3224d388bb7cfad63f38703df9cf0be2cfd2ce8cb49d886b53a174",
+        "bytes": 59265621,
+        "verification": "publisher GitHub release asset digest; binary not downloaded in this research",
+        "source": "https://api.github.com/repos/anomalyco/opencode/releases/tags/v1.18.4"
+      },
+      "selection": "glibc; x64-baseline avoids requiring AVX2, subject to actual target acceptance"
+    },
+    "fx": {
+      "version": "0.0.7",
+      "arm64": {
+        "url": "https://github.com/vercel-labs/fx/releases/download/v0.0.7/fx-linux-aarch64.tar.gz",
+        "sha256": "4a3fb1b0114b8a4f933de64f85fb2288095c17631a0c3ca897aa05601d049974",
+        "bytes": 5161076,
+        "verification": "publisher GitHub release asset digest; binary not downloaded in this research",
+        "source": "https://api.github.com/repos/vercel-labs/fx/releases/tags/v0.0.7"
+      },
+      "amd64": {
+        "url": "https://github.com/vercel-labs/fx/releases/download/v0.0.7/fx-linux-x86_64.tar.gz",
+        "sha256": "c5787ea041d3b5521ec675f1ada78f30cf1b11021ffcac48b4969cf5beb65c45",
+        "bytes": 5232632,
+        "verification": "publisher GitHub release asset digest; binary not downloaded in this research",
+        "source": "https://api.github.com/repos/vercel-labs/fx/releases/tags/v0.0.7"
+      }
+    },
+    "cursor": {
+      "version": "2026.09.02-c22c1a3",
+      "arm64": {
+        "url": "https://downloads.cursor.com/lab/2026.09.02-c22c1a3/linux/arm64/agent-cli-package.tar.gz",
+        "sha256": "fb7bc635be6172ebcf68f907fd9217e3614da51916455c6d7fdb66690997884c",
+        "bytes": 177647834,
+        "localPath": "/private/tmp/blobot-runtime-inputs.clqdM3/cursor-arm64.tar.gz",
+        "verification": "full exact-version tar downloaded and SHA256 measured locally; no independently published checksum established",
+        "source": "https://cursor.com/install"
+      },
+      "amd64": {
+        "url": "https://downloads.cursor.com/lab/2026.09.02-c22c1a3/linux/x64/agent-cli-package.tar.gz",
+        "sha256": "b73b59854762535c0fc20d7ccc51c3b5a356a851491088d60a362be48750f53c",
+        "bytes": 179684142,
+        "localPath": "/private/tmp/blobot-runtime-inputs.clqdM3/cursor-x64.tar.gz",
+        "verification": "full exact-version tar downloaded and SHA256 measured locally; no independently published checksum established",
+        "source": "https://cursor.com/install"
+      },
+      "layout": "dist-package/ contains bundled node, launcher, JS chunks, native .node libraries and helpers; keep complete sibling layout"
+    }
+  },
+  "bridges": {
+    "claude": {
+      "name": "@agentclientprotocol/claude-agent-acp",
+      "version": "0.70.0",
+      "url": "https://registry.npmjs.org/@agentclientprotocol/claude-agent-acp/-/claude-agent-acp-0.70.0.tgz",
+      "integrity": "sha512-Psqj6fhV4pQ8IM480zpJ+xGiMMIqNLxlsTj5Mzn+T8KSURCVNJdl0ktcqLMjgHJC/QnOvDdDkFf3xTW9VIV9aQ==",
+      "unpackedBytes": 636604,
+      "dependencies": {
+        "zod": "^3.25.0 || ^4.0.0",
+        "@agentclientprotocol/sdk": "1.3.0",
+        "@anthropic-ai/claude-agent-sdk": "0.3.232"
+      },
+      "optionalDependencies": {},
+      "source": "https://registry.npmjs.org/@agentclientprotocol/claude-agent-acp/0.70.0",
+      "engines": {
+        "node": ">=22"
+      }
+    },
+    "claudeSdk": {
+      "name": "@anthropic-ai/claude-agent-sdk",
+      "version": "0.3.232",
+      "url": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk/-/claude-agent-sdk-0.3.232.tgz",
+      "integrity": "sha512-8od7hJk9fZnF1/oYYiR9PvroGbZRQrpmNgKirjHNGoj5ur5YcAZLohI70XVUAUe3KvjB1msLxtkvmlAT9sqFAg==",
+      "unpackedBytes": 4510414,
+      "dependencies": {},
+      "optionalDependencies": {
+        "@anthropic-ai/claude-agent-sdk-linux-x64": "0.3.232",
+        "@anthropic-ai/claude-agent-sdk-win32-x64": "0.3.232",
+        "@anthropic-ai/claude-agent-sdk-darwin-x64": "0.3.232",
+        "@anthropic-ai/claude-agent-sdk-linux-arm64": "0.3.232",
+        "@anthropic-ai/claude-agent-sdk-win32-arm64": "0.3.232",
+        "@anthropic-ai/claude-agent-sdk-darwin-arm64": "0.3.232",
+        "@anthropic-ai/claude-agent-sdk-linux-x64-musl": "0.3.232",
+        "@anthropic-ai/claude-agent-sdk-linux-arm64-musl": "0.3.232"
+      },
+      "source": "https://registry.npmjs.org/@anthropic-ai/claude-agent-sdk/0.3.232",
+      "engines": {
+        "node": ">=18.0.0"
+      },
+      "peerDependencies": {
+        "zod": "^4.0.0",
+        "@anthropic-ai/sdk": ">=0.93.0",
+        "@modelcontextprotocol/sdk": "^1.29.0"
+      }
+    },
+    "codex": {
+      "name": "@agentclientprotocol/codex-acp",
+      "version": "1.7.0",
+      "url": "https://registry.npmjs.org/@agentclientprotocol/codex-acp/-/codex-acp-1.7.0.tgz",
+      "integrity": "sha512-+nUhAJyunx8Zc7r3jjLPoMPPUkkk02TmBIosln4l+ugRNUOdNQAMm6toZo7xb+mF1yM5zxJB83qvy/bPmOTaaw==",
+      "unpackedBytes": 1244361,
+      "dependencies": {
+        "zod": "^4.0.0",
+        "diff": "^9.0.0",
+        "open": "^11.0.1",
+        "@openai/codex": "^0.148.0",
+        "vscode-jsonrpc": "^9.0.1",
+        "@agentclientprotocol/sdk": "^1.4.0"
+      },
+      "optionalDependencies": {},
+      "source": "https://registry.npmjs.org/@agentclientprotocol/codex-acp/1.7.0"
+    }
+  },
+  "limits": [
+    "Node/native Claude/Codex/OpenCode/fx binary digests are publisher metadata; these bytes were not downloaded here.",
+    "Only Cursor Linux tarballs were fully downloaded; no provider executed.",
+    "Top-level npm versions do not lock transitive dependencies.",
+    "Image build and authenticated ACP/mailbox acceptance remain separate."
+  ]
+}

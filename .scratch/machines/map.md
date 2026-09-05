@@ -62,6 +62,14 @@ amended, and it is not to be worked around quietly.
 
 ## Notes
 
+**Continuous implementation goal, 2026-09-05 (Guillermo).** Complete the entire Machines
+implementation, resuming the claimed image ticket. Validate throughout, commit each completed
+ticket separately, and write a checkpoint at each issue boundary so context can be compacted
+without losing decisions or evidence. This supersedes the earlier two-ticket/session and
+stop-for-handoff limits. Use `grill-with-docs` and pause for non-obvious product/trust decisions;
+the author delegates basic implementation choices. Do not reopen the accepted sbx engine,
+worktree/shared-Git boundary, base or storage capacities merely because context changed.
+
 **Current continuation, 2026-09-05 (Guillermo): worktrees on both kinds.** The author rejected
 the independent box clone after clarifying clone/worktree/remote semantics. The host-access
 portion of [What a Machine is, and what grain it hangs at](issues/01-what-a-machine-is.md)
@@ -69,8 +77,8 @@ is resolved with the author’s explicit acceptance of shared Git metadata RW; t
 decisions stand.
 [Where a Workspace lives when the Machine is not this one](issues/05-where-a-workspace-lives.md)
 is implemented and resolved. Continue the claimed
-[The image: one per runtime](issues/13-the-image-one-per-runtime.md), whose proposed base awaits
-the author’s answer.
+[The image: one per runtime](issues/13-the-image-one-per-runtime.md), using the base accepted
+in that ticket's **Base decision** section.
 The Workspace ticket's current-direction section supersedes its historical clone design. A synthetic
 worktree mount has been verified in sbx; the evidence and its limits live on the tickets.
 This changes neither the engine choice nor the two-ticket continuation request; the image

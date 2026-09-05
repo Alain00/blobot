@@ -1,0 +1,459 @@
+{
+  "date": "2026-09-05T18:30:28.984Z",
+  "scope": "synthetic-private-Docker-only",
+  "commands": [
+    {
+      "label": "create-source",
+      "ms": 3069.282792,
+      "code": 0
+    },
+    {
+      "label": "inventory-source",
+      "ms": 715.0854169999993,
+      "code": 0
+    },
+    {
+      "label": "uid1000-docker-access",
+      "ms": 332.2536249999994,
+      "code": 0
+    },
+    {
+      "label": "seed-real-Docker",
+      "ms": 2831.5144170000003,
+      "code": 0
+    },
+    {
+      "label": "state-before",
+      "ms": 290.3129169999993,
+      "code": 0
+    },
+    {
+      "label": "quiesce-source-before-snapshot",
+      "ms": 1351.7063750000016,
+      "code": 0
+    },
+    {
+      "label": "quiesce-source-before-snapshot-independent-exec",
+      "ms": 822.8026250000003,
+      "code": 0
+    },
+    {
+      "label": "remove-owned-box",
+      "ms": 335.97350000000006,
+      "code": 0
+    }
+  ],
+  "checks": {
+    "oneAutomaticDockerMount": true,
+    "actualContainerdRootMeasured": true,
+    "sameVmBetweenQuiescenceAndWarmExec": true,
+    "independentWarmExecKeepsDockerStopped": false
+  },
+  "cleanup": {
+    "errors": [],
+    "remainingBoxes": [],
+    "remainingTemplates": []
+  },
+  "previousAttempts": [
+    {
+      "date": "2026-09-05T18:27:41.048Z",
+      "error": "Fixture command failed: create-source (1): WARN: mcp gateway teardown\nERROR: failed to run sandbox container\n",
+      "commands": [
+        {
+          "label": "create-source",
+          "ms": 1433.5489170000003,
+          "code": 1,
+          "killed": false
+        }
+      ],
+      "cleanup": {
+        "errors": [],
+        "remainingBoxes": [],
+        "remainingTemplates": []
+      }
+    },
+    {
+      "date": "2026-09-05T18:28:33.378Z",
+      "error": "Fixture command failed: uid1000-docker-access (1): g to connect to the docker API at unix:///var/run/docker.sock\\n'\n  ],\n  pid: 336,\n  stdout: '{\"ID\":\"\",\"Containers\":0,\"ContainersRunning\":0,\"ContainersPaused\":0,\"ContainersStopped\":0,\"Images\":0,\"Driver\":\"\",\"DriverStatus\":null,\"Plugins\":{\"Volume\":null,\"Network\":null,\"Authorization\":null,\"Log\":null},\"MemoryLimit\":false,\"SwapLimit\":false,\"CpuCfsPeriod\":false,\"CpuCfsQuota\":false,\"CPUShares\":false,\"CPUSet\":false,\"PidsLimit\":false,\"IPv4Forwarding\":false,\"Debug\":false,\"NFd\":0,\"OomKillDisable\":false,\"NGoroutines\":0,\"SystemTime\":\"\",\"LoggingDriver\":\"\",\"CgroupDriver\":\"\",\"NEventsListener\":0,\"KernelVersion\":\"\",\"OperatingSystem\":\"\",\"OSVersion\":\"\",\"OSType\":\"\",\"Architecture\":\"\",\"IndexServerAddress\":\"\",\"RegistryConfig\":null,\"NCPU\":0,\"MemTotal\":0,\"GenericResources\":null,\"DockerRootDir\":\"\",\"HttpProxy\":\"\",\"HttpsProxy\":\"\",\"NoProxy\":\"\",\"Name\":\"\",\"Labels\":null,\"ExperimentalBuild\":false,\"ServerVersion\":\"\",\"Runtimes\":null,\"DefaultRuntime\":\"\",\"Swarm\":{\"NodeID\":\"\",\"NodeAddr\":\"\",\"LocalNodeState\":\"\",\"ControlAvailable\":false,\"Error\":\"\",\"RemoteManagers\":null},\"LiveRestoreEnabled\":false,\"Isolation\":\"\",\"InitBinary\":\"\",\"ContainerdCommit\":{\"ID\":\"\"},\"RuncCommit\":{\"ID\":\"\"},\"InitCommit\":{\"ID\":\"\"},\"SecurityOptions\":null,\"CDISpecDirs\":null,\"Warnings\":null,\"ClientInfo\":{\"Debug\":false,\"Platform\":{\"Name\":\"Docker Engine - Community\"},\"Version\":\"29.7.2\",\"DefaultAPIVersion\":\"1.55\",\"GitCommit\":\"a7dcaa6\",\"GoVersion\":\"go1.26.5\",\"Os\":\"linux\",\"Arch\":\"arm64\",\"BuildTime\":\"Wed Aug  5 18:29:01 2026\",\"Context\":\"default\",\"Plugins\":[{\"SchemaVersion\":\"0.1.0\",\"Vendor\":\"Docker Inc.\",\"Version\":\"v0.36.1\",\"ShortDescription\":\"Docker Buildx\",\"Name\":\"buildx\",\"Path\":\"/usr/libexec/docker/cli-plugins/docker-buildx\"},{\"SchemaVersion\":\"0.1.0\",\"Vendor\":\"Docker Inc.\",\"Version\":\"v5.5.0\",\"ShortDescription\":\"Docker Compose\",\"Name\":\"compose\",\"Path\":\"/usr/libexec/docker/cli-plugins/docker-compose\"}],\"Warnings\":null}}\\n',\n  stderr: 'permission denied while trying to connect to the docker API at unix:///var/run/docker.sock\\n'\n}\n\nNode.js v22.22.1\n",
+      "commands": [
+        {
+          "label": "create-source",
+          "ms": 3100.4423749999996,
+          "code": 0
+        },
+        {
+          "label": "inventory-source",
+          "ms": 877.1734589999996,
+          "code": 0
+        },
+        {
+          "label": "uid1000-docker-access",
+          "ms": 295.2631250000004,
+          "code": 1,
+          "killed": false
+        },
+        {
+          "label": "remove-owned-box",
+          "ms": 321.08337500000016,
+          "code": 0
+        }
+      ],
+      "cleanup": {
+        "errors": [],
+        "remainingBoxes": [],
+        "remainingTemplates": []
+      }
+    },
+    {
+      "date": "2026-09-05T18:29:19.415Z",
+      "error": "Expected values to be strictly equal:\n\n2 !== 0\n",
+      "commands": [
+        {
+          "label": "create-source",
+          "ms": 2583.2930420000002,
+          "code": 0
+        },
+        {
+          "label": "inventory-source",
+          "ms": 346.74337500000047,
+          "code": 0
+        },
+        {
+          "label": "uid1000-docker-access",
+          "ms": 332.3447500000002,
+          "code": 0
+        },
+        {
+          "label": "seed-real-Docker",
+          "ms": 2883.7340839999997,
+          "code": 0
+        },
+        {
+          "label": "state-before",
+          "ms": 299.86062500000025,
+          "code": 0
+        },
+        {
+          "label": "quiesce-source-before-snapshot",
+          "ms": 1397.7816250000014,
+          "code": 0
+        },
+        {
+          "label": "quiesce-source-before-snapshot-independent-exec",
+          "ms": 885.3305409999994,
+          "code": 0
+        },
+        {
+          "label": "remove-owned-box",
+          "ms": 418.40912500000013,
+          "code": 0
+        }
+      ],
+      "cleanup": {
+        "errors": [],
+        "remainingBoxes": [],
+        "remainingTemplates": []
+      }
+    }
+  ],
+  "version": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "base": {
+    "id": "5fc81bc7a127",
+    "repository": "docker.io/docker/sandbox-templates",
+    "tag": "shell-docker",
+    "flavor": "shell-docker",
+    "created_at": "2026-09-04T18:54:27Z",
+    "size": 588725040
+  },
+  "sourceInitial": {
+    "boot": {
+      "id": "880ae97e-c8b9-4fe5-b00b-593e1ddad1fb",
+      "pid1": "6"
+    },
+    "processes": [
+      {
+        "pid": 112,
+        "comm": "dockerd",
+        "args": [
+          "dockerd"
+        ],
+        "start": "75"
+      },
+      {
+        "pid": 119,
+        "comm": "containerd",
+        "args": [
+          "containerd",
+          "--config",
+          "/var/run/docker/containerd/containerd.toml"
+        ],
+        "start": "101"
+      }
+    ],
+    "configs": [
+      {
+        "comm": "dockerd",
+        "path": "/etc/docker/daemon.json",
+        "text": null
+      },
+      {
+        "comm": "containerd",
+        "path": "/var/run/docker/containerd/containerd.toml",
+        "text": "version = 2\nroot = '/var/lib/docker/containerd/daemon'\nstate = '/var/run/docker/containerd/daemon'\ntemp = ''\ndisabled_plugins = ['io.containerd.grpc.v1.cri']\nrequired_plugins = []\noom_score = 0\nimports = []\n\n[debug]\nlevel = ''\nformat = 'text'\nlog_trace_id = false\naddress = '/var/run/docker/containerd/containerd-debug.sock'\n\n[cgroup]\npath = ''\n\n[grpc]\naddress = '/var/run/docker/containerd/containerd.sock'\nmax_recv_message_size = 16777216\nmax_send_message_size = 16777216\n"
+      }
+    ],
+    "docker": {
+      "running": true,
+      "root": "/var/lib/docker",
+      "driver": "overlayfs",
+      "driverStatus": [
+        [
+          "driver-type",
+          "io.containerd.snapshotter.v1"
+        ]
+      ],
+      "version": "29.7.2",
+      "liveRestore": false,
+      "security": [
+        "name=seccomp,profile=builtin",
+        "name=cgroupns"
+      ]
+    },
+    "mounts": [
+      "101 69 0:29 / / rw,relatime - overlay overlay rw,lowerdir=/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/1:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/2:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/3:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/4:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/5:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/6:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/7:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/8:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/9:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/10:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/11:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/12:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/13:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/14:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/15,upperdir=/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/0/upper,workdir=/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/0/work,uuid=on,nouserxattr",
+      "102 101 0:47 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw",
+      "103 101 0:48 / /dev rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "104 103 0:49 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=5,mode=620,ptmxmode=666",
+      "105 103 0:50 / /dev/shm rw,nosuid,nodev,noexec,relatime - tmpfs shm rw,size=65536k",
+      "106 103 0:46 / /dev/mqueue rw,nosuid,nodev,noexec,relatime - mqueue mqueue rw",
+      "107 101 0:51 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw",
+      "108 101 0:52 / /run rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "109 107 0:23 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup2 rw",
+      "110 108 0:53 / /run/secrets rw,nosuid,noexec,relatime - tmpfs tmpfs rw",
+      "111 101 254:48 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdd rw",
+      "112 101 254:64 / /home/agent rw,relatime - ext4 /dev/vde rw",
+      "113 101 254:80 / /workspace rw,relatime - ext4 /dev/vdf rw",
+      "114 101 0:27 /resolv.conf /etc/resolv.conf ro,relatime - virtiofs bind-95f03ffa45a7d998 rw",
+      "115 101 0:28 /hosts /etc/hosts ro,relatime - virtiofs bind-4a666ea3a3b04a24 rw"
+    ],
+    "uid": 0,
+    "groups": [
+      0
+    ]
+  },
+  "policyAtCleanBoot": {
+    "blocked_hosts": [],
+    "allowed_hosts": []
+  },
+  "uid1000Docker": {
+    "uid": 1000,
+    "groups": [
+      1000
+    ],
+    "socket": {
+      "uid": 0,
+      "gid": 1001,
+      "mode": 432
+    },
+    "dockerGroup": [
+      "docker:x:1001:agent"
+    ],
+    "direct": {
+      "ok": false,
+      "code": 1,
+      "stderr": "permission denied while trying to connect to the docker API at unix:///var/run/docker.sock"
+    },
+    "sudo": {
+      "ok": true,
+      "server": "29.7.2",
+      "root": "/var/lib/docker"
+    }
+  },
+  "containerdRoot": "/var/lib/docker/containerd/daemon",
+  "transferRoots": [
+    "/home/agent",
+    "/var/lib/docker"
+  ],
+  "seed": {
+    "imageId": "sha256:e3a68fc637019edb900d8c983503b438da3ab4019806e4009e20d97d246b83a4",
+    "volume": "blobot-volume-81bc67eb-5b11-4098-a7b3-844b8e36ad86",
+    "containerId": "81f430471ae015aad66ab3a1e63a3547fb1bf5758863e5be6e2ad88727718857",
+    "writerRan": true,
+    "stopped": true
+  },
+  "before": {
+    "image": {
+      "id": "sha256:e3a68fc637019edb900d8c983503b438da3ab4019806e4009e20d97d246b83a4",
+      "rootfs": {
+        "Type": "layers",
+        "Layers": [
+          "sha256:54c3eadbf19aff2cfd0432f6851fe112b33174562dfc469d436d9f461f900cf0"
+        ]
+      }
+    },
+    "container": {
+      "id": "81f430471ae015aad66ab3a1e63a3547fb1bf5758863e5be6e2ad88727718857",
+      "image": "sha256:e3a68fc637019edb900d8c983503b438da3ab4019806e4009e20d97d246b83a4",
+      "status": "exited",
+      "restart": {
+        "Name": "unless-stopped",
+        "MaximumRetryCount": 0
+      },
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "blobot-volume-81bc67eb-5b11-4098-a7b3-844b8e36ad86",
+          "source": "/var/lib/docker/volumes/blobot-volume-81bc67eb-5b11-4098-a7b3-844b8e36ad86/_data",
+          "destination": "/data"
+        }
+      ]
+    },
+    "volume": {
+      "name": "blobot-volume-81bc67eb-5b11-4098-a7b3-844b8e36ad86",
+      "driver": "local",
+      "mountpoint": "/var/lib/docker/volumes/blobot-volume-81bc67eb-5b11-4098-a7b3-844b8e36ad86/_data"
+    },
+    "files": {
+      "/opt/blobot-private-docker-sentinel": {
+        "sha256": "f0509ec0f82668e290b5afaaa266761ebb15b19937dc53481892e5b193a6c27e",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/home/agent/.synthetic-session": {
+        "sha256": "a46e440d96e0d22d8044ef7a5d99c208d4eaa5b87db538104777e1fd27d92ba8",
+        "mode": 384,
+        "uid": 1000,
+        "gid": 1000
+      },
+      "/var/lib/docker/volumes/blobot-volume-81bc67eb-5b11-4098-a7b3-844b8e36ad86/_data/volume-sentinel": {
+        "sha256": "82e715eca9ded7bb3528802bd36de73d62b6f0fcd5c537256874a6b4e64599e5",
+        "mode": 420,
+        "uid": 0,
+        "gid": 0
+      }
+    }
+  },
+  "quiescenceTrials": [
+    {
+      "label": "quiesce-source-before-snapshot",
+      "stopped": {
+        "before": [
+          {
+            "pid": 112,
+            "comm": "dockerd",
+            "args": [
+              "dockerd"
+            ],
+            "start": "75"
+          },
+          {
+            "pid": 119,
+            "comm": "containerd",
+            "args": [
+              "containerd",
+              "--config",
+              "/var/run/docker/containerd/containerd.toml"
+            ],
+            "start": "101"
+          }
+        ],
+        "after": [],
+        "boot": {
+          "id": "880ae97e-c8b9-4fe5-b00b-593e1ddad1fb",
+          "pid1": "6"
+        }
+      },
+      "warm": {
+        "boot": {
+          "id": "880ae97e-c8b9-4fe5-b00b-593e1ddad1fb",
+          "pid1": "6"
+        },
+        "processes": [
+          {
+            "pid": 626,
+            "comm": "dockerd",
+            "args": [
+              "dockerd"
+            ],
+            "start": "834"
+          },
+          {
+            "pid": 633,
+            "comm": "containerd",
+            "args": [
+              "containerd",
+              "--config",
+              "/var/run/docker/containerd/containerd.toml"
+            ],
+            "start": "835"
+          }
+        ],
+        "configs": [
+          {
+            "comm": "dockerd",
+            "path": "/etc/docker/daemon.json",
+            "text": null
+          },
+          {
+            "comm": "containerd",
+            "path": "/var/run/docker/containerd/containerd.toml",
+            "text": "version = 2\nroot = '/var/lib/docker/containerd/daemon'\nstate = '/var/run/docker/containerd/daemon'\ntemp = ''\ndisabled_plugins = ['io.containerd.grpc.v1.cri']\nrequired_plugins = []\noom_score = 0\nimports = []\n\n[debug]\nlevel = ''\nformat = 'text'\nlog_trace_id = false\naddress = '/var/run/docker/containerd/containerd-debug.sock'\n\n[cgroup]\npath = ''\n\n[grpc]\naddress = '/var/run/docker/containerd/containerd.sock'\nmax_recv_message_size = 16777216\nmax_send_message_size = 16777216\n"
+          }
+        ],
+        "docker": {
+          "running": true,
+          "root": "/var/lib/docker",
+          "driver": "overlayfs",
+          "driverStatus": [
+            [
+              "driver-type",
+              "io.containerd.snapshotter.v1"
+            ]
+          ],
+          "version": "29.7.2",
+          "liveRestore": false,
+          "security": [
+            "name=seccomp,profile=builtin",
+            "name=cgroupns"
+          ]
+        },
+        "mounts": [
+          "101 69 0:29 / / rw,relatime - overlay overlay rw,lowerdir=/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/1:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/2:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/3:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/4:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/5:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/6:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/7:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/8:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/9:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/10:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/11:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/12:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/13:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/14:/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/15,upperdir=/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/0/upper,workdir=/run/bundles/25b434dcd77adb1927d6e2a12692a95e4fe083ee4a63ce09c3ea4a4998733e06/mounts/0/work,uuid=on,nouserxattr",
+          "102 101 0:47 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw",
+          "103 101 0:48 / /dev rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+          "104 103 0:49 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=5,mode=620,ptmxmode=666",
+          "105 103 0:50 / /dev/shm rw,nosuid,nodev,noexec,relatime - tmpfs shm rw,size=65536k",
+          "106 103 0:46 / /dev/mqueue rw,nosuid,nodev,noexec,relatime - mqueue mqueue rw",
+          "107 101 0:51 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw",
+          "108 101 0:52 / /run rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+          "109 107 0:23 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup2 rw",
+          "110 108 0:53 / /run/secrets rw,nosuid,noexec,relatime - tmpfs tmpfs rw",
+          "111 101 254:48 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdd rw",
+          "112 101 254:64 / /home/agent rw,relatime - ext4 /dev/vde rw",
+          "113 101 254:80 / /workspace rw,relatime - ext4 /dev/vdf rw",
+          "114 101 0:27 /resolv.conf /etc/resolv.conf ro,relatime - virtiofs bind-95f03ffa45a7d998 rw",
+          "115 101 0:28 /hosts /etc/hosts ro,relatime - virtiofs bind-4a666ea3a3b04a24 rw"
+        ],
+        "uid": 0,
+        "groups": [
+          0
+        ]
+      }
+    }
+  ],
+  "passed": false,
+  "error": "Independent sbx exec restarted private Docker in the same VM; copying is refused\n\n2 !== 0\n"
+}

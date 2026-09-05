@@ -1,4 +1,5 @@
 import type { AgentEvent } from './events.js';
+import type { RuntimeImageDefinition } from './machines/runtime-image.js';
 
 /** One prompt handed to a session. Peer messages arrive here too, already enveloped. */
 export interface Prompt {
@@ -252,6 +253,8 @@ export interface AgentRuntime {
   readonly agentId: string;
   readonly sessionId: string;
   readonly lifecycle: RuntimeLifecycle;
+  /** Provider-owned box distribution; undefined for runtimes with no box image, such as the mock. */
+  readonly machineImage?: RuntimeImageDefinition | undefined;
 
   /** Spawn the process and create the session. Rejects if the runtime cannot start. */
   start(): Promise<void>;

@@ -28,6 +28,7 @@ import {
 } from './stdio-bridge.js';
 import { offerableNames, paletteOf } from './palette.js';
 import { LocalMachine } from '../../machines/local-machine.js';
+import { CLAUDE_MACHINE_IMAGE } from './image.js';
 import { requireLocalMachine, type Machine } from '../../machines/machine.js';
 import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
 import {
@@ -198,6 +199,7 @@ export interface ClaudeAgentRuntimeOptions {
  * event. Nothing above this class can tell which provider an agent is.
  */
 export class ClaudeAgentRuntime implements AgentRuntime {
+  readonly machineImage = CLAUDE_MACHINE_IMAGE;
   readonly agentId: string;
 
   readonly #options: ClaudeAgentRuntimeOptions;

@@ -469,6 +469,98 @@ data. Do not label those covered by the existing synthetic two-volume test.
 Claimed as the second implementation ticket in the author's two-ticket continuation.
 [Image decision frontier](../research/21-image-decision-frontier.md) separates existing
 answers, proposals and factual gates. The base proposal (a pinned common shell-docker
-derivative) is pending the author's answer. Do not infer approval from elapsed time.
+derivative) was accepted in the **Base decision** below; its other proposals remain proposals.
 Workspace now uses host worktrees; its former clone volume budget does not apply.
 No release image has been built or published in this continuation.
+
+### Resumed from handoff, 2026-09-05 — local snapshot coverage measured
+
+While the base choice was pending, independent synthetic investigation established
+local rootfs-versus-volume snapshot coverage and exposes engine-provided Docker startup and
+an overlapping Docker mount; see
+[Local templates and private Docker](../research/22-local-template-and-private-docker.md).
+That note links the runnable fixture and raw results. It narrows the factual persistence
+gate, not the release-image choice or permission to snapshot real Agent state. No production
+code or activation guard changed, no release was built, and this ticket remains claimed.
+
+### Base decision, 2026-09-05 (Guillermo)
+
+The author answered **“si acepto”** to the explicit recommendation to use a common derivative
+of Docker's shell template, pinned by hash, adding each runtime in its own image.
+Use `docker/sandbox-templates:shell-docker` at multi-platform digest
+`sha256:5fc81bc7a127e59d81b244a06831ae3212a0310b2e5a0349c54e29249e45e919`;
+the architecture manifests and source evidence are in
+[Image decision frontier](../research/21-image-decision-frontier.md).
+This settles the base only. Guest sudo and private Docker/Compose remain the already accepted
+capabilities; complete state preservation, measured capacities, image contents and release
+acceptance still need their own evidence and any remaining human decisions.
+
+### Architectures and initial capacity, 2026-09-05 (Guillermo)
+
+The author accepted **arm64 and amd64** build/distribution targets, and initial per-Agent
+capacity ceilings of **8 GiB for `/home/agent` and 20 GiB for private Docker**. The
+AgentWorkspace remains the host worktree, outside these private-volume budgets. These are
+capacity limits, not measured physical disk consumption or a claim that later resizing is
+implemented. Validate the effective engine sizes and report actual download/store costs
+separately. Do not retain the old placeholder of 4 GB total per Agent.
+
+### Implementation checkpoint — continuous goal, 2026-09-05
+
+The author now requests the entire Machines implementation as a continuous goal, with
+validation and one commit per ticket, and delegates basic implementation choices. Keep the
+five verified compatibility baselines in `images/machines/inputs.json`; this is an engineering
+choice under that delegation, not a fabricated answer to the earlier optional versions prompt.
+Keep shared images on Agent deletion. No automatic image garbage collector is introduced.
+The eventual explicit cleanup must check both active Machines and retained recovery Machines.
+
+The build recipe, bridge lockfiles, native CI matrix, draft-release assembler and standalone
+startup check are implemented in [the image build directory](../../../images/machines/README.md).
+Each final tag names its OCI manifest hash, separately from its recipe hash; changed bytes
+cannot silently rebuild under the same tag. Each runtime has a 1 GiB archive regression ceiling.
+Five Linux arm64 candidates have been built and their CLI versions verified. Linux amd64 is
+configured for native CI, not yet measured. No release has been published and adapter download
+lists remain empty until verified assets are available anonymously.
+
+Each adapter supplies its image definition through `AgentRuntime.machineImage`; the engine
+does not dispatch on provider names. `SbxImageStore` implements the already-decided verified
+Range download and template-load route, rejects conflicting references, and validates the
+archive's architecture, user, Docker storage label and both manifest formats before load.
+Shared download handling now reports disk-write failures instead of hanging and refuses a
+mismatched pinned length. Its real-engine fixture is [the installation receipt](../research/27-image-store-live-results.json);
+that initial receipt predates the final storage-label guard and content-derived tags.
+
+`start-docker=false` plus explicit privileged kit storage produces one home device of exactly
+8 GiB and one Docker device of exactly 20 GiB; see [the capacity and quiescence measurement](../research/28-explicit-docker-volumes-and-quiescence.md).
+The image's Docker wrapper uses guest sudo because RC5 omits supplementary groups. Core now
+verifies those capacities, the daemon's root-owned mode 0710 and distinct devices. Docker
+workload mounts beneath its private root do not change the host-mount boundary. Resource
+replacement stays refused for both mounted Workspaces and kits with explicit Docker storage
+until complete preservation is implemented; it never falls back to the old two-tree copy.
+
+The ticket remains claimed while the remaining real-image acceptance and persistence work is
+completed. Boot/first-start traffic is being measured independently of credential-free Docker
+ACP startup; a successful initialize is not evidence of mailbox delivery or a paid turn.
+
+### Acceptance results before publication, 2026-09-05
+
+- [All five signed-out sbx observations](../research/29-runtime-image-deny-all-traffic.md)
+  completed under deny-all. Boot/idle had no observed hosts; Codex, OpenCode and Cursor have
+  runtime-start requests. [Source attribution](../research/31-codex-first-start-hosts.md)
+  traces plugin initialization without silently disabling those capabilities. Egress owns
+  admission of these destinations. fx still requires authentication before initialize.
+- [Final local build receipts](../research/32-runtime-image-builds.json) retain the manifest
+  IDs and content-derived references. [The final real-store fixture](../research/33-image-store-fixture.mjs)
+  and [result](../research/33-image-store-fixture-results.json) pass the current storage-label,
+  dual-manifest and load/readiness checks, including the full content tag; cleanup is verified.
+- [The maintained-exec copy](../research/30-held-exec-preservation.md) preserved a 22,599,680-byte
+  private archive exactly, Docker image/container/volume state, home metadata and the original
+  Machine's recoverability with changed CPU/RAM. **Complete preservation remains unproven:**
+  sbx's rootfs snapshot loses subsecond mtime, and production maintenance/exclusion/crash recovery
+  are not implemented by this research fixture. Keep reconfiguration guards closed.
+
+Distribution now needs a non-obvious publication decision: `Alain00/blobot` is private, while
+runtime downloads must be anonymous. The prepared proposal is a separate public
+`guillermolg00/blobot-machine-images` repository containing only build recipes/workflow and
+runtime release artifacts. The account was checked and this proposed repository was not found.
+No repository was created, source published, workflow dispatched or release made public.
+The image ticket remains claimed; a commit of this checkpoint does not mark it resolved.

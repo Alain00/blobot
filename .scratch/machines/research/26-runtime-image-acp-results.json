@@ -1,0 +1,938 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-09-05T18:35:15.238Z",
+  "scope": "Docker image checks only: UID/home, CLI --version and ACP initialize. No sessions, login or inference.",
+  "isolation": {
+    "network": "none",
+    "user": "agent",
+    "cpus": 1,
+    "memoryBytes": 1073741824,
+    "hostMounts": [],
+    "home": "empty private tmpfs"
+  },
+  "request": {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": 1,
+      "clientCapabilities": {
+        "fs": {
+          "readTextFile": false,
+          "writeTextFile": false
+        },
+        "terminal": false
+      },
+      "clientInfo": {
+        "name": "blobot-runtime-image-acp-fixture",
+        "version": "1"
+      }
+    }
+  },
+  "results": [
+    {
+      "runtime": "claude",
+      "receipt": {
+        "schemaVersion": 1,
+        "runtime": "claude",
+        "arch": "arm64",
+        "version": "2.1.260",
+        "recipe": "8359736cceb470b0d0c4a6a7562c8e9069e403257f948d0e66118910bd1d7df0",
+        "reference": "blobot-machine-claude:8359736cceb470b0d0c4-arm64",
+        "imageId": "sha256:eb31f283e6d072d495f58ddda162d736bb25205da9d2eaec722f890b0b7e0df3",
+        "imageBytes": 693335603,
+        "versionOutput": "2.1.260 (Claude Code)",
+        "base": "docker/sandbox-templates@sha256:5fc81bc7a127e59d81b244a06831ae3212a0310b2e5a0349c54e29249e45e919",
+        "guestNode": "/usr/bin/node",
+        "moduleRoot": "/opt/blobot",
+        "executable": "/opt/blobot/bin/claude"
+      },
+      "startedAt": "2026-09-05T18:35:15.243Z",
+      "checks": [
+        {
+          "phase": "identity",
+          "name": "blobot-image-acp-claude-identity-648d0c80-9f35-4509-9476-7f10c862c75d",
+          "command": {
+            "executable": "/usr/bin/node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({uid:process.getuid(),gid:process.getgid(),home:process.env.HOME,homeEntries:require(\"node:fs\").readdirSync(process.env.HOME),node:process.version}))"
+            ]
+          },
+          "stdout": "{\"uid\":1000,\"gid\":1000,\"home\":\"/home/agent\",\"homeEntries\":[],\"node\":\"v22.22.1\"}\n",
+          "stderr": "",
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "elapsedMs": 319.98808299999996,
+          "inputEofAtMs": 2.000583000000006,
+          "cleanup": {
+            "exactName": "blobot-image-acp-claude-identity-648d0c80-9f35-4509-9476-7f10c862c75d",
+            "absent": true,
+            "removeExitCode": 0,
+            "inspectStderr": "Error response from daemon: No such container: blobot-image-acp-claude-identity-648d0c80-9f35-4509-9476-7f10c862c75d"
+          }
+        },
+        {
+          "phase": "version",
+          "name": "blobot-image-acp-claude-version-b301085c-ad7e-48d0-b73b-e547becc8c79",
+          "command": {
+            "executable": "/opt/blobot/bin/claude",
+            "args": [
+              "--version"
+            ]
+          },
+          "stdout": "2.1.260 (Claude Code)\n",
+          "stderr": "",
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "elapsedMs": 150.72358300000008,
+          "inputEofAtMs": 0.814625000000035,
+          "cleanup": {
+            "exactName": "blobot-image-acp-claude-version-b301085c-ad7e-48d0-b73b-e547becc8c79",
+            "absent": true,
+            "removeExitCode": 0,
+            "inspectStderr": "Error response from daemon: No such container: blobot-image-acp-claude-version-b301085c-ad7e-48d0-b73b-e547becc8c79"
+          }
+        },
+        {
+          "phase": "initialize",
+          "name": "blobot-image-acp-claude-initialize-e2048d4d-65fe-4d75-8b08-9697bb5ffc7a",
+          "command": {
+            "executable": "/usr/bin/node",
+            "args": [
+              "/opt/blobot/node_modules/@agentclientprotocol/claude-agent-acp/dist/index.js"
+            ]
+          },
+          "stdout": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":1,\"agentCapabilities\":{\"_meta\":{\"claudeCode\":{\"promptQueueing\":true}},\"promptCapabilities\":{\"image\":true,\"embeddedContext\":true},\"mcpCapabilities\":{\"http\":true,\"sse\":true},\"auth\":{\"logout\":{}},\"providers\":{},\"loadSession\":true,\"sessionCapabilities\":{\"additionalDirectories\":{},\"close\":{},\"delete\":{},\"fork\":{},\"list\":{},\"resume\":{}}},\"agentInfo\":{\"name\":\"@agentclientprotocol/claude-agent-acp\",\"title\":\"Claude Agent\",\"version\":\"0.70.0\"},\"authMethods\":[],\"_meta\":{\"jetbrains\":{\"air\":{\"version\":1,\"capabilities\":[\"sessionFailure\",\"agentFileChangeReport\"]}},\"steering\":{\"supported\":true},\"goal\":{\"version\":1,\"controlMethod\":\"_session/goal\",\"actions\":[\"set\",\"clear\"]}}}}\n",
+          "stderr": "",
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "elapsedMs": 402.8362910000001,
+          "inputEofAtMs": 376.8453749999999,
+          "cleanup": {
+            "exactName": "blobot-image-acp-claude-initialize-e2048d4d-65fe-4d75-8b08-9697bb5ffc7a",
+            "absent": true,
+            "removeExitCode": 0,
+            "inspectStderr": "Error response from daemon: No such container: blobot-image-acp-claude-initialize-e2048d4d-65fe-4d75-8b08-9697bb5ffc7a"
+          },
+          "protocolMessages": [
+            {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "result": {
+                "protocolVersion": 1,
+                "agentCapabilities": {
+                  "_meta": {
+                    "claudeCode": {
+                      "promptQueueing": true
+                    }
+                  },
+                  "promptCapabilities": {
+                    "image": true,
+                    "embeddedContext": true
+                  },
+                  "mcpCapabilities": {
+                    "http": true,
+                    "sse": true
+                  },
+                  "auth": {
+                    "logout": {}
+                  },
+                  "providers": {},
+                  "loadSession": true,
+                  "sessionCapabilities": {
+                    "additionalDirectories": {},
+                    "close": {},
+                    "delete": {},
+                    "fork": {},
+                    "list": {},
+                    "resume": {}
+                  }
+                },
+                "agentInfo": {
+                  "name": "@agentclientprotocol/claude-agent-acp",
+                  "title": "Claude Agent",
+                  "version": "0.70.0"
+                },
+                "authMethods": [],
+                "_meta": {
+                  "jetbrains": {
+                    "air": {
+                      "version": 1,
+                      "capabilities": [
+                        "sessionFailure",
+                        "agentFileChangeReport"
+                      ]
+                    }
+                  },
+                  "steering": {
+                    "supported": true
+                  },
+                  "goal": {
+                    "version": 1,
+                    "controlMethod": "_session/goal",
+                    "actions": [
+                      "set",
+                      "clear"
+                    ]
+                  }
+                }
+              }
+            }
+          ],
+          "initializeResponse": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": {
+              "protocolVersion": 1,
+              "agentCapabilities": {
+                "_meta": {
+                  "claudeCode": {
+                    "promptQueueing": true
+                  }
+                },
+                "promptCapabilities": {
+                  "image": true,
+                  "embeddedContext": true
+                },
+                "mcpCapabilities": {
+                  "http": true,
+                  "sse": true
+                },
+                "auth": {
+                  "logout": {}
+                },
+                "providers": {},
+                "loadSession": true,
+                "sessionCapabilities": {
+                  "additionalDirectories": {},
+                  "close": {},
+                  "delete": {},
+                  "fork": {},
+                  "list": {},
+                  "resume": {}
+                }
+              },
+              "agentInfo": {
+                "name": "@agentclientprotocol/claude-agent-acp",
+                "title": "Claude Agent",
+                "version": "0.70.0"
+              },
+              "authMethods": [],
+              "_meta": {
+                "jetbrains": {
+                  "air": {
+                    "version": 1,
+                    "capabilities": [
+                      "sessionFailure",
+                      "agentFileChangeReport"
+                    ]
+                  }
+                },
+                "steering": {
+                  "supported": true
+                },
+                "goal": {
+                  "version": 1,
+                  "controlMethod": "_session/goal",
+                  "actions": [
+                    "set",
+                    "clear"
+                  ]
+                }
+              }
+            }
+          },
+          "initializeResponseAtMs": 376.689208
+        }
+      ],
+      "finishedAt": "2026-09-05T18:35:16.207Z"
+    },
+    {
+      "runtime": "codex",
+      "receipt": {
+        "schemaVersion": 1,
+        "runtime": "codex",
+        "arch": "arm64",
+        "version": "0.151.0",
+        "recipe": "4e0fa26367fd65a89e8f0aa74ae618d5e3669345aba2a2019e7c473ce03b8670",
+        "reference": "blobot-machine-codex:4e0fa26367fd65a89e8f-arm64",
+        "imageId": "sha256:c50f1fd363781bb8cf7568dcd3bfa1a66e9f9c7be99e7931e0679c6e4c9f3b93",
+        "imageBytes": 719319825,
+        "versionOutput": "codex-cli 0.151.0",
+        "base": "docker/sandbox-templates@sha256:5fc81bc7a127e59d81b244a06831ae3212a0310b2e5a0349c54e29249e45e919",
+        "guestNode": "/usr/bin/node",
+        "moduleRoot": "/opt/blobot",
+        "executable": "/opt/blobot/bin/codex"
+      },
+      "startedAt": "2026-09-05T18:35:16.209Z",
+      "checks": [
+        {
+          "phase": "identity",
+          "name": "blobot-image-acp-codex-identity-e0581cfa-c016-4913-83f2-85e796d61ee3",
+          "command": {
+            "executable": "/usr/bin/node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({uid:process.getuid(),gid:process.getgid(),home:process.env.HOME,homeEntries:require(\"node:fs\").readdirSync(process.env.HOME),node:process.version}))"
+            ]
+          },
+          "stdout": "{\"uid\":1000,\"gid\":1000,\"home\":\"/home/agent\",\"homeEntries\":[],\"node\":\"v22.22.1\"}\n",
+          "stderr": "",
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "elapsedMs": 192.25862499999994,
+          "inputEofAtMs": 1.0281250000000455,
+          "cleanup": {
+            "exactName": "blobot-image-acp-codex-identity-e0581cfa-c016-4913-83f2-85e796d61ee3",
+            "absent": true,
+            "removeExitCode": 0,
+            "inspectStderr": "Error response from daemon: No such container: blobot-image-acp-codex-identity-e0581cfa-c016-4913-83f2-85e796d61ee3"
+          }
+        },
+        {
+          "phase": "version",
+          "name": "blobot-image-acp-codex-version-a2536a21-2f44-492f-8d97-e6f0f3fc9555",
+          "command": {
+            "executable": "/opt/blobot/bin/codex",
+            "args": [
+              "--version"
+            ]
+          },
+          "stdout": "codex-cli 0.151.0\n",
+          "stderr": "",
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "elapsedMs": 135.12091699999996,
+          "inputEofAtMs": 0.743291999999883,
+          "cleanup": {
+            "exactName": "blobot-image-acp-codex-version-a2536a21-2f44-492f-8d97-e6f0f3fc9555",
+            "absent": true,
+            "removeExitCode": 0,
+            "inspectStderr": "Error response from daemon: No such container: blobot-image-acp-codex-version-a2536a21-2f44-492f-8d97-e6f0f3fc9555"
+          }
+        },
+        {
+          "phase": "initialize",
+          "name": "blobot-image-acp-codex-initialize-a61f763e-d166-4582-825e-7358a29ca8ed",
+          "command": {
+            "executable": "/usr/bin/node",
+            "args": [
+              "/opt/blobot/node_modules/@agentclientprotocol/codex-acp/dist/index.js"
+            ]
+          },
+          "stdout": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":1,\"agentInfo\":{\"name\":\"@agentclientprotocol/codex-acp\",\"title\":\"Codex\",\"version\":\"1.7.0\"},\"agentCapabilities\":{\"auth\":{\"logout\":{}},\"providers\":{},\"loadSession\":true,\"promptCapabilities\":{\"embeddedContext\":true,\"image\":true},\"sessionCapabilities\":{\"resume\":{},\"list\":{},\"close\":{},\"delete\":{},\"additionalDirectories\":{},\"subagents\":{}},\"mcpCapabilities\":{\"acp\":false,\"http\":true,\"sse\":false}},\"authMethods\":[{\"id\":\"api-key\",\"name\":\"API Key\",\"description\":\"Use an API key to authenticate\",\"_meta\":{\"api-key\":{\"provider\":\"openai\"}}},{\"id\":\"chat-gpt\",\"name\":\"ChatGPT\",\"description\":\"Use ChatGPT to authenticate\"}],\"_meta\":{\"steering\":{\"supported\":true},\"goal\":{\"version\":1,\"controlMethod\":\"_session/goal\",\"actions\":[\"set\",\"pause\",\"resume\",\"clear\"]},\"jetbrains\":{\"air\":{\"version\":1,\"capabilities\":[\"sessionFailure\",\"agentFileChangeReport\",\"nativeSubagentSessions\"]}}}}}\n",
+          "stderr": "",
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "elapsedMs": 2459.213625,
+          "inputEofAtMs": 401.001542,
+          "cleanup": {
+            "exactName": "blobot-image-acp-codex-initialize-a61f763e-d166-4582-825e-7358a29ca8ed",
+            "absent": true,
+            "removeExitCode": 0,
+            "inspectStderr": "Error response from daemon: No such container: blobot-image-acp-codex-initialize-a61f763e-d166-4582-825e-7358a29ca8ed"
+          },
+          "protocolMessages": [
+            {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "result": {
+                "protocolVersion": 1,
+                "agentInfo": {
+                  "name": "@agentclientprotocol/codex-acp",
+                  "title": "Codex",
+                  "version": "1.7.0"
+                },
+                "agentCapabilities": {
+                  "auth": {
+                    "logout": {}
+                  },
+                  "providers": {},
+                  "loadSession": true,
+                  "promptCapabilities": {
+                    "embeddedContext": true,
+                    "image": true
+                  },
+                  "sessionCapabilities": {
+                    "resume": {},
+                    "list": {},
+                    "close": {},
+                    "delete": {},
+                    "additionalDirectories": {},
+                    "subagents": {}
+                  },
+                  "mcpCapabilities": {
+                    "acp": false,
+                    "http": true,
+                    "sse": false
+                  }
+                },
+                "authMethods": [
+                  {
+                    "id": "api-key",
+                    "name": "API Key",
+                    "description": "Use an API key to authenticate",
+                    "_meta": {
+                      "api-key": {
+                        "provider": "openai"
+                      }
+                    }
+                  },
+                  {
+                    "id": "chat-gpt",
+                    "name": "ChatGPT",
+                    "description": "Use ChatGPT to authenticate"
+                  }
+                ],
+                "_meta": {
+                  "steering": {
+                    "supported": true
+                  },
+                  "goal": {
+                    "version": 1,
+                    "controlMethod": "_session/goal",
+                    "actions": [
+                      "set",
+                      "pause",
+                      "resume",
+                      "clear"
+                    ]
+                  },
+                  "jetbrains": {
+                    "air": {
+                      "version": 1,
+                      "capabilities": [
+                        "sessionFailure",
+                        "agentFileChangeReport",
+                        "nativeSubagentSessions"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "initializeResponse": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": {
+              "protocolVersion": 1,
+              "agentInfo": {
+                "name": "@agentclientprotocol/codex-acp",
+                "title": "Codex",
+                "version": "1.7.0"
+              },
+              "agentCapabilities": {
+                "auth": {
+                  "logout": {}
+                },
+                "providers": {},
+                "loadSession": true,
+                "promptCapabilities": {
+                  "embeddedContext": true,
+                  "image": true
+                },
+                "sessionCapabilities": {
+                  "resume": {},
+                  "list": {},
+                  "close": {},
+                  "delete": {},
+                  "additionalDirectories": {},
+                  "subagents": {}
+                },
+                "mcpCapabilities": {
+                  "acp": false,
+                  "http": true,
+                  "sse": false
+                }
+              },
+              "authMethods": [
+                {
+                  "id": "api-key",
+                  "name": "API Key",
+                  "description": "Use an API key to authenticate",
+                  "_meta": {
+                    "api-key": {
+                      "provider": "openai"
+                    }
+                  }
+                },
+                {
+                  "id": "chat-gpt",
+                  "name": "ChatGPT",
+                  "description": "Use ChatGPT to authenticate"
+                }
+              ],
+              "_meta": {
+                "steering": {
+                  "supported": true
+                },
+                "goal": {
+                  "version": 1,
+                  "controlMethod": "_session/goal",
+                  "actions": [
+                    "set",
+                    "pause",
+                    "resume",
+                    "clear"
+                  ]
+                },
+                "jetbrains": {
+                  "air": {
+                    "version": 1,
+                    "capabilities": [
+                      "sessionFailure",
+                      "agentFileChangeReport",
+                      "nativeSubagentSessions"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "initializeResponseAtMs": 400.93341699999996
+        }
+      ],
+      "finishedAt": "2026-09-05T18:35:19.080Z"
+    },
+    {
+      "runtime": "fx",
+      "receipt": {
+        "schemaVersion": 1,
+        "runtime": "fx",
+        "arch": "arm64",
+        "version": "0.0.7",
+        "recipe": "c1838092856a6e6fa78a9f1fd1b19afd1fd9d7286d71ec89c0ff65772a132421",
+        "reference": "blobot-machine-fx:c1838092856a6e6fa78a-arm64",
+        "imageId": "sha256:8b6a8373f78c351bd33a6d5860b1e0996e17be6e47f6f5ce7cbdcfa9322e4989",
+        "imageBytes": 594105383,
+        "versionOutput": "0.0.7",
+        "base": "docker/sandbox-templates@sha256:5fc81bc7a127e59d81b244a06831ae3212a0310b2e5a0349c54e29249e45e919",
+        "guestNode": "/usr/bin/node",
+        "moduleRoot": "/opt/blobot",
+        "executable": "/opt/blobot/bin/fx"
+      },
+      "startedAt": "2026-09-05T18:35:19.082Z",
+      "checks": [
+        {
+          "phase": "identity",
+          "name": "blobot-image-acp-fx-identity-a9224583-8048-45ba-bfa7-cf4102e1d908",
+          "command": {
+            "executable": "/usr/bin/node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({uid:process.getuid(),gid:process.getgid(),home:process.env.HOME,homeEntries:require(\"node:fs\").readdirSync(process.env.HOME),node:process.version}))"
+            ]
+          },
+          "stdout": "{\"uid\":1000,\"gid\":1000,\"home\":\"/home/agent\",\"homeEntries\":[],\"node\":\"v22.22.1\"}\n",
+          "stderr": "",
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "elapsedMs": 181.78566600000022,
+          "inputEofAtMs": 0.7995409999998628,
+          "cleanup": {
+            "exactName": "blobot-image-acp-fx-identity-a9224583-8048-45ba-bfa7-cf4102e1d908",
+            "absent": true,
+            "removeExitCode": 0,
+            "inspectStderr": "Error response from daemon: No such container: blobot-image-acp-fx-identity-a9224583-8048-45ba-bfa7-cf4102e1d908"
+          }
+        },
+        {
+          "phase": "version",
+          "name": "blobot-image-acp-fx-version-676bfc7d-1af9-4eea-b58a-58b848c070ed",
+          "command": {
+            "executable": "/opt/blobot/bin/fx",
+            "args": [
+              "--version"
+            ]
+          },
+          "stdout": "0.0.7\n",
+          "stderr": "",
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "elapsedMs": 126.32270900000003,
+          "inputEofAtMs": 0.7700840000006792,
+          "cleanup": {
+            "exactName": "blobot-image-acp-fx-version-676bfc7d-1af9-4eea-b58a-58b848c070ed",
+            "absent": true,
+            "removeExitCode": 0,
+            "inspectStderr": "Error response from daemon: No such container: blobot-image-acp-fx-version-676bfc7d-1af9-4eea-b58a-58b848c070ed"
+          }
+        },
+        {
+          "phase": "initialize",
+          "name": "blobot-image-acp-fx-initialize-917734a0-1e09-451e-af13-aab3b947b75b",
+          "command": {
+            "executable": "/opt/blobot/bin/fx",
+            "args": [
+              "acp"
+            ]
+          },
+          "stdout": "{\"jsonrpc\":\"2.0\",\"id\":1,\"error\":{\"code\":-32600,\"message\":\"fx needs access to Vercel AI Gateway. Run fx login to sign in, fx setup to use an API key, or set AI_GATEWAY_API_KEY.\"}}\n",
+          "stderr": "",
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "elapsedMs": 133.30675000000065,
+          "inputEofAtMs": 104.62070900000072,
+          "cleanup": {
+            "exactName": "blobot-image-acp-fx-initialize-917734a0-1e09-451e-af13-aab3b947b75b",
+            "absent": true,
+            "removeExitCode": 0,
+            "inspectStderr": "Error response from daemon: No such container: blobot-image-acp-fx-initialize-917734a0-1e09-451e-af13-aab3b947b75b"
+          },
+          "protocolMessages": [
+            {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "error": {
+                "code": -32600,
+                "message": "fx needs access to Vercel AI Gateway. Run fx login to sign in, fx setup to use an API key, or set AI_GATEWAY_API_KEY."
+              }
+            }
+          ],
+          "initializeResponse": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "error": {
+              "code": -32600,
+              "message": "fx needs access to Vercel AI Gateway. Run fx login to sign in, fx setup to use an API key, or set AI_GATEWAY_API_KEY."
+            }
+          },
+          "initializeResponseAtMs": 104.59683399999994
+        }
+      ],
+      "finishedAt": "2026-09-05T18:35:19.605Z"
+    },
+    {
+      "runtime": "opencode",
+      "receipt": {
+        "schemaVersion": 1,
+        "runtime": "opencode",
+        "arch": "arm64",
+        "version": "1.18.4",
+        "recipe": "a5caa81ac8604a1a3defb43e1ab171401c175a07cd6775982d97162851a005c2",
+        "reference": "blobot-machine-opencode:a5caa81ac8604a1a3def-arm64",
+        "imageId": "sha256:ec0c6f3ae8d6783064672ce08af6b125bb7a038bc9884272cbdcfb38bddaf9a1",
+        "imageBytes": 649661195,
+        "versionOutput": "1.18.4",
+        "base": "docker/sandbox-templates@sha256:5fc81bc7a127e59d81b244a06831ae3212a0310b2e5a0349c54e29249e45e919",
+        "guestNode": "/usr/bin/node",
+        "moduleRoot": "/opt/blobot",
+        "executable": "/opt/blobot/bin/opencode"
+      },
+      "startedAt": "2026-09-05T18:35:19.605Z",
+      "checks": [
+        {
+          "phase": "identity",
+          "name": "blobot-image-acp-opencode-identity-1239d1ca-d07f-44d5-981a-b2e215cf54a4",
+          "command": {
+            "executable": "/usr/bin/node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({uid:process.getuid(),gid:process.getgid(),home:process.env.HOME,homeEntries:require(\"node:fs\").readdirSync(process.env.HOME),node:process.version}))"
+            ]
+          },
+          "stdout": "{\"uid\":1000,\"gid\":1000,\"home\":\"/home/agent\",\"homeEntries\":[],\"node\":\"v22.22.1\"}\n",
+          "stderr": "",
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "elapsedMs": 200.93487499999992,
+          "inputEofAtMs": 0.6979580000006536,
+          "cleanup": {
+            "exactName": "blobot-image-acp-opencode-identity-1239d1ca-d07f-44d5-981a-b2e215cf54a4",
+            "absent": true,
+            "removeExitCode": 0,
+            "inspectStderr": "Error response from daemon: No such container: blobot-image-acp-opencode-identity-1239d1ca-d07f-44d5-981a-b2e215cf54a4"
+          }
+        },
+        {
+          "phase": "version",
+          "name": "blobot-image-acp-opencode-version-d4b91cd0-5ad0-4f02-9adf-29907ae02775",
+          "command": {
+            "executable": "/opt/blobot/bin/opencode",
+            "args": [
+              "--version"
+            ]
+          },
+          "stdout": "1.18.4\n",
+          "stderr": "",
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "elapsedMs": 550.3413330000003,
+          "inputEofAtMs": 0.6656659999998737,
+          "cleanup": {
+            "exactName": "blobot-image-acp-opencode-version-d4b91cd0-5ad0-4f02-9adf-29907ae02775",
+            "absent": true,
+            "removeExitCode": 0,
+            "inspectStderr": "Error response from daemon: No such container: blobot-image-acp-opencode-version-d4b91cd0-5ad0-4f02-9adf-29907ae02775"
+          }
+        },
+        {
+          "phase": "initialize",
+          "name": "blobot-image-acp-opencode-initialize-57c23bad-c0a3-4da5-9f28-4bdb5a5b9e27",
+          "command": {
+            "executable": "/opt/blobot/bin/opencode",
+            "args": [
+              "acp"
+            ]
+          },
+          "stdout": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":1,\"agentCapabilities\":{\"loadSession\":true,\"mcpCapabilities\":{\"http\":true,\"sse\":true},\"promptCapabilities\":{\"embeddedContext\":true,\"image\":true},\"sessionCapabilities\":{\"close\":{},\"fork\":{},\"list\":{},\"resume\":{}}},\"authMethods\":[{\"description\":\"Run `opencode auth login` in the terminal\",\"name\":\"Login with opencode\",\"id\":\"opencode-login\"}],\"agentInfo\":{\"name\":\"OpenCode\",\"version\":\"1.18.4\"}}}\n",
+          "stderr": "",
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "elapsedMs": 1237.2484160000004,
+          "inputEofAtMs": 1192.4392079999998,
+          "cleanup": {
+            "exactName": "blobot-image-acp-opencode-initialize-57c23bad-c0a3-4da5-9f28-4bdb5a5b9e27",
+            "absent": true,
+            "removeExitCode": 0,
+            "inspectStderr": "Error response from daemon: No such container: blobot-image-acp-opencode-initialize-57c23bad-c0a3-4da5-9f28-4bdb5a5b9e27"
+          },
+          "protocolMessages": [
+            {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "result": {
+                "protocolVersion": 1,
+                "agentCapabilities": {
+                  "loadSession": true,
+                  "mcpCapabilities": {
+                    "http": true,
+                    "sse": true
+                  },
+                  "promptCapabilities": {
+                    "embeddedContext": true,
+                    "image": true
+                  },
+                  "sessionCapabilities": {
+                    "close": {},
+                    "fork": {},
+                    "list": {},
+                    "resume": {}
+                  }
+                },
+                "authMethods": [
+                  {
+                    "description": "Run `opencode auth login` in the terminal",
+                    "name": "Login with opencode",
+                    "id": "opencode-login"
+                  }
+                ],
+                "agentInfo": {
+                  "name": "OpenCode",
+                  "version": "1.18.4"
+                }
+              }
+            }
+          ],
+          "initializeResponse": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": {
+              "protocolVersion": 1,
+              "agentCapabilities": {
+                "loadSession": true,
+                "mcpCapabilities": {
+                  "http": true,
+                  "sse": true
+                },
+                "promptCapabilities": {
+                  "embeddedContext": true,
+                  "image": true
+                },
+                "sessionCapabilities": {
+                  "close": {},
+                  "fork": {},
+                  "list": {},
+                  "resume": {}
+                }
+              },
+              "authMethods": [
+                {
+                  "description": "Run `opencode auth login` in the terminal",
+                  "name": "Login with opencode",
+                  "id": "opencode-login"
+                }
+              ],
+              "agentInfo": {
+                "name": "OpenCode",
+                "version": "1.18.4"
+              }
+            }
+          },
+          "initializeResponseAtMs": 1192.331166
+        }
+      ],
+      "finishedAt": "2026-09-05T18:35:21.678Z"
+    },
+    {
+      "runtime": "cursor",
+      "receipt": {
+        "schemaVersion": 1,
+        "runtime": "cursor",
+        "arch": "arm64",
+        "version": "2026.09.02-c22c1a3",
+        "recipe": "17e00d7b99ca316f955c06a5da6d76f6b8866d0df9920576272fe4c659a4aaf9",
+        "reference": "blobot-machine-cursor:17e00d7b99ca316f955c-arm64",
+        "imageId": "sha256:dac412438ec46faf9f49ae3e59abdb807f3b8badf3045bce2b0aa370a6b15b29",
+        "imageBytes": 772229292,
+        "versionOutput": "2026.09.02-c22c1a3",
+        "base": "docker/sandbox-templates@sha256:5fc81bc7a127e59d81b244a06831ae3212a0310b2e5a0349c54e29249e45e919",
+        "guestNode": "/usr/bin/node",
+        "moduleRoot": "/opt/blobot",
+        "executable": "/opt/blobot/bin/cursor-agent"
+      },
+      "startedAt": "2026-09-05T18:36:38.479Z",
+      "checks": [
+        {
+          "phase": "identity",
+          "name": "blobot-image-acp-cursor-identity-d56f81c2-5c73-4971-9e58-9c0b6c932d1c",
+          "command": {
+            "executable": "/usr/bin/node",
+            "args": [
+              "-e",
+              "console.log(JSON.stringify({uid:process.getuid(),gid:process.getgid(),home:process.env.HOME,homeEntries:require(\"node:fs\").readdirSync(process.env.HOME),node:process.version}))"
+            ]
+          },
+          "stdout": "{\"uid\":1000,\"gid\":1000,\"home\":\"/home/agent\",\"homeEntries\":[],\"node\":\"v22.22.1\"}\n",
+          "stderr": "",
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "elapsedMs": 317.196084,
+          "inputEofAtMs": 2.0003749999999982,
+          "cleanup": {
+            "exactName": "blobot-image-acp-cursor-identity-d56f81c2-5c73-4971-9e58-9c0b6c932d1c",
+            "absent": true,
+            "removeExitCode": 0,
+            "inspectStderr": "Error response from daemon: No such container: blobot-image-acp-cursor-identity-d56f81c2-5c73-4971-9e58-9c0b6c932d1c"
+          }
+        },
+        {
+          "phase": "version",
+          "name": "blobot-image-acp-cursor-version-7dfe49b2-beee-4d83-b514-f5afdf3a1226",
+          "command": {
+            "executable": "/opt/blobot/bin/cursor-agent",
+            "args": [
+              "--version"
+            ]
+          },
+          "stdout": "2026.09.02-c22c1a3\n",
+          "stderr": "",
+          "exitCode": 0,
+          "signal": null,
+          "timedOut": false,
+          "elapsedMs": 600.8764580000001,
+          "inputEofAtMs": 1.2892500000000382,
+          "cleanup": {
+            "exactName": "blobot-image-acp-cursor-version-7dfe49b2-beee-4d83-b514-f5afdf3a1226",
+            "absent": true,
+            "removeExitCode": 0,
+            "inspectStderr": "Error response from daemon: No such container: blobot-image-acp-cursor-version-7dfe49b2-beee-4d83-b514-f5afdf3a1226"
+          }
+        },
+        {
+          "phase": "initialize",
+          "name": "blobot-image-acp-cursor-initialize-435a388e-3164-40db-822c-b488809eb9f8",
+          "command": {
+            "executable": "/opt/blobot/bin/cursor-agent",
+            "args": [
+              "acp",
+              "--workspace",
+              "/home/agent"
+            ]
+          },
+          "stdout": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":1,\"agentCapabilities\":{\"loadSession\":true,\"mcpCapabilities\":{\"http\":true,\"sse\":true},\"promptCapabilities\":{\"audio\":false,\"embeddedContext\":false,\"image\":true},\"sessionCapabilities\":{\"list\":{}}},\"authMethods\":[{\"id\":\"cursor_login\",\"name\":\"Cursor Login\",\"description\":\"Authenticate using existing Cursor login credentials. Run 'agent login' first if not logged in.\"}]}}\n",
+          "stderr": "",
+          "exitCode": 143,
+          "signal": null,
+          "timedOut": true,
+          "elapsedMs": 45088.514459,
+          "inputEofAtMs": 634.068542,
+          "cleanup": {
+            "exactName": "blobot-image-acp-cursor-initialize-435a388e-3164-40db-822c-b488809eb9f8",
+            "absent": true,
+            "removeExitCode": 0,
+            "inspectStderr": "Error response from daemon: No such container: blobot-image-acp-cursor-initialize-435a388e-3164-40db-822c-b488809eb9f8"
+          },
+          "protocolMessages": [
+            {
+              "jsonrpc": "2.0",
+              "id": 1,
+              "result": {
+                "protocolVersion": 1,
+                "agentCapabilities": {
+                  "loadSession": true,
+                  "mcpCapabilities": {
+                    "http": true,
+                    "sse": true
+                  },
+                  "promptCapabilities": {
+                    "audio": false,
+                    "embeddedContext": false,
+                    "image": true
+                  },
+                  "sessionCapabilities": {
+                    "list": {}
+                  }
+                },
+                "authMethods": [
+                  {
+                    "id": "cursor_login",
+                    "name": "Cursor Login",
+                    "description": "Authenticate using existing Cursor login credentials. Run 'agent login' first if not logged in."
+                  }
+                ]
+              }
+            }
+          ],
+          "initializeResponse": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": {
+              "protocolVersion": 1,
+              "agentCapabilities": {
+                "loadSession": true,
+                "mcpCapabilities": {
+                  "http": true,
+                  "sse": true
+                },
+                "promptCapabilities": {
+                  "audio": false,
+                  "embeddedContext": false,
+                  "image": true
+                },
+                "sessionCapabilities": {
+                  "list": {}
+                }
+              },
+              "authMethods": [
+                {
+                  "id": "cursor_login",
+                  "name": "Cursor Login",
+                  "description": "Authenticate using existing Cursor login credentials. Run 'agent login' first if not logged in."
+                }
+              ]
+            }
+          },
+          "initializeResponseAtMs": 633.9679169999999
+        }
+      ],
+      "finishedAt": "2026-09-05T18:37:24.584Z"
+    }
+  ],
+  "finishedAt": "2026-09-05T18:37:24.586Z"
+}

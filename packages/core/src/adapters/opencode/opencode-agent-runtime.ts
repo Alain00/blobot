@@ -32,6 +32,7 @@ import type {
 import { agentKeyFor, opencodeConfigContent } from './config.js';
 import { offerableNames } from './palette.js';
 import { LocalMachine } from '../../machines/local-machine.js';
+import { OPENCODE_MACHINE_IMAGE } from './image.js';
 import { requireLocalMachine, type Machine } from '../../machines/machine.js';
 import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
 import { spawnOpencode, VERIFIED_OPENCODE_VERSION, type SpawnOpencode } from './stdio.js';
@@ -120,6 +121,7 @@ export interface OpencodeAgentRuntimeOptions {
  * agent is.
  */
 export class OpencodeAgentRuntime implements AgentRuntime {
+  readonly machineImage = OPENCODE_MACHINE_IMAGE;
   readonly agentId: string;
 
   readonly #options: OpencodeAgentRuntimeOptions;

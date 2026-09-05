@@ -1,0 +1,17 @@
+{
+  "date": "2026-09-05T18:43:30.179Z",
+  "build": {
+    "arch": "arm64",
+    "reference": "blobot-machine-fx:c1838092856a6e6fa78a-arm64",
+    "imageId": "sha256:8b6a8373f78c351bd33a6d5860b1e0996e17be6e47f6f5ce7cbdcfa9322e4989",
+    "url": "https://example.invalid/synthetic-release.tar",
+    "sha256": "5074ac5ec93fab43c67a3406d161f0d7bafd0bf03634126b94e4a8446235e0d5",
+    "bytes": 594125824
+  },
+  "verifiedArchiveAndEngineLoad": true,
+  "readiness": {
+    "state": "ready"
+  },
+  "loadMs": 3306.0598750000004,
+  "source": "local fixture tar, no release or network download"
+}

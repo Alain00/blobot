@@ -39,6 +39,7 @@ import {
 } from './extensions.js';
 import { offerableNames } from './palette.js';
 import { LocalMachine } from '../../machines/local-machine.js';
+import { CURSOR_MACHINE_IMAGE } from './image.js';
 import { requireLocalMachine, type Machine } from '../../machines/machine.js';
 import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
 import { CURSOR_SESSION_MODE } from './permissions.js';
@@ -125,6 +126,7 @@ export interface CursorAgentRuntimeOptions {
  *   blobot narrows nothing there. Per-agent restriction is a future cross-runtime effort.
  */
 export class CursorAgentRuntime implements AgentRuntime {
+  readonly machineImage = CURSOR_MACHINE_IMAGE;
   readonly agentId: string;
 
   readonly #options: CursorAgentRuntimeOptions;

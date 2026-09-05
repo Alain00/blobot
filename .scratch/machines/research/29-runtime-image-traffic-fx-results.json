@@ -1,0 +1,1329 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-09-05T18:54:18.102Z",
+  "receiptPath": "/private/tmp/blobot-machine-images.040Rvi/final/fx-arm64.json",
+  "receipt": {
+    "schemaVersion": 1,
+    "runtime": "fx",
+    "arch": "arm64",
+    "version": "0.0.7",
+    "recipe": "55984dffe8c49fc6648b06afb86585f4d32ee516f363a066ff0c66bc79ddb2b5",
+    "reference": "blobot-machine-fx:55984dffe8c49fc6648b-arm64",
+    "imageId": "sha256:74d888efe94fb1544ae5a275964cfa5ba00dd96de9b4bd50bd1e8c7d917a19df",
+    "imageBytes": 594105563,
+    "versionOutput": "0.0.7",
+    "base": "docker/sandbox-templates@sha256:5fc81bc7a127e59d81b244a06831ae3212a0310b2e5a0349c54e29249e45e919",
+    "guestNode": "/usr/bin/node",
+    "moduleRoot": "/opt/blobot",
+    "executable": "/opt/blobot/bin/fx",
+    "asset": "blobot-machine-fx-arm64-55984dffe8c49fc6648b.tar",
+    "bytes": 594125824,
+    "sha256": "aa85996465914ab9c131bf9dcc65e8e3f9356e31307550caeb305943aedf3bf7"
+  },
+  "scope": "One credential-free local build in sbx deny-all; idle boot, version, signed-out status, ACP initialize only.",
+  "candidate": "blobot-machine-fx:55984dffe8c49fc6648b-arm64",
+  "commands": [
+    {
+      "label": "daemon status",
+      "tool": "sbx",
+      "ms": 314.557958,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "version --json",
+      "tool": "sbx",
+      "ms": 179.15070800000007,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "settings get",
+      "tool": "sbx",
+      "ms": 190.8600409999999,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 240.47354199999995,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "template ls",
+      "tool": "sbx",
+      "ms": 181.84924999999998,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 206.39199999999983,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "verify-built-image",
+      "tool": "docker",
+      "ms": 89.58620799999994,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "load-one-image",
+      "tool": "sbx",
+      "ms": 2603.630583,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "template ls",
+      "tool": "sbx",
+      "ms": 126.48608300000069,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "create-credential-free-box",
+      "tool": "sbx",
+      "ms": 3397.447625,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 146.05145800000173,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 120.95029100000102,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 137.04945800000132,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 144.75575000000026,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "effective-deny-all",
+      "tool": "sbx",
+      "ms": 234.60016600000017,
+      "code": 1,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 154.33787499999926,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "credential-free-boundary",
+      "tool": "sbx",
+      "ms": 481.15287499999977,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 154.33679099999972,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy log",
+      "tool": "sbx",
+      "ms": 136.0789169999989,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 133.89937500000087,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 145.02800000000025,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 129.90279100000043,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "effective-deny-all",
+      "tool": "sbx",
+      "ms": 126.43708300000071,
+      "code": 1,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 121.6747919999998,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "private-docker-info",
+      "tool": "sbx",
+      "ms": 627.5070419999993,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 347.3702920000014,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy log",
+      "tool": "sbx",
+      "ms": 151.27716599999985,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 142.48849999999948,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 127.67512499999975,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 138.02674999999908,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "effective-deny-all",
+      "tool": "sbx",
+      "ms": 148.949208,
+      "code": 1,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 142.69870900000024,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "private-docker-compose",
+      "tool": "sbx",
+      "ms": 382.48904199999924,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 133.9808749999993,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy log",
+      "tool": "sbx",
+      "ms": 131.65420799999993,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 251.2270000000026,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy log",
+      "tool": "sbx",
+      "ms": 136.87537499999962,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 270.34558299999844,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 152.45179199999984,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 148.87258299999667,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "effective-deny-all",
+      "tool": "sbx",
+      "ms": 145.25691599999845,
+      "code": 1,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 146.82916699999987,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "version",
+      "tool": "sbx",
+      "ms": 334.0309579999994,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 149.83499999999913,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy log",
+      "tool": "sbx",
+      "ms": 142.2442499999961,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 127.37658300000476,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 128.42579200000182,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 135.71775000000343,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "effective-deny-all",
+      "tool": "sbx",
+      "ms": 128.18316600000253,
+      "code": 1,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 133.56754199999705,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "signed-out-status",
+      "tool": "sbx",
+      "ms": 288.42087499999616,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 196.58454199999687,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy log",
+      "tool": "sbx",
+      "ms": 135.1410410000026,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 114.76499999999942,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 255.04933300000266,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 159.91012500000215,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "effective-deny-all",
+      "tool": "sbx",
+      "ms": 129.7646670000031,
+      "code": 1,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 133.1137910000034,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "initialize-only",
+      "tool": "sbx",
+      "ms": 10294.056833000002,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 157.41237499999988,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy log",
+      "tool": "sbx",
+      "ms": 140.32558400000562,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 119.87995800000499,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 132.8310829999973,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 133.36649999999645,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "effective-deny-all",
+      "tool": "sbx",
+      "ms": 130.0361669999984,
+      "code": 1,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 139.71870800000033,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "remove-owned-box",
+      "tool": "sbx",
+      "ms": 409.17804199999955,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "template ls",
+      "tool": "sbx",
+      "ms": 183.99608299999818,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "remove-owned-template",
+      "tool": "sbx",
+      "ms": 223.28312500000175,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 153.8690409999981,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "template ls",
+      "tool": "sbx",
+      "ms": 233.82729200000176,
+      "code": 0,
+      "killed": false
+    }
+  ],
+  "policySnapshots": [
+    {
+      "label": "immediate-boot",
+      "at": "2026-09-05T18:54:29.610Z",
+      "log": {
+        "blocked_hosts": [],
+        "allowed_hosts": []
+      },
+      "newOrChangedRows": {
+        "blocked_hosts": [],
+        "allowed_hosts": []
+      }
+    },
+    {
+      "label": "private-docker-info",
+      "at": "2026-09-05T18:54:31.395Z",
+      "log": {
+        "blocked_hosts": [],
+        "allowed_hosts": []
+      },
+      "newOrChangedRows": {
+        "blocked_hosts": [],
+        "allowed_hosts": []
+      }
+    },
+    {
+      "label": "private-docker-compose",
+      "at": "2026-09-05T18:54:32.744Z",
+      "log": {
+        "blocked_hosts": [],
+        "allowed_hosts": []
+      },
+      "newOrChangedRows": {
+        "blocked_hosts": [],
+        "allowed_hosts": []
+      }
+    },
+    {
+      "label": "idle-boot-15s",
+      "at": "2026-09-05T18:54:48.134Z",
+      "log": {
+        "blocked_hosts": [],
+        "allowed_hosts": []
+      },
+      "newOrChangedRows": {
+        "blocked_hosts": [],
+        "allowed_hosts": []
+      }
+    },
+    {
+      "label": "version",
+      "at": "2026-09-05T18:54:52.626Z",
+      "log": {
+        "blocked_hosts": [],
+        "allowed_hosts": []
+      },
+      "newOrChangedRows": {
+        "blocked_hosts": [],
+        "allowed_hosts": []
+      }
+    },
+    {
+      "label": "signed-out-status",
+      "at": "2026-09-05T18:55:03.902Z",
+      "log": {
+        "blocked_hosts": [],
+        "allowed_hosts": []
+      },
+      "newOrChangedRows": {
+        "blocked_hosts": [],
+        "allowed_hosts": []
+      }
+    },
+    {
+      "label": "initialize-only",
+      "at": "2026-09-05T18:55:15.288Z",
+      "log": {
+        "blocked_hosts": [],
+        "allowed_hosts": []
+      },
+      "newOrChangedRows": {
+        "blocked_hosts": [],
+        "allowed_hosts": []
+      }
+    }
+  ],
+  "phases": [
+    {
+      "label": "private-docker-info",
+      "at": "2026-09-05T18:54:30.896Z",
+      "policy": {
+        "global": {
+          "rules": [
+            {
+              "id": "default-deny-all",
+              "name": "default-deny-all",
+              "policy_name": "default-deny-all",
+              "scope": "global",
+              "applies_to": "all",
+              "resource_type": "network",
+              "decision": "deny",
+              "resources": [
+                "**"
+              ],
+              "origin": "local",
+              "layer": "local",
+              "status": "active",
+              "editable": false
+            }
+          ]
+        },
+        "scoped": {
+          "rules": [
+            {
+              "id": "default-deny-all",
+              "name": "default-deny-all",
+              "policy_name": "default-deny-all",
+              "scope": "global",
+              "applies_to": "all",
+              "resource_type": "network",
+              "decision": "deny",
+              "resources": [
+                "**"
+              ],
+              "origin": "local",
+              "layer": "local",
+              "status": "active",
+              "editable": false
+            }
+          ]
+        },
+        "checked": {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-traffic-fx-819c60e4-7e10-4247-becb-7ba83404079a",
+          "deny_kind": "implicit",
+          "governance": {
+            "active": false
+          },
+          "reason": "No matching allow rule (default deny)",
+          "resource_type": "net:domain",
+          "resource_value": "blobot-traffic-fixture.invalid:443",
+          "target": "blobot-traffic-fixture.invalid:443",
+          "type": "network"
+        }
+      },
+      "result": {
+        "uid": 1000,
+        "pid": 314,
+        "command": {
+          "executable": "/opt/blobot/bin/docker",
+          "args": [
+            "info",
+            "--format",
+            "{{json .}}"
+          ]
+        },
+        "code": 0,
+        "exitSignal": null,
+        "stdout": "{\"ID\":\"40cc732b-9772-4e51-984c-be6b2369309a\",\"Containers\":0,\"ContainersRunning\":0,\"ContainersPaused\":0,\"ContainersStopped\":0,\"Images\":0,\"Driver\":\"overlayfs\",\"DriverStatus\":[[\"driver-type\",\"io.containerd.snapshotter.v1\"]],\"Plugins\":{\"Volume\":[\"local\"],\"Network\":[\"bridge\",\"host\",\"ipvlan\",\"macvlan\",\"null\",\"overlay\"],\"Authorization\":null,\"Log\":[\"awslogs\",\"fluentd\",\"gcplogs\",\"gelf\",\"journald\",\"json-file\",\"local\",\"splunk\",\"syslog\"]},\"MemoryLimit\":true,\"SwapLimit\":true,\"CpuCfsPeriod\":true,\"CpuCfsQuota\":true,\"CPUShares\":true,\"CPUSet\":true,\"PidsLimit\":true,\"IPv4Forwarding\":true,\"Debug\":false,\"NFd\":26,\"OomKillDisable\":false,\"NGoroutines\":58,\"SystemTime\":\"2026-09-05T18:54:30.879371168Z\",\"LoggingDriver\":\"json-file\",\"CgroupDriver\":\"cgroupfs\",\"CgroupVersion\":\"2\",\"NEventsListener\":0,\"KernelVersion\":\"7.0.12\",\"OperatingSystem\":\"Ubuntu 26.04 LTS (containerized)\",\"OSVersion\":\"26.04\",\"OSType\":\"linux\",\"Architecture\":\"aarch64\",\"IndexServerAddress\":\"https://index.docker.io/v1/\",\"RegistryConfig\":{\"InsecureRegistryCIDRs\":[\"::1/128\",\"127.0.0.0/8\"],\"IndexConfigs\":{\"docker.io\":{\"Name\":\"docker.io\",\"Mirrors\":[],\"Secure\":true,\"Official\":true}},\"Mirrors\":[]},\"NCPU\":2,\"MemTotal\":2115600384,\"GenericResources\":null,\"DockerRootDir\":\"/var/lib/docker\",\"HttpProxy\":\"http://gateway.docker.internal:3128\",\"HttpsProxy\":\"http://gateway.docker.internal:3128\",\"NoProxy\":\"localhost,127.0.0.1,::1,gateway.docker.internal\",\"Name\":\"blobot-traffic-fx-819c60e4-7e10-4247-becb-7ba83404079a\",\"Labels\":[],\"ExperimentalBuild\":false,\"ServerVersion\":\"29.7.2\",\"Runtimes\":{\"io.containerd.runc.v2\":{\"path\":\"runc\",\"status\":{\"org.opencontainers.runtime-spec.features\":\"{\\\"ociVersionMin\\\":\\\"1.0.0\\\",\\\"ociVersionMax\\\":\\\"1.3.0\\\",\\\"hooks\\\":[\\\"prestart\\\",\\\"createRuntime\\\",\\\"createContainer\\\",\\\"startContainer\\\",\\\"poststart\\\",\\\"poststop\\\"],\\\"mountOptions\\\":[\\\"async\\\",\\\"atime\\\",\\\"bind\\\",\\\"defaults\\\",\\\"dev\\\",\\\"diratime\\\",\\\"dirsync\\\",\\\"exec\\\",\\\"iversion\\\",\\\"lazytime\\\",\\\"loud\\\",\\\"mand\\\",\\\"noatime\\\",\\\"nodev\\\",\\\"nodiratime\\\",\\\"noexec\\\",\\\"noiversion\\\",\\\"nolazytime\\\",\\\"nomand\\\",\\\"norelatime\\\",\\\"nostrictatime\\\",\\\"nosuid\\\",\\\"nosymfollow\\\",\\\"private\\\",\\\"ratime\\\",\\\"rbind\\\",\\\"rdev\\\",\\\"rdiratime\\\",\\\"relatime\\\",\\\"remount\\\",\\\"rexec\\\",\\\"rnoatime\\\",\\\"rnodev\\\",\\\"rnodiratime\\\",\\\"rnoexec\\\",\\\"rnorelatime\\\",\\\"rnostrictatime\\\",\\\"rnosuid\\\",\\\"rnosymfollow\\\",\\\"ro\\\",\\\"rprivate\\\",\\\"rrelatime\\\",\\\"rro\\\",\\\"rrw\\\",\\\"rshared\\\",\\\"rslave\\\",\\\"rstrictatime\\\",\\\"rsuid\\\",\\\"rsymfollow\\\",\\\"runbindable\\\",\\\"rw\\\",\\\"shared\\\",\\\"silent\\\",\\\"slave\\\",\\\"strictatime\\\",\\\"suid\\\",\\\"symfollow\\\",\\\"sync\\\",\\\"tmpcopyup\\\",\\\"unbindable\\\"],\\\"linux\\\":{\\\"namespaces\\\":[\\\"cgroup\\\",\\\"ipc\\\",\\\"mount\\\",\\\"network\\\",\\\"pid\\\",\\\"time\\\",\\\"user\\\",\\\"uts\\\"],\\\"capabilities\\\":[\\\"CAP_CHOWN\\\",\\\"CAP_DAC_OVERRIDE\\\",\\\"CAP_DAC_READ_SEARCH\\\",\\\"CAP_FOWNER\\\",\\\"CAP_FSETID\\\",\\\"CAP_KILL\\\",\\\"CAP_SETGID\\\",\\\"CAP_SETUID\\\",\\\"CAP_SETPCAP\\\",\\\"CAP_LINUX_IMMUTABLE\\\",\\\"CAP_NET_BIND_SERVICE\\\",\\\"CAP_NET_BROADCAST\\\",\\\"CAP_NET_ADMIN\\\",\\\"CAP_NET_RAW\\\",\\\"CAP_IPC_LOCK\\\",\\\"CAP_IPC_OWNER\\\",\\\"CAP_SYS_MODULE\\\",\\\"CAP_SYS_RAWIO\\\",\\\"CAP_SYS_CHROOT\\\",\\\"CAP_SYS_PTRACE\\\",\\\"CAP_SYS_PACCT\\\",\\\"CAP_SYS_ADMIN\\\",\\\"CAP_SYS_BOOT\\\",\\\"CAP_SYS_NICE\\\",\\\"CAP_SYS_RESOURCE\\\",\\\"CAP_SYS_TIME\\\",\\\"CAP_SYS_TTY_CONFIG\\\",\\\"CAP_MKNOD\\\",\\\"CAP_LEASE\\\",\\\"CAP_AUDIT_WRITE\\\",\\\"CAP_AUDIT_CONTROL\\\",\\\"CAP_SETFCAP\\\",\\\"CAP_MAC_OVERRIDE\\\",\\\"CAP_MAC_ADMIN\\\",\\\"CAP_SYSLOG\\\",\\\"CAP_WAKE_ALARM\\\",\\\"CAP_BLOCK_SUSPEND\\\",\\\"CAP_AUDIT_READ\\\",\\\"CAP_PERFMON\\\",\\\"CAP_BPF\\\",\\\"CAP_CHECKPOINT_RESTORE\\\"],\\\"cgroup\\\":{\\\"v1\\\":true,\\\"v2\\\":true,\\\"systemd\\\":true,\\\"systemdUser\\\":true,\\\"rdma\\\":true},\\\"seccomp\\\":{\\\"enabled\\\":true,\\\"actions\\\":[\\\"SCMP_ACT_ALLOW\\\",\\\"SCMP_ACT_ERRNO\\\",\\\"SCMP_ACT_KILL\\\",\\\"SCMP_ACT_KILL_PROCESS\\\",\\\"SCMP_ACT_KILL_THREAD\\\",\\\"SCMP_ACT_LOG\\\",\\\"SCMP_ACT_NOTIFY\\\",\\\"SCMP_ACT_TRACE\\\",\\\"SCMP_ACT_TRAP\\\"],\\\"operators\\\":[\\\"SCMP_CMP_EQ\\\",\\\"SCMP_CMP_GE\\\",\\\"SCMP_CMP_GT\\\",\\\"SCMP_CMP_LE\\\",\\\"SCMP_CMP_LT\\\",\\\"SCMP_CMP_MASKED_EQ\\\",\\\"SCMP_CMP_NE\\\"],\\\"archs\\\":[\\\"SCMP_ARCH_AARCH64\\\",\\\"SCMP_ARCH_ARM\\\",\\\"SCMP_ARCH_LOONGARCH64\\\",\\\"SCMP_ARCH_MIPS\\\",\\\"SCMP_ARCH_MIPS64\\\",\\\"SCMP_ARCH_MIPS64N32\\\",\\\"SCMP_ARCH_MIPSEL\\\",\\\"SCMP_ARCH_MIPSEL64\\\",\\\"SCMP_ARCH_MIPSEL64N32\\\",\\\"SCMP_ARCH_PPC\\\",\\\"SCMP_ARCH_PPC64\\\",\\\"SCMP_ARCH_PPC64LE\\\",\\\"SCMP_ARCH_RISCV64\\\",\\\"SCMP_ARCH_S390\\\",\\\"SCMP_ARCH_S390X\\\",\\\"SCMP_ARCH_X32\\\",\\\"SCMP_ARCH_X86\\\",\\\"SCMP_ARCH_X86_64\\\"],\\\"knownFlags\\\":[\\\"SECCOMP_FILTER_FLAG_TSYNC\\\",\\\"SECCOMP_FILTER_FLAG_SPEC_ALLOW\\\",\\\"SECCOMP_FILTER_FLAG_LOG\\\"],\\\"supportedFlags\\\":[\\\"SECCOMP_FILTER_FLAG_TSYNC\\\",\\\"SECCOMP_FILTER_FLAG_SPEC_ALLOW\\\",\\\"SECCOMP_FILTER_FLAG_LOG\\\"]},\\\"apparmor\\\":{\\\"enabled\\\":true},\\\"selinux\\\":{\\\"enabled\\\":true},\\\"intelRdt\\\":{\\\"enabled\\\":true,\\\"schemata\\\":true,\\\"monitoring\\\":true},\\\"memoryPolicy\\\":{\\\"modes\\\":[\\\"MPOL_BIND\\\",\\\"MPOL_DEFAULT\\\",\\\"MPOL_INTERLEAVE\\\",\\\"MPOL_LOCAL\\\",\\\"MPOL_PREFERRED\\\",\\\"MPOL_PREFERRED_MANY\\\",\\\"MPOL_WEIGHTED_INTERLEAVE\\\"],\\\"flags\\\":[\\\"MPOL_F_NUMA_BALANCING\\\",\\\"MPOL_F_RELATIVE_NODES\\\",\\\"MPOL_F_STATIC_NODES\\\"]},\\\"mountExtensions\\\":{\\\"idmap\\\":{\\\"enabled\\\":true}},\\\"netDevices\\\":{\\\"enabled\\\":true}},\\\"annotations\\\":{\\\"io.github.seccomp.libseccomp.version\\\":\\\"2.6.0\\\",\\\"org.opencontainers.runc.checkpoint.enabled\\\":\\\"true\\\",\\\"org.opencontainers.runc.commit\\\":\\\"v1.4.3-0-gbb14dabe\\\",\\\"org.opencontainers.runc.version\\\":\\\"1.4.3\\\\n\\\"},\\\"potentiallyUnsafeConfigAnnotations\\\":[\\\"bundle\\\",\\\"org.systemd.property.\\\",\\\"org.criu.config\\\"]}\"}},\"runc\":{\"path\":\"runc\",\"status\":{\"org.opencontainers.runtime-spec.features\":\"{\\\"ociVersionMin\\\":\\\"1.0.0\\\",\\\"ociVersionMax\\\":\\\"1.3.0\\\",\\\"hooks\\\":[\\\"prestart\\\",\\\"createRuntime\\\",\\\"createContainer\\\",\\\"startContainer\\\",\\\"poststart\\\",\\\"poststop\\\"],\\\"mountOptions\\\":[\\\"async\\\",\\\"atime\\\",\\\"bind\\\",\\\"defaults\\\",\\\"dev\\\",\\\"diratime\\\",\\\"dirsync\\\",\\\"exec\\\",\\\"iversion\\\",\\\"lazytime\\\",\\\"loud\\\",\\\"mand\\\",\\\"noatime\\\",\\\"nodev\\\",\\\"nodiratime\\\",\\\"noexec\\\",\\\"noiversion\\\",\\\"nolazytime\\\",\\\"nomand\\\",\\\"norelatime\\\",\\\"nostrictatime\\\",\\\"nosuid\\\",\\\"nosymfollow\\\",\\\"private\\\",\\\"ratime\\\",\\\"rbind\\\",\\\"rdev\\\",\\\"rdiratime\\\",\\\"relatime\\\",\\\"remount\\\",\\\"rexec\\\",\\\"rnoatime\\\",\\\"rnodev\\\",\\\"rnodiratime\\\",\\\"rnoexec\\\",\\\"rnorelatime\\\",\\\"rnostrictatime\\\",\\\"rnosuid\\\",\\\"rnosymfollow\\\",\\\"ro\\\",\\\"rprivate\\\",\\\"rrelatime\\\",\\\"rro\\\",\\\"rrw\\\",\\\"rshared\\\",\\\"rslave\\\",\\\"rstrictatime\\\",\\\"rsuid\\\",\\\"rsymfollow\\\",\\\"runbindable\\\",\\\"rw\\\",\\\"shared\\\",\\\"silent\\\",\\\"slave\\\",\\\"strictatime\\\",\\\"suid\\\",\\\"symfollow\\\",\\\"sync\\\",\\\"tmpcopyup\\\",\\\"unbindable\\\"],\\\"linux\\\":{\\\"namespaces\\\":[\\\"cgroup\\\",\\\"ipc\\\",\\\"mount\\\",\\\"network\\\",\\\"pid\\\",\\\"time\\\",\\\"user\\\",\\\"uts\\\"],\\\"capabilities\\\":[\\\"CAP_CHOWN\\\",\\\"CAP_DAC_OVERRIDE\\\",\\\"CAP_DAC_READ_SEARCH\\\",\\\"CAP_FOWNER\\\",\\\"CAP_FSETID\\\",\\\"CAP_KILL\\\",\\\"CAP_SETGID\\\",\\\"CAP_SETUID\\\",\\\"CAP_SETPCAP\\\",\\\"CAP_LINUX_IMMUTABLE\\\",\\\"CAP_NET_BIND_SERVICE\\\",\\\"CAP_NET_BROADCAST\\\",\\\"CAP_NET_ADMIN\\\",\\\"CAP_NET_RAW\\\",\\\"CAP_IPC_LOCK\\\",\\\"CAP_IPC_OWNER\\\",\\\"CAP_SYS_MODULE\\\",\\\"CAP_SYS_RAWIO\\\",\\\"CAP_SYS_CHROOT\\\",\\\"CAP_SYS_PTRACE\\\",\\\"CAP_SYS_PACCT\\\",\\\"CAP_SYS_ADMIN\\\",\\\"CAP_SYS_BOOT\\\",\\\"CAP_SYS_NICE\\\",\\\"CAP_SYS_RESOURCE\\\",\\\"CAP_SYS_TIME\\\",\\\"CAP_SYS_TTY_CONFIG\\\",\\\"CAP_MKNOD\\\",\\\"CAP_LEASE\\\",\\\"CAP_AUDIT_WRITE\\\",\\\"CAP_AUDIT_CONTROL\\\",\\\"CAP_SETFCAP\\\",\\\"CAP_MAC_OVERRIDE\\\",\\\"CAP_MAC_ADMIN\\\",\\\"CAP_SYSLOG\\\",\\\"CAP_WAKE_ALARM\\\",\\\"CAP_BLOCK_SUSPEND\\\",\\\"CAP_AUDIT_READ\\\",\\\"CAP_PERFMON\\\",\\\"CAP_BPF\\\",\\\"CAP_CHECKPOINT_RESTORE\\\"],\\\"cgroup\\\":{\\\"v1\\\":true,\\\"v2\\\":true,\\\"systemd\\\":true,\\\"systemdUser\\\":true,\\\"rdma\\\":true},\\\"seccomp\\\":{\\\"enabled\\\":true,\\\"actions\\\":[\\\"SCMP_ACT_ALLOW\\\",\\\"SCMP_ACT_ERRNO\\\",\\\"SCMP_ACT_KILL\\\",\\\"SCMP_ACT_KILL_PROCESS\\\",\\\"SCMP_ACT_KILL_THREAD\\\",\\\"SCMP_ACT_LOG\\\",\\\"SCMP_ACT_NOTIFY\\\",\\\"SCMP_ACT_TRACE\\\",\\\"SCMP_ACT_TRAP\\\"],\\\"operators\\\":[\\\"SCMP_CMP_EQ\\\",\\\"SCMP_CMP_GE\\\",\\\"SCMP_CMP_GT\\\",\\\"SCMP_CMP_LE\\\",\\\"SCMP_CMP_LT\\\",\\\"SCMP_CMP_MASKED_EQ\\\",\\\"SCMP_CMP_NE\\\"],\\\"archs\\\":[\\\"SCMP_ARCH_AARCH64\\\",\\\"SCMP_ARCH_ARM\\\",\\\"SCMP_ARCH_LOONGARCH64\\\",\\\"SCMP_ARCH_MIPS\\\",\\\"SCMP_ARCH_MIPS64\\\",\\\"SCMP_ARCH_MIPS64N32\\\",\\\"SCMP_ARCH_MIPSEL\\\",\\\"SCMP_ARCH_MIPSEL64\\\",\\\"SCMP_ARCH_MIPSEL64N32\\\",\\\"SCMP_ARCH_PPC\\\",\\\"SCMP_ARCH_PPC64\\\",\\\"SCMP_ARCH_PPC64LE\\\",\\\"SCMP_ARCH_RISCV64\\\",\\\"SCMP_ARCH_S390\\\",\\\"SCMP_ARCH_S390X\\\",\\\"SCMP_ARCH_X32\\\",\\\"SCMP_ARCH_X86\\\",\\\"SCMP_ARCH_X86_64\\\"],\\\"knownFlags\\\":[\\\"SECCOMP_FILTER_FLAG_TSYNC\\\",\\\"SECCOMP_FILTER_FLAG_SPEC_ALLOW\\\",\\\"SECCOMP_FILTER_FLAG_LOG\\\"],\\\"supportedFlags\\\":[\\\"SECCOMP_FILTER_FLAG_TSYNC\\\",\\\"SECCOMP_FILTER_FLAG_SPEC_ALLOW\\\",\\\"SECCOMP_FILTER_FLAG_LOG\\\"]},\\\"apparmor\\\":{\\\"enabled\\\":true},\\\"selinux\\\":{\\\"enabled\\\":true},\\\"intelRdt\\\":{\\\"enabled\\\":true,\\\"schemata\\\":true,\\\"monitoring\\\":true},\\\"memoryPolicy\\\":{\\\"modes\\\":[\\\"MPOL_BIND\\\",\\\"MPOL_DEFAULT\\\",\\\"MPOL_INTERLEAVE\\\",\\\"MPOL_LOCAL\\\",\\\"MPOL_PREFERRED\\\",\\\"MPOL_PREFERRED_MANY\\\",\\\"MPOL_WEIGHTED_INTERLEAVE\\\"],\\\"flags\\\":[\\\"MPOL_F_NUMA_BALANCING\\\",\\\"MPOL_F_RELATIVE_NODES\\\",\\\"MPOL_F_STATIC_NODES\\\"]},\\\"mountExtensions\\\":{\\\"idmap\\\":{\\\"enabled\\\":true}},\\\"netDevices\\\":{\\\"enabled\\\":true}},\\\"annotations\\\":{\\\"io.github.seccomp.libseccomp.version\\\":\\\"2.6.0\\\",\\\"org.opencontainers.runc.checkpoint.enabled\\\":\\\"true\\\",\\\"org.opencontainers.runc.commit\\\":\\\"v1.4.3-0-gbb14dabe\\\",\\\"org.opencontainers.runc.version\\\":\\\"1.4.3\\\\n\\\"},\\\"potentiallyUnsafeConfigAnnotations\\\":[\\\"bundle\\\",\\\"org.systemd.property.\\\",\\\"org.criu.config\\\"]}\"}}},\"DefaultRuntime\":\"runc\",\"Swarm\":{\"NodeID\":\"\",\"NodeAddr\":\"\",\"LocalNodeState\":\"inactive\",\"ControlAvailable\":false,\"Error\":\"\",\"RemoteManagers\":null},\"LiveRestoreEnabled\":false,\"Isolation\":\"\",\"InitBinary\":\"docker-init\",\"ContainerdCommit\":{\"ID\":\"aad11006b869517fcd3009450b6f82da282e1a9b\"},\"RuncCommit\":{\"ID\":\"v1.4.3-0-gbb14dabe\"},\"InitCommit\":{\"ID\":\"de40ad0\"},\"SecurityOptions\":[\"name=seccomp,profile=builtin\",\"name=cgroupns\"],\"FirewallBackend\":{\"Driver\":\"iptables\",\"Info\":[[\"EnableUserlandProxy\",\"true\"],[\"UserlandProxyPath\",\"/usr/bin/docker-proxy\"]]},\"CDISpecDirs\":[\"/etc/cdi\",\"/var/run/cdi\"],\"Containerd\":{\"Address\":\"/var/run/docker/containerd/containerd.sock\",\"Namespaces\":{\"Containers\":\"moby\",\"Plugins\":\"plugins.moby\"}},\"Warnings\":null,\"ClientInfo\":{\"Debug\":false,\"Platform\":{\"Name\":\"Docker Engine - Community\"},\"Version\":\"29.7.2\",\"DefaultAPIVersion\":\"1.55\",\"GitCommit\":\"a7dcaa6\",\"GoVersion\":\"go1.26.5\",\"Os\":\"linux\",\"Arch\":\"arm64\",\"BuildTime\":\"Wed Aug  5 18:29:01 2026\",\"Context\":\"default\",\"Plugins\":[{\"SchemaVersion\":\"0.1.0\",\"Vendor\":\"Docker Inc.\",\"Version\":\"v0.36.1\",\"ShortDescription\":\"Docker Buildx\",\"Name\":\"buildx\",\"Path\":\"/usr/libexec/docker/cli-plugins/docker-buildx\"},{\"SchemaVersion\":\"0.1.0\",\"Vendor\":\"Docker Inc.\",\"Version\":\"v5.5.0\",\"ShortDescription\":\"Docker Compose\",\"Name\":\"compose\",\"Path\":\"/usr/libexec/docker/cli-plugins/docker-compose\"}],\"Warnings\":null}}\n",
+        "stderr": "",
+        "response": null,
+        "responseAtMs": null,
+        "inputEofAtMs": 1.618417000000008,
+        "elapsedMs": 328.365292,
+        "timedOut": false,
+        "signals": []
+      }
+    },
+    {
+      "label": "private-docker-compose",
+      "at": "2026-09-05T18:54:32.478Z",
+      "policy": {
+        "global": {
+          "rules": [
+            {
+              "id": "default-deny-all",
+              "name": "default-deny-all",
+              "policy_name": "default-deny-all",
+              "scope": "global",
+              "applies_to": "all",
+              "resource_type": "network",
+              "decision": "deny",
+              "resources": [
+                "**"
+              ],
+              "origin": "local",
+              "layer": "local",
+              "status": "active",
+              "editable": false
+            }
+          ]
+        },
+        "scoped": {
+          "rules": [
+            {
+              "id": "default-deny-all",
+              "name": "default-deny-all",
+              "policy_name": "default-deny-all",
+              "scope": "global",
+              "applies_to": "all",
+              "resource_type": "network",
+              "decision": "deny",
+              "resources": [
+                "**"
+              ],
+              "origin": "local",
+              "layer": "local",
+              "status": "active",
+              "editable": false
+            }
+          ]
+        },
+        "checked": {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-traffic-fx-819c60e4-7e10-4247-becb-7ba83404079a",
+          "deny_kind": "implicit",
+          "governance": {
+            "active": false
+          },
+          "reason": "No matching allow rule (default deny)",
+          "resource_type": "net:domain",
+          "resource_value": "blobot-traffic-fixture.invalid:443",
+          "target": "blobot-traffic-fixture.invalid:443",
+          "type": "network"
+        }
+      },
+      "result": {
+        "uid": 1000,
+        "pid": 354,
+        "command": {
+          "executable": "/opt/blobot/bin/docker",
+          "args": [
+            "compose",
+            "version",
+            "--short"
+          ]
+        },
+        "code": 0,
+        "exitSignal": null,
+        "stdout": "5.5.0\n",
+        "stderr": "",
+        "response": null,
+        "responseAtMs": null,
+        "inputEofAtMs": 2.0112920000000045,
+        "elapsedMs": 31.301208999999993,
+        "timedOut": false,
+        "signals": []
+      }
+    },
+    {
+      "label": "version",
+      "at": "2026-09-05T18:54:49.332Z",
+      "policy": {
+        "global": {
+          "rules": [
+            {
+              "id": "default-deny-all",
+              "name": "default-deny-all",
+              "policy_name": "default-deny-all",
+              "scope": "global",
+              "applies_to": "all",
+              "resource_type": "network",
+              "decision": "deny",
+              "resources": [
+                "**"
+              ],
+              "origin": "local",
+              "layer": "local",
+              "status": "active",
+              "editable": false
+            }
+          ]
+        },
+        "scoped": {
+          "rules": [
+            {
+              "id": "default-deny-all",
+              "name": "default-deny-all",
+              "policy_name": "default-deny-all",
+              "scope": "global",
+              "applies_to": "all",
+              "resource_type": "network",
+              "decision": "deny",
+              "resources": [
+                "**"
+              ],
+              "origin": "local",
+              "layer": "local",
+              "status": "active",
+              "editable": false
+            }
+          ]
+        },
+        "checked": {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-traffic-fx-819c60e4-7e10-4247-becb-7ba83404079a",
+          "deny_kind": "implicit",
+          "governance": {
+            "active": false
+          },
+          "reason": "No matching allow rule (default deny)",
+          "resource_type": "net:domain",
+          "resource_value": "blobot-traffic-fixture.invalid:443",
+          "target": "blobot-traffic-fixture.invalid:443",
+          "type": "network"
+        }
+      },
+      "result": {
+        "uid": 1000,
+        "pid": 387,
+        "command": {
+          "executable": "/opt/blobot/bin/fx",
+          "args": [
+            "--version"
+          ]
+        },
+        "code": 0,
+        "exitSignal": null,
+        "stdout": "0.0.7\n",
+        "stderr": "",
+        "response": null,
+        "responseAtMs": null,
+        "inputEofAtMs": 1.6525000000000034,
+        "elapsedMs": 55.887375000000006,
+        "timedOut": false,
+        "signals": []
+      }
+    },
+    {
+      "label": "signed-out-status",
+      "at": "2026-09-05T18:54:53.568Z",
+      "policy": {
+        "global": {
+          "rules": [
+            {
+              "id": "default-deny-all",
+              "name": "default-deny-all",
+              "policy_name": "default-deny-all",
+              "scope": "global",
+              "applies_to": "all",
+              "resource_type": "network",
+              "decision": "deny",
+              "resources": [
+                "**"
+              ],
+              "origin": "local",
+              "layer": "local",
+              "status": "active",
+              "editable": false
+            }
+          ]
+        },
+        "scoped": {
+          "rules": [
+            {
+              "id": "default-deny-all",
+              "name": "default-deny-all",
+              "policy_name": "default-deny-all",
+              "scope": "global",
+              "applies_to": "all",
+              "resource_type": "network",
+              "decision": "deny",
+              "resources": [
+                "**"
+              ],
+              "origin": "local",
+              "layer": "local",
+              "status": "active",
+              "editable": false
+            }
+          ]
+        },
+        "checked": {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-traffic-fx-819c60e4-7e10-4247-becb-7ba83404079a",
+          "deny_kind": "implicit",
+          "governance": {
+            "active": false
+          },
+          "reason": "No matching allow rule (default deny)",
+          "resource_type": "net:domain",
+          "resource_value": "blobot-traffic-fixture.invalid:443",
+          "target": "blobot-traffic-fixture.invalid:443",
+          "type": "network"
+        }
+      },
+      "result": {
+        "uid": 1000,
+        "pid": 402,
+        "command": {
+          "executable": "/opt/blobot/bin/fx",
+          "args": [
+            "status",
+            "--json"
+          ]
+        },
+        "code": 0,
+        "exitSignal": null,
+        "stdout": "{\"kind\":\"status\",\"model\":\"moonshotai/kimi-k3\",\"update_channel\":\"stable\",\"build_channel\":\"stable\",\"build_revision\":\"cef08aa0f178\",\"auth\":\"missing\",\"auth_refreshable\":false,\"auth_help\":\"fx needs access to Vercel AI Gateway. Run fx login to sign in, fx setup to use an API key, or set AI_GATEWAY_API_KEY.\",\"permission_mode\":\"auto\",\"workspace\":\"/workspace\",\"history_turns\":0,\"session_permission_grants\":0,\"agent_step_limit\":0,\"mcp\":{\"connection_check\":\"not_checked\",\"servers\":[],\"configuration_issues\":[],\"inspection_error\":null}}\n",
+        "stderr": "",
+        "response": null,
+        "responseAtMs": null,
+        "inputEofAtMs": 1.9549590000000023,
+        "elapsedMs": 3.4437089999999984,
+        "timedOut": false,
+        "signals": []
+      }
+    },
+    {
+      "label": "initialize-only",
+      "at": "2026-09-05T18:55:14.990Z",
+      "policy": {
+        "global": {
+          "rules": [
+            {
+              "id": "default-deny-all",
+              "name": "default-deny-all",
+              "policy_name": "default-deny-all",
+              "scope": "global",
+              "applies_to": "all",
+              "resource_type": "network",
+              "decision": "deny",
+              "resources": [
+                "**"
+              ],
+              "origin": "local",
+              "layer": "local",
+              "status": "active",
+              "editable": false
+            }
+          ]
+        },
+        "scoped": {
+          "rules": [
+            {
+              "id": "default-deny-all",
+              "name": "default-deny-all",
+              "policy_name": "default-deny-all",
+              "scope": "global",
+              "applies_to": "all",
+              "resource_type": "network",
+              "decision": "deny",
+              "resources": [
+                "**"
+              ],
+              "origin": "local",
+              "layer": "local",
+              "status": "active",
+              "editable": false
+            }
+          ]
+        },
+        "checked": {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-traffic-fx-819c60e4-7e10-4247-becb-7ba83404079a",
+          "deny_kind": "implicit",
+          "governance": {
+            "active": false
+          },
+          "reason": "No matching allow rule (default deny)",
+          "resource_type": "net:domain",
+          "resource_value": "blobot-traffic-fixture.invalid:443",
+          "target": "blobot-traffic-fixture.invalid:443",
+          "type": "network"
+        }
+      },
+      "result": {
+        "uid": 1000,
+        "pid": 417,
+        "command": {
+          "executable": "/opt/blobot/bin/fx",
+          "args": [
+            "acp"
+          ]
+        },
+        "code": 0,
+        "exitSignal": null,
+        "stdout": "{\"jsonrpc\":\"2.0\",\"id\":1,\"error\":{\"code\":-32600,\"message\":\"fx needs access to Vercel AI Gateway. Run fx login to sign in, fx setup to use an API key, or set AI_GATEWAY_API_KEY.\"}}\n",
+        "stderr": "",
+        "response": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "error": {
+            "code": -32600,
+            "message": "fx needs access to Vercel AI Gateway. Run fx login to sign in, fx setup to use an API key, or set AI_GATEWAY_API_KEY."
+          }
+        },
+        "responseAtMs": 2.038208999999995,
+        "inputEofAtMs": 10012.406214,
+        "elapsedMs": 10015.563005,
+        "timedOut": false,
+        "signals": []
+      }
+    }
+  ],
+  "cleanup": {
+    "errors": [],
+    "remainingBoxes": [],
+    "remainingImages": []
+  },
+  "observationWindowsMs": {
+    "idleBoot": 15000,
+    "afterVersion": 3000,
+    "afterStatus": 10000,
+    "initializeAfterResponse": 10000
+  },
+  "engine": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "policyBeforeCreate": {
+    "global": {
+      "rules": [
+        {
+          "id": "default-deny-all",
+          "name": "default-deny-all",
+          "policy_name": "default-deny-all",
+          "scope": "global",
+          "applies_to": "all",
+          "resource_type": "network",
+          "decision": "deny",
+          "resources": [
+            "**"
+          ],
+          "origin": "local",
+          "layer": "local",
+          "status": "active",
+          "editable": false
+        }
+      ]
+    }
+  },
+  "hostSpace": {
+    "availableBytes": "4901687296",
+    "requiredBytes": "1667847387"
+  },
+  "export": {
+    "bytes": 594125824,
+    "sha256": "aa85996465914ab9c131bf9dcc65e8e3f9356e31307550caeb305943aedf3bf7",
+    "manifest": {
+      "mediaType": "application/vnd.oci.image.manifest.v1+json",
+      "digest": "sha256:74d888efe94fb1544ae5a275964cfa5ba00dd96de9b4bd50bd1e8c7d917a19df",
+      "size": 3526,
+      "annotations": {
+        "config.digest": "sha256:5183cb72069fb930889279a846330be504a1314fa2a85266906c690a53d98fd7",
+        "io.containerd.image.name": "docker.io/library/blobot-machine-fx:55984dffe8c49fc6648b-arm64",
+        "org.opencontainers.image.ref.name": "55984dffe8c49fc6648b-arm64"
+      }
+    },
+    "deletedAfterLoad": true
+  },
+  "loaded": {
+    "id": "74d888efe94f",
+    "repository": "docker.io/library/blobot-machine-fx",
+    "tag": "55984dffe8c49fc6648b-arm64",
+    "flavor": "shell-docker",
+    "created_at": "2026-09-05T18:54:23Z",
+    "size": 594105563
+  },
+  "kit": {
+    "schemaVersion": "2",
+    "kind": "sandbox",
+    "name": "blobot",
+    "sandbox": {
+      "image": "blobot-machine-fx:55984dffe8c49fc6648b-arm64",
+      "entrypoint": [
+        "/usr/bin/node"
+      ],
+      "command": {
+        "default": [
+          "--version"
+        ]
+      }
+    },
+    "credentials": [],
+    "permissions": {
+      "network": {
+        "allow": [],
+        "deny": []
+      }
+    },
+    "setup": {
+      "install": [
+        {
+          "user": "0",
+          "command": "chown 1000:1000 /home/agent /workspace && chmod 0700 /home/agent /workspace"
+        }
+      ]
+    },
+    "volumes": [
+      {
+        "path": "/home/agent",
+        "size": "8589934592",
+        "mode": "0700"
+      },
+      {
+        "path": "/workspace",
+        "size": "536870912",
+        "mode": "0700"
+      },
+      {
+        "path": "/var/lib/docker",
+        "size": "21474836480",
+        "mode": "0700"
+      }
+    ],
+    "security": {
+      "privileged": true
+    }
+  },
+  "box": {
+    "name": "blobot-traffic-fx-819c60e4-7e10-4247-becb-7ba83404079a",
+    "id": "20222487-1000-4538-9a30-963869db2a2c"
+  },
+  "policyAfterCreate": {
+    "global": {
+      "rules": [
+        {
+          "id": "default-deny-all",
+          "name": "default-deny-all",
+          "policy_name": "default-deny-all",
+          "scope": "global",
+          "applies_to": "all",
+          "resource_type": "network",
+          "decision": "deny",
+          "resources": [
+            "**"
+          ],
+          "origin": "local",
+          "layer": "local",
+          "status": "active",
+          "editable": false
+        }
+      ]
+    },
+    "scoped": {
+      "rules": [
+        {
+          "id": "default-deny-all",
+          "name": "default-deny-all",
+          "policy_name": "default-deny-all",
+          "scope": "global",
+          "applies_to": "all",
+          "resource_type": "network",
+          "decision": "deny",
+          "resources": [
+            "**"
+          ],
+          "origin": "local",
+          "layer": "local",
+          "status": "active",
+          "editable": false
+        }
+      ]
+    },
+    "checked": {
+      "action": "net:connect:tcp",
+      "allowed": false,
+      "context": "sandbox:blobot-traffic-fx-819c60e4-7e10-4247-becb-7ba83404079a",
+      "deny_kind": "implicit",
+      "governance": {
+        "active": false
+      },
+      "reason": "No matching allow rule (default deny)",
+      "resource_type": "net:domain",
+      "resource_value": "blobot-traffic-fixture.invalid:443",
+      "target": "blobot-traffic-fixture.invalid:443",
+      "type": "network"
+    }
+  },
+  "boundary": {
+    "uid": 1000,
+    "gid": 1000,
+    "groups": [
+      1000
+    ],
+    "home": "/home/agent",
+    "node": "v22.22.1",
+    "homeEntries": [
+      ".gitconfig",
+      ".gitignore_global",
+      "lost+found"
+    ],
+    "workspaceEntries": [
+      "lost+found"
+    ],
+    "credentialVariablesPresent": [],
+    "roots": {
+      "/home/agent": {
+        "uid": 1000,
+        "gid": 1000,
+        "mode": 448,
+        "directory": true,
+        "mounts": [
+          {
+            "line": "117 107 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+            "device": "254:48",
+            "sectors": "16777216",
+            "blockBytes": "8589934592"
+          }
+        ]
+      },
+      "/workspace": {
+        "uid": 1000,
+        "gid": 1000,
+        "mode": 448,
+        "directory": true,
+        "mounts": [
+          {
+            "line": "118 107 254:64 / /workspace rw,relatime - ext4 /dev/vde rw",
+            "device": "254:64",
+            "sectors": "1048576",
+            "blockBytes": "536870912"
+          }
+        ]
+      },
+      "/var/lib/docker": {
+        "uid": 0,
+        "gid": 0,
+        "mode": 456,
+        "directory": true,
+        "mounts": [
+          {
+            "line": "119 107 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+            "device": "254:80",
+            "sectors": "41943040",
+            "blockBytes": "21474836480"
+          }
+        ]
+      }
+    },
+    "mountinfo": "107 73 0:29 / / rw,relatime - overlay overlay rw,lowerdir=/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/1:/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/2:/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/3:/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/4:/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/5:/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/6:/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/7:/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/8:/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/9:/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/10:/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/11:/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/12:/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/13:/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/14:/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/15:/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/16:/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/17,upperdir=/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/0/upper,workdir=/run/bundles/ab42d43387e6a59617a2dba7b7c40f17f8e187c761dfd952d95d2c559a9602cb/mounts/0/work,uuid=on,nouserxattr\n108 107 0:49 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw\n109 107 0:50 / /dev rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755\n110 109 0:51 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=5,mode=620,ptmxmode=666\n111 109 0:52 / /dev/shm rw,nosuid,nodev,noexec,relatime - tmpfs shm rw,size=65536k\n112 109 0:48 / /dev/mqueue rw,nosuid,nodev,noexec,relatime - mqueue mqueue rw\n113 107 0:53 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw\n114 107 0:54 / /run rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755\n115 113 0:23 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup2 rw\n116 114 0:55 / /run/secrets rw,nosuid,noexec,relatime - tmpfs tmpfs rw\n117 107 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw\n118 107 254:64 / /workspace rw,relatime - ext4 /dev/vde rw\n119 107 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw\n120 107 0:27 /resolv.conf /etc/resolv.conf ro,relatime - virtiofs bind-95f03ffa45a7d998 rw\n121 107 0:28 /hosts /etc/hosts ro,relatime - virtiofs bind-4a666ea3a3b04a24 rw\n"
+  },
+  "policyAtEnd": {
+    "global": {
+      "rules": [
+        {
+          "id": "default-deny-all",
+          "name": "default-deny-all",
+          "policy_name": "default-deny-all",
+          "scope": "global",
+          "applies_to": "all",
+          "resource_type": "network",
+          "decision": "deny",
+          "resources": [
+            "**"
+          ],
+          "origin": "local",
+          "layer": "local",
+          "status": "active",
+          "editable": false
+        }
+      ]
+    },
+    "scoped": {
+      "rules": [
+        {
+          "id": "default-deny-all",
+          "name": "default-deny-all",
+          "policy_name": "default-deny-all",
+          "scope": "global",
+          "applies_to": "all",
+          "resource_type": "network",
+          "decision": "deny",
+          "resources": [
+            "**"
+          ],
+          "origin": "local",
+          "layer": "local",
+          "status": "active",
+          "editable": false
+        }
+      ]
+    },
+    "checked": {
+      "action": "net:connect:tcp",
+      "allowed": false,
+      "context": "sandbox:blobot-traffic-fx-819c60e4-7e10-4247-becb-7ba83404079a",
+      "deny_kind": "implicit",
+      "governance": {
+        "active": false
+      },
+      "reason": "No matching allow rule (default deny)",
+      "resource_type": "net:domain",
+      "resource_value": "blobot-traffic-fixture.invalid:443",
+      "target": "blobot-traffic-fixture.invalid:443",
+      "type": "network"
+    }
+  },
+  "measurementCompleted": true,
+  "finishedAt": "2026-09-05T18:55:17.152Z"
+}

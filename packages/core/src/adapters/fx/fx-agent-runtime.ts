@@ -34,6 +34,7 @@ import type {
 } from '../acp/wire.js';
 import { offerableNames } from './palette.js';
 import { LocalMachine } from '../../machines/local-machine.js';
+import { FX_MACHINE_IMAGE } from './image.js';
 import { requireLocalMachine, type Machine } from '../../machines/machine.js';
 import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
 import { fxModeFor } from './permissions.js';
@@ -122,6 +123,7 @@ export interface FxAgentRuntimeOptions {
  * with no edit. What is left in this file is only what is fx's own.
  */
 export class FxAgentRuntime implements AgentRuntime {
+  readonly machineImage = FX_MACHINE_IMAGE;
   readonly agentId: string;
 
   readonly #options: FxAgentRuntimeOptions;

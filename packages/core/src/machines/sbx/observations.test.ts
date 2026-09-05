@@ -11,6 +11,18 @@ const sample = () => ({
     '115 101 0:28 /hosts /etc/hosts ro,relatime - virtiofs bind-b rw\n',
 });
 describe('limited sbx observation admission', () => {
+  it('requires a single private Docker device and the exact home/Docker capacities', () => {
+    const storage = { homeBytes: 8 * 1024 ** 3, dockerBytes: 20 * 1024 ** 3 };
+    const base = sample();
+    const docker = { path: '/var/lib/docker', uid: 0, gid: 0, mode: 0o710, directory: true, device: 3, blockBytes: storage.dockerBytes };
+    const line = '120 101 254:96 / /var/lib/docker rw,relatime - ext4 /dev/vdg rw\n';
+    const observed = { ...base, roots: [...base.roots.map(root => ({ ...root, blockBytes: storage.homeBytes })), docker], mountinfo: base.mountinfo + line };
+    const baseline = verifySbxBoundary(observed, limits, 0, undefined, undefined, storage);
+    expect(() => verifySbxBoundary(observed, limits, 0, baseline, undefined, { ...storage, dockerBytes: 50 * 1024 ** 3 })).toThrow('capacity');
+    expect(() => verifySbxBoundary({ ...observed, mountinfo: observed.mountinfo + line }, limits, 0, baseline, undefined, storage)).toThrow('mount');
+    expect(() => verifySbxBoundary({ ...observed, mountinfo: observed.mountinfo + '121 120 0:32 / /var/lib/docker/overlay2/workload/merged rw - overlay overlay rw\n' }, limits, 0, baseline, undefined, storage)).not.toThrow();
+    expect(() => verifySbxBoundary({ ...observed, roots: [...observed.roots.slice(0, 2), { ...docker, device: 0 }] }, limits, 0, baseline, undefined, storage)).toThrow('separate devices');
+  });
   it('admits exactly the declared worktree and Git mounts, with escaped spaces and no private workspace volume', () => {
     const workspace = { path: '/Users/test/agent work', commonGit: ['/Users/test/repo/.git'] };
     const sampleValue = sample();
