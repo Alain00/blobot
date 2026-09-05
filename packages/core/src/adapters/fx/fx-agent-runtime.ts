@@ -639,6 +639,11 @@ export class FxAgentRuntime implements AgentRuntime {
               optionId: option.optionId,
               kind: permissionKind(option.kind),
               name: option.name ?? option.optionId,
+              ...(option.kind === 'allow_always'
+                ? {
+                    description: 'Applies to this live session. It is not saved in settings or restored when a session is resumed. blobot does not provide a control to revoke it.',
+                  }
+                : {}),
             },
           ],
     );
@@ -762,7 +767,8 @@ function toAcpMcpServer(server: McpServerConfig): unknown {
 
 /**
  * fx offers `allow_once`, `allow_always` and `reject_once`, measured on a real permission
- * request. Ticket 14 gives `allow_always` no path to the UI. An unknown kind is a rejection.
+ * request. A reusable approval is a live session grant, not a saved setting. An unknown kind
+ * is a rejection.
  */
 function permissionKind(kind: string | undefined): PermissionOption['kind'] {
   switch (kind) {

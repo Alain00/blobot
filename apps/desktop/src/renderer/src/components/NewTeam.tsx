@@ -493,8 +493,8 @@ function Where({
               : `~/blobot/${name === '' ? '…' : name} · blobot makes this folder`}
       </div>
       <div className="pickfoot">
-        Each agent gets its own copy of this folder and asks before anything blobot has not
-        vouched for. blobot is not a sandbox.
+        Each agent gets its own working folder. Its runtime uses the approval settings chosen
+        for that agent.
       </div>
     </>
   );

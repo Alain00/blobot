@@ -97,6 +97,13 @@ harness's selected approval policy. Worktrees, credential ownership and engine c
 accepted. No further answer is pending about network reach or destination-list editability; no box
 activation is implied before the remaining image/runtime/onboarding/UI gates are complete.
 
+**Disclosure checkpoint, 2026-09-06.**
+[What a sandbox lets blobot say](issues/09-what-a-machine-lets-blobot-say.md) is implemented,
+validated and resolved. No permission answer remains pending. Its Answer supersedes historical
+clone/allowlist/box-only-approval prose and supplies the screen ticket's current copy contract.
+Continue the remaining implementation frontier; the claimed image preservation and box activation
+gates are still outstanding.
+
 **Measured network boundary.** The [RC5 probe](research/46-open-internet-boundary.md) found that
 the native Internet wildcard also admits host-loopback services despite private CIDR denies.
 The [decision round](egress-decision-round.md) records acceptance of that additional host-network
@@ -285,6 +292,8 @@ none is discarded, and the destination is unchanged:
   which, because the first blocking result turned out to be a platform's and not a library's.
 
 ## Decisions so far
+
+- [What a sandbox lets blobot say](issues/09-what-a-machine-lets-blobot-say.md): kind-specific words reflect host worktrees and open network reach; the shipped permission disclosure uses the selected runtime option's scope instead of a universal Claude file. Approval choices are unchanged, with tests and builds passing.
 
 - [Egress from a box: the allowlist, and how a block is said](issues/15-egress-from-a-box.md): open Internet plus host/local-network reach, preserving approval posture; scoped rule ownership/migration/revocation implemented and tested in RC5. Destination restrictions belong to a separate future effort.
 

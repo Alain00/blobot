@@ -148,8 +148,8 @@ export interface PendingPermission {
  * the chosen option does not exist on this runtime. It is not the same as a rejection, and the
  * transcript says which.
  *
- * `allowed_always` is separate from `allowed` because it is not the same act: it leaves a
- * standing rule behind, and the line the transcript keeps has to say so.
+ * `allowed_always` is separate from `allowed` because it chooses a reusable approval. Its
+ * lifetime and scope belong to the runtime option, not to this outcome.
  */
 export type PermissionOutcome = 'allowed' | 'allowed_always' | 'rejected' | 'cancelled';
 

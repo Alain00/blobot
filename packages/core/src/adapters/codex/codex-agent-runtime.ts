@@ -752,10 +752,9 @@ function toAcpMcpServer(server: McpServerConfig): unknown {
 }
 
 /**
- * Codex offers `allow_once`, `allow_always` and `reject_once`, and it spells `allow_always` two
- * different ways depending on what is being asked about: `accept_execpolicy_amendment` on a
- * command, `allow_for_session` on an edit. Both arrive as the kind, which is what blobot reads,
- * and ticket 14 gives that kind no path to the UI. An unknown kind is a rejection.
+ * Codex uses `allow_always` for both session grants and saved command/network rules. Keep
+ * the option's name with its id: the kind alone says nothing about scope or persistence.
+ * An unknown kind is a rejection.
  */
 function permissionKind(kind: string | undefined): PermissionOption['kind'] {
   switch (kind) {

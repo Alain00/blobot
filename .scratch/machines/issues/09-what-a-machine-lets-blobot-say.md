@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 04, 15
 
 # What a sandbox lets blobot say
@@ -689,3 +689,97 @@ shipping in the first build, which `12` now says. If the door ships, §7 is re-a
 different ground (a rule revocable only through a door) rather than kept. The words are this
 ticket's and `08`'s *Decided* now says so in as many words. The edges: `08` and `15` are blocked
 by `17` on disk now.
+
+
+## Answer — 2026-09-06
+
+Resolved within Guillermo's delegated implementation scope after his explicit approval of open
+Internet, host/local-network reach and unchanged runtime approval settings. Those approvals,
+the accepted host worktrees and the resolved native-protection decision supersede the historical
+proposals above. In particular **§7's box-only withholding of Allow always is withdrawn by name**:
+its guest-clone/no-editor premise no longer exists, and kind does not raise or lower approval
+authority. The [source review](../research/48-permission-disclosure.md) corrects the separate,
+previously shipped false universal statement about Claude's settings file.
+
+### Words for the Machine screen
+
+These are the current copy contract for
+[A Machine on screen, and where a profile is addressed from](12-a-machine-on-screen.md).
+That ticket owns placement and wiring; it must use actual detection/failure subjects, and must
+not offer a box before the remaining image/runtime/setup gates pass.
+
+| Context | Copy |
+| --- | --- |
+| Shared creation footer, implemented | Each agent gets its own working folder. Its runtime uses the approval settings chosen for that agent. |
+| Kind labels | this computer / a sandbox on this computer |
+| Local detail | {Agent} runs on this computer in its own working folder. It uses the runtime's local tools and configuration. |
+| Box detail | {Agent} runs in its own sandbox on this computer, with its own home and login. Its working folder is on this computer. Git history and configuration are shared with the repository. |
+| Box network detail | It can reach the Internet and services on this computer and your local network. Its runtime uses the approval settings chosen for this agent. |
+| Box tools/skills detail | Your reusable skills are available to read. Other tools must be available inside the sandbox or reachable over the network. |
+| Setup account | A sandbox on this computer needs a Docker account. Sign in through your browser. |
+| Setup software cost | Sandbox support uses proprietary software under the vendor's terms. That software can send usage data to its vendor. |
+| Setup sign-in note | Sandbox support keeps its own sign-in on this computer. Each agent signs in to its runtime separately inside its sandbox. |
+| Runtime sign-in card | {Agent} needs to sign in to {Runtime} inside its sandbox. |
+| Runtime sign-in note | This sign-in belongs to this agent's sandbox. The runtime stores it there. |
+
+Setup links the [vendor's terms](https://www.docker.com/legal/docker-subscription-service-agreement/)
+and [privacy information](https://www.docker.com/legal/privacy/), with the vendor name used only
+as the account/software owner in this accepted onboarding context. Buttons remain `set up
+sandboxes`, `sign in to Docker`, and `sign in to {Runtime}`. No extra confirmation or terminal.
+The account cost travels with the box offer; the longer software/sign-in note belongs in setup.
+No fee, offline guarantee, imported login or global settings copy is promised.
+
+The shared footer is stated, not consented to. A per-Agent kind detail is available again when
+editing that Agent; neither a mixed Team nor adding a box member hides its placement. Git,
+nested and plain workspace labels stay the same on both kinds: accepted host worktrees/copies
+removed the need for a guest-clone label, fetch-home sentence or off-host editor claim.
+Local protection uses the adapter-owned statements implemented by
+[Where the boundary goes: around the bridge, or inside the runtime](04-where-the-boundary-goes.md),
+not a universal fence. The optional inner fence and the approval settings are separate facts.
+
+### Failures and reach
+
+- **A selected box never falls back to local.** Its Agent is failed while other ready members
+  can work. This preserves `Orchestrator.start`'s per-member failure handling; `failed` is the
+  existing status, not a new one. A refusal need not add a second justification of no fallback.
+- Name the Agent, then the observed cause and remedy: `{Agent}'s sandbox is not set up. Set up
+  sandboxes to start it.`; `Sandbox support needs sign-in. Sign in to Docker to start {Agent}.`;
+  `{Agent}'s sandbox software is not ready. Finish its download to start it.`;
+  `{Agent}'s sandbox download did not finish. Try the download again.`;
+  `{Agent}'s sandbox could not start. Try starting it again.`
+- A verification failure is different: `blobot could not confirm {Agent}'s sandbox settings.
+  Check sandbox support and try again.` Mailbox readiness: `{Agent}'s sandbox could not connect
+  to the conversation. Try starting it again.` A transient problem offers retry; an unchanged
+  boundary/configuration mismatch remains refused. UI remedies must not repeat indefinitely
+  without exposing the supported setup/recovery action. Typed causes are mapped at the screen
+  boundary; daemon commands and diagnostics are not pasted into these sentences.
+- A Routine that cannot launch retains the same launch refusal as its skipped reason. No new
+  failure vocabulary or synthetic successful run is introduced.
+- No destination-policy denial line, hostname editor or destination list is implemented. Those
+  are explicitly a future effort. Ordinary network/tool errors remain runtime transcript
+  events. Open network reach does not authorize a service action, import credentials or add
+  host filesystem mounts. The copy promises neither credential containment nor safety equal
+  to running directly on the host, and does not suggest private Git history or configuration.
+- The former box-only fifth level and its no-questions disclosure are not introduced here.
+  The author's requirement is the same selected runtime approval policy; the trust ticket owns
+  reconciliation of its obsolete proposed level. No bypass follows from choosing a box.
+
+### Implemented permission disclosure
+
+The runtime's concrete reusable option name now accompanies the option selected by main, plus
+adapter-owned scope/storage text when verified. It survives live updates and reopening a Team.
+Claude's measured file is named only by that adapter, with no promise about every request or
+immediate revocation. OpenCode explains session/pattern scope; fx explains live, unsaved grants.
+Cursor and Codex have no invented universal store or revocation route. Unknown details say the
+runtime determines scope/lifetime and blobot has no individual revocation control. A once-only
+request does not describe an unavailable reusable option. The controls and selected ids remain
+unchanged, including the existing first option per kind when several are advertised.
+
+`DESIGN.md` and the original permission ticket are amended, so the historical Claude observation
+cannot again be generalized into a UI rule. The creation footer now avoids the unconditional
+ask promise, which was false for unattended configurations and runtime-specific policy behavior.
+
+Validation: focused adapters **149 passed**; desktop state/choices/transcript/creation
+**186 passed**. Full suites: core **975 passed / 47 skipped**, desktop **623 passed / 1 skipped**.
+Both typechecks and production builds pass; `git diff --check` passes. No box has been enabled and
+no real provider permission was authored by this verification.

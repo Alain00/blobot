@@ -611,6 +611,7 @@ describe('a permission block', () => {
     title: 'rm -rf dist',
     canAllow: true,
     canAllowAlways: true,
+    allowAlways: { name: 'Allow for this session', description: 'This grant ends with the session.' },
   };
   const started: AgentEvent = {
     ...identity,
@@ -625,7 +626,7 @@ describe('a permission block', () => {
     const asked = reduce(apply([started]), { type: 'permission', request, at: 20 });
     expect(asked.items).toMatchObject([
       { kind: 'tool', id: 'tool_1', status: 'asking' },
-      { kind: 'permission', id: 'perm_1', title: 'rm -rf dist', canAllow: true },
+      { kind: 'permission', id: 'perm_1', title: 'rm -rf dist', canAllow: true, allowAlways: request.allowAlways },
     ]);
   });
 
@@ -638,7 +639,7 @@ describe('a permission block', () => {
     ]);
   });
 
-  it('starts the call on an always answer too, and says the rule was left behind', () => {
+  it('starts the call on a reusable approval too, and records that choice', () => {
     const asked = reduce(apply([started]), { type: 'permission', request, at: 20 });
     const allowed = reduce(asked, {
       type: 'permissionSettled',
@@ -697,7 +698,7 @@ describe('a permission block', () => {
         dictation: 'off' as const,
       },
     });
-    expect(state.items).toMatchObject([{ kind: 'permission', id: 'perm_1' }]);
+    expect(state.items).toMatchObject([{ kind: 'permission', id: 'perm_1', allowAlways: request.allowAlways }]);
   });
 });
 

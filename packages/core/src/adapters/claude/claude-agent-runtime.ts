@@ -666,6 +666,11 @@ export class ClaudeAgentRuntime implements AgentRuntime {
               optionId: option.optionId,
               kind: permissionKind(option.kind),
               name: option.name ?? option.optionId,
+              ...(option.kind === 'allow_always'
+                ? {
+                    description: 'Claude can save approval rules in .claude/settings.local.json in this agent\'s working folder. You can remove saved rules from that file; when the change takes effect depends on the runtime.',
+                  }
+                : {}),
             },
           ],
     );

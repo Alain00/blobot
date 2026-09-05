@@ -3889,3 +3889,13 @@ pressing Escape and starting again. The stack is the transcript's, halo and all 
 drop-shadows of the surface's own ground rather than a border, because a blobatar is a silhouette
 and a rounded outline would cut its edge. Four rather than three, because these are 20px against a
 field rather than 11px inside a folder.
+
+
+## 2026-09-06 — permission disclosure names the selected runtime option
+
+Machines' [What a sandbox lets blobot say](../machines/issues/09-what-a-machine-lets-blobot-say.md#answer--2026-09-06)
+corrects the universal Claude-file and unconditional-prompt claims in the shipped UI. The
+option name and optional adapter-owned description survive request/snapshot delivery; the
+three choices and selected option ids are unchanged. No common persistence or revocation
+behavior is claimed. This amends the earlier permission-card prose rule, not its design or
+approval behavior. Machine-specific placement stays with Machines' screen ticket.

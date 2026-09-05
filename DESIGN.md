@@ -527,9 +527,14 @@ Other transcript rules:
   blobot has no opinion about whether the call should run, which is why it is asking. Three
   answers, **allow once**, **allow always** and **reject** (ticket 14 and its second
   amendment), and the tool line does not print `running` while nothing is running. The block
-  says where an *always* goes, because a standing rule the user cannot find is the reason the
-  answer was withheld in the first place: it is a line in that one agent's
-  `.claude/settings.local.json`, and no other agent's.
+  explains the selected reusable option's scope and storage when known. **Amended by Machines,
+  2026-09-06:** the original `.claude/settings.local.json` observation applies to a measured
+  Claude approval, not to every runtime or request. Some options grant access only for a
+  session; others save rules. The adapter owns the explanation and the runtime's option name
+  travels with the selected id. When scope or storage is unverified, say the runtime determines
+  it and blobot has no individual revocation control. Never invent a common file, promise
+  that every grant is permanent, or say it cannot affect another agent. Machine kind does not
+  withhold a runtime's advertised reusable approval; both kinds use host working folders.
 
   **Amended 2026-08-30: it is a card, and the prose is behind a disclosure.** The ink edge is
   gone entirely — it was `.refusal`'s on the argument that this is the same kind of event, and
@@ -543,11 +548,11 @@ Other transcript rules:
   Inside it, **the command is its own line**: run inline through the sentence, a real one wraps
   three times and the only thing on the block a person has to read becomes the hardest thing on
   it to find. It scrolls in its own track rather than wrapping, the rule a path already follows.
-  And the four lines explaining what blobot vouches for and where an *always* is written are
+  And the prose explaining the request and the selected reusable approval is
   **behind the disclosure**, not on the face: they were identical on every request forever and
   were the largest thing on the block, which is read once and noise every time after. The rule
-  above is kept — the block still says where an always goes, one click away, on the control that
-  is about to write it. Nothing about the answers changed: still three, still none of them
+  above is kept — the block explains the approval one click away, on the control that
+  is about to send it. Nothing about the answers changed: still three, still none of them
   armed, still no colour.
 
   **The card and the Routine block are one grammar** (`.card`), because they are one kind of

@@ -4,6 +4,16 @@ Blocked by: 05, 09
 
 # A Machine on screen, and where a profile is addressed from
 
+## Current inputs, 2026-09-06
+
+[What a sandbox lets blobot say](09-what-a-machine-lets-blobot-say.md#answer--2026-09-06)
+is resolved and owns the current words. Its Answer supersedes the historical guest-clone,
+sole-host-port, destination-list and box-only withheld-approval premises below. Both kinds use
+host working folders; a box has open Internet and host/local-network reach while preserving
+its runtime's selected approval policy. No network list/editor is in scope. Profile contact is
+already implemented by [Where a profile is addressed from, on screen](18-the-profile-conversation-on-screen.md).
+Machine placement/setup controls still must respect the image/runtime activation gates.
+
 ## Question
 
 Two surfaces do not exist and both are governed by `DESIGN.md`.

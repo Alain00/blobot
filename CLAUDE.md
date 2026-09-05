@@ -192,6 +192,12 @@ up. Read it before starting work.
   are not the same record of what happened. `reject_always` stays unoffered: refusing forever is
   the same standing rule pointed the other way, and nobody has asked for it.
 
+- **Permission disclosure corrected, 2026-09-06.** The historical Claude observation above is
+  not a universal file or persistence guarantee. Machines' **What a sandbox lets blobot say**
+  carries the selected reusable option's name and adapter-owned scope/storage explanation;
+  session grants and saved rules share an ACP kind. Both Machine kinds retain the same
+  advertised approval choices. `DESIGN.md` and first-demo's permission ticket record the amendment.
+
 - **Agents exist independently of teams** — `docs/adr/0001-agents-exist-independently-of-teams.md`,
   the repo's first ADR, and the reason `CONTEXT.md` now has an **AgentProfile**. An agent is
   hired once, on no team, and can be on several at the same time; joining a team instantiates an

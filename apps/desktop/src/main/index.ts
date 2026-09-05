@@ -244,16 +244,18 @@ const LIVE_TEAM_LIMIT = 3;
 /** Outstanding permission requests, so an answer can find the team that is blocked on it. */
 const permissions = new Map<string, { teamId: string; orchestrator: RunningTeam['orchestrator'] }>();
 
-/** A pending request in the words the transcript uses. The option ids never leave the main
- *  process: the renderer answers `allow` or `reject`, which is all ticket 14 offers. */
+/** A pending request in the words the transcript uses. Option ids stay in main; the renderer
+ *  returns one of blobot's three choices and receives the selected option's explanation. */
 function asUiPermission(pending: PendingPermission): UiPermissionRequest {
+  const choices = choicesOf(pending);
   return {
     id: pending.id,
     agentId: pending.agentId,
     toolCallId: pending.toolCallId,
     title: pending.title,
-    canAllow: choicesOf(pending).allowOptionId !== undefined,
-    canAllowAlways: choicesOf(pending).allowAlwaysOptionId !== undefined,
+    canAllow: choices.allowOptionId !== undefined,
+    canAllowAlways: choices.allowAlwaysOptionId !== undefined,
+    ...(choices.allowAlways === undefined ? {} : { allowAlways: choices.allowAlways }),
   };
 }
 

@@ -202,6 +202,7 @@ export type Item =
       title: string;
       canAllow: boolean;
       canAllowAlways: boolean;
+      allowAlways?: UiPermissionRequest['allowAlways'];
       /** Absent while it is still standing there. Present is a record of what you answered. */
       outcome?: UiPermissionOutcome;
     };
@@ -723,6 +724,7 @@ export function reduce(state: AppState, action: Action): AppState {
               title: request.title,
               canAllow: request.canAllow,
               canAllowAlways: request.canAllowAlways,
+              ...(request.allowAlways === undefined ? {} : { allowAlways: request.allowAlways }),
             }),
           ),
         ].sort((left, right) => left.at - right.at),
@@ -783,6 +785,9 @@ export function reduce(state: AppState, action: Action): AppState {
             title: action.request.title,
             canAllow: action.request.canAllow,
             canAllowAlways: action.request.canAllowAlways,
+            ...(action.request.allowAlways === undefined
+              ? {}
+              : { allowAlways: action.request.allowAlways }),
           },
         ],
       };

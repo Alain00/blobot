@@ -1322,8 +1322,8 @@ const ItemView = React.memo(function ItemView({
  * The *always* sentence is behind the transcript's own disclosure rather than on the face of the
  * block. It is three of the four lines the block used to open with, all of them about the
  * rarest of the three answers, and the paragraph out-massed both the command and the buttons.
- * DESIGN.md's rule that the block says where an always goes is kept: it says it, one click away,
- * on the control that is about to write the rule.
+ * The disclosure carries the selected runtime option's scope and storage when known. The
+ * reusable kind can mean a session grant or a saved rule; it does not imply one common file.
  */
 function Permission({
   item,
@@ -1352,11 +1352,16 @@ function Permission({
           and never again belongs. */}
       {open && (
         <div className="always">
-          blobot did not vouch for this one, so the runtime is asking and the agent waits until
-          you answer. What it vouches for is what this agent is set to, in its own definition.
-          Allow always writes a rule into this agent&apos;s own .claude/settings.local.json and
-          stops asking for this one thing. It is a file in this agent&apos;s own copy of the
-          folder, so you can read it and delete it, and it says nothing about any other agent.
+          The runtime is asking for approval, and the agent waits until you answer. Its approval
+          settings come from this agent&apos;s definition and the runtime&apos;s own configuration.
+          {item.canAllowAlways && (
+            <>
+              {' '}Allow always uses the runtime&apos;s reusable approval option.
+              {item.allowAlways !== undefined && <> This option: {item.allowAlways.name}.</>}
+              {' '}{item.allowAlways?.description ??
+                'The runtime determines its scope and lifetime. blobot does not provide a control to revoke it.'}
+            </>
+          )}
         </div>
       )}
       <div className="acts">

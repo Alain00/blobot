@@ -497,6 +497,25 @@ describe('permission requests', () => {
     expect(reply.result).toEqual({ outcome: { outcome: 'cancelled' } });
   });
 
+  it('keeps the reusable option identity with its measured settings explanation', async () => {
+    const { runtime, bridge } = await started();
+    runtime.setPermissionHandler(async (request) => {
+      const option = request.options.find((option) => option.kind === 'allow_always');
+      expect(option?.name).toBe('Always allow this tool');
+      expect(option?.description).toContain('.claude/settings.local.json');
+      expect(request.options.find((option) => option.kind === 'allow_once')?.description).toBeUndefined();
+      return option?.optionId ?? null;
+    });
+    const reply = await bridge.requestPermission({
+      toolCall: { toolCallId: 'mcp_1', title: 'mcp__example__create_issue' },
+      options: [
+        { optionId: 'once', name: 'Allow once', kind: 'allow_once' },
+        { optionId: 'always', name: 'Always allow this tool', kind: 'allow_always' },
+      ],
+    });
+    expect(reply.result).toEqual({ outcome: { outcome: 'selected', optionId: 'always' } });
+  });
+
   it('approves nothing when no handler is attached', async () => {
     const { bridge } = await started();
     const reply = await bridge.requestPermission({

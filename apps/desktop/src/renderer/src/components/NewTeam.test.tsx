@@ -307,7 +307,9 @@ describe('where they work', () => {
   it('still states what the user is taking on', async () => {
     const host = await named('checkout');
     const text = (host.textContent ?? '').replace(/\s+/g, ' ');
-    expect(text).toContain('its own copy of this folder');
-    expect(text).toContain('blobot is not a sandbox');
+    expect(text).toContain('its own working folder');
+    expect(text).toContain('approval settings chosen for that agent');
+    expect(text).not.toContain('asks before anything');
+    expect(text).not.toContain('blobot is not a sandbox');
   });
 });

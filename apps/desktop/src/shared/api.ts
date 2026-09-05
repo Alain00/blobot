@@ -624,16 +624,15 @@ export interface UiPermissionRequest {
   readonly title: string;
   /** False on a runtime that offers no single-use approval: the block can only reject. */
   readonly canAllow: boolean;
-  /**
-   * False on a runtime that cannot record a standing rule. On Claude Code the rule lands in
-   * `<workspace>/.claude/settings.local.json`, in this one agent's copy of the folder.
-   */
+  /** False when the runtime offers no reusable approval. */
   readonly canAllowAlways: boolean;
+  /** The selected reusable option's words, not a promise of a permanent or per-agent rule. */
+  readonly allowAlways?: { readonly name: string; readonly description?: string };
 }
 
 /**
  * How a permission block ends. `cancelled` is nobody answering, which is not a rejection, and
- * `allowed_always` left a rule behind where `allowed` did not.
+ * `allowed_always` chose the runtime's reusable approval, whose lifetime depends on the option.
  */
 export type UiPermissionOutcome = 'allowed' | 'allowed_always' | 'rejected' | 'cancelled';
 

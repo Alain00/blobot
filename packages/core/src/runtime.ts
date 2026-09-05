@@ -76,6 +76,8 @@ export interface PermissionOption {
   readonly optionId: string;
   readonly kind: 'allow_once' | 'allow_always' | 'reject_once' | 'reject_always';
   readonly name: string;
+  /** Adapter-owned explanation of this approval's scope or storage, when known. */
+  readonly description?: string;
 }
 
 /** Resolves with the chosen `optionId`, or `null` to cancel the turn. */

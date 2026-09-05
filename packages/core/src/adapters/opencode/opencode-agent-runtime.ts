@@ -574,6 +574,11 @@ export class OpencodeAgentRuntime implements AgentRuntime {
               optionId: option.optionId,
               kind: permissionKind(option.kind),
               name: option.name ?? option.optionId,
+              ...(option.kind === 'allow_always'
+                ? {
+                    description: 'Applies to the tool\'s suggested patterns for the rest of the session. blobot does not provide a control to revoke it.',
+                  }
+                : {}),
             },
           ],
     );

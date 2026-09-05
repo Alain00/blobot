@@ -476,6 +476,26 @@ describe('the voices, after the roster stopped being passed down', () => {
     );
   });
 
+  it('explains the selected reusable approval without inventing a common settings file', () => {
+    const asking: Item = {
+      kind: 'permission', id: 'q', at, agentId: 'a', toolCallId: 'c', title: 'git push',
+      canAllow: true, canAllowAlways: true,
+      allowAlways: { name: 'Allow for this session', description: 'This grant ends with the session.' },
+    };
+    const open = (host: HTMLElement): void => host.querySelector<HTMLButtonElement>('.perm .route')?.click();
+    expect(draw([asking], { kind: 'team' })).not.toContain('This grant ends');
+    const explained = draw([asking], { kind: 'team' }, undefined, open);
+    expect(explained).toContain('This option: Allow for this session.');
+    expect(explained).toContain('This grant ends with the session.');
+    expect(explained).not.toContain('.claude/settings.local.json');
+    const unknown = draw([{ ...asking, allowAlways: undefined }], { kind: 'team' }, undefined, open);
+    expect(unknown).toContain('The runtime determines its scope and lifetime.');
+    expect(unknown).not.toContain('this one thing');
+    const onceOnly = draw([{ ...asking, canAllowAlways: false }], { kind: 'team' }, undefined, open);
+    expect(onceOnly).not.toContain('This option:');
+    expect(onceOnly).not.toContain('This grant ends');
+  });
+
   it('attributes a system line in the team pane and leaves it bare in an agent pane', () => {
     const items: Item[] = [
       { kind: 'system', id: 's', at, agentId: 'a', text: 'turn stopped · max tokens' },

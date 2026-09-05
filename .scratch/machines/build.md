@@ -792,3 +792,20 @@ Continue at [What a sandbox lets blobot say](issues/09-what-a-machine-lets-blobo
 unblocked. Apply current worktree/network/native-policy amendments instead of its historical
 clone/domain-list premises. Network restrictions are outside this effort. Full root/home/Docker
 preservation is still claimed and unfinished, and production box activation remains gated.
+
+
+## 2026-09-06 — disclosure follows the Machine and selected approval
+
+[What a sandbox lets blobot say](issues/09-what-a-machine-lets-blobot-say.md) is resolved. The
+common creation footer now describes working folders and chosen approvals. Reusable permission
+options carry their actual name plus an optional adapter-owned scope/storage explanation through
+main, live state and snapshots. The controls and selected ids are unchanged; no provider logic
+entered React. Unknown storage/lifetime has a factual fallback, with no common Claude-file claim.
+The screen ticket now reads the resolved copy contract for placement, setup, sign-in and failure.
+
+Validation: core **975 passed / 47 skipped**, desktop **623 passed / 1 skipped**; both typechecks
+and production builds pass. Focused tests cover first-of-several reusable options, once-only
+requests, missing metadata and restored requests. Research/source limits are in
+[Permission disclosure](research/48-permission-disclosure.md). No provider call or real grant was
+made, and no box activation is implied. Next frontier: the Machine screen; full-state image
+preservation remains claimed and unfinished. Network filtering remains a separate future effort.
