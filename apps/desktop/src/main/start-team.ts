@@ -1,6 +1,7 @@
 import {
   workspaceProviderFor,
   machineFor,
+  SleepingRuntime,
   Orchestrator,
   PeerMessageServer,
   SqliteRecorder,
@@ -35,6 +36,9 @@ export interface StartTeamOptions {
    * watch them arrive instead of waiting on the slowest.
    */
   readonly onAgentReady?: (agentId: string) => void;
+  readonly idleAfterMs?: number;
+  readonly canSleep?: () => boolean;
+  readonly onMachinePowerChange?: () => void;
 }
 
 /**
@@ -139,6 +143,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
   // Read once for the whole roster: what the user set outranks what the adapter ships.
   const overrides = store.contextCeilings();
   const runtimes = new Map<string, AgentRuntime>();
+  const executions = new Map<string, SleepingRuntime>();
   for (const record of records) {
     const agent = agents.find((candidate) => candidate.id === record.id);
     if (agent === undefined) continue;
@@ -146,21 +151,37 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     const measured = resolveCeiling(overrides, record.runtimeId, record.runtimeOptions?.['model']);
     if (measured !== undefined) contextCeilings[record.id] = measured;
     const machine = machineFor('local', { agentId: agent.id, workspacePath: agent.workspacePath });
-    await machine.start({ mailboxPort: mcp.port });
     const endpoint = mcp.endpointFor(agent.id, machine.mailboxHostname);
     // The whole difference between a relaunch and a resume. Undefined on a first launch, and
     // a session the provider has forgotten is not fatal: the adapter falls back to a new one.
     const resumeSessionId = store.lastProviderSessionOf(agent.id);
     // The one branch on a provider in the whole app, and it produces an `AgentRuntime`:
     // nothing below this line knows which runtime an agent is.
-    const runtime = runtimeFor({
+    let openedOnce = false;
+    const runtime = new SleepingRuntime({
+      machine,
+      clock,
+      startRequest: { mailboxPort: mcp.port },
+      ...(options.idleAfterMs === undefined ? {} : { idleAfterMs: options.idleAfterMs }),
+      ...(resumeSessionId === undefined ? {} : { resumeSessionId }),
+      canSleep: () => (options.canSleep?.() ?? true) &&
+        orchestrator.statusOf(agent.id) === 'idle' && orchestrator.mailbox(agent.id).length === 0,
+      onPowerChange: () => options.onMachinePowerChange?.(),
+      onSessionOpened: (sessionId) => {
+        if (openedOnce) store.startSession({
+          id: uuidv7(clock.now()), agentId: agent.id, providerSessionId: sessionId,
+          personaText: personas.get(agent.id) ?? '', startedAt: clock.now(),
+        });
+        openedOnce = true;
+      },
+      create: (latestSessionId) => runtimeFor({
       machine,
       runtimeId: record.runtimeId,
       agentId: agent.id,
       agentName: agent.name,
       cwd: agent.workspacePath,
       persona: personas.get(agent.id) ?? '',
-      ...(resumeSessionId === undefined ? {} : { resumeSessionId }),
+      ...(latestSessionId === undefined ? {} : { resumeSessionId: latestSessionId }),
       // Ticket 07: the user's own binary, never a bundled copy.
       ...(record.executablePath === undefined ? {} : { executablePath: record.executablePath }),
       // What this agent was set to when it was hired or last edited. A team takes it at its
@@ -179,7 +200,9 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
         },
       ],
       onStderr: (line) => log(`[runtime:${agent.id}] ${line}`),
+      }),
     });
+    executions.set(agent.id, runtime);
     runtime.onLifecycleChange((lifecycle) => {
       log(`[${agent.id}] ${lifecycle}`);
       if (lifecycle === 'ready') options.onAgentReady?.(agent.id);
@@ -263,6 +286,8 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     runtimeLabels,
     contextCeilings,
     branches,
+    powerOf: (agentId) => executions.get(agentId)?.power ?? 'unknown',
+    setIdleAfterMs: (value) => { for (const execution of executions.values()) execution.setIdleAfterMs(value); },
     demoMode: false,
     autoplayPrompt:
       'Ask a teammate, using your message_agent tool, what they think the riskiest part of ' +

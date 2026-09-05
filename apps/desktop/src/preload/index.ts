@@ -51,6 +51,8 @@ import type {
  * renderer that will eventually filter on `runtime_id`.
  */
 const api: BlobotApi = {
+  machineIdleAfterMs: () => ipcRenderer.invoke('blobot:machineIdleAfterMs') as Promise<number>,
+  setMachineIdleAfterMs: (value) => ipcRenderer.invoke('blobot:setMachineIdleAfterMs', value) as Promise<number>,
   snapshot: () => ipcRenderer.invoke('blobot:snapshot') as Promise<UiSnapshot>,
   earlier: (teamId: string, before: number) =>
     ipcRenderer.invoke('blobot:earlier', teamId, before) as Promise<UiEarlier | undefined>,

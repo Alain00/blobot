@@ -1,6 +1,7 @@
 import type {
   AgentEvent,
   AgentStatus,
+  MachinePower,
   AttachmentKind,
   AttachmentSupport,
   CompactionSetting,
@@ -164,6 +165,8 @@ export interface UiAgent {
   readonly name: string;
   readonly role: string;
   readonly runtimeLabel: string;
+  /** Execution power, independent of work status and runtime sign-in. */
+  readonly machinePower?: MachinePower;
   readonly workspacePath: string;
   readonly branch?: string;
   /** The blobatar's hue, when the user chose one. Absent means the name derives it. */
@@ -1094,6 +1097,8 @@ export type UiDictationStart =
   | { readonly ok: false; readonly error: string };
 
 export interface BlobotApi {
+  machineIdleAfterMs(): Promise<number>;
+  setMachineIdleAfterMs(value: number): Promise<number>;
   snapshot(): Promise<UiSnapshot>;
   /**
    * One thing the user typed, to everybody they addressed with it.

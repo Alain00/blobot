@@ -3,12 +3,9 @@ import { posix } from 'node:path';
 import { childTransport } from '../../adapters/acp/child-transport.js';
 import type { MachineSpawnRequest, MachineTransport } from '../machine.js';
 import { SBX_BOOTSTRAP_SOURCE } from './bootstrap.js';
+import { sbxClientEnvironment } from './client-environment.js';
 
 const MAX_HEADER_BYTES = 1024 * 1024;
-const CLIENT_ENV_NAMES = [
-  'HOME', 'PATH', 'USER', 'LOGNAME', 'TMPDIR', 'TMP', 'TEMP', 'LANG', 'LC_ALL', 'LC_CTYPE',
-  'XDG_CONFIG_HOME', 'XDG_CACHE_HOME', 'XDG_DATA_HOME',
-] as const;
 const FORBIDDEN_ENV = /^(?:BLOBOT_[A-Z0-9_]+_API_KEY|SSH_AUTH_SOCK|ELECTRON_RUN_AS_NODE|NODE_OPTIONS|NODE_PATH|LD_PRELOAD|LD_LIBRARY_PATH|HOME|PATH|HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|NO_PROXY)$/i;
 
 /** An adapter-owned JSON patch, applied in the guest before the runtime starts. */
@@ -90,12 +87,8 @@ export function prepareSbxExec(options: SbxExecOptions, request: MachineSpawnReq
  */
 export function spawnSbxTransport(options: SbxExecOptions, request: MachineSpawnRequest): MachineTransport {
   const prepared = prepareSbxExec(options, request);
-  const env: NodeJS.ProcessEnv = {};
-  for (const name of CLIENT_ENV_NAMES) {
-    if (process.env[name] !== undefined) env[name] = process.env[name];
-  }
   const child = spawn(prepared.executable, [...prepared.args], {
-    env,
+    env: sbxClientEnvironment(),
     stdio: ['pipe', 'pipe', 'pipe'],
   });
   const transport = childTransport(child, request.onStderr);

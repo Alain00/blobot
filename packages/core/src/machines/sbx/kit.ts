@@ -32,7 +32,7 @@ export function sbxKit(options: SbxKitOptions) {
     permissions: { network: { allow: [], deny: [] } },
     // Block volumes arrive owned by root. This synchronous setup must finish before any
     // user process writes a login or configuration; startup hooks do not gate exec.
-    setup: { install: [{ user: '0', command: 'chown 1000:1000 /home/agent /workspace' }] },
+    setup: { install: [{ user: '0', command: 'chown 1000:1000 /home/agent /workspace && chmod 0700 /home/agent /workspace' }] },
     volumes: [
       { path: '/home/agent', size: String(options.dataBytes), mode: '0700' },
       { path: '/workspace', size: String(options.workspaceBytes), mode: '0700' },

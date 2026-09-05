@@ -19,6 +19,14 @@ Everything else is `--ground`, `--raised`, `--ink`, `--muted`, `--line`. No acce
 brand colour, no coloured badges, no red errors, no green success. Colour means *identity*, and
 an agent is the only thing on screen that has one.
 
+**Machine power exception, approved 2026-09-05.** The live Agent avatar has a small dot at its
+bottom right: subdued green when its execution is awake, gray when asleep. This is power,
+not turn status, readiness or sign-in. Transitions use a split monochrome dot; unknown uses
+a dashed hollow ring. Every dot has a text label and tooltip. Sleep freezes the live face;
+settled transcript avatars and profile definitions do not acquire a live-power claim.
+The ordinary monochrome turn-status rules below still apply. See the amendment on
+`.scratch/first-demo/issues/12-team-and-conversation-ui.md`.
+
 Consequences you will keep bumping into:
 
 - **Status is never colour**, and it is a shape or a word, **never both at once**. A coloured dot

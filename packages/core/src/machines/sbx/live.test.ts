@@ -6,8 +6,11 @@ import { promisify } from 'node:util';
 import { describe, expect, it, vi } from 'vitest';
 import { renderSbxKit } from './kit.js';
 import { spawnSbxTransport } from './transport.js';
+import { sbxClientEnvironment } from './client-environment.js';
 
-const exec = promisify(execFile);
+const execProcess = promisify(execFile);
+const exec = (file: string, args: string[], options: { timeout: number }) =>
+  execProcess(file, args, { ...options, env: sbxClientEnvironment() });
 const live = process.env['BLOBOT_LIVE_SBX'] === '1' ? describe : describe.skip;
 
 /**
@@ -27,14 +30,19 @@ live('a root kit and the exec transport on the installed sbx', () => {
       image: 'docker/sandbox-templates:shell-docker', guestNode: '/usr/bin/node',
       dataBytes: 512 * 1024 * 1024, workspaceBytes: 512 * 1024 * 1024,
     }));
-    let created = false;
+    let createAttempted = false;
     try {
+      const { stdout: version } = await exec('sbx', ['version'], { timeout: 10_000 });
+      const mountFree = version.startsWith('sbx version: v0.42.0-rc5 ');
+      if (!mountFree && !version.startsWith('sbx version: v0.39.0 ')) {
+        throw new Error('Fixture creation is only verified on sbx v0.39.0 and v0.42.0-rc5');
+      }
       await exec('sbx', ['kit', 'validate', kit], { timeout: 30_000 });
+      createAttempted = true;
       await exec('sbx', ['create', '--name', name, '--cpus', '2', '--memory', '2g',
         // v0.39 requires even an empty primary mount to be writable. This is a disposable,
         // empty fixture directory, never the user's Workspace. Product admission forbids it.
-        '--kit', kit, 'blobot', mount], { timeout: 90_000 });
-      created = true;
+        ...mountFree ? [kit] : ['--kit', kit, 'blobot', mount]], { timeout: 90_000 });
       vi.stubEnv('BLOBOT_HOST_SECRET_TEST', 'must-stay-on-host');
       const script = String.raw`
         const fs = require('node:fs');
@@ -83,8 +91,17 @@ live('a root kit and the exec transport on the installed sbx', () => {
       });
     } finally {
       vi.unstubAllEnvs();
-      if (created) await exec('sbx', ['rm', '-f', name], { timeout: 30_000 });
-      rmSync(root, { recursive: true, force: true });
+      try {
+        if (createAttempted) {
+          const { stdout } = await exec('sbx', ['ls', '--json'], { timeout: 30_000 });
+          const boxes = JSON.parse(stdout) as { sandboxes: { name: string }[] };
+          if (boxes.sandboxes.some((box) => box.name === name)) {
+            await exec('sbx', ['rm', '-f', name], { timeout: 30_000 });
+          }
+        }
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
     }
   }, 150_000);
 });

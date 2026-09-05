@@ -1,10 +1,17 @@
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 19
 
 # Detection, and its remedies, when the runtime is not on this computer
 
 ## Question
+
+### Confirmed with Guillermo, 2026-09-05
+
+Keep the existing four readiness states, with an explicit engine or Agent subject. Do not
+wake a sleeping Machine to inspect login: report `unknown`, “Status unknown: it is stopped”.
+Check the engine fresh before work and after every configuration/remedy action. This confirms
+the proposed caching direction; it is not proof that implementation or remedies are complete.
 
 Ticket 11's four honest states — and, since `runtime-readiness`, the way out of each — are
 written as facts about **the app's machine**. `claude`, `opencode`, `cursor-agent` and `fx` are
@@ -497,3 +504,51 @@ user's own tools keep for themselves.
   *a data volume holds the CLI's own login, per agent* reopens by name that day (`01`,
   Amendments). Until then point 4 stands.
 - **Caching** (§4) is this ticket's decision; `17` supplies the cost of asking the engine fresh.
+
+## Answer — 2026-09-05
+
+Resolved with the author's confirmed four-state/sleep policy. The prior Decided amendments
+govern onboarding, stream handling and credential ownership; the earlier proposals do not
+reopen them. This resolution supplies the scoped detection/remedy contract and staged code,
+not working runtime images or the Machine screen owned by their existing tickets.
+
+- Detection carries a mandatory **engine or Agent subject**. The existing four words survive;
+  no additional readiness state is invented. Engine readiness does not certify a particular
+  Agent's login, and one Agent's login never certifies another's.
+- A sleeping Agent answers **unknown, “Status unknown: it is stopped.”** A failed or otherwise
+  unavailable execution remains unknown without falsely calling it stopped. There is no saved
+  green login tick. `SleepingRuntime.inspect` serializes an awake probe with sleep and returns
+  without a probe when unavailable; inspection does not reset the inactivity clock.
+- The box probe uses the existing runtime parsers **in that Machine**, at `/home/agent`, with
+  a bounded fixed guest runner. The executable name comes from core's table, not a returned
+  host path, shell discovery on this computer, the picker cache, or renderer argv. A definite
+  guest lookup absence is not-installed; a transport/malformed response is unknown. Probes
+  bypass launch-config patching and never read credential files themselves. Local detection
+  remains unchanged. Positive status means the CLI reports a credential, not working inference.
+- Display asks only the engine's status, with unknown when it cannot safely establish more.
+  Before work and after setup/remedy, engine checks run fresh. RC5 Authentication/pass is the
+  measured positive; unmeasured negative/error forms remain unknown. An unknown result may
+  offer an explicit retry/sign-in; it must not be silently reworded as definite sign-out.
+- Engine login is a button for the vendor's browser flow, no displayed Docker command.
+  Runtime login is scoped to an owned, admitted Agent Machine with no active runtime channel;
+  fixed core argv runs as UID 1000 on a watched PTY. Closing/failing it is separate from the
+  fresh detected state. Bytes are forwarded, not logged, parsed for URLs, or read as credentials.
+  The PTY can render links for the person to click. A successful exit proves no login.
+- A missing engine has an explicit setup door; a missing runtime/image follows the image
+  contract, not the host runtime installer. The production installer/release channel is not
+  enabled by a development RC5 approval. The code therefore exposes no automatic RC installation
+  and does not pretend the setup experience has shipped. The existing Machine screen ticket
+  owns the doors/cards and must invalidate displayed Agent readiness on power changes.
+- Launch refuses engine unavailability or unverified policy, with no local fallback. Runtime
+  sign-in remains advisory: the adapter owns its actual launch failure. The existing copy
+  ticket owns final refusal words/partial-team behavior. Image availability remains conditional
+  on the image ticket's pull decision, and real vendor login/browser callbacks/proxy OAuth
+  remain the first-box measurement ticket's—not inferred from a synthetic executable.
+
+Implementation: `detect/machine-runtime.ts`, `SleepingRuntime.inspect`, and the internal
+`OwnedSbxMachine.detectRuntime/signInRuntime` plus `SbxEngine` mechanisms. Unit tests cover
+distinct Agents, absent versus unavailable, no cold probe, and inspection versus idle sleep.
+The RC5 lifecycle fixture now runs a **synthetic** `fx status` executable, exercises an abandoned
+PTY callback and fresh detection, and verifies the stopped box is still stopped after its
+readiness is drawn. No real provider login or paid model request was made. Aggregated checks
+are in [the build record](../build.md); all box activation guards remain closed.

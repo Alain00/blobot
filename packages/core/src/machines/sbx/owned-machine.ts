@@ -1,0 +1,418 @@
+import { execFile } from 'node:child_process';
+import { detectAgentRuntime, type MachineDetection } from '../../detect/machine-runtime.js';
+import { RUNTIME_PROBES, type CommandRunner, type RuntimeDetection } from '../../detect/runtimes.js';
+import { remedyFor } from '../../detect/remedies.js';
+import { randomUUID } from 'node:crypto';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { Machine, MachineLocation, MachineReadiness, MachineSpawnRequest, MachineStartRequest, MachineTransport } from '../machine.js';
+import { machineLimits, sameMachineLimits, type MachineLimits } from '../resources.js';
+import { sbxClientEnvironment } from './client-environment.js';
+import { SbxEngine, sbxCommandRunner, type SbxPtyRunner } from './engine.js';
+import type { SleepingRuntime } from '../sleeping-runtime.js';
+import { SBX_RUNTIME_PROBE } from './runtime-probe.js';
+import { copySbxData, type SbxReference } from './data-transfer.js';
+import { renderSbxKit, sbxNameFor, type SbxKitOptions } from './kit.js';
+import { SBX_BOUNDARY_PROBE, verifySbxBoundary, verifySbxMailboxRule, verifySbxReference, verifySbxNetworkRules, verifySbxNetworkCheck, verifySbxStopped, readSbxNetworkRules } from './observations.js';
+import { SbxRegistry, type OwnedSbx, type SbxRecord } from './registry.js';
+import { spawnSbxTransport, type SbxExecOptions } from './transport.js';
+
+export interface OwnedSbxMachineOptions {
+  readonly agentId: string;
+  readonly registry: SbxRegistry;
+  readonly kit: SbxKitOptions;
+  readonly limits: MachineLimits;
+  readonly transport: Omit<SbxExecOptions, 'sandboxName' | 'guestNode' | 'sbxExecutable'>;
+  readonly sbxExecutable?: string;
+  readonly commandTimeoutMs?: number;
+}
+
+/**
+ * Staged RC5 lifecycle. NOT selected by machineFor: image, Workspace, egress and product
+ * onboarding admission must land first. No daemon/global-settings mutations, host mounts,
+ * vendor kits, credential imports or automatic orphan removal occur here.
+ */
+export class OwnedSbxMachine implements Machine {
+  readonly kind = 'box';
+  readonly mailboxHostname = 'host.docker.internal';
+  readonly #options: OwnedSbxMachineOptions;
+  readonly #location: MachineLocation;
+  readonly #engineClient: SbxEngine;
+  readonly #transports = new Set<MachineTransport>();
+  #active: OwnedSbx | undefined;
+  #started = false;
+  #exclusive = false;
+  #release: (() => Promise<void>) | undefined;
+  #safeToRelease = true;
+
+  constructor(options: OwnedSbxMachineOptions) {
+    sbxNameFor(options.agentId);
+    renderSbxKit(options.kit);
+    machineLimits(options.limits);
+    if (options.commandTimeoutMs !== undefined && (!Number.isSafeInteger(options.commandTimeoutMs) || options.commandTimeoutMs < 1)) {
+      throw new Error('Invalid sandbox command timeout.');
+    }
+    this.#options = { ...options, kit: Object.freeze({ ...options.kit }), limits: machineLimits(options.limits) };
+    this.#engineClient = new SbxEngine(sbxCommandRunner(options.sbxExecutable, options.commandTimeoutMs));
+    this.#location = Object.freeze({ agentId: options.agentId, kind: 'box', workspacePath: '/workspace',
+      volumes: Object.freeze({ data: '/home/agent', workspace: '/workspace' }) });
+  }
+  location(): MachineLocation { return this.#location; }
+
+  /** Status only. Never use settings/diagnose/guest exec merely to paint a screen. */
+  async readiness(): Promise<MachineReadiness> {
+    return this.#engineClient.readiness();
+  }
+
+  /** Bound to this Agent; neither host PATH nor the host login memo participates. */
+  async detectRuntime(runtimeId: string, execution: Pick<SleepingRuntime, 'agentId' | 'inspect' | 'power'>): Promise<MachineDetection> {
+    if (execution.agentId !== this.#options.agentId) throw new Error('Runtime detection belongs to a different Agent.');
+    return detectAgentRuntime({ agentId: this.#options.agentId, runtimeId, power: () => execution.power,
+      inspect: (read) => execution.inspect(() => this.#locked(async () => {
+        if (!this.#started || this.#active === undefined) throw new Error('Machine is not awake.');
+        // Never ask settings or execute inside a known-stopped guest just to render readiness.
+        if ((await this.#json(['daemon', 'status', '--json']))['status'] !== 'running') throw new Error('Engine is stopped.');
+        const inventory = await this.#json(['ls', '--json']);
+        verifySbxReference(inventory, this.#active);
+        const boxes = inventory['sandboxes'] as Record<string, unknown>[];
+        if (boxes.find((box) => box['id'] === this.#active?.id)?.['status'] !== 'running') throw new Error('Machine is stopped.');
+        return read();
+      })),
+      run: this.#probeRuntime,
+    });
+  }
+
+  /** Explicit sign-in before an Agent runtime launches. The watched PTY stays opaque. */
+  async signInRuntime(runtimeId: string, perform: SbxPtyRunner): Promise<{ readonly completed: boolean; readonly detection: MachineDetection }> {
+    return this.#locked(async () => {
+      if (!this.#started || this.#active === undefined || this.#transports.size !== 0) {
+        throw new Error('Open this Machine without an active Agent execution before signing in.');
+      }
+      const probe = RUNTIME_PROBES.find((value) => value.runtimeId === runtimeId);
+      if (probe === undefined) throw new Error('Unknown runtime.');
+      await this.#engine();
+      await this.#boundary(this.#active);
+      const detection: RuntimeDetection = { runtimeId, label: probe.label, supported: probe.supported,
+        executablePath: probe.binary, readiness: 'unknown', detail: '' };
+      const remedy = remedyFor(detection, 'sign_in', 'linux');
+      if (remedy === undefined) throw new Error('No sign-in remedy is available.');
+      let completed = false;
+      try {
+        await perform({ args: ['exec', '-it', '-u', '1000', '-w', '/home/agent', this.#active.name, ...remedy.argv],
+          env: sbxClientEnvironment() });
+        completed = true;
+      } catch {
+        // Abandonment is reported separately from what the fresh probe can establish.
+      } finally {
+        // A failed or abandoned PTY is not permission to keep stale engine readiness.
+        await this.#engine();
+        await this.#identity(this.#active);
+      }
+      return { completed, detection: await detectAgentRuntime({ agentId: this.#options.agentId, runtimeId, power: () => 'awake',
+        inspect: async (read) => read(), run: this.#probeRuntime }) };
+    });
+  }
+
+  readonly #probeRuntime: CommandRunner = async (command, args, options) => {
+    if (!this.#started || this.#active === undefined) throw new Error('Machine is not awake.');
+    const value = await this.#json(['exec', '-u', '1000', this.#active.name, this.#options.kit.guestNode, '-e', SBX_RUNTIME_PROBE,
+      JSON.stringify({ command, args, timeoutMs: options?.timeoutMs ?? 5000 })]);
+    if (value['protocol'] !== 'blobot-runtime-probe-v1' || !Number.isInteger(value['code']) ||
+        typeof value['stdout'] !== 'string' || value['stderr'] !== '') throw new Error('Runtime probe could not be read.');
+    return { code: value['code'] as number, stdout: value['stdout'], stderr: '' };
+  };
+  async reconcile() {
+    const record = await this.#options.registry.read(this.#options.agentId);
+    if (record?.active === undefined) return { state: 'absent' as const, detail: 'No owned sandbox is recorded.' };
+    try {
+      if (record.pending !== undefined) throw new Error('Pending operation');
+      await this.#identity(record.active);
+      return { state: 'ok' as const, location: this.#location };
+    } catch {
+      return { state: 'lost' as const, detail: 'The recorded sandbox needs recovery. Existing data was kept.' };
+    }
+  }
+  async start(request: MachineStartRequest): Promise<MachineLocation> {
+    if (!Number.isInteger(request.mailboxPort) || request.mailboxPort < 1 || request.mailboxPort > 65535) throw new Error('Invalid mailbox port.');
+    if (request.runtime !== undefined && (request.runtime.image !== this.#options.kit.image || request.runtime.allowedHosts.length !== 0)) {
+      throw new Error('Runtime image and egress admission have not been implemented for this Machine.');
+    }
+    return this.#locked(async () => {
+      await this.#engine();
+      let record = await this.#record();
+      if (record.active === undefined) {
+        const active = await this.#create(record, this.#options.limits);
+        record = { ...record, active };
+        await this.#options.registry.save(record);
+      }
+      const active = record.active;
+      if (active === undefined) throw new Error('Machine creation did not complete.');
+      try {
+        this.#safeToRelease = false;
+        await this.#boundary(active);
+        record = await this.#revokeMailbox(record);
+        const before = await this.#rules(active);
+        verifySbxNetworkRules(before);
+        await this.#run(['policy', 'allow', 'network', '--sandbox', active.name, `localhost:${request.mailboxPort}`]);
+        const after = await this.#rules(active);
+        const added = after.filter((rule) => !before.some((prior) => prior['id'] === rule['id']));
+        if (added.length !== 1 || typeof added[0]?.['id'] !== 'string') throw new Error('Mailbox permission creation could not be verified.');
+        const mailbox = { id: added[0]['id'], port: request.mailboxPort };
+        verifySbxMailboxRule(added[0], active.name, mailbox);
+        await this.#options.registry.save({ ...record, mailbox });
+        verifySbxNetworkRules(after.filter((rule) => rule['id'] !== mailbox.id));
+        await this.#networkChecks(active, mailbox.port);
+        await this.#identity(active);
+        this.#active = active;
+        this.#started = true;
+        return this.#location;
+      } catch {
+        this.#started = false;
+        await this.#stopOwned(active).then(() => { this.#safeToRelease = true; }).catch(() => {});
+        throw new Error('This Machine could not start safely. Its stored data was kept.');
+      }
+    });
+  }
+  spawn(request: MachineSpawnRequest): MachineTransport {
+    if (!this.#started || this.#exclusive || this.#active === undefined) throw new Error('The Machine must be started before launching a process.');
+    const channel = spawnSbxTransport({ ...this.#options.transport, sandboxName: this.#active.name,
+      guestNode: this.#options.kit.guestNode,
+      ...(this.#options.sbxExecutable === undefined ? {} : { sbxExecutable: this.#options.sbxExecutable }),
+    }, request);
+    this.#transports.add(channel);
+    channel.onClose(() => this.#transports.delete(channel));
+    return channel;
+  }
+  async beforeWork(): Promise<void> {
+    await this.#locked(async () => {
+      if (!this.#started || this.#active === undefined) throw new Error('This Machine is not awake.');
+      await this.#engine();
+      const record = await this.#record();
+      if (record.active?.id !== this.#active.id || record.mailbox === undefined) throw new Error('Machine configuration changed.');
+      const rules = await this.#rules(this.#active);
+      const mailbox = rules.filter((rule) => rule['id'] === record.mailbox?.id);
+      if (mailbox.length !== 1) throw new Error('The mailbox permission is unavailable.');
+      verifySbxMailboxRule(mailbox[0], this.#active.name, record.mailbox);
+      verifySbxNetworkRules(rules.filter((rule) => rule['id'] !== record.mailbox?.id));
+      await this.#networkChecks(this.#active, record.mailbox.port);
+    });
+  }
+  async stop(): Promise<void> {
+    await this.#locked(async () => {
+      this.#started = false;
+      const closed = await Promise.allSettled([...this.#transports].map((channel) => channel.close()));
+      this.#transports.clear();
+      const record = await this.#options.registry.read(this.#options.agentId);
+      if (record?.pending !== undefined) {
+        if (record.pending.id === undefined) throw new Error('An interrupted Machine creation needs recovery before its power can be confirmed.');
+        await this.#stopOwned({ name: record.pending.name, id: record.pending.id });
+      }
+      if (record?.active !== undefined) {
+        await this.#stopOwned(record.active);
+        await this.#revokeMailbox(record);
+      }
+      this.#safeToRelease = true;
+      if (closed.some((result) => result.status === 'rejected')) throw new Error('Some Agent channels could not close.');
+    });
+  }
+  /** Called only after the Workspace owner has preserved work and the user requested removal. */
+  async destroy(): Promise<void> {
+    throw new Error('Machine data removal awaits Workspace preservation integration. No data was deleted.');
+  }
+  async measure(): Promise<number | null> { return null; } // no verified engine-owned byte metric
+
+  /**
+   * Caller closes the Agent runtime after any busy-work warning/confirmation, then calls this.
+   * Any open channel refuses. Whole-VM stop quiesces leftover application writers before copy.
+   * The original stays recorded and stopped after cutover; it is never automatically deleted.
+   */
+  async reconfigure(limits: MachineLimits, options: { readonly signal?: AbortSignal; readonly timeoutMs?: number } = {}): Promise<void> {
+    const desired = machineLimits(limits);
+    if (options.signal?.aborted) throw new Error('Machine reconfiguration was cancelled.');
+    await this.#locked(async () => {
+      if (this.#transports.size !== 0) throw new Error('Close this Agent execution before changing its resource limits.');
+      await this.#engine();
+      let record = await this.#record();
+      const original = record.active;
+      if (original === undefined) throw new Error('This Machine has not been created.');
+      if (sameMachineLimits(original.limits, desired)) return;
+      this.#started = false;
+      await this.#identity(original);
+      record = await this.#revokeMailbox(record);
+      await this.#stopOwned(original);
+      this.#safeToRelease = true;
+      let candidate: OwnedSbx | undefined;
+      try {
+        if (options.signal?.aborted) throw new Error('Machine reconfiguration was cancelled.');
+        // The journal retains the original as active until verified cutover.
+        candidate = await this.#create(record, desired);
+        await this.#stopOwned(candidate);
+        await this.#boundary(original);
+        await this.#boundary(candidate);
+        await copySbxData({ source: original, target: candidate, guestNode: this.#options.kit.guestNode,
+          ...(this.#options.sbxExecutable === undefined ? {} : { sbxExecutable: this.#options.sbxExecutable }),
+          ...options });
+        if (options.signal?.aborted) throw new Error('Machine reconfiguration was cancelled.');
+        // Verify after an actual stop/reopen, not just in the VM that received the copy.
+        await this.#stopOwned(candidate);
+        await this.#engine();
+        await this.#boundary(candidate);
+        await this.#stopOwned(candidate);
+        await this.#stopOwned(original);
+        if (options.signal?.aborted) throw new Error('Machine reconfiguration was cancelled.');
+        await this.#options.registry.save({ ...record, active: candidate, retained: [...record.retained, original] });
+        this.#active = candidate;
+      } catch {
+        throw new Error('Machine reconfiguration did not complete. The original and any replacement data were kept for recovery.');
+      } finally {
+        const stopped = await Promise.allSettled([
+          ...(candidate === undefined ? [] : [this.#stopOwned(candidate)]), this.#stopOwned(original),
+        ]);
+        // An unknown partial create cannot be certified stopped or have its lease released.
+        this.#safeToRelease = candidate !== undefined && stopped.every((result) => result.status === 'fulfilled');
+      }
+    });
+  }
+
+  async #record(): Promise<SbxRecord> {
+    const record = await this.#options.registry.read(this.#options.agentId) ?? {
+      version: 1, agentId: this.#options.agentId, kit: this.#options.kit, retained: [],
+    };
+    if (record.pending !== undefined) throw new Error('This Machine has an unfinished operation. Recover it before continuing.');
+    if (renderSbxKit(record.kit) !== renderSbxKit(this.#options.kit)) throw new Error('The recorded Machine image or volume configuration does not match.');
+    return record;
+  }
+  async #create(record: SbxRecord, limits: MachineLimits): Promise<OwnedSbx> {
+    // Keep engine names short; ownership is the durable Agent/id binding, not a name prefix.
+    const name = `blobot-${randomUUID()}`;
+    const pending = { name, limits: machineLimits(limits) };
+    await this.#options.registry.save({ ...record, pending });
+    const root = await mkdtemp(join(tmpdir(), 'blobot-machine-kit-'));
+    let created: SbxReference | undefined;
+    try {
+      const kit = join(root, 'kit');
+      await mkdir(kit);
+      await writeFile(join(kit, 'spec.yaml'), renderSbxKit(record.kit), { mode: 0o600 });
+      this.#safeToRelease = false;
+      await this.#run(['create', '--name', name, '--cpus', String(limits.maxCpus), '--memory', String(limits.maxMemoryBytes), kit]);
+      const inventory = await this.#json(['ls', '--json']);
+      const boxes = inventory['sandboxes'];
+      if (!Array.isArray(boxes)) throw new Error('Sandbox inventory is unavailable.');
+      const matches = boxes.filter((value: unknown) => typeof value === 'object' && value !== null && 'name' in value && value.name === name);
+      if (matches.length !== 1 || typeof matches[0]?.id !== 'string') throw new Error('New sandbox identity could not be verified.');
+      const reference = { name, id: matches[0].id as string };
+      created = reference;
+      this.#safeToRelease = false;
+      await this.#options.registry.save({ ...record, pending: { ...pending, id: reference.id } });
+      await this.#identity(reference);
+      const rootProbe = await this.#json(['exec', '-u', '0', name, record.kit.guestNode, '-e', SBX_BOUNDARY_PROBE]);
+      const baseline = verifySbxBoundary(rootProbe, limits, 0);
+      const active: OwnedSbx = { ...reference, limits, baseline };
+      await this.#boundary(active);
+      verifySbxNetworkRules(await this.#rules(active));
+      await this.#networkChecks(active);
+      // Caller alone publishes the binding, after first admission or verified data transfer.
+      return active;
+    } catch (error) {
+      if (created !== undefined) await this.#stopOwned(created).then(() => { this.#safeToRelease = true; }).catch(() => {});
+      throw error;
+    } finally {
+      await rm(root, { recursive: true, force: true }); // only our generated kit; never Agent data
+    }
+  }
+  async #engine(): Promise<void> {
+    await this.#engineClient.beforeWork();
+    // Settings alone cannot prove that a required restart was applied; #boundary verifies
+    // the effective root and Agent socket absence in every admitted guest.
+  }
+  async #identity(reference: SbxReference): Promise<void> {
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9.-]+$/.test(reference.name) || !/^[a-zA-Z0-9-]+$/.test(reference.id)) throw new Error('Invalid recorded sandbox identity.');
+    verifySbxReference(await this.#json(['ls', '--json']), reference);
+  }
+  async #boundary(reference: OwnedSbx): Promise<void> {
+    await this.#identity(reference);
+    for (const uid of [0, 1000] as const) {
+      verifySbxBoundary(await this.#json(['exec', '-u', String(uid), reference.name, this.#options.kit.guestNode, '-e', SBX_BOUNDARY_PROBE]),
+        reference.limits, uid, reference.baseline);
+    }
+    await this.#identity(reference);
+  }
+  async #stopOwned(reference: SbxReference): Promise<void> {
+    await this.#identity(reference);
+    await this.#run(['stop', reference.name]);
+    verifySbxStopped(await this.#json(['ls', '--json']), reference);
+  }
+  async #rules(reference: SbxReference): Promise<Record<string, unknown>[]> {
+    await this.#identity(reference);
+    // The unnamed listing includes other sandboxes. Keep global and this exact scope;
+    // the default-deny display row is synthetic and disappears when explicit rules exist.
+    const layers = await Promise.all([
+      this.#json(['policy', 'ls', '--type', 'network', '--json']),
+      this.#json(['policy', 'ls', reference.name, '--type', 'network', '--json']),
+    ]);
+    const unique = new Map<string, Record<string, unknown>>();
+    for (const [index, data] of layers.entries()) {
+      for (const rule of readSbxNetworkRules(data)) {
+        const id = rule['id'] as string;
+        if (rule['scope'] !== 'global' && rule['scope'] !== `sandbox:${reference.name}`) {
+          if (index === 0 && typeof rule['sandbox_id'] === 'string' && rule['scope'] === `sandbox:${rule['sandbox_id']}` &&
+              rule['applies_to'] === rule['scope']) continue;
+          throw new Error('Unexpected network policy scope.');
+        }
+        const prior = unique.get(id);
+        if (prior !== undefined && JSON.stringify(prior) !== JSON.stringify(rule)) throw new Error('Conflicting network policy observations.');
+        unique.set(id, rule);
+      }
+    }
+    return [...unique.values()];
+  }
+  async #networkChecks(reference: SbxReference, mailboxPort?: number): Promise<void> {
+    const checks: [string, boolean][] = [['blobot-admission.invalid:443', false]];
+    if (mailboxPort !== undefined) checks.push([`localhost:${mailboxPort}`, true]);
+    for (const [target, allowed] of checks) {
+      // A documented denial exits 1 with JSON. Other commands still require exit 0.
+      const value: unknown = JSON.parse(await this.#run(['policy', 'check', 'network', '--sandbox', reference.name, '--json', target], true));
+      verifySbxNetworkCheck(value, reference.name, target, allowed);
+    }
+  }
+  async #revokeMailbox(record: SbxRecord): Promise<SbxRecord> {
+    if (record.mailbox === undefined || record.active === undefined) return record;
+    const found = (await this.#rules(record.active)).filter((rule) => rule['id'] === record.mailbox?.id);
+    if (found.length > 1) throw new Error('Ambiguous mailbox permission.');
+    if (found.length === 1) {
+      verifySbxMailboxRule(found[0], record.active.name, record.mailbox);
+      await this.#run(['policy', 'rm', 'network', '--sandbox', record.active.name, '--id', record.mailbox.id]);
+      if ((await this.#rules(record.active)).some((rule) => rule['id'] === record.mailbox?.id)) throw new Error('Mailbox permission could not be revoked.');
+    }
+    const { mailbox: _mailbox, ...next } = record;
+    await this.#options.registry.save(next);
+    return next;
+  }
+  async #locked<T>(work: () => Promise<T>): Promise<T> {
+    if (this.#exclusive) throw new Error('This Machine is changing state.');
+    this.#exclusive = true;
+    try {
+      this.#release ??= await this.#options.registry.lease(this.#options.agentId);
+      return await this.#options.registry.locked(this.#options.agentId, work);
+    } finally {
+      try {
+        if (!this.#started && this.#safeToRelease && this.#release !== undefined) { await this.#release(); this.#release = undefined; }
+      } finally { this.#exclusive = false; }
+    }
+  }
+  async #json(args: readonly string[]): Promise<Record<string, unknown>> {
+    const data: unknown = JSON.parse(await this.#run(args));
+    if (typeof data !== 'object' || data === null || Array.isArray(data)) throw new Error('Invalid sandbox response.');
+    return data as Record<string, unknown>;
+  }
+  #run(args: readonly string[], allowDenied = false): Promise<string> {
+    return new Promise((resolve, reject) => {
+      execFile(this.#options.sbxExecutable ?? 'sbx', [...args], { env: sbxClientEnvironment(),
+        timeout: this.#options.commandTimeoutMs ?? 90_000, maxBuffer: 1024 * 1024 }, (error, stdout) => {
+        if (error && !(allowDenied && error.code === 1 && !error.killed)) reject(new Error(`Sandbox ${args[0] ?? 'operation'} could not complete.`));
+        else resolve(stdout);
+      });
+    });
+  }
+}

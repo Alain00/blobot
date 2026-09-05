@@ -68,6 +68,8 @@ export class TeamPool<T extends PoolableTeam> {
     return this.#live.find((candidate) => candidate.team.id === teamId);
   }
 
+  isHeld(teamId: string): boolean { return this.#pinned.has(teamId); }
+
   /**
    * Make this team the active one, starting it if it is not already live.
    *

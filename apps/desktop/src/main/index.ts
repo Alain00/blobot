@@ -72,6 +72,7 @@ import { knownRuntime, knownRuntimes, refreshKnownRuntimes } from './known-runti
 import { resizeStep, startStep, stopStep, writeStep } from './runtime-step.js';
 import { isWorking, type RunningTeam } from './running-team.js';
 import { TeamPool } from './team-pool.js';
+import { MachinePreferences } from './machine-preferences.js';
 import { DictationHost, TRYOUT_TEAM } from './dictation.js';
 import { DictationSettingsHost } from './dictation-settings.js';
 import { SpeechFiles, type SpeechTarget } from './speech-files.js';
@@ -306,6 +307,7 @@ function asStepRequest(
  * nobody could keep. Only ever started once a window exists.
  */
 let routines: RoutineRunner | undefined;
+let machinePreferences: MachinePreferences | undefined;
 
 const pool = new TeamPool<RunningTeam>({
   limit: LIVE_TEAM_LIMIT,
@@ -316,6 +318,9 @@ const pool = new TeamPool<RunningTeam>({
       store,
       db: opened.db,
       clock,
+      ...(machinePreferences === undefined ? {} : { idleAfterMs: machinePreferences.idleAfterMs }),
+      canSleep: () => !pool.isHeld(team.id),
+      onMachinePowerChange: () => send('blobot:team'),
       // Each agent reports itself up, and the rail redraws that one row. A cold start is a
       // workspace reconcile and a process per agent, and reporting only at the end would make
       // a four-agent team look frozen for as long as its slowest member takes.
@@ -675,6 +680,7 @@ function snapshot(): UiSnapshot {
       name: agent.name,
       role: agent.role,
       runtimeLabel: team.runtimeLabels[agent.id] ?? 'unknown',
+      ...(team.powerOf === undefined ? {} : { machinePower: team.powerOf(agent.id) }),
       workspacePath: agent.workspacePath,
       ...(agent.hue === undefined ? {} : { hue: agent.hue }),
       ...(team.branches[agent.id] === undefined ? {} : { branch: team.branches[agent.id] }),
@@ -1056,6 +1062,10 @@ async function createWindow(): Promise<void> {
 }
 
 void app.whenReady().then(async () => {
+  machinePreferences = new MachinePreferences(join(app.getPath('userData'), 'machine-preferences.json'));
+  await machinePreferences.load().catch(() => {
+    process.stderr.write('[machines] Saved sleep settings could not be read; automatic sleep is disabled. The file was kept.\n');
+  });
   // No native menubar. Every command blobot has is on the surface it belongs to, so the
   // default File/Edit/View/Window strip was four menus of things this app does not do,
   // drawn above a window whose own chrome is the interface.
@@ -1825,6 +1835,13 @@ void app.whenReady().then(async () => {
 
   // The Dictation section (ticket 10). Every action answers with the whole section.
   ipcMain.handle('blobot:dictationSettings', () => dictationSettings.view());
+  ipcMain.handle('blobot:machineIdleAfterMs', () => machinePreferences?.idleAfterMs);
+  ipcMain.handle('blobot:setMachineIdleAfterMs', async (_event, value: number) => {
+    if (machinePreferences === undefined) throw new Error('Machine preferences are not available.');
+    const saved = await machinePreferences.setIdleAfterMs(value);
+    for (const live of pool.live) live.setIdleAfterMs?.(saved);
+    return saved;
+  });
   ipcMain.handle('blobot:setDictation', (_event, patch: DictationPatch) => dictationSettings.set(patch));
   ipcMain.handle('blobot:checkSpeechReadiness', () => dictationSettings.checkReadiness());
   ipcMain.handle('blobot:downloadSpeech', (_event, target: SpeechTarget) => dictationSettings.download(target));

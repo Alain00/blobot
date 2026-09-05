@@ -110,3 +110,5 @@ export {
 export type { SpeechModelId } from './speech/catalog.js';
 export type { SpeechReadiness } from './speech/readiness.js';
 export { describeRtf } from './speech/readiness.js';
+export type { MachinePower } from './machines/power.js';
+export type { DetectionSubject, MachineDetection } from './detect/machine-runtime.js';

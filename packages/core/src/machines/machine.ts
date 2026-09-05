@@ -1,3 +1,5 @@
+import type { MachineLimits } from './resources.js';
+
 /** A process channel, independent of ACP, Electron and any particular engine. */
 export interface MachineTransport {
   write(line: string): void;
@@ -69,6 +71,10 @@ export interface Machine {
   readiness(): Promise<MachineReadiness>;
   reconcile(): Promise<MachineReconcileOutcome>;
   start(request: MachineStartRequest): Promise<MachineLocation>;
+  /** Fresh engine check before a turn; implementations must not silently relocate execution. */
+  beforeWork?(): Promise<void>;
+  /** Intentional same-Agent replacement; callers first quiesce runtime work with consent. */
+  reconfigure?(limits: MachineLimits, options?: { readonly signal?: AbortSignal; readonly timeoutMs?: number }): Promise<void>;
   spawn(request: MachineSpawnRequest): MachineTransport;
   stop(): Promise<void>;
   destroy(): Promise<void>;

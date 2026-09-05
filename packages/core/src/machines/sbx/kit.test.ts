@@ -7,7 +7,7 @@ describe('a root blobot kit', () => {
   it('declares exactly two private volumes without inheriting vendor grants or login', () => {
     const kit = sbxKit(options);
     expect(kit).not.toHaveProperty('extends');
-    expect(kit.setup.install).toEqual([{ user: '0', command: 'chown 1000:1000 /home/agent /workspace' }]);
+    expect(kit.setup.install).toEqual([{ user: '0', command: 'chown 1000:1000 /home/agent /workspace && chmod 0700 /home/agent /workspace' }]);
     expect(kit.credentials).toEqual([]);
     expect(kit.permissions.network.allow).toEqual([]);
     expect(kit.volumes).toEqual([

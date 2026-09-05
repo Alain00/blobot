@@ -6,6 +6,7 @@ import { RuntimeMark } from './RuntimeMark.js';
 import { RuntimeSetup } from './RuntimeSetup.js';
 import { ContextCeilings } from './ContextCeilings.js';
 import { Dictation } from './Dictation.js';
+import { MachineSleepSettings } from './MachineSleepSettings.js';
 import { useSoundSettings } from '../sound/useSound.js';
 
 /**
@@ -29,10 +30,11 @@ import { useSoundSettings } from '../sound/useSound.js';
  * to pass, and the reason it is here rather than behind a lid over the other two doors.
  * *2026-08-31, `.scratch/sound/issues/06`.*
  */
-export type Section = 'runtimes' | 'context' | 'sound' | 'dictation';
+export type Section = 'runtimes' | 'context' | 'sound' | 'dictation' | 'machines';
 
 const SECTIONS: readonly { readonly id: Section; readonly label: string }[] = [
   { id: 'runtimes', label: 'Runtimes' },
+  { id: 'machines', label: 'Machines' },
   { id: 'context', label: 'Context' },
   { id: 'sound', label: 'Sound' },
   { id: 'dictation', label: 'Dictation' },
@@ -168,6 +170,7 @@ export function Settings({
           )}
 
           {section === 'context' && <ContextCeilings />}
+          {section === 'machines' && <MachineSleepSettings />}
 
           {section === 'sound' && <SoundSection />}
 

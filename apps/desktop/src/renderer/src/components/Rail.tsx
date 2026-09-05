@@ -6,6 +6,7 @@ import { foldTeamStatus, lastLineOf, type Item, type Pane } from '../model.js';
 import { lastActive } from '../time.js';
 import { useTeamOpening } from '../useTeamOpening.js';
 import { Blob, SEEN } from './Blob.js';
+import { MachinePowerDot } from './MachinePowerDot.js';
 import { TeamMark } from './TeamMark.js';
 import { StatusWord } from './StatusWord.js';
 
@@ -269,14 +270,17 @@ export function Rail({
                       status the pointer and every other one nothing — so this is the excursion
                       of a blocked agent following you until you answer, not of a roster
                       swivelling in unison. */}
+                  <span className="machineavatar">
                   <Blob
                     name={agent.name}
 										size={44}
                     status={status}
                     hue={agent.hue}
-                    animated
+                    animated={agent.machinePower === undefined || agent.machinePower === 'awake'}
                     travel={SEEN}
                   />
+                  {agent.machinePower !== undefined && <MachinePowerDot power={agent.machinePower} />}
+                  </span>
                   <span className="who">
                     <span className="nm">
                       <b>{agent.name}</b>

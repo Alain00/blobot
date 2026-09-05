@@ -29,7 +29,8 @@ and raise it rather than working around it.
 - **The orchestrator owns agent-to-agent communication.** It is our concern, not ACP's, and
   never a full context copy between agents — always compact context.
 - **The blobatars are the only saturated thing on screen.** Status is monochrome, carried by
-  motion, a mono word and a hairline. The rest of the interface's rules, and the reason behind
+  motion, a mono word and a hairline, with DESIGN.md's explicit low-chroma Machine-power-dot exception.
+  The rest of the interface's rules, and the reason behind
   each, live in `DESIGN.md` at the repo root. **Read it before changing anything a user sees.**
 
 ## Engineering constraints

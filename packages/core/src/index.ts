@@ -19,6 +19,12 @@ export type {
 
 export { sameCommands } from './commands.js';
 export { LocalMachine } from './machines/local-machine.js';
+export { SleepingRuntime } from './machines/sleeping-runtime.js';
+export type { SleepingRuntimeOptions } from './machines/sleeping-runtime.js';
+export { DEFAULT_MACHINE_IDLE_MS, machineIdleMs } from './machines/power.js';
+export type { MachinePower } from './machines/power.js';
+export { DEFAULT_MACHINE_LIMITS, machineLimits } from './machines/resources.js';
+export type { MachineLimits } from './machines/resources.js';
 export { machineFor } from './machines/machine-for.js';
 export { MachineUnavailableError } from './machines/machine.js';
 export type {
@@ -291,6 +297,8 @@ export {
 } from './adapters/cursor/stdio.js';
 
 export { detectRuntimes, parseCursorStatus, parseOpencodeAuthList, parseVersion, stripAnsi } from './detect/runtimes.js';
+export { detectAgentRuntime, engineDetection } from './detect/machine-runtime.js';
+export type { DetectionSubject, MachineDetection, AgentProbeAccess } from './detect/machine-runtime.js';
 export type {
   CommandResult,
   CommandRunner,

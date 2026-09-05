@@ -76,6 +76,7 @@ function draw(
   statuses: Record<string, AgentStatus>,
   unread: readonly string[] = [],
   items: readonly Item[] = [],
+  agents: readonly UiAgent[] = OPEN_AGENTS,
 ): Drawn {
   const host = document.createElement('div');
   document.body.appendChild(host);
@@ -85,7 +86,7 @@ function draw(
       React.createElement(Rail, {
         team: OPEN,
         teams: TEAMS,
-        agents: OPEN_AGENTS,
+        agents,
         statuses,
         items,
         pane: { kind: 'team' },
@@ -110,6 +111,22 @@ function backgrounded(drawn: Drawn): HTMLElement {
 }
 
 describe('a team the user is not looking at', () => {
+  it('draws Machine power separately from work status, including sleep and unknown', () => {
+    for (const power of ['awake', 'asleep', 'waking', 'sleeping', 'unknown'] as const) {
+      const agents = OPEN_AGENTS.map((agent) => ({ ...agent, machinePower: power }));
+      const drawn = draw({ alice: 'idle' }, [], [], agents);
+      const dot = drawn.host.querySelector(`.machineavatar .machinepower.is-${power}`);
+      expect(dot?.getAttribute('aria-label')).toMatch(/Machine/);
+      if (power === 'unknown') expect(dot?.getAttribute('aria-label')).not.toMatch(/asleep/);
+      expect(drawn.host.querySelector('.stat.is-working')).toBeNull();
+      done(drawn);
+    }
+  });
+  it('does not invent Machine power when there is no observation', () => {
+    const drawn = draw({});
+    expect(drawn.host.querySelector('.machinepower')).toBeNull();
+    done(drawn);
+  });
   it('draws a mark rather than an anonymous silhouette', () => {
     const drawn = draw({});
     const row = backgrounded(drawn);

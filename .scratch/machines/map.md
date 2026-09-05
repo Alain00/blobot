@@ -68,6 +68,18 @@ per session, alongside the decisions. Start with *The engine, the Machine interf
 box's lifecycle*: its interface is the prerequisite for the box implementation; the remaining
 `local` inner-fence decision does not block that work. Open decisions remain open until answered.
 
+**Session scope amended, 2026-09-05 (Guillermo).** Continue implementation across **two tickets**
+in this session, overriding the earlier one-ticket limit. Any unresolved choice is put to the
+author through `grill-with-docs`; do not bypass it to finish implementation.
+
+**Engine review deferred, 2026-09-05 (Guillermo).** Finish the two current tickets on `sbx`,
+verify and commit their work, then create research tickets comparing vanilla Docker Engine
+with `sbx` and a dependent HITL `grill-with-docs` reevaluation ticket. Prepare a handoff for
+that next session. Creating those research tickets does **not** authorize running them now.
+Only that later evidence and the author's decision may change the engine or the remaining
+plan; the Eve comparison alone changes neither. Current ticket completion remains subject
+to its acceptance criteria, not waived by the future review.
+
 **Domain.** blobot is a local-first Electron desktop app that assembles teams from the coding
 agents a user already has installed. It provides no inference, stores no credentials and provides
 no infrastructure. `CLAUDE.md` has the permanent architectural rules and `CONTEXT.md` the
@@ -176,6 +188,8 @@ none is discarded, and the destination is unchanged:
 
 - [The engine, the Machine interface, and a box's lifecycle](issues/14-the-engine-and-the-machine-interface.md): the Agent-bound interface and null engine are implemented across all five launch paths, with explicit environment layers and shared client-capability protection; box activation remains the engine's work. [Build status](build.md).
 - [The first engine: sbx behind the interface, and a box's life](issues/17-the-first-engine-sbx-behind-the-interface.md): root kit and stdin-framed exec implemented and fixture-tested across stop/start; SSH disable is daemon-wide, so production admission and setup continue in [A box's lifecycle, engine setup, and the pool](issues/19-a-box-lifecycle-and-engine-setup.md). No Agent runs in Docker yet.
+- [A box's lifecycle, engine setup, and the pool](issues/19-a-box-lifecycle-and-engine-setup.md): staged owned lifecycle, verified sleep/reopen, preserved-data limit changes, scoped mailbox permissions and explicit shared setup; local sleep/power UI is connected, box activation remains behind image/Workspace/egress work.
+- [Detection, and its remedies, when the runtime is not on this computer](issues/08-detection-and-remedies-per-machine.md): four states with engine/Agent subjects, awake-only guest probes, fresh checks after remedies and no login inference from exit; Machine-screen and real runtime-image activation remain with their existing tickets.
 
 Query the issue status and blocking lines for the current frontier; the former recharting
 snapshot is superseded by the interface's resolution.

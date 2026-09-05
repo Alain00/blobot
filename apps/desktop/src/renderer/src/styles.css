@@ -8,6 +8,15 @@
  * monochrome, carried by motion, a mono word and three dots.
  */
 
+.machineavatar { position:relative; display:inline-flex; flex:none; }
+.machinepower { position:absolute; right:0; bottom:0; width:10px; height:10px; border:2px solid var(--raised); border-radius:50%; background:var(--muted); }
+.machinepower.is-awake { background:#579769; }
+.machinepower.is-unknown { background:var(--raised); outline:1px dashed var(--muted); }
+.machinepower.is-waking, .machinepower.is-sleeping { background:linear-gradient(90deg,var(--muted) 50%,var(--raised) 50%); }
+.machinesleep { max-width:560px; }
+.machinesleep .field { display:grid; gap:8px; max-width:280px; }
+.machinesleep input { padding:8px; color:var(--ink); background:var(--raised); border:1px solid var(--line); }
+
 :root{
   --ground:#0a0a0b; --raised:#131315; --ink:#fafaf8; --muted:#8a8a93; --line:#232327;
   /* The one saturated pair that is not a blobatar, and the only two tokens in this file that
