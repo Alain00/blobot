@@ -88,6 +88,19 @@ implemented, validated and resolved, including its entry-point UI. The
 No further product answer is pending for this choice. Continue the remaining frontier;
 complete-state image preservation remains claimed and unfinished.
 
+**Network continuation, 2026-09-06.** The individual-Team UI is committed as `1aa70a7`.
+[Egress from a box: the allowlist, and how a block is said](issues/15-egress-from-a-box.md)
+is claimed. Its [focused decision round](egress-decision-round.md) records Guillermo's choice:
+Internet access without a blobot destination allowlist, beyond the harness's own restrictions.
+Implement that amendment. Host separation, the exact mailbox door, worktrees and engine choice
+remain accepted. No further answer is pending about destination-list editability; no box
+activation is implied before the amended network boundary has been implemented and validated.
+
+**Measured network boundary.** The [RC5 probe](research/46-open-internet-boundary.md) found that
+the native Internet wildcard also admits host-loopback services despite private CIDR denies.
+The [decision round](egress-decision-round.md) now asks only about that additional host-network
+reach; the user's open-Internet answer remains accepted. No production network code was enabled.
+
 **Main integration, 2026-09-05.** The incoming September 4 planning fork predates the
 accepted local/box scope and uses the numbers now held by the image and engine tickets.
 Its two questions are preserved under unique identities:

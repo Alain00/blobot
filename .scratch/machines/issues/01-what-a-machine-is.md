@@ -3,6 +3,16 @@ Status: resolved
 
 # What a Machine is, and what grain it hangs at
 
+## Internet-access amendment, 2026-09-06
+
+Guillermo chose Internet access without blobot's own destination allowlist, beyond restrictions
+the runtime harness already applies. This supersedes the domain-list portion of point 5 only;
+the host-access list, exact mailbox door, worktrees/shared Git metadata, credential ownership,
+SSH-forwarding exclusion and separate approval posture remain accepted. No per-host network
+editor is required. [Egress from a box](15-egress-from-a-box.md) implements this decision and
+records sbx's remaining protocol or operator-policy limitations; the earlier domain-filter and
+automatic proxy-block-transcript requirements are historical, not activation promises.
+
 ## Answer to the narrow reopen, 2026-09-05 — worktrees on both kinds
 
 Guillermo rejected the box clone after clarifying that it owns an independent Git store and

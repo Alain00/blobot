@@ -735,3 +735,37 @@ Return to the remaining frontier by dependency. The accepted profile flow needs 
 answer. Full-state image preservation remains claimed and unfinished; box activation gates
 remain closed. Continue the full Machines goal and consult the author for non-obvious product
 or trust choices. Each completed ticket still requires validation and its own commit.
+
+## 2026-09-06 — network decision checkpoint
+
+The individual-Team entry point is committed as `1aa70a7`; its throwaway worktree was removed
+after deleting only its three owned dependency symlinks. Prototype branch/commit `6e36df4`
+remains available. Production code is unchanged since the validated UI commit.
+
+[Egress from a box: the allowlist, and how a block is said](issues/15-egress-from-a-box.md)
+is claimed. Read-only reviews recovered current contracts, startup traffic and policy limits;
+the [focused decision round](egress-decision-round.md) records the proposal for fixed development
+destinations without a hostname editor. Await the author's product answer before applying
+that scope. Optional telemetry must not be conflated with plugin traffic, and a domain rule
+cannot distinguish telemetry from functional calls to the same host. No sbx/global-policy,
+provider, credential or production activation mutation was made for this preparation.
+
+## 2026-09-06 — open Internet accepted; host boundary measured
+
+Guillermo selected Internet access without blobot's own domain list, beyond each harness's
+existing restrictions. The Machine answer, glossary and boundary ADR now record the amendment.
+The prior fixed-list/editor proposal is rejected; no domain catalog or generic list-denial
+transcript feature should be implemented from the historical ticket body.
+
+[Open-Internet boundary research](research/46-open-internet-boundary.md) includes the executable
+fixture and complete results. On pinned sbx RC5, allow-only-IP ranges did not admit HTTPS by
+hostname. Wildcard hostname allowance plus private CIDR denies admitted public HTTPS and two
+requests to an owned synthetic host-loopback listener. The sandbox and scoped rules are gone;
+the global policy is verified unchanged. No user mounts, real credentials, provider, inference,
+real host/LAN service or production network code was used or changed. Fixture syntax and
+`git diff --check` pass; its live run completed with successful ownership cleanup.
+
+The remaining non-obvious question is whether to broaden network reach to host/local services
+with sbx's open policy. This was not part of the accepted Internet answer. Preserve all other
+host mounts/credential/approval decisions and await the answer before choosing that boundary.
+The egress ticket stays claimed. Image preservation and box activation remain unfinished.

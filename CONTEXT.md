@@ -39,7 +39,8 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
   per Agent for the exception: **this computer**, or **a sandbox on this computer**, a small
   virtual machine holding the Agent's own copy of its runtime, its own login and its own copy of
   the Workspace. It can also write the Workspace’s shared Git metadata, reach the mailbox and
-  allowed hosts, and read the operator’s skills. The main checkout and other Agents’ working
+  the Internet under its runtime's own restrictions, and read the operator’s skills. Blobot
+  imposes no additional Internet destination list. The main checkout and other Agents’ working
   files are outside it. A Machine is **not** a home: what an AgentProfile keeps for itself across teams is a
   different object. On screen a Machine is said by kind and in plain words; the mechanism behind
   a kind is never named. See `.scratch/machines/`.

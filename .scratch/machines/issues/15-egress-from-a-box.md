@@ -1,6 +1,17 @@
 Type: grilling
-Status: open
+Status: claimed
 Blocked by: 19
+
+Current continuation, 2026-09-06: Guillermo rejected the fixed list and selected Internet access
+without blobot destination limits beyond the harness's own behavior. The
+[focused decision round](../egress-decision-round.md) records the answer. Implement this amended
+scope while preserving host separation and the exact mailbox door. The older allowlist,
+editability and generic proxy-log transcript requirements below are superseded.
+
+The [measured open-network probe](../research/46-open-internet-boundary.md) exposes a new
+decision: the native wildcard also reaches host-loopback services despite private CIDR denies.
+The Internet choice is accepted; widening the host-service boundary is not. Keep this ticket
+claimed and production guarded pending that answer or a verified additional boundary.
 
 # Egress from a box: the allowlist, and how a block is said
 
@@ -353,3 +364,16 @@ user's own tools keep for themselves.
 forward off is `17`'s kit, and `01`'s amendment has refused the socket, so *whether it joins the
 list* is moot. The rail is `12`'s. If `12` §7's door ever ships, Microsoft's update hosts are its
 price and are named here then.
+
+## Continuation, 2026-09-06
+
+The current Workspace answer supersedes this ticket's historical clone, fetch-home and
+no-origin questions. Worktrees already expose the shared Git metadata and origin; there is no
+network transport to bring their branch home. The accepted SSH-forwarding exclusion stands.
+The native boundary answer keeps box reach separate from approvals and turns off Claude's
+optional inner fence inside a box. No choice already accepted in those tickets is reopened.
+
+Claimed after the individual-Team entry point was completed in `1aa70a7`. The first pending
+product choice is recorded in the [decision round](../egress-decision-round.md). Exact host
+classification, release-artifact validation, policy enforcement and denial-event integration
+remain implementation/research work. The ticket is not resolved and box activation is closed.

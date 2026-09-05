@@ -23,3 +23,20 @@ checkpoint `d9da267`: a protected shell command may fail while the session and n
 remain usable. This does not remove inherited project exceptions or extend protection to
 those other tools. Cursor's ACP sandbox setting likewise does not establish native containment;
 the ticket records the evidence and the UI states these differences.
+
+## Internet access amendment, 2026-09-06
+
+Guillermo explicitly chose Internet access without an additional blobot destination allowlist:
+“acceso a internet sin limitar por ahora mas alla que lo que cada harness ya limita por sus
+propios medios”. This replaces the earlier host-proxy domain-list decision. The Agent may use
+external APIs, sites and development downloads without a blobot hostname editor or permission
+to widen the list. Native runtime behavior and approval posture remain their existing controls;
+this does not silently grant tools broader approvals or undo the accepted inner-fence policy.
+
+The Machine's separation from the host remains: Internet access does not add host services,
+host credentials, SSH forwarding, sibling Machines or other host mounts. The mailbox is still
+the one explicitly admitted host service. Engine protocol limitations and operator/organization
+network policy must be disclosed rather than described as restrictions imposed by the harness.
+No destination-filtering, credential-containment or lossless proxy-denial guarantee follows from
+this choice. Implementation and measurements belong to
+[Egress from a box](../../.scratch/machines/issues/15-egress-from-a-box.md).
