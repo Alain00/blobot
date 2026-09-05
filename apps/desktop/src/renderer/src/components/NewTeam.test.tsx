@@ -55,7 +55,7 @@ const prepareWorkspace = vi.fn(async (name: string) => ({
   path: `/home/someone/blobot/${name}`,
 }));
 
-async function screen(): Promise<HTMLElement> {
+async function screen(initialProfile?: UiAgentProfile): Promise<HTMLElement> {
   created.mockClear();
   prepareWorkspace.mockClear();
   (globalThis as unknown as { window: { blobot: unknown } }).window.blobot = {
@@ -70,7 +70,7 @@ async function screen(): Promise<HTMLElement> {
   const root = createRoot(host);
   drawn.push({ unmount: () => root.unmount() });
   await act(async () => {
-    root.render(React.createElement(NewTeam, { onCreate: created }));
+    root.render(React.createElement(NewTeam, { onCreate: created, ...(initialProfile === undefined ? {} : { initialProfile }) }));
   });
   return host;
 }
@@ -112,6 +112,24 @@ function naming(host: HTMLElement): boolean {
 }
 
 describe('who is on the team', () => {
+  it('starts from the requested profile, with its folder disclosed and no creation until pressed', async () => {
+    const host = await screen(BOB);
+    expect(naming(host)).toBe(true);
+    expect(host.textContent).toContain('Bob');
+    expect(host.querySelector('.pickfoot')?.textContent).toContain('~/blobot/With Bob');
+    expect(created).not.toHaveBeenCalled();
+    expect(prepareWorkspace).not.toHaveBeenCalled();
+    await act(async () => (host.querySelector('.pickgo') as HTMLButtonElement).click());
+    expect(created).toHaveBeenCalledWith(expect.objectContaining({
+      profileIds: [BOB.id], leadProfileId: BOB.id, name: 'With Bob',
+    }));
+  });
+
+  it('does not create a team for a profile absent from the current roster', async () => {
+    const host = await screen({ ...ALICE, id: 'retired' });
+    expect((host.querySelector('.pickgo') as HTMLButtonElement).disabled).toBe(true);
+    expect(prepareWorkspace).not.toHaveBeenCalled();
+  });
   it('takes an agent into the field and stops offering them', async () => {
     const host = await screen();
     await act(async () => {

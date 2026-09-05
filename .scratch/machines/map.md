@@ -82,11 +82,11 @@ is implemented, validated and resolved after acceptance of its [focused proposal
 The behavior of [What an agent addressed outside a team may do, and what its transcript is](issues/07-what-a-dmd-agent-may-do.md)
 is now accepted and resolved; continue with its entry-point UI.
 
-**Current implementation frontier.** The profile-conversation behavior is resolved. Its
-[first decision round](profile-conversation-decision-round.md) was accepted after explanation:
-direct contact through a visible individual Team with its own workspace and transcript.
-Implement the accepted behavior and then its entry-point UI; no further product answer is
-pending for this choice. Continue the remaining frontier after completing that flow.
+**Current implementation frontier.** Profile contact through a visible individual Team is
+implemented, validated and resolved, including its entry-point UI. The
+[first decision round](profile-conversation-decision-round.md) was accepted after explanation.
+No further product answer is pending for this choice. Continue the remaining frontier;
+complete-state image preservation remains claimed and unfinished.
 
 **Main integration, 2026-09-05.** The incoming September 4 planning fork predates the
 accepted local/box scope and uses the numbers now held by the image and engine tickets.
@@ -270,6 +270,8 @@ none is discarded, and the destination is unchanged:
   which, because the first blocking result turned out to be a platform's and not a library's.
 
 ## Decisions so far
+
+- [Where a profile is addressed from, on screen](issues/18-the-profile-conversation-on-screen.md): a visible talk action opens a dialog to choose an individual Team or use ordinary creation with the profile preselected; existing Team surfaces own its history, permissions and context. Both layouts were prototyped and the implemented flow validated in Electron.
 
 - [What an agent addressed outside a team may do, and what its transcript is](issues/07-what-a-dmd-agent-may-do.md): contact from a profile opens a visible individual Team, with ordinary worktree/tools/history and existing approval/lifecycle rules; exact membership is rechecked before opening, and the screen ticket completes the entry point.
 

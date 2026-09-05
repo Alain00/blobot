@@ -714,3 +714,24 @@ to connect the accepted entry point, then return to the remaining frontier. The 
 delegates routine implementation/design choices; no further answer is pending for the accepted
 individual-Team behavior. Full-state image preservation and all box activation gates remain
 unfinished. The application branch has not been pushed.
+
+## 2026-09-06 — individual-Team entry point implemented and resolved
+
+[Where a profile is addressed from, on screen](issues/18-the-profile-conversation-on-screen.md)
+is complete. The visible `talk` action opens a chooser of the profile's individual Teams, or
+ordinary creation with the profile preselected and its folder disclosed. Cancellation returns
+to Your agents. Selecting a Team opens its ordinary Agent pane; stale identity refusals stay
+visible. No profile-owned session, new permission model or Machine claim was introduced.
+The dialog was chosen after comparing both layouts, under the delegated routine design scope.
+
+Prototype source is retained on `prototype/machines-individual-team` at `6e36df4`.
+[Renderer validation](research/45-individual-team-ui.md) records screenshots and a replayable
+synthetic Electron fixture. Desktop **621 passed / 1 skipped**, typecheck/build pass; the core
+overview's prompt punctuation correction passes its 11 tests and core typecheck/build. The
+preceding full core run was 971 passed / 46 skipped. No real provider or box ran in this UI
+fixture, and the application branch has not been pushed.
+
+Return to the remaining frontier by dependency. The accepted profile flow needs no additional
+answer. Full-state image preservation remains claimed and unfinished; box activation gates
+remain closed. Continue the full Machines goal and consult the author for non-obvious product
+or trust choices. Each completed ticket still requires validation and its own commit.

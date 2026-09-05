@@ -1449,6 +1449,14 @@ One flat file, one flat namespace, no build step between it and the DOM.
   it was a row above TEAMS, on the grounds that an agent exists before a team and that is the
   order the model reads in. True of the model, wrong on screen — see* **The doors at the foot of
   the rail** *below.*
+  **Individual-Team entry, approved 2026-09-06.** A visible `talk` button beside each profile
+  opens a dialog listing its individual Teams and an action to create one through the normal
+  flow, with that profile preselected. Choosing a Team opens its ordinary working surface;
+  this explicit navigation can start that Team. Browsing and editing profiles still restart
+  nothing. The row click keeps editing, and edit/retire icons keep their hover/focus reveal.
+  The dialog is about one profile; the roster remains a place about everybody. No profile
+  transcript, new visual voice or extra live-power claim is introduced. See Machines'
+  *Where a profile is addressed from, on screen*.
 - **Routines** — everything that runs on a clock, over the working surface, in the register of
   *your agents* and reached from the second door at the foot of the rail. A row is the Routine's name, the
   schedule **in words**, the blobatar and name of the agent it belongs to, the team, and when it

@@ -1513,7 +1513,17 @@ textarea.field{resize:vertical;line-height:1.5}
    somebody must not be the loudest thing on a screen whose job is "here is everybody". */
 .agentcardwrap{position:relative}
 .agentcardwrap:hover .rowacts,.agentcardwrap:focus-within .rowacts{opacity:1;pointer-events:auto}
-.agentcardwrap .rowacts{top:11px;right:11px}
+.agentcardwrap .rowacts{top:11px;right:11px;translate:none;align-items:center;opacity:1;pointer-events:auto}
+/* Talking is a visible entry point. Editing and retiring keep their hover/focus reveal. */
+.agentcardwrap .rowacts > .iconbtn{opacity:0;pointer-events:none}
+.agentcardwrap:hover .rowacts > .iconbtn,.agentcardwrap:focus-within .rowacts > .iconbtn{opacity:1;pointer-events:auto}
+.agentcardwrap > .listrow.tall{padding-right:146px;min-height:64px}
+.agentcardwrap .nm{flex-wrap:wrap;overflow-wrap:anywhere}
+.agenttalk{padding:5px 12px;font-size:12px}
+.individualteamlist{display:flex;flex-direction:column;gap:6px;max-height:45vh;overflow:auto}
+.individualteamlist .listrow{justify-content:space-between}
+.individualteamname{min-width:0;overflow-wrap:anywhere}
+.individualteamlist .listrow > svg,.individualteamlist .listrow > .mono{flex-shrink:0}
 
 /* The doors at the foot of the rail: agents, routines, settings. They were `.railsection`,
    two mono headings above TEAMS, and they read as a second list stacked on the first.

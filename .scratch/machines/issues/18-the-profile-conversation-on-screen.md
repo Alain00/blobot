@@ -1,5 +1,5 @@
 Type: prototype
-Status: open
+Status: resolved
 Blocked by: 07
 
 # Where a profile is addressed from, on screen
@@ -66,3 +66,28 @@ existing individual Team or start the current creation flow with that profile pr
 and open the ordinary Agent/Team working surface. Its existing unread/permission/context/
 compaction surfaces are the honest furniture for this choice. The Agent is allowed ordinary
 tools/files/commits under its configured Machine; no conversation-only guarantee is added.
+
+## Answer
+
+Resolved 2026-09-06. The accepted individual-Team behavior is implemented as a visible `talk`
+action on each profile row. Its dialog names only that exact profile's active one-member Teams;
+the user chooses a history explicitly or starts ordinary Team creation with the profile and a
+suggested name preselected. The folder is disclosed before creation. A missing/retired profile
+cannot prepare a workspace, and opening rechecks membership in main through the preceding
+behavior ticket's guard. A refusal stays in the dialog; Escape returns focus to the action and
+leaves Your agents open. Selecting a Team opens its ordinary working surface.
+
+Compared an inline expansion and a dialog on the throwaway branch
+`prototype/machines-individual-team`, commit `6e36df4`. The dialog keeps the roster stable and
+gives Team names room. This layout is a routine design choice under the author's standing
+delegation; the author accepted the individual-Team behavior, not a separate vote between
+these prototypes. No profile transcript was added. Unread, permission requests, context and
+compaction use the existing Team/Agent surfaces, including cancellation when nobody listens.
+
+[Prototype and renderer validation](../research/45-individual-team-ui.md) records both
+arrangements, the chosen implementation, screenshots and the synthetic Electron fixture.
+Desktop: **621 passed / 1 skipped**, typecheck and build pass. The core overview's introductory
+punctuation was aligned with DESIGN.md; its 11 tests, typecheck and build pass. Core's previous
+full run remains 971 passed / 46 skipped. The real built renderer's create/cancel/select
+interactions and narrow layout pass with a synthetic API; this does not certify provider turns
+or box activation. The Machine screen and full-state preservation remain with their tickets.

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pencil, Trash2, X } from 'lucide-react';
-import type { UiAgentProfile, UiRuntimeChoice } from '../../../shared/api.js';
+import type { TeamOpenResult, UiAgentProfile, UiRuntimeChoice, UiTeamSummary } from '../../../shared/api.js';
 import { EditAgent, HireAgent, RetireAgent } from './AgentForm.js';
 import { Blob } from './Blob.js';
+import { IndividualTeam } from './IndividualTeam.js';
 
 /**
  * Your agents: everyone you have hired, on no team and on several at once.
@@ -24,6 +25,9 @@ export function Agents({
   onClose,
   onChanged,
   hiringAtOnce,
+  teams,
+  onCreateIndividualTeam,
+  onOpenIndividualTeam,
 }: {
   onClose: () => void;
   /**
@@ -39,6 +43,9 @@ export function Agents({
   onChanged?: () => void;
   /** `--screen=hire` only: the dialog a screenshot cannot click its way to. */
   hiringAtOnce?: boolean;
+  teams: readonly UiTeamSummary[];
+  onCreateIndividualTeam: (agent: UiAgentProfile) => void;
+  onOpenIndividualTeam: (profileId: string, team: UiTeamSummary) => Promise<TeamOpenResult>;
 }): React.JSX.Element {
   const [roster, setRoster] = useState<readonly UiAgentProfile[]>([]);
   const [runtimes, setRuntimes] = useState<readonly UiRuntimeChoice[]>([]);
@@ -75,7 +82,7 @@ export function Agents({
   useEffect(() => {
     if (dialogOpen) return;
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape' && document.querySelector('[role="dialog"]') === null) onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -135,6 +142,8 @@ export function Agents({
                   </span>
                 </button>
                 <span className="rowacts">
+                  <IndividualTeam agent={agent} teams={teams}
+                    onCreate={onCreateIndividualTeam} onOpen={onOpenIndividualTeam} />
                   <button
                     className="iconbtn sm"
                     onClick={() => setEditing(agent.id)}

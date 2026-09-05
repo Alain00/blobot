@@ -36,6 +36,7 @@ import { Blob } from './Blob.js';
 export function NewTeam({
   onCancel,
   onCreate,
+  initialProfile,
 }: {
   onCancel?: () => void;
   /**
@@ -48,11 +49,13 @@ export function NewTeam({
    * surface report what happens next, because they are what a team appears in.
    */
   onCreate: (spec: NewTeamSpec) => void;
+  /** The profile entry point still uses ordinary team creation and its folder disclosure. */
+  initialProfile?: UiAgentProfile;
 }): React.JSX.Element {
   /** Which of the two questions is up. There is no third, and there is no way back to a page. */
-  const [stage, setStage] = useState<'who' | 'where'>('who');
+  const [stage, setStage] = useState<'who' | 'where'>(initialProfile === undefined ? 'who' : 'where');
   const [roster, setRoster] = useState<readonly UiAgentProfile[]>([]);
-  const [chosen, setChosen] = useState<readonly string[]>([]);
+  const [chosen, setChosen] = useState<readonly string[]>(initialProfile === undefined ? [] : [initialProfile.id]);
   /**
    * Who leads, when the user has said. Until then it is the first one they picked.
    *
@@ -66,7 +69,7 @@ export function NewTeam({
   const [runtimes, setRuntimes] = useState<readonly UiRuntimeChoice[]>([]);
   const [hiring, setHiring] = useState(false);
 
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialProfile === undefined ? '' : `With ${initialProfile.name}`);
   const [path, setPath] = useState('');
   const [inspection, setInspection] = useState<UiWorkspaceInspection | undefined>();
   /** `nested` only: the repositories in scope, which is all of them, unpicked and unshown. */
@@ -158,7 +161,8 @@ export function NewTeam({
       : inspection.kind === 'nested'
         ? repos.length > 0 || inspection.looseFiles
         : true);
-  const ready = !reading && !busy && usable && name.trim() !== '' && chosen.length > 0;
+  const ready = !reading && !busy && usable && name.trim() !== '' && chosen.length > 0
+    && chosen.every((id) => roster.some((agent) => agent.id === id));
 
   const picked = chosen
     .map((id) => roster.find((agent) => agent.id === id))

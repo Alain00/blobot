@@ -22,7 +22,7 @@ import { useDictation } from './useDictation.js';
 import { settingsSectionOf } from './components/Settings.js';
 import { useComposerRoom } from './useComposerRoom.js';
 import { usePlaySound } from './sound/useSound.js';
-import type { NewTeamSpec } from '../../shared/api.js';
+import type { NewTeamSpec, UiAgentProfile, UiTeamSummary } from '../../shared/api.js';
 
 export function App(): React.JSX.Element {
   const [state, dispatch] = useReducer(reduce, initialState);
@@ -43,6 +43,7 @@ export function App(): React.JSX.Element {
   // `--screen=new-team` opens it, for the same reason `--screen=agents` exists: the flow is a
   // surface a screenshot cannot click its way to, and now one of its steps decides who leads.
   const [creating, setCreating] = useState(opened.get('screen') === 'new-team');
+  const [initialProfile, setInitialProfile] = useState<UiAgentProfile>();
   /**
    * A team handed over and not yet on screen.
    *
@@ -276,6 +277,23 @@ export function App(): React.JSX.Element {
     });
   }, []);
 
+  const openIndividualTeam = useCallback(async (profileId: string, team: UiTeamSummary) => {
+    const agentId = team.members[0]?.id;
+    wanted.current = agentId;
+    const result = await window.blobot.selectIndividualTeam(profileId, team.id).catch(() => ({
+      ok: false, error: 'The team could not be opened. Try again.',
+    }));
+    if (result.ok) {
+      setBrowsingAgents(false);
+      setOpenError(undefined);
+      if (agentId !== undefined) setPane({ kind: 'agent', agentId });
+    } else {
+      wanted.current = undefined;
+    }
+    refresh();
+    return result;
+  }, [refresh]);
+
   const items = useMemo(() => itemsFor(state.items, pane), [state.items, pane]);
   // Kept current on every render, so the callback above reads the cursor as it is now rather
   // than as it was when it was built.
@@ -302,6 +320,7 @@ export function App(): React.JSX.Element {
   const startTeam = useCallback(
     (spec: NewTeamSpec) => {
       setCreating(false);
+      setInitialProfile(undefined);
       setStarting(true);
       void window.blobot.createTeam(spec).then((result) => {
         setStarting(false);
@@ -369,7 +388,7 @@ export function App(): React.JSX.Element {
       // header for the same reason.
       <div className="app">
         {openError !== undefined && <div className="openerror">{openError}</div>}
-        <NewTeam onCreate={startTeam} />
+        <NewTeam onCreate={startTeam} {...(initialProfile === undefined ? {} : { initialProfile })} />
       </div>
     );
   }
@@ -645,14 +664,20 @@ export function App(): React.JSX.Element {
             onSaved={() => refresh(true)}
           />
         )}
-        {/* Over the panes rather than in place of them: the team behind it keeps running, and
-            an edit here is about agents rather than about what is on screen. Nothing it does
-            restarts a team, so nothing behind it has to be torn down. */}
+        {/* Browsing and editing definitions keep the working surface alive. Choosing an
+            individual team through talk is explicit navigation to that team's own surface. */}
         {browsingAgents && (
           <Agents
             onClose={() => setBrowsingAgents(false)}
             onChanged={refresh}
             hiringAtOnce={opened.get('screen') === 'hire'}
+            teams={snapshot.teams}
+            onOpenIndividualTeam={openIndividualTeam}
+            onCreateIndividualTeam={(agent) => {
+              setInitialProfile(agent);
+              setBrowsingAgents(false);
+              setCreating(true);
+            }}
           />
         )}
         {/* Over the panes for the same reason *your agents* is: the team behind it keeps
@@ -683,7 +708,11 @@ export function App(): React.JSX.Element {
         {/* The same layer the navigator takes, and for the same reason: forming a team is a
             door, not a place, and the team you are on is still running behind it. */}
         {creating && (
-          <NewTeam onCancel={() => setCreating(false)} onCreate={startTeam} />
+          <NewTeam onCancel={() => {
+            setCreating(false);
+            if (initialProfile !== undefined) setBrowsingAgents(true);
+            setInitialProfile(undefined);
+          }} onCreate={startTeam} {...(initialProfile === undefined ? {} : { initialProfile })} />
         )}
         {/* Over every other layer, because it is how you leave the one you are on. It is the
             only surface in the app that is not a place: it opens on a key, answers, and goes. */}
