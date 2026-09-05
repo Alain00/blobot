@@ -746,6 +746,30 @@ it was written during this turn or was already there**, which is the fact that t
 of a stale build from an unfalsifiable claim into a weighable one. The branch is refused there, and
 the two sources draw differently on purpose.
 
+**Also charted, not built:** `.scratch/file-sidebar/` — **a resizable right sidebar holding a file
+tree of an AgentWorkspace**, seven tickets, all resolved, frontier empty. Raised 2026-09-05 and
+narrowed in charting to one panel, read-only in every direction: the tabbed viewer behind it and
+editing a file inside blobot are both out of scope, on the map and with reasons. It exists because
+every surface built so far reads a worktree as a *figure* — `+412 −7 · 9 files`, a branch, a
+percent — and **not one of them can say which nine files**. The grain is `<team>/<agent>`, as it is
+for a Handbook, a Routine and a branch; the map chartered a chooser for the team pane and **04 found
+there isn't one** — the sidebar draws the pane's agent, full stop, and in the team pane the empty
+state *is* the chooser. It restores the third column that came off the day it was raised, so
+`DESIGN.md`'s flanks rule takes an amendment carrying the test a future flank must pass (06): **is
+this the only rendering of this fact?** — where the activity column drew what the transcript was
+already drawing. Colour splits on authorship: blobot drew the tree, so the tree is monochrome and
+the coloured file-type badges of the reference are refused; the user wrote the file, so a viewer
+would highlight in colour, which is the thumbnail yield's own sentence. The liveness answer is
+`useWorkspaces`' answer — settle-driven, no timer, plus the manual refresh — measured by 02 at
+**3 ms** for a `git status` against **535 ms** for a recursive walk, which is why the tree is lazy
+and a watcher is refused. **Two rules are amended by the build, both worded on their tickets**: the
+flanks rule (06) and `DESIGN.md`'s Icons, because Lucide cannot do per-extension and 07 takes
+Material Icon Theme (MIT) **greyed to one `currentColor`** as a generated subset — the vendor-mark
+exception reaching further, not a second yield of the governing rule. And the build inherits one
+shipped defect the map found: `pushFeed` caps the feed at 200, so `state.feed.length` saturates and
+local git is never re-read again. A file leaving the tree into the composer, on ADR-0004's embedded
+path, is deliberately in the fog and not in the map.
+
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that
 reproduces every observed trap on purpose — ragged deltas, a cancelled tool reporting
 `completed`, `used: 0` on cancel — because a kind mock produces a UI that shatters on first
