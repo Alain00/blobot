@@ -248,6 +248,7 @@ function Live({
    */
   grouped: boolean;
 }): React.JSX.Element {
+  const shown = useDwell(block.items);
   return (
     <div className={grouped ? 'msg live grouped' : 'msg live'}>
       {/* The one face in the transcript that is drawn live, and the only one that may be.
@@ -278,7 +279,7 @@ function Live({
             <span className="nm">{agent?.name ?? block.agentId}</span>
           </div>
         )}
-        {block.items.length === 0 ? (
+        {shown.length === 0 ? (
           <div
             className="dots"
             aria-label={`${agent?.name ?? block.agentId} is ${status}`}
@@ -289,7 +290,7 @@ function Live({
           </div>
         ) : (
           <div className="steps">
-            {block.items.map((item) =>
+            {shown.map((item) =>
               item.kind === 'tool' ? (
                 <ToolLine key={item.id} item={item} />
               ) : (
@@ -301,6 +302,60 @@ function Live({
       </div>
     </div>
   );
+}
+
+/**
+ * The block's steps, with anything the model dropped inside {@link DWELL} held in place.
+ *
+ * The timer owns the removal, exactly as it does for the swallow: the model is free to be strict
+ * about what is happening now, and this is the only thing standing between strictness and a line
+ * that is never drawn. A step that comes back before its timer fires simply stays — it is matched
+ * by id, so a call that finishes and a call that returns are the same row throughout.
+ */
+function useDwell(items: readonly Item[]): readonly Item[] {
+  const [held, setHeld] = useState<readonly Item[]>([]);
+  const previous = useRef<readonly Item[]>([]);
+  const shownAt = useRef(new Map<string, number>());
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    const running = timers.current;
+    return () => {
+      for (const timer of running) clearTimeout(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    const now = Date.now();
+    for (const item of items) if (!shownAt.current.has(item.id)) shownAt.current.set(item.id, now);
+    const present = new Set(items.map((item) => item.id));
+    const early = previous.current.filter(
+      (item) => !present.has(item.id) && now - (shownAt.current.get(item.id) ?? now) < DWELL,
+    );
+    previous.current = items;
+
+    setHeld((current) => {
+      const kept = current.filter(
+        (item) => !present.has(item.id) && !early.some((gone) => gone.id === item.id),
+      );
+      if (kept.length === current.length && early.length === 0) return current;
+      return [...kept, ...early];
+    });
+    if (early.length === 0) return;
+
+    const wait = Math.max(
+      ...early.map((item) => DWELL - (now - (shownAt.current.get(item.id) ?? now))),
+    );
+    const gone = new Set(early.map((item) => item.id));
+    timers.current.push(
+      setTimeout(() => setHeld((current) => current.filter((item) => !gone.has(item.id))), wait),
+    );
+  }, [items]);
+
+  if (held.length === 0) return items;
+  // Back where it stood: a line that jumps to the end on its way out is a move the reader did
+  // not cause, on top of the removal they also did not cause.
+  return [...held, ...items].sort((left, right) => left.at - right.at);
 }
 
 /**
@@ -573,6 +628,27 @@ export const IN_THE_AIR = 2;
  * and the collapse is cut off mid-shut, longer and a finished, empty box holds the column open.
  */
 export const FLIGHT = 260;
+/**
+ * The shortest a live step may be on screen, however briefly the model held it.
+ *
+ * The author, 2026-09-05: *"it's not that is visible for a short time, the thing it's never
+ * visible, i think each live step should have a min screen time, for example 300ms"* — and the
+ * diagnosis is better than the rule it corrects. A teammate's reply leaves the block when the
+ * principal's current batch does, and a batch is usually one call opened *after* the reply
+ * landed, so the reply's natural life on screen was not short, it was **zero**.
+ *
+ * Bounding it by time rather than by widening the rule is the honest split. Whether a step is
+ * still what is happening now is a question about the turn; whether the reader got to see that
+ * it happened at all is a question about the screen, and answering the first with the second is
+ * how the block ends up holding stale work again. So the model stays strict and the render holds
+ * anything it drops too early, in place, for the rest of this.
+ *
+ * The author's own number. It is a floor on *noticing* and not on reading — a clipped reply is
+ * not readable in 300ms and is not meant to be, since the whole of it is in the fold the moment
+ * the turn ends. It sits above `FLIGHT`, which matters: a step must not be born and taken away
+ * inside one swallow.
+ */
+export const DWELL = 300;
 
 /** A step caught mid-file, and the fold that is taking it. */
 interface Flight {
@@ -1056,11 +1132,20 @@ const ItemView = React.memo(function ItemView({
     // things the agent said. In the team pane the name goes with it for the same reason every
     // other per-agent line carries one. It does not animate.
     case 'picture':
-      return (
+      // A Picture that could not be shown is one mono line and nothing else, so it takes no
+      // gutter and no header: the name is in the sentence, where the only thing there is to
+      // say has to fit.
+      return item.notDrawn !== undefined ? (
+        <Picture item={item} fromName={fromName} />
+      ) : (
         <div className="msg pictrow">
           <div className="gutter" />
           <div className="body">
-            {fromName !== undefined && <div className="hdr"><span className="nm">{fromName}</span></div>}
+            {fromName !== undefined && (
+              <div className="hdr">
+                <span className="nm">{fromName}</span>
+              </div>
+            )}
             <Picture item={item} />
           </div>
         </div>

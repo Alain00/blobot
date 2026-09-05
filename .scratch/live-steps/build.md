@@ -109,3 +109,29 @@ reply that landed between two calls belongs between them.
 `.tool.reply` is the one new selector: the step row, the teammate's blobatar in the verb slot, and
 the words in `--sans` rather than `--mono`. Prose set as a command would be the only place in the
 app where somebody's sentence is drawn as machinery.
+
+### A live step has a floor now
+
+The reply was still never on screen, and the author's diagnosis was better than the rule it
+corrected: *"it's not that is visible for a short time, the thing it's never visible, i think each
+live step should have a min screen time, for example 300ms"*.
+
+The batch bound is **degenerate for a single-call batch**, which is what most of them are: the
+boundary is the batch's first call, and that call was opened *after* the reply landed, so the
+reply is never after it. Its life on screen was not short, it was zero. Widening the rule was the
+wrong fix, because it is two questions — whether a step is still what is happening now, which is
+about the turn, and whether the reader got to see that it happened, which is about the screen.
+Answering the first with the second is how the block filled up with stale work in the first place.
+
+So the model stays strict and `useDwell` holds anything it drops inside `DWELL` (300ms, the
+author's number), in place, matched by id. The timer owns the removal, which is `useSwallowed`'s
+shape exactly.
+
+**And the live row is keyed by its agent now**, not by its first item. It had been remounting the
+whole block every time that item changed, which threw away the blobatar's animation state and,
+once the dwell existed, the hook's memory of what had just been on screen — the first build of
+the dwell did nothing at all for that reason, and the test that caught it is the only one in here
+that renders twice onto the same root.
+
+Not caught in a still: a 300ms window is not something `--screenshot-at` finds by guessing. The
+fake-timer test is the evidence.

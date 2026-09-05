@@ -311,6 +311,66 @@ describe('the voices, after the roster stopped being passed down', () => {
     );
   });
 
+  /*
+   * The author, from the built thing: *"it's not that is visible for a short time, the thing it's
+   * never visible"*. A batch is usually one call opened after the reply landed, so by the strict
+   * rule the reply's life on screen is not short, it is zero. The model stays strict and the
+   * render holds anything dropped inside `DWELL`, in place.
+   */
+  it('holds a live step on screen for its minimum, however briefly the model had it', () => {
+    vi.useFakeTimers();
+    const at = 1_700_000_000_000;
+    const reply: Item = { kind: 'agent', id: 'm', at: at + 2000, agentId: 'b', text: 'NOTHING RUNNING MY END', live: false };
+    const call = (id: string, when: number, status: 'running' | 'completed'): Item => ({
+      kind: 'tool', id, at: when, agentId: 'a', title: `npm run ${id}`, toolKind: 'execute', status,
+    });
+    const base: Item[] = [
+      { kind: 'user', id: 'u', at, agentIds: ['a'], text: 'can you check on Bob' },
+      { kind: 'peer', id: 'p', at: at + 1000, fromId: 'a', toId: 'b', text: 'what are you on?' },
+      reply,
+    ];
+    const statuses: Record<string, AgentStatus> = { a: 'working', b: 'idle' };
+
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const show = (items: readonly Item[]): void => {
+      act(() => {
+        root.render(
+          React.createElement(Conversation, {
+            pane: { kind: 'team' } as Pane,
+            agents: AGENTS,
+            statuses,
+            items,
+            onAnswerPermission: () => {},
+            routineArmed: {},
+            onDisarmRoutine: () => {},
+            onRemoveHandbookEntry: () => {},
+          }),
+        );
+      });
+    };
+    const text = (): string => host.querySelector('.col')?.textContent ?? '';
+
+    show(base);
+    expect(text()).toContain('NOTHING RUNNING MY END');
+
+    // Alice opens her next call, which starts a batch after the reply and drops it at once.
+    show([...base, call('t1', at + 2100, 'running')]);
+    expect(text()).toContain('NOTHING RUNNING MY END');
+
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(text()).not.toContain('NOTHING RUNNING MY END');
+    expect(text()).toContain('npm run t1');
+
+    act(() => root.unmount());
+    host.remove();
+    vi.useRealTimers();
+
+  });
+
   it('stacks the faces past two partners, and counts nothing in words', () => {
     const at = 1_700_000_000_000;
     const items: Item[] = [

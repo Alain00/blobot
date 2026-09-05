@@ -1532,7 +1532,29 @@ export type Row =
    * so a fan-out with two agents working draws each block under its own fold instead of stacking
    * both of them below everybody's history.
    */
-  | ({ readonly kind: 'live'; readonly id: string; readonly at: number } & LiveBlock);
+  | ({ readonly kind: 'live'; readonly id: string; readonly at: number } & LiveBlock)
+  /**
+   * Every Picture one agent showed in a turn, on one line.
+   *
+   * A turn that takes four screenshots drew four column-width pictures, one under the other with
+   * a name and a caption between each, and the answer they were taken for ended up a screen and
+   * a half below the question. The fold already makes this call for the same turn's *calls*; a
+   * row makes it for what those calls produced.
+   *
+   * **Only ever more than one.** A single Picture is the thing you are being shown and it keeps
+   * the column, because shrinking one picture to half width buys no scroll at all and costs the
+   * detail the picture exists to carry.
+   *
+   * A Picture that could **not** be drawn never joins one. It is a sentence, it already counts
+   * rather than repeating, and a row of them would be a row of nothing.
+   */
+  | {
+      readonly kind: 'pictures';
+      readonly id: string;
+      readonly at: number;
+      readonly agentId: string;
+      readonly items: readonly Item[];
+    };
 
 /**
  * Prose past this is not a caption on a call, it is something being explained, and folding it
@@ -2024,7 +2046,14 @@ export function rowsOf(items: readonly Item[], live: LiveNow = NOBODY_LIVE): Row
       if (open.length > 0) {
         rows.push({
           kind: 'live',
-          id: `live:${(open[0] as Item).id}`,
+          /*
+           * Keyed by the agent and never by what is in it. The block is one thing for the length
+           * of a turn -- steps arrive and leave inside it -- and keying it by its first item made
+           * React unmount and remount the whole block every time that item changed, which threw
+           * away the face's animation state and, with it, `useDwell`'s memory of what had just
+           * been on screen. One live block per agent at a time, because one turn is.
+           */
+          id: `live:${principal as string}`,
           at: (open[0] as Item).at,
           agentId: principal as string,
           items: open,
@@ -2038,7 +2067,75 @@ export function rowsOf(items: readonly Item[], live: LiveNow = NOBODY_LIVE): Row
     index += 1;
   }
 
-  return rows;
+  return oneRowPerTurnsPictures(rows);
+}
+
+/**
+ * A turn's Pictures, gathered onto one row.
+ *
+ * The window is the runs and the Pictures between them, and it closes on anything else: prose,
+ * a user message, a system line, a block still in flight. So Pictures are only ever gathered
+ * across the turn's own **demoted** work -- the folds -- and never across something somebody
+ * said. That is the same editorial call the fold itself makes, applied to what the calls
+ * produced rather than to the calls: the mechanics go first, and what came of them is the thing
+ * you are left looking at.
+ *
+ * It is the one place in this column that moves a row past another. What it moves past is a shut
+ * fold, and it keeps the folds in their own order, so nothing that is legible on screen changes
+ * position relative to anything else that is.
+ *
+ * One agent, because a row of pictures under one face has to be that face's work.
+ */
+function oneRowPerTurnsPictures(rows: readonly Row[]): Row[] {
+  const grouped: Row[] = [];
+  let index = 0;
+  while (index < rows.length) {
+    const window = pictureWindowFrom(rows, index);
+    if (window === undefined) {
+      grouped.push(rows[index] as Row);
+      index += 1;
+      continue;
+    }
+    for (const row of window.others) grouped.push(row);
+    const last = window.pictures[window.pictures.length - 1] as Item;
+    grouped.push({
+      kind: 'pictures',
+      id: `pictures:${(window.pictures[0] as Item).id}`,
+      at: last.at,
+      agentId: window.agentId,
+      items: window.pictures,
+    });
+    index = window.end;
+  }
+  return grouped;
+}
+
+/** The longest run of folds and one agent's drawn Pictures starting here, if it holds two. */
+function pictureWindowFrom(
+  rows: readonly Row[],
+  from: number,
+): { others: Row[]; pictures: Item[]; agentId: string; end: number } | undefined {
+  const others: Row[] = [];
+  const pictures: Item[] = [];
+  let agentId: string | undefined;
+  let index = from;
+  while (index < rows.length) {
+    const row = rows[index] as Row;
+    if (row.kind === 'steps') {
+      others.push(row);
+      index += 1;
+      continue;
+    }
+    const item = row.kind === 'item' ? row.item : undefined;
+    if (item?.kind !== 'picture' || item.notDrawn !== undefined) break;
+    if (agentId !== undefined && agentId !== item.agentId) break;
+    agentId = item.agentId;
+    pictures.push(item);
+    index += 1;
+  }
+  return pictures.length > 1 && agentId !== undefined
+    ? { others, pictures, agentId, end: index }
+    : undefined;
 }
 
 /**
