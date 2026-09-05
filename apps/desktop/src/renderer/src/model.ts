@@ -68,7 +68,14 @@ export type Item =
        * and a tool that says `running` while nothing is running is the exact lie ticket 08
        * spent a mock on.
        */
-      status: 'asking' | 'running' | 'completed' | 'failed';
+      /**
+       * `unfinished` is blobot never having learned how the call ended -- the process that owned
+       * it went away mid-flight and the launch reconcile closed the row. It is deliberately not
+       * `failed`: the tool may have done its work perfectly and only the answer was lost. It
+       * counts as settled, because nothing more is coming, and it is not counted as a failure,
+       * because that is a claim nobody can make.
+       */
+      status: 'asking' | 'running' | 'completed' | 'failed' | 'unfinished';
       exit?: number | null;
       /**
        * What the edit changed, in lines. Absent is not zero, and the three ways it can be
@@ -513,7 +520,12 @@ export function reduce(state: AppState, action: Action): AppState {
               // Only the two terminal words reach here: `logOfTeam` returns finished calls.
               // Anything else would be a call claiming to be in flight in a pane that was
               // rebuilt after it ended.
-              status: tool.status === 'failed' ? 'failed' : 'completed',
+              status:
+                tool.status === 'failed'
+                  ? 'failed'
+                  : tool.status === 'unfinished'
+                    ? 'unfinished'
+                    : 'completed',
               ...(tool.exit === undefined ? {} : { exit: tool.exit }),
               ...(tool.changed === undefined ? {} : { changed: tool.changed }),
             })),
@@ -1325,7 +1337,7 @@ function speakerOf(item: Item): string | undefined {
 function settledWork(item: Item): boolean {
   switch (item.kind) {
     case 'tool':
-      return item.status === 'completed' || item.status === 'failed';
+      return item.status !== 'asking' && item.status !== 'running';
     case 'permission':
       return item.outcome !== undefined;
     case 'agent':
@@ -1473,7 +1485,7 @@ function partnerWork(item: Item): boolean {
     case 'agent':
       return !item.live;
     case 'tool':
-      return item.status === 'completed' || item.status === 'failed';
+      return item.status !== 'asking' && item.status !== 'running';
     case 'permission':
       return item.outcome !== undefined;
     default:

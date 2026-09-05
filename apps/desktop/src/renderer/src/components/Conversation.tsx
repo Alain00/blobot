@@ -223,6 +223,7 @@ interface RowCast {
 
 /** The transcript itself: every row of it, with the time rules between them. */
 function Rows({ rows, cast }: { rows: readonly Row[]; cast: RowCast }): React.JSX.Element {
+  const flying = useSwallowed(rows);
   return (
     <>
       {rows.map((row, index) => {
@@ -236,7 +237,11 @@ function Rows({ rows, cast }: { rows: readonly Row[]; cast: RowCast }): React.JS
           <React.Fragment key={row.kind === 'item' ? row.item.id : row.id}>
             {rule !== undefined && <div className="timerule">{rule}</div>}
             {row.kind === 'steps' ? (
-              <Steps row={row} cast={cast} />
+              <Steps
+                row={row}
+                cast={cast}
+                flying={flying.filter((flight) => flight.rowId === row.id).map((flight) => flight.item)}
+              />
             ) : (
               <ItemView
                 item={row.item}
@@ -401,7 +406,110 @@ function lastItemOf(row: Row | undefined): Item | undefined {
  * turn keep their own voices inside the fold, because dashed-against-solid is the contrast that
  * says *refusable, lower authority* and it is not this block's to flatten.
  */
-function Steps({ row, cast }: { row: Extract<Row, { kind: 'steps' }>; cast: RowCast }): React.JSX.Element {
+/**
+ * How many steps may be in the air at once, and how long the flight lasts.
+ *
+ * Two, because that is the whole of the claim: one line arriving under the fold while the one
+ * before it is still leaving. A third would be a queue, and a queue on this path is a slot
+ * machine -- a run of fast calls would have the reader watching a column of text scroll rather
+ * than reading the line that is live. Past two the oldest is dropped, which is the same answer
+ * `.stack` gives four faces on one label.
+ */
+export const IN_THE_AIR = 2;
+/**
+ * Kept equal to the `filed` keyframe's duration in the stylesheet, deliberately in two places.
+ * The timer owns the removal and the animation is cosmetic, so the two cannot drift: shorter
+ * and the collapse is cut off mid-shut, longer and a finished, empty box holds the column open.
+ */
+export const FLIGHT = 260;
+
+/** A step caught mid-file, and the fold that is taking it. */
+interface Flight {
+  readonly rowId: string;
+  readonly item: Item;
+}
+
+/**
+ * The steps a fold has just swallowed, held for one flight so the swallow can be seen.
+ *
+ * A completed call moves out of its own row and into a `steps` row the moment a second one
+ * lands, because {@link rowsOf} regroups on every delta and `WORTH_FOLDING` is 2. That is a real
+ * transition in the data and it has always been drawn as a cut: the line the reader was looking
+ * at is replaced between two frames by a count one higher. This is that cut, made travellable.
+ * The line is not deleted, it is *filed*, and the fold header above it is where it goes -- so
+ * the motion states a fact the interface was already asserting, which is the only kind
+ * `DESIGN.md` admits. Miss it and the count still says everything.
+ *
+ * **It lives here rather than in `Steps`, and it has to.** The obvious place is the fold itself,
+ * diffing its own `items` and ghosting what is new. It was written that way and it drew nothing,
+ * because the ordinary swallow is the one that *creates* the fold: below the threshold there is
+ * no `steps` row at all, so the component seeing the arrival is mounting for the first time and
+ * has no previous set to diff against. The signal is only legible one level up, where the same
+ * pass can see a row stop being loose and an item start being folded.
+ *
+ * That diff is also what keeps settled data still. A ghost is drawn for exactly one shape: an
+ * item that was a top-level tool row on the previous render and is inside a fold on this one.
+ * A restored transcript, a team switch and `load earlier` all arrive with their calls already
+ * folded and never loose, so they mount perfectly still -- which is `DESIGN.md`'s *nothing that
+ * moves what the user is reading*, kept rather than argued around.
+ *
+ * The timer is the authority and the animation is cosmetic, for the reason the entrance rules
+ * already give: a window that is not painting can starve a keyframe for seconds, and a ghost
+ * whose removal hung on `animationend` would sit on top of live text until it got a frame.
+ */
+function useSwallowed(rows: readonly Row[]): readonly Flight[] {
+  const loose = useRef<Map<string, Item> | undefined>(undefined);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [flying, setFlying] = useState<readonly Flight[]>([]);
+
+  useEffect(() => {
+    const running = timers.current;
+    return () => {
+      for (const timer of running) clearTimeout(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    const before = loose.current;
+    const now = new Map<string, Item>();
+    for (const row of rows) {
+      if (row.kind === 'item' && row.item.kind === 'tool') now.set(row.item.id, row.item);
+    }
+    loose.current = now;
+    if (before === undefined) return;
+
+    const taken: Flight[] = [];
+    for (const row of rows) {
+      if (row.kind !== 'steps') continue;
+      for (const item of row.items) {
+        // Loose a moment ago, folded now. Drawn in the state it was last seen in, which is the
+        // completed one: the reader watched it finish and then watched it go.
+        const was = before.get(item.id);
+        if (was !== undefined && !now.has(item.id)) taken.push({ rowId: row.id, item: was });
+      }
+    }
+    if (taken.length === 0) return;
+
+    const gone = new Set(taken.map((flight) => flight.item.id));
+    setFlying((air) => [...air, ...taken].slice(-IN_THE_AIR));
+    timers.current.push(
+      setTimeout(() => setFlying((air) => air.filter((flight) => !gone.has(flight.item.id))), FLIGHT),
+    );
+  }, [rows]);
+
+  return flying;
+}
+
+function Steps({
+  row,
+  cast,
+  flying,
+}: {
+  row: Extract<Row, { kind: 'steps' }>;
+  cast: RowCast;
+  /** What this fold has just taken, on its way in. Empty for every settled fold on screen. */
+  flying: readonly Item[];
+}): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const teamPane = cast.pane.kind === 'team';
   const calls = toolsIn(row.items);
@@ -473,6 +581,18 @@ function Steps({ row, cast }: { row: Extract<Row, { kind: 'steps' }>; cast: RowC
           ))}
         </div>
       )}
+      {/* On its way in, under the header rather than over it, because that is where the line was
+          standing when it was taken. One shutting box per line rather than one holding all of
+          them: two calls swallowed in the same frame were standing as two rows and each closes
+          on its own, which is also what keeps a second swallow arriving mid-flight from
+          restarting the first one's collapse. */}
+      {flying.map((item) => (
+        <div className="went" aria-hidden key={item.id}>
+          <div>
+            <ToolLine item={item as Extract<Item, { kind: 'tool' }>} />
+          </div>
+        </div>
+      ))}
       {open && (
         <div className="did">
           {row.items.map((item) => {
@@ -526,8 +646,12 @@ function ToolLine({ item }: { item: Extract<Item, { kind: 'tool' | 'permission' 
   const changed = item.kind === 'permission' ? undefined : item.changed;
   const kind = item.kind === 'permission' ? undefined : item.toolKind;
   const Glyph = kind === undefined ? undefined : GLYPH[kind];
+  // Only a call that is still running arrives, which is the whole of the gate: every other
+  // `.tool` on screen is settled data, and settled data does not move. A restored transcript
+  // mounts dozens of these and must sit perfectly still while it does.
+  const running = item.kind === 'tool' && item.status === 'running';
   return (
-    <div className="tool">
+    <div className={running ? 'tool now' : 'tool'}>
       {/* The glyph took the verb's column, 2026-08-31, and did not join it: an icon beside the
           word it denotes is the same claim twice in the narrowest place in the app, which is
           what took WORKING out from beside the dots. The column itself is untouched and is the
@@ -598,6 +722,9 @@ const GLYPH: Record<ToolKind, React.ComponentType<{ size?: number; role?: string
 function toolSaid(item: Extract<Item, { kind: 'tool' }>): string | undefined {
   if (item.exit === null) return 'exit null';
   if (item.status === 'failed') return 'failed';
+  // Not a failure and not a success. The process that owned the call went away before it
+  // reported, so the one true thing to say is that blobot never found out.
+  if (item.status === 'unfinished') return 'unfinished';
   return undefined;
 }
 

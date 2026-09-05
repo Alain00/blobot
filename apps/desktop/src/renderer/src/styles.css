@@ -9,29 +9,35 @@
  */
 
 :root{
-  --ground:#0a0a0b; --raised:#131315; --ink:#fafaf8; --muted:#8a8a93; --line:#232327;
+  /* EXPLORATION 2026-09-04: Tomorrow Night, sampled off the reference rather than guessed at.
+     Same roles and the same ordering (recessed < ground < tray < raised); what moved is the
+     floor, up 19 levels, and the hue, which is *cooler* than the ramp it replaces rather than
+     warmer — blue is the highest channel here, where the old ramp held it at +2 over a grey.
+     Revert is `git checkout` on this block. */
+  --ground:#1a1c1e; --raised:#282a2e; --ink:#c5c8c6; --muted:#969896; --line:#373b41;
   /* The one saturated pair that is not a blobatar, and the only two tokens in this file that
      name a colour rather than a role. DESIGN.md carries the exception and the reason: an
      edit's line counts, where the sign already says which is which and the hue reinforces it.
      Deliberately low-chroma — a blobatar at full saturation must still win the eye, or the
      governing rule has been broken rather than bent. Nothing else may use them. */
-  --added:#6f9c72; --removed:#b8756a;
+  --added:#b5bd68; --removed:#cc6666;
   /* The tray under the composer: tucked behind the pill, so it has to read as a shelf and not as
      a hole cut in the page, which is what the page's own black made of it.
      **On the ramp, not beside it.** It is the midpoint of `--ground` and `--raised` channel by
      channel, which puts its blue at +2 over its grey exactly as `--raised` does. The first
      value here was +4 and read as blue: this ramp's coolness is a hair, and a step that
      out-cools its neighbours stops looking like a surface and starts looking like a colour. */
-  --tray:#0e0e10;
-  /* The ramp's fourth step, and it is the only one *below* the page. The flanks: the rail and
-     the activity column, which are chrome around the surface you read on.
-     It is not the black `--ground` is kept off. Ten levels separate them, and the refusal a few
-     lines above is of #000 exactly — against true black a blobatar silhouette reads as cut out,
-     which is an argument about the floor and not about everything above it. Four levels down
-     is a recess, and it *helps* the faces: the rail is where they live, and they gain the
-     contrast this takes away from the grey around them.
-     On the ramp like every other step: 6 -> 10 -> 14 -> 19, blue held at +2 over the grey. */
-  --recessed:#060608;
+  --tray:#212326;
+  /* The ramp's fourth step, and it is the only one that is not the page. The flanks: the rail
+     and the activity column, which are chrome around the surface you read on.
+     **It sits above the page, not below it, since 2026-09-04** — the reverse of how this ramp
+     began. The old argument was that a recess helps the faces, the rail being where they live.
+     Swapped, the argument holds from the other end: the reading surface is now the darkest
+     thing on screen, the flanks read as chrome laid over it rather than cut into it, and the
+     faces gain their contrast from the transcript being darker than they are rather than from
+     the rail being darker than the page. The name is now wrong and is left alone: renaming it
+     would touch every rule in this file for a word. */
+  --recessed:#1d1f21;
   /* `Geist Sans` is what the bundled faces are called; `Geist` is what a machine with the
      typeface installed calls it. Both, so neither case falls through to the system stack. */
   --sans:"Geist Sans","Geist",ui-sans-serif,system-ui,sans-serif;
@@ -184,12 +190,11 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    The rail itself stopped being the scroll container when the doors moved down here — a place
    that is not about any team must not be at the far end of every team. */
 .vA .rail{overflow:hidden;display:flex;flex-direction:column}
-.railscroll{flex:1;min-height:0;overflow:auto;padding:10px 0}
+.railscroll{flex:1;min-height:0;overflow:auto;padding:8px 0 10px}
 /* Drag to resize the rail. Out of flow so it does not become a fourth grid column, and wider
    than the hairline it sits on because a 1px target is a target nobody hits. */
 .railgrab{position:absolute;top:0;bottom:0;width:9px;margin-left:-4px;cursor:col-resize;z-index:10}
 .railgrab:hover::after,.railgrab.on::after{content:"";position:absolute;top:0;bottom:0;left:4px;width:1px;background:var(--ink)}
-.railhead{padding:6px 14px 10px;display:flex;align-items:baseline;gap:8px}
 /* Selection is the raised ground alone. The 2px ink rule that used to mark it was a third
    emphasis on a row that already lifts and brightens, and it cut into the blobatar's column. */
 /* Inset and rounded, because the raised ground is a lifted surface and every other one in this
@@ -309,10 +314,21 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    up to the folder is not cut off on its way out of a box that is still short. What covers the
    overlap while the teams below slide away is the rows' own fade. */
 .roster{overflow:visible}
-/* Indented by the gutter above, so the agent rows' faces sit on the same left edge as the mark
-   they came out of. Scoped to `.teamgroup`, because `.roster` is also the creation flow's list
-   of agents — one flat namespace, and an unscoped padding here would have indented that too. */
-.teamgroup > .roster{padding-left:8px;margin-top:7px}
+/* Not indented, since 2026-09-04. It carried the gutter's 8px so that an agent's face sat on
+   the same left edge as the mark it came out of — true of the geometry, and the wrong thing to
+   optimise for: a face is the largest and only saturated object in this column, so a column of
+   them stepped in from the rail's own edge reads as a ragged margin rather than as a hierarchy.
+   The roster is already legible as the open team's, from the fill behind it and from being the
+   only rows there. It did not need to be said twice, and the second saying cost the alignment
+   that matters more.
+   Scoped to `.teamgroup`, because `.roster` is also the creation flow's list of agents — one
+   flat namespace, and an unscoped rule here would reach that too. */
+/* 2px, not 7. The 7 was set when the roster was indented and needed to read as a separate
+   block hanging off the row above; unindented it is simply the next rows, and the gap it left
+   was doing the opposite of what the group is for — the open team and its members belong to
+   each other, and a gap that size reads as a break between two lists. The rows keep their own
+   4px of padding, so the space is not zero, it is the list's own rhythm. */
+.teamgroup > .roster{margin-top:2px}
 /* Editing and deleting a team, on the row it is about. Hidden until the row is hovered or
    something inside it takes focus: the rail is a list of teams to work in, and a delete button
    sitting on every row at rest would be the loudest thing in a column whose job is quiet.
@@ -323,7 +339,13 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* Standing, rather than waiting for a pointer. For the one block on a screen that is asking the
    reader a question: there is nothing quiet about it to protect. */
 .rowacts.on{opacity:1;pointer-events:auto}
-.teamrowwrap:hover .rowacts,.teamrowwrap:focus-within .rowacts{opacity:1;pointer-events:auto}
+/* A team row's own actions moved onto a right-click, so it has no `.rowacts` to reveal. What
+   it has instead is a row that says which one the open menu belongs to: the menu is portalled
+   out of the rail and lands under the pointer, so without this the user is reading two names
+   at once — the one in the menu and whichever row their eye was on. `.sel`'s own fill, since
+   *this row, right now* is what both states mean. */
+.teamrowwrap[data-state='open'] .teamrow{background:var(--raised)}
+.teamrowwrap[data-state='open'] .teamrow.off .nm{color:var(--ink)}
 /* Two icons appearing in one frame is a pop, and this is the quietest column in the app. 120ms
    is under the threshold where a reveal reads as delayed, so it removes the pop without making
    the row feel slow. Pointer devices only: on touch there is no hover to bridge. */
@@ -374,10 +396,14 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    type a name, even though this one opens a layer rather than taking the keystrokes itself.
    The shortcut sits at the end in mono and muted: it is teaching the key, not competing with
    the word. */
-.railfind{display:flex;align-items:center;gap:8px;width:calc(100% - 12px);margin:0 6px 4px;padding:7px 9px;border-radius:12px;background:var(--raised);color:var(--muted);text-align:left;font-size:13px}
-.railfind:hover{color:var(--ink)}
-.railadd{color:var(--muted)}
+/* The act that adds to the list, on its own line above it. Bare — no surface under the glyph,
+   because the field below is the raised thing here and a second raised block would read as two
+   fields rather than as a field and an action. */
+.railbar{display:flex;justify-content:flex-end;padding:0 8px 6px}
+.railadd{display:flex;align-items:center;justify-content:center;padding:4px;color:var(--muted)}
 .railadd:hover{color:var(--ink)}
+.railfind{display:flex;align-items:center;gap:8px;width:calc(100% - 12px);margin:0 6px 10px;padding:7px 9px;border-radius:12px;background:var(--raised);color:var(--muted);text-align:left;font-size:13px}
+.railfind:hover{color:var(--ink)}
 .raillabel{padding:12px 14px 6px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .badge{font-family:var(--mono);font-size:10px;border:1px solid var(--ink);padding:0 4px;line-height:14px}
 .vA .conv{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
@@ -743,7 +769,16 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    `.inflight` already does with the only other non-text thing on this line. */
 .tool .v{flex:0 0 16px;display:inline-flex;align-items:center;align-self:center;color:var(--muted)}
 .tool .v svg{flex:0 0 auto}
-.tool .k{min-width:0;overflow-wrap:anywhere}
+/* A tool line is a line. `overflow-wrap:anywhere` alone made it a paragraph: a title is
+   whatever the runtime called the call, and a `python3 - <<'EOF'` heredoc arrives as eight
+   hundred characters of script, which drew as fifteen wrapped mono lines and took the transcript
+   over -- above the agent's own prose, at the altitude of the thing the fold exists to demote.
+   One line, stated rather than left to the flex box to decide: the fixed verb column beside it
+   exists so that a run of calls scans as a column, and a row that is sometimes one line and
+   sometimes four is the ragged edge that column was built to prevent. Clamped and never
+   truncated in the data -- the row keeps every character it was given, `.touched` and the feed
+   read from the same string, and this is one column declining to draw all of it. */
+.tool .k{min-width:0;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:1;overflow:hidden}
 /* The one exception to the governing rule, taken deliberately (DESIGN.md, ticket 12). Held
    well below the blobatars' chroma so the rail still wins the eye: these are two glyphs of
    reinforcement on a fact the sign already carries, not a third status channel. */
@@ -762,6 +797,62 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 /* A folded run of settled work. It takes `.route`'s chevron and mono label so the transcript
    has one disclosure gesture and not two, and leaves behind the dashed edge, which is the peer
    voice saying "refusable" about somebody else's mail. This is the agent's own turn. */
+/* ---------- a step arriving, and a step being filed ----------
+
+   The one place in the transcript where something moves, and it is admitted on the same terms
+   the roster's opening was: it smooths a change the interface was making anyway, and nothing is
+   learned from it. `rowsOf` regroups on every delta and `WORTH_FOLDING` is 2, so the second call
+   to complete takes the first out of its own row and into the fold, and the count on the header
+   goes up by one. That is the transition the reader kept half-seeing -- a line shown for a
+   moment and then gone -- and until now it was a cut between two frames.
+
+   Two halves, and each is gated so that it can only ever run on live work:
+
+   - `.now` is a call that is still running, which is the only `.tool` on screen that was not
+     already there. A settled line never carries it, so a restored transcript, a team switch and
+     `load earlier` mount their tool lines perfectly still. That is `DESIGN.md`'s *nothing that
+     moves what the user is reading* kept intact: what moves here is not the record, it is the
+     thing that has not finished happening yet.
+   - `.went` is the ghost of a line the fold has taken, drawn one last time as it closes up into
+     the header that now counts it. `pointer-events:none`, because it is a picture of something
+     that has already moved and must not be clickable.
+
+   **The ghost collapses rather than flying, and that is a correction rather than a preference.**
+   It was written out of flow, on the reasoning that the column should settle on the frame of
+   the swallow and nothing below it should wait for an animation. That is true and it is not
+   worth what it costs: a line taken out of flow is drawn on top of whatever has just moved up
+   into its place, which in a live turn is the agent's own prose. Screenshotted mid-flight it
+   put two dimming tool lines across `Alice TYPING` and made both unreadable. An animation whose
+   worst frame is illegible live text is not smoothing a change, it is a second thing on screen.
+
+   So it stays in flow and shuts, `1fr` to `0fr` over a hidden overflow, and what is beneath it
+   slides up instead of being snapped up. That is a row animating its own height, which this
+   file allows in exactly one other place for exactly this reason -- the opening roster, where
+   the thing that has to move is everything *underneath* the box. It is the same sentence: the
+   height is not the effect, it is the only property that can carry what is below.
+
+   240ms, which is over the 200ms an arrival gets and under the fold's 260ms. An exit is usually
+   the faster half; this one is not, because it is the half carrying the sentence. The arrival is
+   only a line appearing where a line was going to appear. */
+/* Four properties, not two. *2026-09-04, from a reference the author brought.* It shipped as
+   6px and a dim frame and read as nothing at all: an arrival that only translates is a line
+   that was already there, drawn slightly lower. What makes one legible is the whole set moving
+   together -- it comes from below, up from under its own size, out of focus and into it. Scale
+   is what carries *size*, and it is the half a translate alone cannot say: a line that grows
+   into place has somewhere it came from. */
+.tool.now{animation:entertool 200ms var(--ease-out)}
+@keyframes entertool{from{opacity:.15;scale:.97;translate:0 8px;filter:blur(4px)}}
+/* Inside an opened fold the run enters as one thing, on `.did`. A per-line entrance in there
+   would be the same event announced twice, at two durations. */
+.ran .did .tool.now{animation:none}
+/* The same four, pointed the other way, and 260ms because this is the fold and that is the
+   fold's number. `FLIGHT` in `Conversation.tsx` is the same figure and has to stay it: the timer
+   owns the removal and the keyframe is cosmetic, so a shorter timer would cut the collapse off
+   at the knees and a longer one would leave a settled gap open after it finished. */
+.ran .went{display:grid;grid-template-rows:1fr;overflow:hidden;pointer-events:none;animation:filed 260ms var(--ease-out) forwards}
+.ran .went>div{min-height:0}
+.ran .went .tool{margin-left:0;padding-top:5px}
+@keyframes filed{to{grid-template-rows:0fr;opacity:0;scale:.97;translate:0 -8px;filter:blur(4px)}}
 .ran{margin-left:40px;padding:2px 0}
 .ran .route{display:flex;align-items:center;gap:7px;text-align:left;color:var(--muted)}
 .ran .route:hover .lbl{color:var(--ink)}
@@ -1156,6 +1247,21 @@ textarea.field{resize:vertical;line-height:1.5}
 .selectitem{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;font-size:13px;cursor:pointer;outline:none}
 .selectitem[data-highlighted]{background:var(--ground)}
 .selectitem[data-disabled]{color:var(--muted);cursor:default}
+/* The row menu is `.selectmenu` with one addition: it leaves. A select's menu is dismissed by
+   choosing from it and the choice is what the eye follows, so it has never needed one — this
+   one is dismissed by Escape and by clicking away as often as by choosing, and an object that
+   vanishes on those reads as broken rather than as fast.
+   Out in 90ms against 140ms in, which is the asymmetry rather than a rounding: entering is the
+   system answering and wants to be seen, leaving is the system getting out of the way. Scaled
+   to .98 rather than to nothing, because nothing in the world shrinks to a point. Scoped to
+   this menu and not folded into `.selectmenu`, because giving every select in the app an exit
+   is a decision about the app and not about this row. */
+.rowmenu[data-state='closed']{animation:exitpop 90ms var(--ease-out) forwards}
+@keyframes exitpop{to{opacity:0;scale:.98}}
+/* The glyph is a door and the rows behind it are the words, so the icons here are the muted
+   half of the pair the rest of the app draws in — they identify a row, they do not carry it. */
+.rowmenu .selectitem svg{color:var(--muted);flex:0 0 auto}
+.rowmenu .selectitem[data-highlighted] svg{color:var(--ink)}
 .selecttick{margin-left:auto;display:flex;color:var(--muted)}
 /* The runtime's own mark, greyed. It is the team icon's rule in a second place: a vendor's logo
    is allowed on screen at `--muted` and never in colour, so it sits at the same value as the
@@ -1483,7 +1589,15 @@ button.listrow:not(.pick):hover{outline:1px solid var(--line);outline-offset:-1p
   @keyframes entersheet{from{opacity:.3}}
   @keyframes entermodal{from{opacity:.3}}
   @keyframes enterpeer{from{opacity:0}}
+  /* The arrival keeps its cross-fade and loses its travel. The ghost goes entirely: it exists
+     to be watched crossing a distance, and held still it is a duplicate line flashing over the
+     column for a quarter of a second. The count on the header carries the swallow alone, which
+     is what it did before any of this. */
+  @keyframes entertool{from{opacity:.3}}
+  .tool.now{filter:none;scale:1}
+  .ran .went{display:none}
   @keyframes enterpop{from{opacity:.3}}
+  @keyframes exitpop{to{opacity:0}}
   .btn,.iconbtn,.swatch,.ctxring,.composer .clip{transition:none}
   /* The send keeps its cross-fade and loses its scale, which is the withdrawal rule stated
      exactly: colour is not motion, and the fill is how this button says it is armed. */

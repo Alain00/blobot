@@ -417,3 +417,68 @@ describe('a Routine run nobody has looked at', () => {
     done(drawn);
   });
 });
+
+/**
+ * The two things you can do to a team, which stopped being two buttons.
+ *
+ * Worth a test because what replaced them is invisible: the row draws nothing about editing or
+ * deleting, and the words only exist once somebody right-clicks. A regression here is not a
+ * misdrawn row, it is an action with no way in at all — and the previous version, two
+ * always-mounted buttons, could not have had this failure.
+ */
+describe('the actions on a team row', () => {
+  function withActions(): Drawn {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    act(() => {
+      root.render(
+        React.createElement(Rail, {
+          team: OPEN,
+          teams: TEAMS,
+          agents: OPEN_AGENTS,
+          statuses: {},
+          items: [],
+          pane: { kind: 'team' },
+          unread: [],
+          onSelect: () => {},
+          onSelectTeam: () => {},
+          onEditTeam: () => {},
+          onDeleteTeam: () => {},
+        }),
+      );
+    });
+    return { text: (host.textContent ?? '').replace(/\s+/g, ' ').trim(), host };
+  }
+
+  it('draws nothing at rest, and never the word delete', () => {
+    const drawn = withActions();
+    // No control on the row at all now — not even one hidden behind a hover reveal. The rail
+    // is teams and nothing else, which is the whole of what the right-click bought.
+    for (const row of drawn.host.querySelectorAll('.teamrowwrap')) {
+      expect(row.querySelectorAll('.rowacts').length).toBe(0);
+    }
+    expect(drawn.text.toLowerCase()).not.toContain('delete');
+    done(drawn);
+  });
+
+  it('names both actions on a right-click, against the row that was clicked', () => {
+    const drawn = withActions();
+    const row = drawn.host.querySelector('.teamrowwrap') as HTMLElement;
+    act(() => {
+      row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, button: 2 }));
+    });
+    // Portalled, so the menu is not inside the rail's own subtree — read the document.
+    const menu = document.querySelector('.rowmenu');
+    expect(menu).not.toBeNull();
+    const words = (menu?.textContent ?? '').replace(/\s+/g, ' ');
+    // Named rows rather than glyphs, which is the whole reason for the trade: a bin icon says
+    // "delete" and a row says "delete blobatar".
+    expect(words).toContain('Delete');
+    expect(words).toContain('Who is on');
+    // And the row the menu belongs to says so, since the menu lands under the pointer rather
+    // than attached to anything the eye can follow back.
+    expect(row.getAttribute('data-state')).toBe('open');
+    done(drawn);
+  });
+});

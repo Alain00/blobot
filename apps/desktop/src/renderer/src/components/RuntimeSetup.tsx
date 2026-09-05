@@ -177,22 +177,22 @@ function settledLine(outcome: RuntimeStepOutcome): string {
  * emphasis, which is the same pair of weights the rest of the interface runs on.
  */
 const MONOCHROME_ANSI = {
-  black: '#0a0a0b',
-  red: '#8a8a93',
-  green: '#8a8a93',
-  yellow: '#8a8a93',
-  blue: '#8a8a93',
-  magenta: '#8a8a93',
-  cyan: '#8a8a93',
-  white: '#c9c9cf',
-  brightBlack: '#4a4a52',
-  brightRed: '#fafaf8',
-  brightGreen: '#fafaf8',
-  brightYellow: '#fafaf8',
-  brightBlue: '#fafaf8',
-  brightMagenta: '#fafaf8',
-  brightCyan: '#fafaf8',
-  brightWhite: '#fafaf8',
+  black: '#1a1c1e',
+  red: '#969896',
+  green: '#969896',
+  yellow: '#969896',
+  blue: '#969896',
+  magenta: '#969896',
+  cyan: '#969896',
+  white: '#b0b3b1',
+  brightBlack: '#5c6065',
+  brightRed: '#c5c8c6',
+  brightGreen: '#c5c8c6',
+  brightYellow: '#c5c8c6',
+  brightBlue: '#c5c8c6',
+  brightMagenta: '#c5c8c6',
+  brightCyan: '#c5c8c6',
+  brightWhite: '#c5c8c6',
 } as const;
 
 /** `cmd` on a Mac, `ctrl+shift` everywhere else, which is what each platform's terminals use. */
@@ -243,11 +243,11 @@ function TerminalPane({
       // not the page. The cursor is ink, which is this app's one emphasis and is exactly what a
       // cursor is for.
       theme: {
-        background: token('--raised', '#131315'),
-        foreground: token('--ink', '#fafaf8'),
-        cursor: token('--ink', '#fafaf8'),
-        cursorAccent: token('--raised', '#131315'),
-        selectionBackground: token('--line', '#232327'),
+        background: token('--raised', '#282a2e'),
+        foreground: token('--ink', '#c5c8c6'),
+        cursor: token('--ink', '#c5c8c6'),
+        cursorAccent: token('--raised', '#282a2e'),
+        selectionBackground: token('--line', '#373b41'),
         ...MONOCHROME_ANSI,
       },
       cursorBlink: true,

@@ -790,6 +790,47 @@ export class SqliteStore implements MessageStore, AttachmentStore {
    * call finished. The transcript takes them as items, ordered by `startedAt`, which is why
    * both times are returned rather than one.
    */
+  /**
+   * Close out every call that was in flight when the process that owned it went away.
+   *
+   * A call cannot outlive its runtime. `running` is defined as `ended_at IS NULL`, which is the
+   * right question to ask *inside* a session and a false one across a restart: a hard close --
+   * a crash, a kill, a machine that slept badly -- leaves rows that nothing will ever come back
+   * to finish, and every restore from then on draws them with the in-flight dots under an agent
+   * the status fold says is idle. Observed: a `python3 - <<EOF` heredoc still spinning in a
+   * transcript whose turn had ended and been answered.
+   *
+   * So it runs once at launch, before anything reads, which is the only moment the answer is
+   * knowable: no runtime is attached yet, so nothing can legitimately be in flight. It is the
+   * same shape as the AgentWorkspace launch reconcile and for the same reason -- the world
+   * outside the database moved while blobot was not running, and the row is now a claim rather
+   * than a record.
+   *
+   * **It concludes nothing about the call.** `unfinished` is not `failed` and not `completed`:
+   * the tool may well have done its work and the answer died with the process. That is the
+   * column's standing rule -- it records what came over the wire -- and the one honest thing to
+   * write here is that nothing did. `ended_at` takes `started_at` rather than now, because the
+   * feed is ordered by it and a call restored to the head of a log it did not finish at would
+   * be a second false claim bought with the fix to the first.
+   *
+   * Answers how many rows it closed, so a launch that repairs something can say so.
+   */
+  closeOrphanedCalls(): number {
+    const orphaned = this.#db
+      .select({ id: toolCalls.id, startedAt: toolCalls.startedAt })
+      .from(toolCalls)
+      .where(isNull(toolCalls.endedAt))
+      .all();
+    for (const row of orphaned) {
+      this.#db
+        .update(toolCalls)
+        .set({ status: 'unfinished', endedAt: row.startedAt })
+        .where(eq(toolCalls.id, row.id))
+        .run();
+    }
+    return orphaned.length;
+  }
+
   logOfTeam(teamId: string, limit = 200): {
     /**
      * Calls that had not finished when this was read.

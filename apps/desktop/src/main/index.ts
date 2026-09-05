@@ -979,7 +979,7 @@ async function createWindow(): Promise<void> {
     width: 1360,
     height: 860,
     // Near-black, not #000: against true black the blobatar silhouettes read as cut out.
-    backgroundColor: '#0a0a0b',
+    backgroundColor: '#1a1c1e',
     title: 'blobot',
     webPreferences: {
       preload: join(here, '../preload/index.mjs'),
@@ -1113,6 +1113,10 @@ void app.whenReady().then(async () => {
     // re-encrypted here, and never the reverse.
     speechKeys.migrate();
     store = new SqliteStore(opened.db);
+    // Before anything reads. A call cannot outlive the runtime that owned it, and this is the
+    // one moment that is knowable: nothing is attached yet, so every row still claiming to be
+    // in flight was orphaned by however the last process ended.
+    store.closeOrphanedCalls();
     routines = new RoutineRunner({
       store,
       clock,

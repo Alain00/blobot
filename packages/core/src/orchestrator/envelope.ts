@@ -29,6 +29,11 @@ export function composePersona(
     `You are ${agent.name}, ${agent.role}, on the team "${team.name}".`,
     `The team works on ${team.workspacePath}.`,
     `You work in your own copy of it at ${agent.workspacePath}.`,
+    // Both paths are absolute and one of them is not yours, so an agent told only that much
+    // pins the directory on every command it runs. That prefix costs tokens on every call and
+    // defeats the prefix rules in each adapter's permission posture, which match `git status`
+    // and not `cd /...; git status`. Every runtime is spawned in the AgentWorkspace already.
+    'Your shell already starts there. Run commands as they are, without changing directory first.',
     '',
     teammates.length === 0
       ? 'You have no teammates on this team yet.'

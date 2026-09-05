@@ -760,7 +760,18 @@ are narrow:
   state the reason for.
 - **`transform` and `opacity` only**, and prefer the individual `scale` and `translate`
   properties: they compose with a `transform` a rule is already using for layout instead of
-  overwriting it. The one `height` in the app is the opening roster below, and it is there
+  overwriting it.
+  ***Amended 2026-09-04: `filter: blur()` joins them, on the two transitions in the transcript
+  and nowhere else yet.*** A tool line arriving and a tool line being filed were built to this
+  rule — a translate and an opacity — and read as nothing: an arrival that only travels is a
+  line that was already there, drawn slightly lower. Blur is what the rule was missing rather
+  than a decoration on top of it. A crossfade without it is two legible objects overlapping, and
+  the eye reads two things swapping; blurred, it reads one thing changing. It is admitted on
+  terms, not generally: **4px and never more**, because heavy blur is expensive and this is the
+  one budget where cost is paid per frame; **only on an element that is already moving**, so it
+  can never become a way to make something static look soft; and **withdrawn entirely under
+  `prefers-reduced-motion`**, alongside the scale and the travel, because a thing softening and
+  growing into place is motion whatever property carries it. The one `height` in the app is the opening roster below, and it is there
   because what has to move is everything *beneath* that box, which nothing but its height can
   move.
 - **Nothing that carries meaning of its own.** It smooths a change the interface was making
@@ -794,8 +805,35 @@ are narrow:
   are data, and data does not move for style. *The composer's context ring is the same rule and
   broke it for a day: its arc grew into place over 320ms, which is both a number animating for
   style and — since `usage_updated` arrives from a runtime while nobody is touching anything —
-  ambient motion, the budget the blobatar has already spent. The arc snaps, like the pips beside
   it. Only its hover colour fades.*
+  **The line that is still happening is not what the user is reading, and it moves. *2026-09-04.***
+  A call is a loose row while it runs, and the moment a second one completes `rowsOf` lifts both
+  into `RAN n TOOLS` — the count goes up by one and the line the reader was looking at is gone
+  between two frames. That is a real transition in the data that had never been drawn as one,
+  and it is the thing a reader keeps half-seeing and cannot name: *something was there.* So two
+  narrow things move, and the gate on each is the whole of what keeps this rule intact rather
+  than dented. A call **arrives** — 8px, `.97`, a dim frame and 4px of blur over 200ms — only while its status is
+  `running`, which is the one `.tool` on screen that was not already there. And a call **shuts**
+  as the fold takes it — `1fr` to `0fr` over 260ms — only when it was a loose row on the previous
+  render and is inside a fold on this one. Everything settled mounts perfectly still: a restored
+  transcript, a team switch and `load earlier` arrive with their calls already folded and never
+  loose, so they draw exactly as they did before any of this existed. What moves is not the
+  record. It is the part that has not finished becoming one.
+  Two further things it is not. It is **not ambient**, though nothing the user did starts it:
+  the first budget is about a loop that runs forever, and this is one 240ms shut per swallow
+  inside a turn that is already the loudest thing on screen. And it **carries nothing** — the
+  count on the header says everything the collapse says, which is why `prefers-reduced-motion`
+  drops the ghost outright rather than fading it in place. It is capped at two in the air,
+  because three lines closing under one header is a column of scrolling text where a reader is
+  trying to follow one live line, and frequency is the disqualifier here as everywhere.
+  *It shipped for an hour drawn out of flow, absolutely positioned so the column would settle on
+  the frame of the swallow, and that was wrong in the way only a screenshot shows: a line taken
+  out of flow is drawn on top of whatever has moved up into its place, which in a live turn is
+  the agent's own prose. Two dimming tool lines across `Alice TYPING`, both illegible. An
+  animation whose worst frame is unreadable live text is not smoothing a change, it is a second
+  thing on screen. It is in flow and shuts, so what is beneath it slides rather than snaps —
+  a row animating its own height, which is the roster's exception and the same sentence: the
+  height is not the effect, it is the only property that can carry what is below.*
 - **Anything that can be pressed answers the press.** `scale:.97` over 160ms, which `.btn`,
   `.iconbtn` and the swatches have always done — and the composer's send, the one control this
   whole app is built around, did not until 2026-08-31. It is a **pointer** state, so the send

@@ -540,6 +540,45 @@ describe('what a turn leaves behind', () => {
     expect(dropped.every((at) => at <= oldestKept)).toBe(true);
   });
 
+  it('closes a call the process died holding, and concludes nothing about it', async () => {
+    await runDemoTurn();
+    // What a hard close leaves behind: a row that started and never reported. `running` is
+    // `ended_at IS NULL`, so without the reconcile every restore from here on draws this with
+    // the in-flight dots under an agent the status fold calls idle.
+    opened.db.run(
+      sql.raw(
+        `insert into tool_calls (id, turn_id, agent_id, provider_tool_call_id, name, kind, status, started_at)
+         select 'orphan', turn_id, agent_id, 'orphan', 'python3 - <<EOF', 'execute', 'in_progress', started_at
+         from tool_calls limit 1`,
+      ),
+    );
+    expect(store.logOfTeam(team.id).running.map((tool) => tool.toolCallId)).toEqual(['orphan']);
+
+    expect(store.closeOrphanedCalls()).toBe(1);
+
+    const log = store.logOfTeam(team.id);
+    expect(log.running).toEqual([]);
+    // Not `failed` and not `completed`. The tool may have done its work perfectly and only the
+    // answer was lost, so the row says the one thing that is actually known.
+    expect(log.tools.find((tool) => tool.toolCallId === 'orphan')?.status).toBe('unfinished');
+  });
+
+  it('leaves a call that is genuinely in flight alone', async () => {
+    await runDemoTurn();
+    opened.db.run(
+      sql.raw(
+        `insert into tool_calls (id, turn_id, agent_id, provider_tool_call_id, name, kind, status, started_at, ended_at)
+         select 'done', turn_id, agent_id, 'done', 'read x', 'read', 'completed', started_at, started_at
+         from tool_calls limit 1`,
+      ),
+    );
+    // Nothing dangling, so the reconcile is a no-op and no settled row is rewritten.
+    expect(store.closeOrphanedCalls()).toBe(0);
+    expect(store.logOfTeam(team.id).tools.find((tool) => tool.toolCallId === 'done')?.status).toBe(
+      'completed',
+    );
+  });
+
   it('says nothing for a team that has never run', () => {
     store.createTeam({
       id: 'team_2',
