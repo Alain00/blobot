@@ -1,5 +1,5 @@
 Type: research
-Status: open
+Status: resolved
 Blocked by: 19, 08
 
 # Docker Engine and sbx: isolation, network access and product constraints
@@ -61,3 +61,19 @@ Do not resolve the engine choice here or modify downstream implementation ticket
 - [Current implementation](../build.md) and [Eve source review](../research/15-eve-docker-sandbox-lifecycle.md).
 - Existing box, Workspace, trust, egress and first-box measurement tickets, reached by the map's
   ownership index; read their actual decisions before calling a difference acceptable.
+
+## Answer — 2026-09-05
+
+[Isolation, network and product findings](../research/17-engine-isolation-egress-and-product.md)
+resolve the factual comparison with a threat/capability matrix and primary sources. Ordinary
+Engine containers, including rootless ones, do not retain the selected per-Agent kernel.
+Private nested Docker and mandatory selective egress add operational work; native Linux
+also needs a designed route to the loopback-only mailbox. Container hardening is useful,
+not equivalent to a microVM or an implemented replacement architecture.
+
+The artifact distinguishes documented capabilities from prior Mac observations and unverified
+guarantees, including full bypass resistance, custom-kit OAuth, offline renewal and binary
+redistribution. It names compensating controls, disqualifiers and decisions needing reopening.
+No new live security test, engine mutation, credential handling or implementation occurred.
+These findings resolve research, **not acceptance of a weaker boundary or selection of an
+engine**. Guillermo's reevaluation still waits for the lifecycle/resource investigation.

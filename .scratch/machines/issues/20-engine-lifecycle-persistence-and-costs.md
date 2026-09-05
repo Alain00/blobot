@@ -1,5 +1,5 @@
 Type: research
-Status: open
+Status: resolved
 Blocked by: 19, 08
 
 # Docker Engine and sbx: lifecycle, persistence and resource costs
@@ -61,3 +61,44 @@ decision, not a favorable verdict for either candidate. Link the artifact on res
 - Existing `research/11`, `research/12`, `research/13`, `research/14` for measured sbx contracts.
 - [Eve's actual backend](../research/15-eve-docker-sandbox-lifecycle.md): a starting observation,
   not proof that Eve already meets blobot's persistent Machine requirements.
+
+## Comments
+
+### 2026-09-05 — documentation complete; measurement authorization pending
+
+[Lifecycle, persistence and resource findings](../research/16-engine-lifecycle-persistence-and-costs.md)
+contain the primary-source capability matrix, persistence inventory, failure semantics and
+current-code reuse audit. No engine choice or downstream plan change has been made.
+
+The initial read-only check found Docker CLI 29.6.1 but no reachable Engine server; sbx RC5
+was running. Asked Guillermo whether to start the installed Docker Desktop for bounded,
+disposable synthetic comparisons. **No answer yet; Desktop was not started.** Given his
+performance priority, keep this ticket claimed until that permission leads to measurements,
+or he explicitly accepts a documentation-only comparison with performance unmeasured.
+Use the artifact's measurement protocol and the ticket's safe-probe boundaries; do not infer
+permission to change shared configuration, pull new images, or interrupt unrelated work.
+The human engine reevaluation remains blocked on this ticket.
+
+### 2026-09-05 — measurement request answered
+
+Guillermo replied **"ya lo abri"**, having opened Docker Desktop himself. The scoped synthetic
+Engine fixture and a subsequent sbx fixture ran using existing cached images only. Both passed;
+their exact disposable resources were removed. The initial pending-authorization comment above
+is historical, not a current blocker.
+
+## Answer — 2026-09-05
+
+[Lifecycle, persistence and resource findings](../research/16-engine-lifecycle-persistence-and-costs.md)
+resolve the comparison with primary sources, current-code reuse, and linked reproducible Mac
+fixtures/raw results. Engine natively supplies verified same-ID CPU/RAM updates, cold configuration
+inspection and named-volume reuse. sbx retains per-VM resource sizing and requires the documented
+copy route for these local limit edits. Sleep/wake policy, ownership, recovery and Workspace
+preservation remain application obligations on both routes.
+
+The fixtures verify updates, rejected-update readback, stop/wake, persistence and the different
+rollback semantics of shared versus copied volumes. Timing and memory accounting remain scoped
+to minimal shells with different images/kernels, not a production Agent performance ranking.
+The evidence explicitly retains full-Agent, Linux-host, pressure, OOM, physical-disk and login
+unknowns. That is sufficient to discuss the engine trade-off, not to waive deployment gates.
+The dependent human reevaluation is now unblocked; **no engine or remaining implementation plan
+has been changed by this research**.

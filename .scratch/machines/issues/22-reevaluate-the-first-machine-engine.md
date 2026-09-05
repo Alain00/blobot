@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: claimed
 Blocked by: 20, 21
 
 # Reevaluate the first Machine engine with the measured trade-offs
@@ -47,3 +47,22 @@ Link the decision from the map and hand off the newly agreed next work.
 - [Current completion/activation boundaries](../build.md), implementation commit `5d2edd9`.
 - [Lifecycle, persistence and resource research](20-engine-lifecycle-persistence-and-costs.md).
 - [Isolation, network and product research](21-engine-isolation-egress-and-product.md).
+
+## Comments
+
+### 2026-09-05 — research complete; human reevaluation opened
+
+Both prerequisites are resolved, including the authorized bounded Mac fixtures. The findings
+are on the research tickets; minimal shell timings are not full-Agent or equal-isolation
+benchmarks. No engine decision has been made and no downstream plan has been rewritten.
+
+**First live question, awaiting Guillermo:** must each Agent retain `sudo` and the ability to
+run its own Docker/Compose workloads inside its Machine? Recommendation: keep that capability
+for general-purpose development Agents; removing it would narrow which projects they can run.
+This is an explicit reevaluation of the workload assumptions, not a claim that a shell-only
+Engine fixture already implements the promised Machine.
+
+The answer determines the next comparison: a hardened container for a narrower workload,
+or the costs and boundary of a private nested Docker environment. Then decide whether a
+shared Linux kernel is acceptable, settle any necessary deployment conditions, and obtain
+the author's final engine choice. Do not record an answer or migrate on the author's behalf.
