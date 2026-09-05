@@ -809,3 +809,17 @@ requests, missing metadata and restored requests. Research/source limits are in
 [Permission disclosure](research/48-permission-disclosure.md). No provider call or real grant was
 made, and no box activation is implied. Next frontier: the Machine screen; full-state image
 preservation remains claimed and unfinished. Network filtering remains a separate future effort.
+
+
+## 2026-09-06 — Machine screen prototype checkpoint
+
+The [screen checkpoint](research/49-machine-screen-prototype.md) captures three variants on
+`prototype/machines-screen` at `642b051`, reviewed in Electron with synthetic data. Inline
+controls are the direction; no prototype source is merged into the product. The screen stays
+claimed because the backend still lacks placement/engine/login IPC and an admission-aware
+message queue. In particular, current submit can mark a message delivered before a failed
+runtime accepts it. Preserve messages until guest readiness before shipping that sign-in card.
+
+Continue the already claimed image ticket's full-state worker/preservation gate, then finish
+operational UI. Neither a mock resource editor nor the scoped network proof closes that gate.
+The disclosure ticket was committed as `5b4b46c`. No new question is pending.

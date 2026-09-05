@@ -1,5 +1,5 @@
 Type: prototype
-Status: open
+Status: claimed
 Blocked by: 05, 09
 
 # A Machine on screen, and where a profile is addressed from
@@ -708,3 +708,19 @@ in, and everything the Question's first paragraph asked (`18`).
   ran. Say *measured on the proxy*, not *the turn goes on*.
 - §7's *first click confirm* cites a shape `08` replaced; `08`'s *Decided* is a button that opens
   the browser, and that is the shape.
+
+
+## Implementation checkpoint — 2026-09-06
+
+Three Settings variants and setup/sign-in placement were prototyped on
+`prototype/machines-screen` at `642b051`; [the checkpoint](../research/49-machine-screen-prototype.md)
+records the visual direction, captures, run command and concrete integration gaps. Inline
+controls in the existing Settings page are the implementation direction under the author's
+routine-choice delegation. Host worktrees supersede §7's SSH setup: the existing contained
+system folder opener needs no remote door, and its honest label is `open working folder`.
+
+**Still claimed.** This does not certify operational Machine UI. Guest login/queued delivery,
+member placement persistence, engine installation/IPC and full-state resource changes remain
+to connect. The accepted image preservation gate is still blocking that activation; return to
+[The image: one per runtime](13-the-image-one-per-runtime.md) to close it and then finish this
+screen. No product answer is pending and no sandbox offer is enabled by the prototype.
