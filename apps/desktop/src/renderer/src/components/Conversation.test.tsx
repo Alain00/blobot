@@ -43,7 +43,7 @@ vi.mock('./Markdown.js', () => ({
   },
 }));
 
-const { Conversation } = await import('./Conversation.js');
+const { Conversation, REPLY_STANDS } = await import('./Conversation.js');
 
 const AGENTS: readonly UiAgent[] = [
   { id: 'a', name: 'Alice', role: 'builds', runtimeLabel: 'mock', workspacePath: '/w/a', accepts: { images: true, textFiles: true } },
@@ -288,8 +288,9 @@ describe('the voices, after the roster stopped being passed down', () => {
     const live = draw(items, { kind: 'team' }, { a: 'working', b: 'idle' });
     expect(live).toContain('NOTHING RUNNING MY END');
 
-    // And it is news only until the principal has worked past it. Two calls of Alice's after the
-    // reply and it is the turn's history, which is what the fold is for.
+    // And it keeps standing while the principal works on, because by position it is already
+    // behind that work: an agent message is timestamped at its first delta, so a reply that took
+    // a few seconds to write settles into the transcript behind everything done meanwhile.
     const worked: Item[] = [
       ...items,
       { kind: 'tool', id: 't1', at: at + 3000, agentId: 'a', title: 'npm run one', toolKind: 'execute', status: 'completed' },
@@ -297,7 +298,7 @@ describe('the voices, after the roster stopped being passed down', () => {
     ];
     const moved = draw(worked, { kind: 'team' }, { a: 'working', b: 'idle' });
     expect(moved).toContain('npm run two');
-    expect(moved).not.toContain('NOTHING RUNNING MY END');
+    expect(moved).toContain('NOTHING RUNNING MY END');
 
     // Still being written, it is in neither place: not a paragraph at the top level, and not a
     // line in the block. `when it finished` is the whole of the instruction.
@@ -317,7 +318,7 @@ describe('the voices, after the roster stopped being passed down', () => {
    * rule the reply's life on screen is not short, it is zero. The model stays strict and the
    * render holds anything dropped inside `DWELL`, in place.
    */
-  it('holds a live step on screen for its minimum, however briefly the model had it', () => {
+  it('stands a reply on its own clock, and takes it away when that runs out', () => {
     vi.useFakeTimers();
     const at = 1_700_000_000_000;
     const reply: Item = { kind: 'agent', id: 'm', at: at + 2000, agentId: 'b', text: 'NOTHING RUNNING MY END', live: false };
@@ -355,12 +356,13 @@ describe('the voices, after the roster stopped being passed down', () => {
     show(base);
     expect(text()).toContain('NOTHING RUNNING MY END');
 
-    // Alice opens her next call, which starts a batch after the reply and drops it at once.
+    // Alice works on, and the reply keeps standing: it is news by arrival, not by position.
     show([...base, call('t1', at + 2100, 'running')]);
     expect(text()).toContain('NOTHING RUNNING MY END');
 
+    // Its own clock takes it away, and the work in progress stays.
     act(() => {
-      vi.advanceTimersByTime(400);
+      vi.advanceTimersByTime(REPLY_STANDS + 100);
     });
     expect(text()).not.toContain('NOTHING RUNNING MY END');
     expect(text()).toContain('npm run t1');

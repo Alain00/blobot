@@ -1919,25 +1919,27 @@ function liveRunIn(
   }
 
   /*
-   * A reply is in here while it is **news**, and no longer.
+   * Every settled reply in the run, and **how long each stands is not decided here.**
    *
-   * The first build collected every reply in the run, so a teammate's line stood in the block for
-   * the rest of the turn and a second reply stacked under the first -- the author, from a real
-   * frame: *"why if there have past time from this message from bob it's still in the live
-   * steps?"*. A step is what is happening now, and a reply the principal has already worked past
-   * is not: it is the turn's history, which is what the fold is.
+   * Two rules were tried and both were wrong for the same reason, which the third attempt
+   * measured. Collecting every reply left a teammate's line standing for the rest of the turn
+   * with a second stacked under it. Bounding it by position — after the open batch's first call,
+   * or after the last thing the principal did — made it never appear at all.
    *
-   * So the boundary is where *now* begins — the first call of the open batch, or, with nothing
-   * open, the last thing the principal itself did. A reply after it arrived during the work the
-   * reader is watching and stays until that work does; a reply before it has been answered by
-   * everything under it and folds.
+   * From a real run: Bob's reply is item **21** while Alice is already at item 25 and climbing.
+   * An agent message takes its `at` from its **first delta**, so a reply that took a few seconds
+   * to write is inserted at the moment it *began*, and by the time it settles the principal has
+   * moved past that position. It is new, and it is behind. No comparison of positions can call it
+   * news, because by position it is not.
+   *
+   * What is new is the **transition**, a live message becoming a settled one, and nothing in the
+   * item records when that happened. The only place that sees one render follow another is the
+   * renderer, so this hands over everything that has settled and `useDwell` decides how long a
+   * reply stands.
    */
-  const boundary = batch.length > 0 ? (batch[0] as number) : lastOwn;
-  const news = replies.filter((at) => at > boundary);
-
   // In the order they happened: a reply that came back between two calls belongs between them,
   // because this is the turn as it is being lived rather than two lists stacked.
-  return [...batch, ...news].sort((left, right) => left - right);
+  return [...batch, ...replies].sort((left, right) => left - right);
 }
 
 /** Whether the principal said anything of its own between two of its calls, which ends a batch. */

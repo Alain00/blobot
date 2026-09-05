@@ -314,6 +314,7 @@ function Live({
  */
 function useDwell(items: readonly Item[]): readonly Item[] {
   const [held, setHeld] = useState<readonly Item[]>([]);
+  const [withdrawn, setWithdrawn] = useState<ReadonlySet<string>>(() => new Set());
   const previous = useRef<readonly Item[]>([]);
   const shownAt = useRef(new Map<string, number>());
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -324,6 +325,17 @@ function useDwell(items: readonly Item[]): readonly Item[] {
       for (const timer of running) clearTimeout(timer);
     };
   }, []);
+
+  // A reply's own clock, started the first time it is seen settled and never restarted. The model
+  // goes on offering it for the rest of the run, so this is the thing that takes it away.
+  useEffect(() => {
+    const fresh = items.filter((item) => item.kind === 'agent' && !shownAt.current.has(item.id));
+    if (fresh.length === 0) return;
+    const gone = new Set(fresh.map((item) => item.id));
+    timers.current.push(
+      setTimeout(() => setWithdrawn((current) => new Set([...current, ...gone])), REPLY_STANDS),
+    );
+  }, [items]);
 
   useEffect(() => {
     const now = Date.now();
@@ -352,10 +364,11 @@ function useDwell(items: readonly Item[]): readonly Item[] {
     );
   }, [items]);
 
-  if (held.length === 0) return items;
+  const standing = withdrawn.size === 0 ? items : items.filter((item) => !withdrawn.has(item.id));
+  if (held.length === 0) return standing;
   // Back where it stood: a line that jumps to the end on its way out is a move the reader did
   // not cause, on top of the removal they also did not cause.
-  return [...held, ...items].sort((left, right) => left.at - right.at);
+  return [...held, ...standing].sort((left, right) => left.at - right.at);
 }
 
 /**
@@ -446,6 +459,25 @@ function Rows({
                 cast={cast}
                 flying={flying.filter((flight) => flight.rowId === row.id).map((flight) => flight.item)}
               />
+            ) : row.kind === 'pictures' ? (
+              // Every Picture one agent showed in a turn, side by side. Only ever more than one:
+              // a single Picture keeps the column, because half a column buys no scroll and
+              // costs the detail it exists to carry.
+              <div className="msg pictrow">
+                <div className="gutter" />
+                <div className="body">
+                  {cast.pane.kind === 'team' && (
+                    <div className="hdr">
+                      <span className="nm">{cast.byId.get(row.agentId)?.name}</span>
+                    </div>
+                  )}
+                  <div className="picts">
+                    {row.items.map((item) => (
+                      <Picture key={item.id} item={item as Extract<Item, { kind: 'picture' }>} />
+                    ))}
+                  </div>
+                </div>
+              </div>
             ) : (
               <ItemView
                 item={row.item}
@@ -648,7 +680,25 @@ export const FLIGHT = 260;
  * the turn ends. It sits above `FLIGHT`, which matters: a step must not be born and taken away
  * inside one swallow.
  */
-export const DWELL = 300;
+export const DWELL = 800;
+/**
+ * How long a teammate's reply stands in the live block before it is withdrawn into the fold.
+ *
+ * A call's time on screen is its own: it is there while it is open and while its batch stands,
+ * and {@link DWELL} is only a floor under that. A reply has no such life — it has already
+ * happened — so something has to say when it stops being news, and two attempts to say it in the
+ * model failed. The measurement is on `liveRunIn`: an agent message takes its `at` from its first
+ * delta, so a reply is inserted into the transcript at the moment it *began* and settles behind
+ * work the principal has since done. It is new and it is positionally old, so nothing about where
+ * it sits can date it.
+ *
+ * What can is the transition the renderer watches — a live message becoming a settled one — and
+ * the clock starts there. Eight seconds is long enough to read a clipped line and short enough
+ * that a turn with three replies in it is not three lines of history stacked over the work in
+ * progress. The whole of it is in the fold the moment the turn ends, so nothing is lost when it
+ * goes.
+ */
+export const REPLY_STANDS = 8_000;
 
 /** A step caught mid-file, and the fold that is taking it. */
 interface Flight {

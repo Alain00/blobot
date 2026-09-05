@@ -135,3 +135,29 @@ that renders twice onto the same root.
 
 Not caught in a still: a 300ms window is not something `--screenshot-at` finds by guessing. The
 fake-timer test is the evidence.
+
+### Why no positional rule could ever have worked
+
+Two attempts failed in opposite directions and the third one measured it instead of reasoning
+about it. A `console.log` in `liveRunIn`, one run of `many-steps`:
+
+```
+principal=alice replies=[21] batch=[25]          lastOwn=25 boundary=25 news=[]
+principal=alice replies=[21] batch=[31,32,33]    lastOwn=33 boundary=31 news=[]
+principal=alice replies=[21] batch=[38,39,40,41] lastOwn=41 boundary=38 news=[]
+```
+
+Bob's reply is item **21**, forever, while Alice climbs past 40. **An agent message takes its `at`
+from its first delta**, so a reply that took a few seconds to write is inserted into the
+transcript at the moment it *began* — and by the time it settles, the principal has produced
+several items that sort after it. It is new and it is positionally old. No comparison of
+positions can date it, which is why one rule made it permanent and the other made it invisible.
+
+What is new is the **transition**: a live message becoming a settled one. Nothing on the item
+records when that happened, and the only thing that sees one render follow another is the
+renderer. So `liveRunIn` hands over every settled reply and says nothing about how long it
+stands, and `useDwell` starts a clock the first time it sees one, `REPLY_STANDS` at 8s.
+
+Two clocks in one hook and they are not the same thing: `DWELL` is a **floor** under something
+whose life belongs to the model (a call is on screen while it is open), and `REPLY_STANDS` is the
+**whole** life of something that has no life of its own, because it has already happened.
