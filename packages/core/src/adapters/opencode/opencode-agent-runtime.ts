@@ -31,6 +31,9 @@ import type {
 } from '../acp/wire.js';
 import { agentKeyFor, opencodeConfigContent } from './config.js';
 import { offerableNames } from './palette.js';
+import { LocalMachine } from '../../machines/local-machine.js';
+import { requireLocalMachine, type Machine } from '../../machines/machine.js';
+import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
 import { spawnOpencode, VERIFIED_OPENCODE_VERSION, type SpawnOpencode } from './stdio.js';
 import { currentModeOf, type OpencodeSessionResult } from './wire.js';
 
@@ -101,6 +104,7 @@ export interface OpencodeAgentRuntimeOptions {
   /** The user's own `opencode`. Defaults to `OPENCODE_BIN`, then `PATH`. */
   readonly opencodeExecutable?: string;
   readonly env?: Readonly<Record<string, string>>;
+  readonly machine?: Machine;
   /** Injected in tests: a transport that speaks the protocol without spawning anything. */
   readonly spawn?: SpawnOpencode;
   readonly onStderr?: (line: string) => void;
@@ -144,7 +148,11 @@ export class OpencodeAgentRuntime implements AgentRuntime {
 
   constructor(options: OpencodeAgentRuntimeOptions) {
     this.agentId = options.agentId;
-    this.#options = options;
+    requireLocalMachine(options.machine);
+    this.#options = {
+      ...options,
+      machine: options.machine ?? new LocalMachine({ agentId: options.agentId, workspacePath: options.cwd }),
+    };
     this.#clock = options.clock ?? new SystemClock();
     this.#spawn = options.spawn ?? spawnOpencode;
     this.#agentKey = agentKeyFor(options.agentName ?? options.agentId);
@@ -191,6 +199,7 @@ export class OpencodeAgentRuntime implements AgentRuntime {
 
   async #connect(): Promise<void> {
     const transport = this.#spawn({
+      ...(this.#options.machine === undefined ? {} : { machine: this.#options.machine }),
       cwd: this.#options.cwd,
       // The persona and the posture reach the process here, before it reads a directory:
       // OpenCode snapshots a directory's config for the process lifetime, so a config that
@@ -219,7 +228,7 @@ export class OpencodeAgentRuntime implements AgentRuntime {
       protocolVersion: PROTOCOL_VERSION,
       // We own no terminals and serve no unsaved buffers: the agent works in a real workspace
       // on disk, so OpenCode's own file and shell tools are the right ones to use.
-      clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
+      clientCapabilities: MACHINE_CLIENT_CAPABILITIES,
     });
     this.#checkVersions(initialized);
 

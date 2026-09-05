@@ -1,5 +1,6 @@
 import {
   workspaceProviderFor,
+  machineFor,
   Orchestrator,
   PeerMessageServer,
   SqliteRecorder,
@@ -144,13 +145,16 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     runtimeLabels[record.id] = runtimeLabel(record.runtimeId);
     const measured = resolveCeiling(overrides, record.runtimeId, record.runtimeOptions?.['model']);
     if (measured !== undefined) contextCeilings[record.id] = measured;
-    const endpoint = mcp.endpointFor(agent.id);
+    const machine = machineFor('local', { agentId: agent.id, workspacePath: agent.workspacePath });
+    await machine.start({ mailboxPort: mcp.port });
+    const endpoint = mcp.endpointFor(agent.id, machine.mailboxHostname);
     // The whole difference between a relaunch and a resume. Undefined on a first launch, and
     // a session the provider has forgotten is not fatal: the adapter falls back to a new one.
     const resumeSessionId = store.lastProviderSessionOf(agent.id);
     // The one branch on a provider in the whole app, and it produces an `AgentRuntime`:
     // nothing below this line knows which runtime an agent is.
     const runtime = runtimeFor({
+      machine,
       runtimeId: record.runtimeId,
       agentId: agent.id,
       agentName: agent.name,

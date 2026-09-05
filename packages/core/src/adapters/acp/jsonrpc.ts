@@ -19,14 +19,8 @@ export interface JsonRpcMessage {
 
 /** The transport the connection writes to and reads from. Stdio in production, a pair of
  *  queues in tests — which is how the whole adapter is testable without spawning anything. */
-export interface LineTransport {
-  write(line: string): void;
-  lines(): AsyncIterable<string>;
-  /** Close our side. The bridge exits on stdin EOF, so this is the whole `stop()` story. */
-  close(): Promise<void>;
-  /** The far side went away: EOF, a crash, a signal. */
-  onClose(listener: (reason: string | undefined) => void): () => void;
-}
+export type { MachineTransport as LineTransport } from '../../machines/machine.js';
+import type { MachineTransport as LineTransport } from '../../machines/machine.js';
 
 export type RequestHandler = (params: unknown) => Promise<unknown>;
 export type NotificationHandler = (params: unknown) => void;

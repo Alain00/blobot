@@ -33,6 +33,9 @@ import type {
   SessionUpdate,
 } from '../acp/wire.js';
 import { offerableNames } from './palette.js';
+import { LocalMachine } from '../../machines/local-machine.js';
+import { requireLocalMachine, type Machine } from '../../machines/machine.js';
+import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
 import { fxModeFor } from './permissions.js';
 import { fxPersonaBlocks } from './persona.js';
 import { spawnFx, VERIFIED_FX_VERSION, type SpawnFx } from './stdio.js';
@@ -101,6 +104,7 @@ export interface FxAgentRuntimeOptions {
   /** The user's own `fx`, from detection. */
   readonly fxExecutable?: string;
   readonly env?: Readonly<Record<string, string>>;
+  readonly machine?: Machine;
   /** Injected in tests: a transport that speaks the protocol without spawning anything. */
   readonly spawn?: SpawnFx;
   readonly onStderr?: (line: string) => void;
@@ -159,7 +163,11 @@ export class FxAgentRuntime implements AgentRuntime {
 
   constructor(options: FxAgentRuntimeOptions) {
     this.agentId = options.agentId;
-    this.#options = options;
+    requireLocalMachine(options.machine);
+    this.#options = {
+      ...options,
+      machine: options.machine ?? new LocalMachine({ agentId: options.agentId, workspacePath: options.cwd }),
+    };
     this.#clock = options.clock ?? new SystemClock();
     this.#spawn = options.spawn ?? spawnFx;
   }
@@ -215,6 +223,7 @@ export class FxAgentRuntime implements AgentRuntime {
 
   async #connect(): Promise<void> {
     const transport = this.#spawn({
+      ...(this.#options.machine === undefined ? {} : { machine: this.#options.machine }),
       cwd: this.#options.cwd,
       trust: this.trust,
       ...(this.#options.env === undefined ? {} : { env: this.#options.env }),
@@ -285,7 +294,7 @@ export class FxAgentRuntime implements AgentRuntime {
         protocolVersion: PROTOCOL_VERSION,
         // We own no terminals and serve no unsaved buffers, so fx's own tools are the right
         // ones — and a client that offers to write files is a way around the posture.
-        clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
+        clientCapabilities: MACHINE_CLIENT_CAPABILITIES,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

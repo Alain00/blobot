@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: none
 
 # The engine, the Machine interface, and a box's lifecycle
@@ -383,3 +383,49 @@ in VS Code* (`12`, item 6). What the data volume holds (`13`, `17`).
 entry: every spawn path today carries one, and a box is where copy-everything inverts. Its shape
 is this ticket's; how it travels into a box is `17`'s. The four items the split paragraph routed to
 `17` are accepted there by name (`17`, *Handoffs*).
+
+## Answer — 2026-09-05, first implementation
+
+The author's request to begin development opened execution on the map. The interface half is
+implemented; the engine half remains *The first engine: sbx behind the interface, and a box's
+life*. Implementation and verification: [Machines implementation](../build.md).
+
+`Machine` is an Agent-bound instance in core, with a pure `location()` reader, `readiness`,
+`reconcile`, `start`, `spawn`, `stop`, `destroy`, `measure` and the kind's mailbox hostname.
+`start` returns its location when the engine is engaged, and throws on refusal; it promises
+neither runtime authentication nor a successful mailbox handshake. Reconcile describes the
+instance, not engine installation or login. Destroy is separate from stop and follows Workspace
+preservation, never implied by eviction. Measurement permits unknown, distinct from zero.
+
+`spawn` carries executable/argv or a pinned Node package entry, cwd in the Machine's namespace,
+an explicit environment layer and stderr diagnostics. Its result is `MachineTransport`, a
+protocol-independent pipe; no `ChildProcess`, provider type or Electron import crosses it.
+Opaque image/allowed-host requirements belong to the runtime and are carried by the start
+request. Their concrete values arrive with the image and engine work, not an invented image tag
+in this ticket. Commands can run git too; no additional provider-specific git verb is needed.
+
+`machineFor` lives in core beside the Workspace factory. It needs no renderer or runtime id.
+`LocalMachine` is the null engine: today's execution, no owned volumes, no-op lifecycle, and no
+deletion of the user's home or Workspace. It owns host environment inheritance and can accept
+the node executable explicitly. All five actual launch paths now use it. The inner-policy seam
+remains local spawn for an outer wrapper and the adapter's session options for an inner fence;
+neither policy was changed here.
+
+The capabilities invariant is enforced with one frozen shared constant and a source regression
+test enumerating all five adapters, plus existing wire tests. No adapter registers host file or
+terminal handlers. Mailbox minting changes only the hostname; bearer/path authority and the
+loopback bind remain intact. Its test simulates the already-measured proxy rewrite, not a live VM.
+
+The five future constraints hold at the interface: transport establishment has no prescribed
+direction; no Electron dependency is required; stopping does not discard volumes and the existing
+resume/compaction protocol still carries handoffs as text; wake can acquire a transport without
+changing the mailbox protocol; and an engine may wrap a user-owned SSH process without carrying
+a credential on this type. Remote execution is not implemented. The actual persistence, wake
+cost and session survival remain acceptance checks on the engine, not results claimed by local
+tests. A future engine must meet the box kind's mailbox and isolation contract before registration.
+
+No separate network-block event is introduced at this seam: the proxy diagnostics' carrier
+remains the engine ticket's measured implementation work. No move-between-Machines control or
+user/editor door is introduced. Unsupported box execution currently refuses before host config
+or palette preparation; it never falls back to local. The guard's removal is contingent on the
+engine, image and Workspace integration, detailed in the build record.

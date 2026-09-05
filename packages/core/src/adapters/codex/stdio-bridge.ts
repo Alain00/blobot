@@ -5,6 +5,7 @@ import {
   type NpmBridgeSpec,
 } from '../acp/npm-bridge.js';
 import type { LineTransport } from '../acp/jsonrpc.js';
+import type { Machine } from '../../machines/machine.js';
 import { DEFAULT_TRUST, type TrustLevel } from '../../trust.js';
 import { codexPostureEnv } from './permissions.js';
 
@@ -35,6 +36,7 @@ export const CODEX_BRIDGE: NpmBridgeSpec = {
 export interface SpawnCodexBridgeOptions {
   /** The AgentWorkspace. The bridge overrides the session's `cwd` with `session/new`'s. */
   readonly cwd: string;
+  readonly machine?: Machine;
   /** The user's own `codex`, from detection. Resolved from `CODEX_PATH` and then `PATH` when it
    *  is not given — and a failure to find one is the launch refused by name, which is what
    *  ticket 11 asks of a runtime that is not installed. */
@@ -51,6 +53,7 @@ export type SpawnCodexBridge = (options: SpawnCodexBridgeOptions) => LineTranspo
 export const spawnCodexBridge: SpawnCodexBridge = (options) =>
   spawnNpmBridge(CODEX_BRIDGE, {
     cwd: options.cwd,
+    ...(options.machine === undefined ? {} : { machine: options.machine }),
     ...(options.codexExecutable === undefined ? {} : { executable: options.codexExecutable }),
     env: {
       // The bridge advertises three ACP auth methods, and blobot takes exactly one of them:

@@ -27,6 +27,9 @@ import {
   type SpawnBridge,
 } from './stdio-bridge.js';
 import { offerableNames, paletteOf } from './palette.js';
+import { LocalMachine } from '../../machines/local-machine.js';
+import { requireLocalMachine, type Machine } from '../../machines/machine.js';
+import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
 import {
   CLAUDE_POSTURE_MODE,
   claudeModeFor,
@@ -181,6 +184,7 @@ export interface ClaudeAgentRuntimeOptions {
   /** The user's own `claude`. Defaults to `CLAUDE_CODE_EXECUTABLE`, then `PATH`. */
   readonly claudeExecutable?: string;
   readonly env?: Readonly<Record<string, string>>;
+  readonly machine?: Machine;
   /** Injected in tests: a transport that speaks the protocol without spawning anything. */
   readonly spawn?: SpawnBridge;
   readonly onStderr?: (line: string) => void;
@@ -221,7 +225,11 @@ export class ClaudeAgentRuntime implements AgentRuntime {
 
   constructor(options: ClaudeAgentRuntimeOptions) {
     this.agentId = options.agentId;
-    this.#options = options;
+    requireLocalMachine(options.machine);
+    this.#options = {
+      ...options,
+      machine: options.machine ?? new LocalMachine({ agentId: options.agentId, workspacePath: options.cwd }),
+    };
     this.#clock = options.clock ?? new SystemClock();
     this.#spawn = options.spawn ?? spawnClaudeBridge;
   }
@@ -268,6 +276,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
 
   async #connect(): Promise<void> {
     const transport = this.#spawn({
+      ...(this.#options.machine === undefined ? {} : { machine: this.#options.machine }),
       cwd: this.#options.cwd,
       ...(this.#options.claudeExecutable === undefined
         ? {}
@@ -292,7 +301,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
       protocolVersion: PROTOCOL_VERSION,
       // We own no terminals and serve no unsaved buffers: the agent works in a real worktree
       // on disk, so the bridge's own file and shell tools are the right ones to use.
-      clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
+      clientCapabilities: MACHINE_CLIENT_CAPABILITIES,
     });
     assertBridgeVersion(initialized);
     assertAuthenticated(initialized);

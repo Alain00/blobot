@@ -1,0 +1,93 @@
+/** A process channel, independent of ACP, Electron and any particular engine. */
+export interface MachineTransport {
+  write(line: string): void;
+  lines(): AsyncIterable<string>;
+  close(): Promise<void>;
+  onClose(listener: (reason: string | undefined) => void): () => void;
+}
+
+export type MachineKind = 'local' | 'box';
+
+/** Paths are in the Machine's namespace, never implicitly paths on the host. */
+export type MachineCommand =
+  | { readonly kind: 'exec'; readonly executable: string; readonly args: readonly string[] }
+  | {
+      readonly kind: 'node-module';
+      readonly package: string;
+      readonly version: string;
+      readonly entry: string;
+      /** Packaging overrides for local execution only. A box resolves its own package. */
+      readonly localEntryPath?: string;
+    };
+
+export interface MachineSpawnRequest {
+  readonly command: MachineCommand;
+  readonly cwd: string;
+  /** Only explicitly supplied entries travel. Host inheritance belongs to LocalMachine. */
+  readonly env?: Readonly<Record<string, string | undefined>>;
+  readonly onStderr?: (line: string) => void;
+}
+
+/** Adapter-owned facts: the engine treats both as opaque, with no runtime-id switch. */
+export interface MachineRuntimeRequirements {
+  readonly image: string;
+  readonly allowedHosts: readonly string[];
+}
+
+export interface MachineIdentity {
+  readonly agentId: string;
+  readonly workspacePath: string;
+}
+
+export interface MachineLocation extends MachineIdentity {
+  readonly kind: MachineKind;
+  /** Local execution has no owned volumes. Never describe the user's home as our volume. */
+  readonly volumes: { readonly data: string; readonly workspace: string } | null;
+}
+
+export type MachineReadiness =
+  | { readonly state: 'ready' }
+  | { readonly state: 'not_installed' | 'needs_sign_in' | 'unknown'; readonly detail: string };
+
+export type MachineReconcileOutcome =
+  | { readonly state: 'ok' | 'repaired'; readonly location: MachineLocation }
+  | { readonly state: 'absent' | 'lost'; readonly detail: string };
+
+export interface MachineStartRequest {
+  readonly mailboxPort: number;
+  readonly runtime?: MachineRuntimeRequirements;
+}
+
+/**
+ * One instance per Agent. A stop keeps all work and login state; destroy is an explicit,
+ * separate operation, called only after the Workspace provider has preserved the work.
+ * Engine readiness is not a runtime login check, nor evidence of the mailbox handshake.
+ */
+export interface Machine {
+  readonly kind: MachineKind;
+  location(): MachineLocation;
+  readiness(): Promise<MachineReadiness>;
+  reconcile(): Promise<MachineReconcileOutcome>;
+  start(request: MachineStartRequest): Promise<MachineLocation>;
+  spawn(request: MachineSpawnRequest): MachineTransport;
+  stop(): Promise<void>;
+  destroy(): Promise<void>;
+  /** Only engine-owned storage; null means it could not be measured, never zero. */
+  measure(): Promise<number | null>;
+  /** The address seen by the agent. The server itself always binds host loopback. */
+  readonly mailboxHostname: '127.0.0.1' | 'host.docker.internal';
+}
+
+export class MachineUnavailableError extends Error {
+  constructor(readonly kind: MachineKind, message: string) {
+    super(message);
+    this.name = 'MachineUnavailableError';
+  }
+}
+
+/** Until the image/configuration/Workspace work lands, box must never fall back to the host. */
+export function requireLocalMachine(machine: Pick<Machine, 'kind'> | undefined): void {
+  if (machine !== undefined && machine.kind !== 'local') {
+    throw new MachineUnavailableError(machine.kind, 'Sandbox runtime preparation is not implemented yet.');
+  }
+}

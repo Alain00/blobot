@@ -1,8 +1,8 @@
-import { childEnvironment } from '../acp/child-env.js';
-import { spawn } from 'node:child_process';
+import { LocalMachine } from '../../machines/local-machine.js';
+import { requireLocalMachine, type Machine } from '../../machines/machine.js';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { childTransport, isExecutable, searchPath } from '../acp/child-transport.js';
+import { isExecutable, searchPath } from '../acp/child-transport.js';
 import type { LineTransport } from '../acp/jsonrpc.js';
 import type { TrustLevel } from '../../trust.js';
 import { fxPermissionEnv } from './permissions.js';
@@ -19,6 +19,7 @@ import { fxPermissionEnv } from './permissions.js';
 export const VERIFIED_FX_VERSION = '0.0.7';
 
 export interface SpawnFxOptions {
+  readonly machine?: Machine;
   /** The AgentWorkspace. fx binds the workspace to the process's cwd, so this is the whole of
    *  what makes one process one agent. */
   readonly cwd: string;
@@ -45,9 +46,13 @@ export type SpawnFx = (options: SpawnFxOptions) => LineTransport;
  * would be a path blobot chose on a disk nobody asked it to write to.
  */
 export const spawnFx: SpawnFx = (options) => {
-  const child = spawn(resolveFxExecutable(options.fxExecutable), ['acp'], {
+  requireLocalMachine(options.machine);
+  const machine = options.machine ?? new LocalMachine({ agentId: 'standalone', workspacePath: options.cwd });
+  return machine.spawn({
+    command: { kind: 'exec', executable: resolveFxExecutable(options.fxExecutable), args: ['acp'] },
     cwd: options.cwd,
-    env: childEnvironment(options.env, {
+    env: {
+      ...options.env,
       // The posture reaches the process here, in its environment, and dies with it. Nothing is
       // written into the AgentWorkspace, which is a checkout of the user's repository.
       ...fxPermissionEnv(options.trust),
@@ -58,10 +63,9 @@ export const spawnFx: SpawnFx = (options) => {
       FX_NO_OPEN_BROWSER: '1',
       // stderr is diagnostics and the only channel that would carry colour; stdout is protocol.
       NO_COLOR: '1',
-    }),
-    stdio: ['pipe', 'pipe', 'pipe'],
+    },
+    ...(options.onStderr === undefined ? {} : { onStderr: options.onStderr }),
   });
-  return childTransport(child, options.onStderr);
 };
 
 /**

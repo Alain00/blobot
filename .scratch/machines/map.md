@@ -62,6 +62,12 @@ amended, and it is not to be worked around quietly.
 
 ## Notes
 
+**Execution opened, 2026-09-05 (Guillermo).** The author asked to begin development so each
+Agent is born and works in its own Docker Machine. Implementation is now in scope, one ticket
+per session, alongside the decisions. Start with *The engine, the Machine interface, and a
+box's lifecycle*: its interface is the prerequisite for the box implementation; the remaining
+`local` inner-fence decision does not block that work. Open decisions remain open until answered.
+
 **Domain.** blobot is a local-first Electron desktop app that assembles teams from the coding
 agents a user already has installed. It provides no inference, stores no credentials and provides
 no infrastructure. `CLAUDE.md` has the permanent architectural rules and `CONTEXT.md` the
@@ -167,7 +173,10 @@ none is discarded, and the destination is unchanged:
 - [What a Machine is, and what grain it hangs at](issues/01-what-a-machine-is.md): the noun is **Machine**; a home and a Machine are two objects; a Machine is a kind in a global registry and **every Agent gets its own instance**, placed per Agent with a Team default; two volumes, data and workspace; a closed list of accesses; `local` and `box` in scope with `box` built first and `local` the default; **one image, many engines**, `sbx` first behind the interface; four constraints a future kind imposes. ADR-0001 extended, `CONTEXT.md` gains *Machine*.
 - [Can a sandboxed agent still reach the mailbox](issues/02-can-an-agent-reach-the-mailbox.md): yes on every kind, by a different door each; the mailbox's three constants survive unchanged and the **carrier** (the hostname minted in `endpointFor` plus the one door the kind opens) is a property of the Machine kind. Linux is read, not run; the Docker door has since been run (`research/08`, comment on the ticket). Evidence in `research/02`, `research/03`, `research/08`.
 
-The frontier after the 2026-09-05 recharting: `04`, `05`, `06`, `13`, `14` and `16` are takeable; `07`, `08`, `09`, `10`, `12`, `15`, `17` and `18` are blocked; `11` is closed as out of scope. The critical chain is `14` → `17` → {`08`, `15`} → `09` → `12`, and `10` with `05` and `13`.
+- [The engine, the Machine interface, and a box's lifecycle](issues/14-the-engine-and-the-machine-interface.md): the Agent-bound interface and null engine are implemented across all five launch paths, with explicit environment layers and shared client-capability protection; box activation remains the engine's work. [Build status](build.md).
+
+Query the issue status and blocking lines for the current frontier; the former recharting
+snapshot is superseded by the interface's resolution.
 
 ## Not yet specified
 

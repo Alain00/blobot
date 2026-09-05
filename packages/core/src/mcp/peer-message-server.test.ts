@@ -214,6 +214,16 @@ describe("ticket 15's hazards", () => {
 });
 
 describe('the token', () => {
+  it('changes the box carrier without changing bearer authority or opening the listener', async () => {
+    const { server, rpc } = await harness();
+    const box = server.endpointFor('box-agent', 'host.docker.internal');
+    expect(box.url).toBe(`http://host.docker.internal:${server.port}/agents/box-agent/mcp`);
+    // Model the proxy's already-measured hostname rewrite on the host side of the door.
+    const upstream = box.url.replace('host.docker.internal', '127.0.0.1');
+    expect((await rpc('tools/list', undefined, { url: upstream, token: box.token })).status).toBe(200);
+    expect((await rpc('tools/list', undefined, { url: upstream })).status).toBe(401);
+  });
+
   it('refuses a request with no token, a wrong token, and another agent path', async () => {
     const { server, endpoint, rpc } = await harness();
     const bob = server.endpointFor('bob');

@@ -13,10 +13,12 @@ import {
   codexCeiling,
   opencodeCeiling,
   type AgentRuntime,
+  type Machine,
   type TrustLevel,
 } from '@blobot/core';
 
 export interface RuntimeRequest {
+  readonly machine?: Machine;
   readonly runtimeId: string;
   readonly agentId: string;
   /** The human name. OpenCode needs it: the persona is an agent definition with a key. */
@@ -55,6 +57,7 @@ export interface RuntimeRequest {
  */
 export function runtimeFor(request: RuntimeRequest): AgentRuntime {
   const shared = {
+    ...(request.machine === undefined ? {} : { machine: request.machine }),
     agentId: request.agentId,
     cwd: request.cwd,
     persona: request.persona,

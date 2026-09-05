@@ -38,6 +38,9 @@ import {
   createPlanRefusal,
 } from './extensions.js';
 import { offerableNames } from './palette.js';
+import { LocalMachine } from '../../machines/local-machine.js';
+import { requireLocalMachine, type Machine } from '../../machines/machine.js';
+import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
 import { CURSOR_SESSION_MODE } from './permissions.js';
 import { cursorPersonaBlocks } from './persona.js';
 import { spawnCursor, VERIFIED_CURSOR_VERSION, type SpawnCursor } from './stdio.js';
@@ -95,6 +98,7 @@ export interface CursorAgentRuntimeOptions {
   /** Tests inject a directory; production uses `~/.local/share/blobot/cursor-config/<id>`. */
   readonly configDir?: string;
   readonly env?: Readonly<Record<string, string>>;
+  readonly machine?: Machine;
   /** Injected in tests: a transport that speaks the protocol without spawning anything. */
   readonly spawn?: SpawnCursor;
   readonly onStderr?: (line: string) => void;
@@ -148,7 +152,11 @@ export class CursorAgentRuntime implements AgentRuntime {
 
   constructor(options: CursorAgentRuntimeOptions) {
     this.agentId = options.agentId;
-    this.#options = options;
+    requireLocalMachine(options.machine);
+    this.#options = {
+      ...options,
+      machine: options.machine ?? new LocalMachine({ agentId: options.agentId, workspacePath: options.cwd }),
+    };
     this.#clock = options.clock ?? new SystemClock();
     this.#spawn = options.spawn ?? spawnCursor;
     this.#configDir = options.configDir ?? defaultCursorConfigDir(options.agentId);
@@ -211,6 +219,7 @@ export class CursorAgentRuntime implements AgentRuntime {
 
   async #connect(): Promise<void> {
     const transport = this.#spawn({
+      ...(this.#options.machine === undefined ? {} : { machine: this.#options.machine }),
       cwd: this.#options.cwd,
       configDir: this.#configDir,
       ...(this.#options.cursorExecutable === undefined
@@ -242,7 +251,7 @@ export class CursorAgentRuntime implements AgentRuntime {
       protocolVersion: PROTOCOL_VERSION,
       // We own no terminals and serve no unsaved buffers, so Cursor's own tools are the right
       // ones — and a client that offers to write files is a way around the posture.
-      clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
+      clientCapabilities: MACHINE_CLIENT_CAPABILITIES,
     });
     this.#reportVersion(initialized);
     this.#accepts = acceptsOf(initialized.agentCapabilities);

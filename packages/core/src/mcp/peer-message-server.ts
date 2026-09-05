@@ -299,11 +299,11 @@ export class PeerMessageServer {
    * Mint one agent's endpoint. The path names the agent so a transcript is readable, but the
    * **token** is the authority — a request whose token does not match its path is refused.
    */
-  endpointFor(agentId: string): PeerMessageEndpoint {
+  endpointFor(agentId: string, hostname: '127.0.0.1' | 'host.docker.internal' = '127.0.0.1'): PeerMessageEndpoint {
     if (this.#server === undefined) throw new Error('PeerMessageServer: start() first');
     const token = randomBytes(24).toString('base64url');
     this.#tokens.set(token, agentId);
-    return { url: `http://127.0.0.1:${this.#port}/agents/${agentId}/mcp`, token };
+    return { url: `http://${hostname}:${this.#port}/agents/${agentId}/mcp`, token };
   }
 
   /**

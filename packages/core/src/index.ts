@@ -18,6 +18,14 @@ export type {
 } from './events.js';
 
 export { sameCommands } from './commands.js';
+export { LocalMachine } from './machines/local-machine.js';
+export { machineFor } from './machines/machine-for.js';
+export { MachineUnavailableError } from './machines/machine.js';
+export type {
+  Machine, MachineKind, MachineCommand, MachineIdentity, MachineLocation, MachineReadiness,
+  MachineReconcileOutcome, MachineRuntimeRequirements, MachineSpawnRequest, MachineStartRequest,
+  MachineTransport,
+} from './machines/machine.js';
 
 export type {
   AgentRuntime,

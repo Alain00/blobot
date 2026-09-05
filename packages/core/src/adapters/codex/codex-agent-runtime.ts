@@ -32,6 +32,9 @@ import type {
   SessionNotification,
 } from '../acp/wire.js';
 import { offerableNames, offeredName } from './palette.js';
+import { LocalMachine } from '../../machines/local-machine.js';
+import { requireLocalMachine, type Machine } from '../../machines/machine.js';
+import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
 import { CODEX_POSTURE_MODE, codexModeFor } from './permissions.js';
 import {
   CODEX_BRIDGE_PACKAGE,
@@ -106,6 +109,7 @@ export interface CodexAgentRuntimeOptions {
   /** The user's own `codex`, from detection. The bridge runs its own bundled copy without it. */
   readonly codexExecutable?: string;
   readonly env?: Readonly<Record<string, string>>;
+  readonly machine?: Machine;
   /** Injected in tests: a transport that speaks the protocol without spawning anything. */
   readonly spawn?: SpawnCodexBridge;
   readonly onStderr?: (line: string) => void;
@@ -171,7 +175,11 @@ export class CodexAgentRuntime implements AgentRuntime {
 
   constructor(options: CodexAgentRuntimeOptions) {
     this.agentId = options.agentId;
-    this.#options = options;
+    requireLocalMachine(options.machine);
+    this.#options = {
+      ...options,
+      machine: options.machine ?? new LocalMachine({ agentId: options.agentId, workspacePath: options.cwd }),
+    };
     this.#clock = options.clock ?? new SystemClock();
     this.#spawn = options.spawn ?? spawnCodexBridge;
   }
@@ -217,6 +225,7 @@ export class CodexAgentRuntime implements AgentRuntime {
 
   async #connect(): Promise<void> {
     const transport = this.#spawn({
+      ...(this.#options.machine === undefined ? {} : { machine: this.#options.machine }),
       cwd: this.#options.cwd,
       trust: this.trust,
       // The persona reaches the process here, in its environment, and dies with it. Nothing is
@@ -245,7 +254,7 @@ export class CodexAgentRuntime implements AgentRuntime {
       // We own no terminals and serve no unsaved buffers, so Codex's own tools are the right
       // ones. Declining `fs` is also what keeps the sandbox meaningful: a client that offers to
       // write files is a way around a kernel boundary ticket 02 relies on.
-      clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
+      clientCapabilities: MACHINE_CLIENT_CAPABILITIES,
       // The bridge's subagent and goal extensions are negotiated and therefore opt-in. They are
       // declined by saying nothing, on purpose and not by omission: blobot owns agent-to-agent
       // communication, and a second orchestrator underneath ours is not something to reach for.
