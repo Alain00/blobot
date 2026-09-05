@@ -71,10 +71,15 @@ decisions stand.
 is implemented and resolved. Continue the claimed
 [The image: one per runtime](issues/13-the-image-one-per-runtime.md), whose proposed base awaits
 the author’s answer.
-The latter's current-direction section supersedes its historical clone design. A synthetic
+The Workspace ticket's current-direction section supersedes its historical clone design. A synthetic
 worktree mount has been verified in sbx; the evidence and its limits live on the tickets.
 This changes neither the engine choice nor the two-ticket continuation request; the image
 work follows the revised Workspace contract. No production activation has been enabled.
+
+**Session handoff, 2026-09-05 (Guillermo).** The author requested a commit and handoff to
+continue in another session. Workspace implementation is committed as `65aece0`; resume the
+claimed image ticket with its base choice still pending. This handoff neither resolves that
+choice nor marks the image ticket complete. See the latest checkpoint in [build.md](build.md).
 
 **Execution opened, 2026-09-05 (Guillermo).** The author asked to begin development so each
 Agent is born and works in its own Docker Machine. Implementation is now in scope, one ticket

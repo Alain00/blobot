@@ -366,3 +366,8 @@ no answer has arrived. No image or release has been built/published. Complete pr
 system/Docker preservation, capacity budgets, release distribution and per-runtime acceptance
 remain that ticket's work. Resource replacement on mounted Workspaces refuses until the
 preservation contract is verified; it never runs the legacy home/workspace-only copy on them.
+
+Implementation and its verification are committed as **`65aece0`**. Guillermo then requested
+a commit and handoff to continue in another session. The next session resumes the claimed
+image ticket and the pending base choice above; the request does not answer that choice.
+This closing update changes documentation only, with no additional test/build result claimed.
