@@ -133,3 +133,42 @@ leaving 09 to discover it.
   costing nothing, exactly as the grilling predicted.
 - 549 desktop tests, 753 core, typecheck clean. Eight tests replace the five `liveTailOf` had,
   including the teammate case, 06's ordering and the own-pane case.
+
+## Amendment, 2026-09-05 — a teammate's reply is a step
+
+The author, watching the built thing: *"alice messages bob, but i can see bob's reply while it's
+streaming then it's folded, there is only noise in seeing the streaming response of bob, while
+alice is already generating stuffs, can we add the bob reply to the live steps, not while it's
+streaming, when it finished"*, with a reference frame showing a teammate's line at a step's
+altitude with its own small face.
+
+The answer above shipped with one exception left in `runWork`: a teammate's **live** prose was
+refused admission to the run, on the grounds that folding prose mid-stream would take it off the
+screen. What that actually bought was the worst of the three available positions — the reply
+streamed at the top level for as long as it took to write, over the agent the reader had actually
+asked, and then vanished into the shut fold the instant it settled, for a reason nothing on screen
+explained.
+
+Three positions, and the middle one is right:
+
+- **Top level while it streams.** Words nobody in the room was addressed in, at the reader's own
+  altitude, taking the column from the turn they asked for. Then removed.
+- **Straight into the shut fold.** No noise, and the reader never sees the reply arrive at all —
+  the thing the whole exchange was for is a number going up on a chevron.
+- **A step in the live block, once it has finished.** Where the rest of the turn's machinery is.
+  A call's altitude, the teammate's own face where a call has its verb, its own words in the
+  sentence face rather than the mono one — these are words somebody wrote, and setting them as a
+  command would be the only place in the app where prose is drawn as machinery — clipped to the
+  one line a glance can use. It leaves the way a call leaves: the turn ends and the fold takes the
+  whole block.
+
+*When it finished* is load-bearing and is the whole of the instruction: live prose is in neither
+place. Clipped and never summarised, because blobot provides no inference; the whole of it is one
+click away the moment the block folds.
+
+This narrows the ticket's own *"a teammate never draws a top-level face, live dots, or a pending
+state"* by adding what it does draw. It does not touch the three exclusions' last member: an
+unanswered permission is still outside the block, hardest for a teammate.
+
+The `principal: boolean` argument this had added to `runWork` is gone with it, so the predicate is
+one function again, which is what 07 said it should be.

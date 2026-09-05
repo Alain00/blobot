@@ -24,6 +24,7 @@ import {
 import { timeRule } from '../time.js';
 import { useComposerFocus } from '../useComposerFocus.js';
 import { Attached } from './Attached.js';
+import { Picture } from './Picture.js';
 import { Blob } from './Blob.js';
 import { Markdown } from './Markdown.js';
 
@@ -191,6 +192,7 @@ export function Conversation({
               key={block.agentId}
               block={block}
               agent={byId.get(block.agentId)}
+              byId={byId}
               composer={composer}
               status={statuses[block.agentId] ?? 'idle'}
               grouped={continuesAgent(block.agentId, lastItemOf(rows.at(-1)))}
@@ -226,12 +228,15 @@ export function Conversation({
 function Live({
   block,
   agent,
+  byId,
   composer,
   status,
   grouped,
 }: {
   block: LiveBlock;
   agent: UiAgent | undefined;
+  /** For the steps that are not this agent's: a teammate's reply carries its own face. */
+  byId: Map<string, UiAgent>;
   composer: Element | null;
   status: AgentStatus;
   /**
@@ -284,12 +289,45 @@ function Live({
           </div>
         ) : (
           <div className="steps">
-            {block.items.map((item) => (
-              <ToolLine key={item.id} item={item as Extract<Item, { kind: 'tool' }>} />
-            ))}
+            {block.items.map((item) =>
+              item.kind === 'tool' ? (
+                <ToolLine key={item.id} item={item} />
+              ) : (
+                <Reply key={item.id} item={item as Extract<Item, { kind: 'agent' }>} byId={byId} />
+              ),
+            )}
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * A teammate's finished reply, standing in the live block as a step.
+ *
+ * `.scratch/live-steps/issues/08`, amended by the author 2026-09-05. It is at a call's altitude
+ * and wears a call's register — the same row, the same muted ink, the same one-line clamp — with
+ * the teammate's own face where a call has its verb, because the one thing a reader needs off it
+ * at a glance is *who answered*. Clipped rather than summarised: blobot provides no inference, so
+ * the line is the reply's own first words and stops where the row does. The whole of it is one
+ * click away in the fold, the moment the turn ends and this block is taken.
+ */
+function Reply({
+  item,
+  byId,
+}: {
+  item: Extract<Item, { kind: 'agent' }>;
+  byId: Map<string, UiAgent>;
+}): React.JSX.Element {
+  const who = byId.get(item.agentId);
+  return (
+    <div className="tool reply">
+      <span className="v">
+        <Blob name={who?.name ?? item.agentId} size={16} hue={who?.hue} shape={who?.shape} />
+      </span>
+      <span className="nm">{who?.name ?? item.agentId}</span>
+      <span className="k">{item.text.replace(/\s+/g, " ").trim()}</span>
     </div>
   );
 }
@@ -342,6 +380,7 @@ function Rows({
               <Live
                 block={row}
                 agent={cast.byId.get(row.agentId)}
+                byId={cast.byId}
                 composer={cast.composer}
                 status={cast.statuses[row.agentId] ?? 'idle'}
                 grouped={rule === undefined && continuesAgent(row.agentId, previous)}
@@ -460,6 +499,8 @@ function castOf(
         fromName: pane.kind === 'team' ? byId.get(item.agentId)?.name : undefined,
         armed: routineArmed[item.routineId] ?? false,
       };
+    // A Picture is one agent's, so the team pane has to say whose. Same rule again.
+    case 'picture':
     case 'system':
     // Same rule for a compaction, which is a system line that opens: in an agent's pane the
     // agent is the pane, and in the team pane the line has to say whose session it was.
@@ -1008,6 +1049,20 @@ const ItemView = React.memo(function ItemView({
       return (
         <div className="sysline">
           <span>{fromName === undefined ? item.text : `${fromName} · ${item.text}`}</span>
+        </div>
+      );
+
+    // A Picture, at the agent's own altitude in the agent's own column, because it is one of the
+    // things the agent said. In the team pane the name goes with it for the same reason every
+    // other per-agent line carries one. It does not animate.
+    case 'picture':
+      return (
+        <div className="msg pictrow">
+          <div className="gutter" />
+          <div className="body">
+            {fromName !== undefined && <div className="hdr"><span className="nm">{fromName}</span></div>}
+            <Picture item={item} />
+          </div>
         </div>
       );
 

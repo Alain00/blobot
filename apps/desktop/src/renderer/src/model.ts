@@ -4,6 +4,8 @@ import type {
   AgentEvent,
   AgentStatus,
   Message,
+  PictureNotDrawn,
+  PictureSource,
   StopReason,
   ToolKind,
 } from '@blobot/core/domain';
@@ -111,6 +113,36 @@ export type Item =
       handoff?: string;
       handoffPath?: string;
       reason?: string;
+    }
+  /**
+   * A Picture, or the fact that there was one and it is not here.
+   *
+   * `.scratch/agent-media/`. One item for both outcomes, because they are one event: a Picture
+   * that arrived and could not be shown is *not drawn*, always with the reason in the same line,
+   * and never a noun on its own -- a noun would let a session ship the noun without the reason.
+   *
+   * `count` is what stops a screenshot loop drawing a column of identical apologies. It collapses
+   * by turn, by agent **and by reason**, in that order, so two different reasons in one turn are
+   * two lines: a reason that is averaged away is not a reason.
+   */
+  | {
+      kind: 'picture';
+      id: string;
+      at: number;
+      agentId: string;
+      /** Which frame it gets. The two sources must never draw the same. */
+      source: PictureSource;
+      /** The store's row, and what the pane fetches bytes by. Absent when `notDrawn` is set. */
+      pictureId?: string;
+      notDrawn?: PictureNotDrawn;
+      /** How many identical refusals this line stands for. Only ever above one when not drawn. */
+      count?: number;
+      /** The tool that produced it, for an observed Picture's frame. */
+      toolName?: string;
+      /** The file's own name, for a shown one. */
+      name?: string;
+      /** Whether the file was written during this turn or was already there. Shown only. */
+      writtenThisTurn?: boolean;
     }
   /**
    * An agent put itself on a schedule, and it is already running.
@@ -1129,12 +1161,89 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
         }),
       };
     }
+    case 'picture_arrived': {
+      const id = `${event.agentId}:${event.at}:picture`;
+      if (state.items.some((item) => item.id === id)) return state;
+      return { ...state, items: withPicture(state.items, id, event) };
+    }
     // Thinking has no pane of its own yet, and the peer message is rendered from its record
     // rather than from this announcement.
     case 'agent_thought_delta':
     case 'agent_message_sent':
       return state;
   }
+}
+
+/**
+ * A Picture into the transcript, counting rather than repeating.
+ *
+ * A Picture that was drawn is always its own item: they are different pictures and the reader is
+ * looking at them. A Picture that was **not** drawn folds into the last one from the same agent
+ * with the same reason, and the fold is deliberately shallow -- only the trailing item, so a
+ * refusal from before the agent said something is not silently absorbed into a later run.
+ *
+ * That asymmetry is the whole rule: an agent in a screenshot loop produces `4 pictures from bob`
+ * and not four apologies, and two reasons in one turn stay two lines.
+ */
+function withPicture(
+  items: readonly Item[],
+  id: string,
+  event: {
+    agentId: string;
+    at: number;
+    source: PictureSource;
+    pictureId?: string;
+    notDrawn?: PictureNotDrawn;
+    toolName?: string;
+    name?: string;
+    writtenAt?: number;
+    turnStartedAt?: number;
+  },
+): Item[] {
+  const item = pictureItem(id, event);
+  const last = items[items.length - 1];
+  if (
+    item.notDrawn !== undefined &&
+    last?.kind === 'picture' &&
+    last.agentId === item.agentId &&
+    last.notDrawn === item.notDrawn
+  ) {
+    return [...items.slice(0, -1), { ...last, count: (last.count ?? 1) + 1 }];
+  }
+  return [...items, item];
+}
+
+/** One `picture_arrived` as the transcript holds it. Shared by the live and restored paths. */
+function pictureItem(
+  id: string,
+  event: {
+    agentId: string;
+    at: number;
+    source: PictureSource;
+    pictureId?: string;
+    notDrawn?: PictureNotDrawn;
+    toolName?: string;
+    name?: string;
+    writtenAt?: number;
+    turnStartedAt?: number;
+  },
+): Extract<Item, { kind: 'picture' }> {
+  return {
+    kind: 'picture',
+    id,
+    at: event.at,
+    agentId: event.agentId,
+    source: event.source,
+    ...(event.pictureId === undefined ? {} : { pictureId: event.pictureId }),
+    ...(event.notDrawn === undefined ? {} : { notDrawn: event.notDrawn }),
+    ...(event.toolName === undefined ? {} : { toolName: event.toolName }),
+    ...(event.name === undefined ? {} : { name: event.name }),
+    // Compared here rather than at the draw, so a replay weighs the same two numbers a live draw
+    // did instead of re-deriving one of them from a clock that has moved on.
+    ...(event.writtenAt === undefined || event.turnStartedAt === undefined
+      ? {}
+      : { writtenThisTurn: event.writtenAt >= event.turnStartedAt }),
+  };
 }
 
 /** One `context_compacted` as the transcript holds it. Shared by the live and restored paths. */
@@ -1450,15 +1559,20 @@ function speakerOf(item: Item): string | undefined {
  * What is still refused is what has to reach the person: a question nobody has answered, and the
  * disclosures that exist *because* something happened off screen.
  *
- * Prose is the one place the speaker still matters, and only because of where it comes back out.
- * The **principal's** is admitted whether or not it has finished, since {@link runFrom} lifts all
- * of it straight back out again — letting the run reach past a sentence being written hides
- * nothing, and refusing to was cutting the turn in half under a teammate whose call was still
- * open, which left that call in an unattributed `ran 1 tool` of its own. A **teammate's** live
- * prose is refused, because folding that really would take it off the screen while it is being
- * written, and `DESIGN.md` binds the three exclusions to the teammate too.
+ * **Prose is admitted whether or not it has finished**, which is the author's, 2026-09-05, from
+ * watching it: a teammate's reply streamed at the top level for as long as it took to write and
+ * then vanished into the fold the instant it stopped, while the agent the reader had actually
+ * asked was working underneath it. Two costs and no benefit. The words were never addressed to
+ * the reader, so they are noise while they arrive; and the reader watches a paragraph appear and
+ * be taken away for a reason nothing on screen explains. Folded from the first delta, the same
+ * reply simply is where it belongs from the start and never moves.
+ *
+ * Nothing is hidden by it. The **principal's** prose is lifted straight back out by
+ * {@link runFrom} — all of it, live included — so letting a run reach past a sentence being
+ * written changes only where the run ends. A **teammate's** was never going to stay on screen:
+ * it folds a second later regardless, so refusing it here only chose which second.
  */
-function runWork(item: Item, live: LiveNow, principal: boolean): boolean {
+function runWork(item: Item, live: LiveNow): boolean {
   switch (item.kind) {
     case 'tool':
       if (item.status === 'asking') return false;
@@ -1466,7 +1580,7 @@ function runWork(item: Item, live: LiveNow, principal: boolean): boolean {
     case 'permission':
       return item.outcome !== undefined;
     case 'agent':
-      return principal || !item.live;
+      return true;
     default:
       return false;
   }
@@ -1644,9 +1758,9 @@ function runFrom(
 
     if (isPrincipal(addressed, speaker)) {
       if (principal !== undefined && principal !== speaker) break;
-      if (!runWork(item, live, true)) break;
+      if (!runWork(item, live)) break;
       principal = speaker;
-    } else if (!runWork(item, live, false)) {
+    } else if (!runWork(item, live)) {
       break;
     }
     end += 1;
@@ -1714,10 +1828,20 @@ function runFrom(
  * A teammate's items are stepped over rather than stopping it, because they are somebody else's
  * work happening in the middle of this one's batch and say nothing about where the batch begins.
  *
- * Only the principal's. A teammate has no live block in a team pane at all (`issues/08`): its
- * open calls stay inside the run they were caused by, and what says it is working is that block.
- * In its own pane it *is* the principal — {@link itemsFor} filters the other agents out before
- * any of this runs, so nothing is addressed there and {@link isPrincipal} answers yes.
+ * Only the principal's calls. A teammate has no live block of its own in a team pane
+ * (`issues/08`): its open calls stay inside the run they were caused by, and what says it is
+ * working is that block. In its own pane it *is* the principal — {@link itemsFor} filters the
+ * other agents out before any of this runs, so nothing is addressed there and
+ * {@link isPrincipal} answers yes.
+ *
+ * **A teammate's reply, once it has finished, is a step in here too.** The author's, 2026-09-05,
+ * and it is the middle of three positions rather than a return to the first. Drawn at the top
+ * level while it streams, it is a paragraph nobody in the room was addressed in taking the column
+ * from the agent the reader did ask; dropped straight into the shut fold, it is a reply the
+ * reader never sees arrive at all. As a step it sits where the rest of the turn's machinery sits,
+ * at the altitude of a call and clipped to the one line a glance can use, and it leaves the way a
+ * call leaves — when the turn ends and the fold takes the whole block. Live prose is not in here:
+ * *when it finished* is the whole of the instruction.
  */
 function liveRunIn(
   items: readonly Item[],
@@ -1729,22 +1853,33 @@ function liveRunIn(
   if (principal === undefined || !live(principal)) return [];
 
   const calls: number[] = [];
+  const replies: number[] = [];
   let open = -1;
   for (let at = index; at < end; at += 1) {
     const item = items[at] as Item;
-    if (speakerOf(item) !== principal) continue;
+    const speaker = speakerOf(item);
+    if (speaker === undefined) continue;
+    if (speaker !== principal) {
+      if (item.kind === 'agent' && !item.live) replies.push(at);
+      continue;
+    }
     if (item.kind !== 'tool') continue;
     calls.push(at);
     if (open === -1 && item.status === 'running') open = at;
   }
-  if (open === -1) return [];
 
-  let from = calls.indexOf(open);
-  while (from > 0) {
-    if (narratedBetween(items, calls[from - 1] as number, calls[from] as number, principal)) break;
-    from -= 1;
+  let batch: number[] = [];
+  if (open !== -1) {
+    let from = calls.indexOf(open);
+    while (from > 0) {
+      if (narratedBetween(items, calls[from - 1] as number, calls[from] as number, principal)) break;
+      from -= 1;
+    }
+    batch = calls.slice(from);
   }
-  return calls.slice(from);
+  // In the order they happened: a reply that came back between two calls belongs between them,
+  // because this is the turn as it is being lived rather than two lists stacked.
+  return [...batch, ...replies].sort((left, right) => left - right);
 }
 
 /** Whether the principal said anything of its own between two of its calls, which ends a batch. */

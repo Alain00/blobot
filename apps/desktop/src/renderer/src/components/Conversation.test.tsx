@@ -252,7 +252,9 @@ describe('the voices, after the roster stopped being passed down', () => {
       { kind: 'agent', id: 'm', at: at + 2000, agentId: 'b', text: 'NOTHING RUNNING MY END', live: false },
     ];
 
-    const shut = draw(items, { kind: 'team' });
+    // Idle on purpose: while Alice is still in her turn the same reply is a live step instead,
+    // which is the test below this one.
+    const shut = draw(items, { kind: 'team' }, { a: 'idle', b: 'idle' });
     expect(shut).toContain('2 messages');
     expect(shut).toContain('Bob');
     expect(shut).not.toContain('NOTHING RUNNING MY END');
@@ -268,6 +270,36 @@ describe('the voices, after the roster stopped being passed down', () => {
    * said in words what the faces beside it were already saying, and the count of mail is the half
    * of it a reader can do nothing with.
    */
+  /*
+   * And the same reply while the turn it belongs to is still running. The author, 2026-09-05:
+   * drawn at the top level it streamed a paragraph nobody in the room was addressed in over the
+   * agent they did ask, and then vanished into the fold the instant it stopped. It is a step
+   * now -- a call's altitude, Bob's own face, his words clipped to the row -- and it leaves when
+   * the fold takes the whole block.
+   */
+  it('draws a teammate reply as a step while the principal is still working', () => {
+    const at = 1_700_000_000_000;
+    const items: Item[] = [
+      { kind: 'user', id: 'u', at, agentIds: ['a'], text: 'can you check on Bob' },
+      { kind: 'peer', id: 'p', at: at + 1000, fromId: 'a', toId: 'b', text: 'what are you on?' },
+      { kind: 'agent', id: 'm', at: at + 2000, agentId: 'b', text: 'NOTHING RUNNING MY END', live: false },
+    ];
+
+    const live = draw(items, { kind: 'team' }, { a: 'working', b: 'idle' });
+    expect(live).toContain('NOTHING RUNNING MY END');
+
+    // Still being written, it is in neither place: not a paragraph at the top level, and not a
+    // line in the block. `when it finished` is the whole of the instruction.
+    const writing: Item[] = [
+      items[0] as Item,
+      items[1] as Item,
+      { kind: 'agent', id: 'm', at: at + 2000, agentId: 'b', text: 'NOTHING RUNNING MY END', live: true },
+    ];
+    expect(draw(writing, { kind: 'team' }, { a: 'working', b: 'responding' })).not.toContain(
+      'NOTHING RUNNING MY END',
+    );
+  });
+
   it('stacks the faces past two partners, and counts nothing in words', () => {
     const at = 1_700_000_000_000;
     const items: Item[] = [

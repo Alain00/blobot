@@ -846,6 +846,15 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    is what carries *size*, and it is the half a translate alone cannot say: a line that grows
    into place has somewhere it came from. */
 .tool.now{animation:entertool 200ms var(--ease-out)}
+/* A teammate's finished reply, at a call's altitude. Its own face where a call has its verb, its
+   name in the ink a name is drawn in everywhere else, and its words in the sentence face rather
+   than the mono one -- these are words somebody wrote, and setting them as a command would be
+   the only place in the app where prose is drawn as machinery. Clipped to the row.
+   `.scratch/live-steps/issues/08`. */
+.tool.reply{align-items:center}
+.tool.reply .v{align-self:center}
+.tool.reply .nm{flex:0 0 auto;font-family:var(--sans);font-size:12px;font-weight:500;color:var(--ink)}
+.tool.reply .k{font-family:var(--sans);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
 @keyframes entertool{from{opacity:.15;scale:.97;translate:0 8px;filter:blur(4px)}}
 /* Inside an opened fold the run enters as one thing, on `.did`. A per-line entrance in there
    would be the same event announced twice, at two durations. */

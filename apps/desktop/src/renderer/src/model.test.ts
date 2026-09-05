@@ -1349,13 +1349,21 @@ describe('turns nobody addressed', () => {
     expect(rows.map((row) => row.kind)).toEqual(['item', 'item', 'item']);
   });
 
-  it('never folds a turn that is still being written', () => {
-    const rows = rowsOf([
-      prompt(['alice']),
-      mail('1', 'alice', 'auditor'),
-      said('2', 'auditor', 'thinking', true),
-    ]);
-    expect(rows.map((row) => row.kind)).toEqual(['item', 'item', 'item']);
+  /*
+   * Folded from the first delta, by the author, 2026-09-05. It used to stream at the top level
+   * and then vanish into the block the instant it settled: words the reader was never addressed
+   * in, taking the column while the agent they did ask worked underneath, and then taken away
+   * for a reason nothing on screen explained. The principal's own prose is the opposite case and
+   * is lifted out of the block live, which the test above this one holds.
+   */
+  it('folds a teammate turn from the first delta, rather than on the last', () => {
+    const writing = said('2', 'auditor', 'thinking', true) as Extract<Item, { kind: 'agent' }>;
+    const rows = rowsOf([prompt(['alice']), mail('1', 'alice', 'auditor'), writing]);
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'steps']);
+    expect(steps(rows[1]).items.map((item) => item.id)).toEqual(['1', '2']);
+    // And it does not move when it settles: the same two items, in the same block.
+    const settled = rowsOf([prompt(['alice']), mail('1', 'alice', 'auditor'), { ...writing, live: false }]);
+    expect(settled.map((row) => row.kind)).toEqual(['item', 'steps']);
   });
 
   // A Routine an agent armed and a Handbook entry it wrote are disclosures that exist because

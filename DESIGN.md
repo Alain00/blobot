@@ -318,17 +318,28 @@ Other transcript rules:
   short, since it is the thing you did not ask for; mail with nothing behind it does not, because
   one outbound line nobody has answered yet is already one line and is your agent's own act.
 
-  Two of the three exclusions bind the teammate too, the last one harder than anywhere else: an
-  agent nobody addressed is precisely the one whose permission request has no other way of
-  reaching you, and prose it is still writing would be genuinely gone from the screen if the
-  block took it. **The first does not, amended 2026-09-05 (`live-steps` ticket 08): a teammate's
-  running call is inside the block.** The exclusion is about the principal's own work, where a
-  call outside the fold is the thing you can watch happening; a teammate's call outside it is a
-  second live voice at your altitude for work you did not ask for, and — because a run ended at
-  the first unsettled line of anybody's — it also cut the turn in half and left that call
-  standing between two folds with nothing on it saying whose it was. The price is that a fold can
-  now be a live object: its count of calls goes up while you are reading it. That is bought
-  deliberately and it is not yet paid for, which is `live-steps` ticket 09.
+  **Only one of the three exclusions binds the teammate, amended 2026-09-05 (`live-steps` ticket
+  08).** The one that does is the hardest anywhere: an agent nobody addressed is precisely the one
+  whose permission request has no other way of reaching you. The other two are about the
+  principal's own work, where a running call outside the fold is the thing you can watch happening
+  and a live answer is the thing you asked for. A teammate's are neither, and putting them at your
+  altitude cost twice — a second live voice for work you did not ask for, and, because a run ended
+  at the first unsettled line of anybody's, a turn cut in half with that call standing between the
+  two folds saying nothing about whose it was.
+
+  So **a teammate's work is in the run from the first delta**, calls and prose alike, and never
+  arrives at your altitude to be taken away again a second later. What it gets instead is a
+  **step**: once a teammate's reply has finished, it stands in the live block at a call's
+  altitude — its own face where a call has its verb, its own words in the sentence face, clipped
+  to the row — and it leaves the way a call leaves, when the turn ends and the fold takes the
+  block. Prose still being written is in neither place, because *finished* is what makes it worth
+  a line. That middle position is the author's, from watching both ends of it: a paragraph
+  streaming at the top level is words nobody in the room was addressed in taking the column from
+  the agent you did ask, and a reply dropped straight into the shut fold is one you never see
+  arrive at all.
+
+  The price is that a fold can be a live object: its count of calls goes up while you are reading
+  it. Bought deliberately, not yet paid for, and that is `live-steps` ticket 09.
 
   **What the principal said to you is never in the block.** All of it comes out and is drawn
   underneath, in order, where consecutive rows from one agent group into one turn the way they

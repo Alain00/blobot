@@ -91,3 +91,21 @@ unchanged through a rewrite of the function they test.
   effort.
 - **Still nothing has met a real batch.** Unchanged from round one, and now it would exercise
   `liveRunIn`'s backwards walk as well as the ids and the ordering.
+
+## And then the author looked at it
+
+**The exception in `runWork` was the wrong side of the trade.** Refusing a teammate's live prose
+kept it on screen while it streamed and then took it away when it settled: the reply arrived at
+the reader's altitude, over the turn they had asked for, and left without explanation. Admitting
+it fixes the leaving and loses the arriving, so neither end of the predicate was the answer. The
+answer is a third place, and it is on the amendment on ticket 08: **a finished teammate reply is a
+step in the live block**, at a call's altitude with its own face, clipped to the row.
+
+Two things fell out. `runWork` is one function with no `principal` argument again, which is what
+07 said it should be, and `liveRunIn` now returns two kinds of index sorted back into transcript
+order — the principal's open batch and the teammate replies that came back during it — because a
+reply that landed between two calls belongs between them.
+
+`.tool.reply` is the one new selector: the step row, the teammate's blobatar in the verb slot, and
+the words in `--sans` rather than `--mono`. Prose set as a command would be the only place in the
+app where somebody's sentence is drawn as machinery.
