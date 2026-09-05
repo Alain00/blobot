@@ -278,3 +278,7 @@ editing exists in the staged lifecycle/runtime API, not a shipped box settings s
 Workspace, egress, real CLI login/resume, Machine-screen activation and explicit recovery doors
 remain work under the existing plan. Do not reinterpret these two resolutions as the whole
 Machines feature being ready, or use the upcoming research as permission to switch engines.
+
+Implementation committed as **`5d2edd9`**. After that commit, the author-requested research pair
+and dependent reevaluation were created under the map's next-session priority. They remain
+open and unclaimed; neither research nor the grill was run, and no downstream plan was changed.

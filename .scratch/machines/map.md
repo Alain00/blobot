@@ -80,6 +80,14 @@ Only that later evidence and the author's decision may change the engine or the 
 plan; the Eve comparison alone changes neither. Current ticket completion remains subject
 to its acceptance criteria, not waived by the future review.
 
+**Next-session priority (Guillermo):** take the research pair
+[Docker Engine and sbx: lifecycle, persistence and resource costs](issues/20-engine-lifecycle-persistence-and-costs.md)
+and [Docker Engine and sbx: isolation, network access and product constraints](issues/21-engine-isolation-egress-and-product.md)
+before resuming the older numeric frontier. Their findings unblock
+[Reevaluate the first Machine engine with the measured trade-offs](issues/22-reevaluate-the-first-machine-engine.md).
+Only the author's decision there can change the engine or remaining plan. This priority changes
+no other ticket's status, scope or dependencies. No comparison research was started on creation.
+
 **Domain.** blobot is a local-first Electron desktop app that assembles teams from the coding
 agents a user already has installed. It provides no inference, stores no credentials and provides
 no infrastructure. `CLAUDE.md` has the permanent architectural rules and `CONTEXT.md` the
