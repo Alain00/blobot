@@ -151,7 +151,7 @@ export const demoScripts = {
     bob: scenarios['bob-reviews'],
   },
   /**
-   * One turn, twelve steps, one answer. The shape a long piece of real work has, and the run
+   * One turn, twenty-two calls, one answer. The shape a long piece of real work has, and the run
    * the transcript's fold is reviewed against: shut, this is a caption, one mono line and a
    * paragraph; flat, it was a bulleted list of intentions with the answer buried under it.
    */

@@ -4,7 +4,7 @@
  * The unit tests in `model.test.ts` build the item list directly, which proves the grouping and
  * proves nothing about whether a real turn produces that shape. This runs `works-through-a-list`
  * through `MockAgentRuntime` and reduces the events it actually emits, because the first review
- * of the fold in the running app counted three calls where the scenario has six, and no
+ * of the fold in the running app counted three calls where the scenario has many, and no
  * hand-built fixture could have said why.
  */
 import { expect, it } from 'vitest';
@@ -36,7 +36,7 @@ it('folds a whole scripted turn into one block, and leaves the answer under it',
   const rows = rowsOf(itemsFor(state.items, { kind: 'agent', agentId: 'alice' }));
   const steps = rows.filter((row): row is Extract<Row, { kind: 'steps' }> => row.kind === 'steps');
   expect(steps).toHaveLength(1);
-  expect(toolsIn(steps[0]!.items)).toBe(6);
-  // And the paragraph the six steps were leading to is a row of its own, under the fold.
+  expect(toolsIn(steps[0]!.items)).toBe(22);
+  // And the paragraph the twenty-two steps were leading to is a row of its own, under the fold.
   expect(rows.at(-1)).toMatchObject({ kind: 'item', item: { kind: 'agent' } });
 });
