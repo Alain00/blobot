@@ -32,7 +32,7 @@ it.skipIf(process.env['BLOBOT_LIVE_SBX_RC5'] !== '1')('owns, sleeps, reopens and
     const initial = await registry.read(agentId);
     expect(initial?.active).toBeDefined();
     expect(initial?.pending).toBeUndefined();
-    expect(initial?.mailbox?.port).toBe(34567);
+    expect(initial?.network?.mailboxPort).toBe(34567);
     const source = initial!.active!;
     // A synthetic status executable, not a real provider or login, exercises the guest probe.
     await run(['exec', '-u', '0', source.name, '/usr/bin/node', '-e',
@@ -53,16 +53,15 @@ it.skipIf(process.env['BLOBOT_LIVE_SBX_RC5'] !== '1')('owns, sleeps, reopens and
     await run(['exec', source.name, '/usr/bin/node', '-e',
       "const fs=require('node:fs');fs.writeFileSync('/home/agent/.session-fixture','synthetic',{mode:384});fs.writeFileSync('/workspace/work-fixture','kept')"]);
     await machine.stop();
-    expect((await registry.read(agentId))?.mailbox).toBeUndefined();
+    expect((await registry.read(agentId))?.network).toBeUndefined();
     expect((await machine.detectRuntime('fx', { agentId, power: 'asleep', inspect: async () => undefined })).detail).toBe('Status unknown: it is stopped.');
     const stoppedInventory = JSON.parse(await run(['ls', '--json'])).sandboxes as { id: string; status: string }[];
     expect(stoppedInventory.find((box) => box.id === source.id)?.status).toBe('stopped');
     await machine.start({ mailboxPort: 34568 });
     expect((await registry.read(agentId))?.active?.id).toBe(source.id);
-    expect((await registry.read(agentId))?.mailbox?.port).toBe(34568);
-    const denied = await exec('sbx', ['policy', 'check', 'network', '--sandbox', source.name, '--json', 'blobot-admission.invalid:443'], { env: sbxClientEnvironment() })
-      .catch((error: { code: number; stdout: string }) => { expect(error.code).toBe(1); return error; });
-    expect(JSON.parse(denied.stdout)).toMatchObject({ allowed: false, deny_kind: 'implicit', governance: { active: false } });
+    expect((await registry.read(agentId))?.network?.mailboxPort).toBe(34568);
+    expect(JSON.parse(await run(['policy', 'check', 'network', '--sandbox', source.name, '--json', 'blobot-admission.invalid:443'])))
+      .toMatchObject({ allowed: true, governance: { active: false } });
     expect(JSON.parse(await run(['policy', 'check', 'network', '--sandbox', source.name, '--json', 'localhost:34568'])))
       .toMatchObject({ allowed: true, context: `sandbox:${source.name}`, governance: { active: false } });
     await machine.beforeWork();

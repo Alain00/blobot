@@ -30,10 +30,9 @@ export interface MachineSpawnRequest {
   readonly onStderr?: (line: string) => void;
 }
 
-/** Adapter-owned facts: the engine treats both as opaque, with no runtime-id switch. */
+/** Adapter-owned image requirement, with no runtime-id switch or provider domain catalog. */
 export interface MachineRuntimeRequirements {
   readonly image: string;
-  readonly allowedHosts: readonly string[];
 }
 
 export interface MachineIdentity {

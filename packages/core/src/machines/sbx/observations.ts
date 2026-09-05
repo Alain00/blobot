@@ -132,6 +132,8 @@ export function verifySbxBoundary(value: unknown, limits: MachineLimits, uid: 0 
 }
 
 export interface SbxMailboxRule { readonly id: string; readonly port: number; }
+/** Open network permission is owned by one Machine; the port is a readiness check, not a fence. */
+export interface SbxNetworkRule { readonly id: string; readonly mailboxPort: number; }
 
 /** RC5 uses null for an empty scoped result when a different sandbox has explicit rules. */
 export function readSbxNetworkRules(value: unknown): Record<string, unknown>[] {
@@ -146,8 +148,9 @@ export function readSbxNetworkRules(value: unknown): Record<string, unknown>[] {
 }
 
 /** RC5 omits its synthetic default-deny row as soon as any explicit rule exists. */
-export function verifySbxNetworkRules(rules: readonly Record<string, unknown>[]): void {
-  if (rules.some((rule) => rule['status'] !== 'active' || rule['decision'] !== 'deny' ||
+export function verifySbxNetworkRules(rules: readonly Record<string, unknown>[], allowGlobal = false): void {
+  if (rules.some((rule) => rule['status'] !== 'active' ||
+      (rule['decision'] !== 'deny' && !(allowGlobal && rule['scope'] === 'global' && rule['decision'] === 'allow')) ||
       rule['resource_type'] !== 'network' || !Array.isArray(rule['resources']) ||
       rule['resources'].length === 0 || !rule['resources'].every((resource: unknown) => typeof resource === 'string'))) {
     throw new Error('Unexpected sandbox network permissions.');
@@ -167,11 +170,22 @@ export function verifySbxNetworkCheck(value: unknown, name: string, target: stri
 
 /** Only a recorded, exact scoped ID can authorize revocation. A matching resource is not ownership. */
 export function verifySbxMailboxRule(value: unknown, name: string, expected: SbxMailboxRule): void {
+  verifyScopedAllow(value, name, expected.id, `localhost:${expected.port}`);
+}
+
+export function verifySbxOpenNetworkRule(value: unknown, name: string, expected: SbxNetworkRule): void {
+  if (!Number.isInteger(expected.mailboxPort) || expected.mailboxPort < 1 || expected.mailboxPort > 65535) {
+    throw new Error('The recorded mailbox port is invalid.');
+  }
+  verifyScopedAllow(value, name, expected.id, '**');
+}
+
+function verifyScopedAllow(value: unknown, name: string, id: string, resource: string): void {
   const rule = object(value);
-  if (rule['id'] !== expected.id || rule['scope'] !== `sandbox:${name}` || rule['applies_to'] !== `sandbox:${name}` ||
+  if (rule['id'] !== id || rule['scope'] !== `sandbox:${name}` || rule['applies_to'] !== `sandbox:${name}` ||
       rule['sandbox_id'] !== name || rule['origin'] !== 'scoped' || rule['layer'] !== 'local' ||
       rule['resource_type'] !== 'network' || rule['decision'] !== 'allow' || rule['status'] !== 'active' || rule['editable'] !== true ||
-      !Array.isArray(rule['resources']) || rule['resources'].length !== 1 || rule['resources'][0] !== `localhost:${expected.port}`) {
-    throw new Error('The recorded mailbox permission no longer matches.');
+      !Array.isArray(rule['resources']) || rule['resources'].length !== 1 || rule['resources'][0] !== resource) {
+    throw new Error('The recorded network permission no longer matches.');
   }
 }

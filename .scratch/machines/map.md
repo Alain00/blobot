@@ -90,16 +90,18 @@ complete-state image preservation remains claimed and unfinished.
 
 **Network continuation, 2026-09-06.** The individual-Team UI is committed as `1aa70a7`.
 [Egress from a box: the allowlist, and how a block is said](issues/15-egress-from-a-box.md)
-is claimed. Its [focused decision round](egress-decision-round.md) records Guillermo's choice:
+is implemented, validated and resolved. Its [focused decision round](egress-decision-round.md) records Guillermo's choice:
 Internet access without a blobot destination allowlist, beyond the harness's own restrictions.
-Implement that amendment. Host separation, the exact mailbox door, worktrees and engine choice
-remain accepted. No further answer is pending about destination-list editability; no box
-activation is implied before the amended network boundary has been implemented and validated.
+The author also accepted host/local-network reach while keeping the
+harness's selected approval policy. Worktrees, credential ownership and engine choice remain
+accepted. No further answer is pending about network reach or destination-list editability; no box
+activation is implied before the remaining image/runtime/onboarding/UI gates are complete.
 
 **Measured network boundary.** The [RC5 probe](research/46-open-internet-boundary.md) found that
 the native Internet wildcard also admits host-loopback services despite private CIDR denies.
-The [decision round](egress-decision-round.md) now asks only about that additional host-network
-reach; the user's open-Internet answer remains accepted. No production network code was enabled.
+The [decision round](egress-decision-round.md) records acceptance of that additional host-network
+reach and unchanged approval posture. Owned open-network permissions are implemented; keep the
+remaining image/runtime/UI activation gates. Do not reopen the settled network choice.
 
 **Main integration, 2026-09-05.** The incoming September 4 planning fork predates the
 accepted local/box scope and uses the numbers now held by the image and engine tickets.
@@ -284,6 +286,8 @@ none is discarded, and the destination is unchanged:
 
 ## Decisions so far
 
+- [Egress from a box: the allowlist, and how a block is said](issues/15-egress-from-a-box.md): open Internet plus host/local-network reach, preserving approval posture; scoped rule ownership/migration/revocation implemented and tested in RC5. Destination restrictions belong to a separate future effort.
+
 - [Where a profile is addressed from, on screen](issues/18-the-profile-conversation-on-screen.md): a visible talk action opens a dialog to choose an individual Team or use ordinary creation with the profile preselected; existing Team surfaces own its history, permissions and context. Both layouts were prototyped and the implemented flow validated in Electron.
 
 - [What an agent addressed outside a team may do, and what its transcript is](issues/07-what-a-dmd-agent-may-do.md): contact from a profile opens a visible individual Team, with ordinary worktree/tools/history and existing approval/lifecycle rules; exact membership is rechecked before opening, and the screen ticket completes the entry point.
@@ -349,6 +353,12 @@ In scope, not yet sharp enough to ticket. Graduates as the frontier advances.
 ## Out of scope
 
 Ruled beyond this destination. These do not graduate; they return only as a fresh effort.
+
+- **Destination filtering and a configurable network policy.** Guillermo explicitly deferred
+  restrictions to another effort after choosing open Internet and host/local-network reach.
+  An arbitrary hostname whitelist is not part of this implementation. Harness approval rules,
+  authenticated mailbox calls and the remaining Machine boundaries still apply. See
+  [Egress from a box: the allowlist, and how a block is said](issues/15-egress-from-a-box.md).
 
 - **Automatic promotion to personal memory.** The accepted
   [profile overview](issues/06-what-lives-in-an-agents-home.md) supplies membership metadata and

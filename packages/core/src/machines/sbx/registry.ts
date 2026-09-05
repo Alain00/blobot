@@ -2,7 +2,7 @@ import { lstat, mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
 import Database from 'better-sqlite3';
 import { join } from 'node:path';
 import type { SbxReference } from './data-transfer.js';
-import type { SbxBoundaryBaseline, SbxMailboxRule } from './observations.js';
+import type { SbxBoundaryBaseline, SbxMailboxRule, SbxNetworkRule } from './observations.js';
 import { machineLimits, sameMachineLimits, type MachineLimits } from '../resources.js';
 import { sbxNameFor, type SbxKitOptions } from './kit.js';
 import type { SbxStateReceipt } from './state-transfer.js';
@@ -39,7 +39,9 @@ export interface SbxRecord {
     readonly candidate?: OwnedSbx;
     readonly receipt?: SbxStateReceipt;
   };
+  /** Legacy exact-host rule, revoked before adopting the accepted open network policy. */
   readonly mailbox?: SbxMailboxRule;
+  readonly network?: SbxNetworkRule;
 }
 
 /**

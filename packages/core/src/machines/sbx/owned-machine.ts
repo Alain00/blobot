@@ -15,7 +15,7 @@ import type { SleepingRuntime } from '../sleeping-runtime.js';
 import { SBX_RUNTIME_PROBE } from './runtime-probe.js';
 import { copySbxData, type SbxReference } from './data-transfer.js';
 import { renderSbxKit, sbxNameFor, type SbxKitOptions } from './kit.js';
-import { SBX_BOUNDARY_PROBE, verifySbxBoundary, verifySbxMailboxRule, verifySbxReference, verifySbxNetworkRules, verifySbxNetworkCheck, verifySbxStopped, readSbxNetworkRules } from './observations.js';
+import { SBX_BOUNDARY_PROBE, verifySbxBoundary, verifySbxMailboxRule, verifySbxOpenNetworkRule, verifySbxReference, verifySbxNetworkRules, verifySbxNetworkCheck, verifySbxStopped, readSbxNetworkRules } from './observations.js';
 import { SbxRegistry, type OwnedSbx, type SbxRecord } from './registry.js';
 import { spawnSbxTransport, type SbxExecOptions } from './transport.js';
 
@@ -30,8 +30,8 @@ export interface OwnedSbxMachineOptions {
 }
 
 /**
- * Staged RC5 lifecycle. NOT selected by machineFor: image, Workspace, egress and product
- * onboarding admission must land first. Host mounts are the AgentWorkspace and its approved
+ * Staged RC5 lifecycle. NOT selected by machineFor: complete-state preservation, runtime and
+ * product onboarding admission must land first. Host mounts are the AgentWorkspace and its approved
  * shared Git directories only. No daemon/global-settings mutations or credential imports.
  */
 export class OwnedSbxMachine implements Machine {
@@ -141,8 +141,8 @@ export class OwnedSbxMachine implements Machine {
   }
   async start(request: MachineStartRequest): Promise<MachineLocation> {
     if (!Number.isInteger(request.mailboxPort) || request.mailboxPort < 1 || request.mailboxPort > 65535) throw new Error('Invalid mailbox port.');
-    if (request.runtime !== undefined && (request.runtime.image !== this.#options.kit.image || request.runtime.allowedHosts.length !== 0)) {
-      throw new Error('Runtime image and egress admission have not been implemented for this Machine.');
+    if (request.runtime !== undefined && request.runtime.image !== this.#options.kit.image) {
+      throw new Error('The runtime image does not match this Machine.');
     }
     return this.#locked(async () => {
       await this.#engine();
@@ -157,18 +157,18 @@ export class OwnedSbxMachine implements Machine {
       try {
         this.#safeToRelease = false;
         await this.#boundary(active);
-        record = await this.#revokeMailbox(record);
+        record = await this.#revokeNetwork(record);
         const before = await this.#rules(active);
-        verifySbxNetworkRules(before);
-        await this.#run(['policy', 'allow', 'network', '--sandbox', active.name, `localhost:${request.mailboxPort}`]);
+        verifySbxNetworkRules(before, true);
+        await this.#run(['policy', 'allow', 'network', '--sandbox', active.name, '**']);
         const after = await this.#rules(active);
         const added = after.filter((rule) => !before.some((prior) => prior['id'] === rule['id']));
-        if (added.length !== 1 || typeof added[0]?.['id'] !== 'string') throw new Error('Mailbox permission creation could not be verified.');
-        const mailbox = { id: added[0]['id'], port: request.mailboxPort };
-        verifySbxMailboxRule(added[0], active.name, mailbox);
-        await this.#options.registry.save({ ...record, mailbox });
-        verifySbxNetworkRules(after.filter((rule) => rule['id'] !== mailbox.id));
-        await this.#networkChecks(active, mailbox.port);
+        if (added.length !== 1 || typeof added[0]?.['id'] !== 'string') throw new Error('Network permission creation could not be verified.');
+        const network = { id: added[0]['id'], mailboxPort: request.mailboxPort };
+        verifySbxOpenNetworkRule(added[0], active.name, network);
+        await this.#options.registry.save({ ...record, network });
+        verifySbxNetworkRules(after.filter((rule) => rule['id'] !== network.id), true);
+        await this.#networkChecks(active, network.mailboxPort);
         await this.#identity(active);
         this.#active = active;
         this.#started = true;
@@ -196,13 +196,13 @@ export class OwnedSbxMachine implements Machine {
       await this.#engine();
       const record = await this.#record();
       if (this.#options.kit.workspace !== undefined) await verifyBoxMountPaths(this.#options.kit.workspace);
-      if (record.active?.id !== this.#active.id || record.mailbox === undefined) throw new Error('Machine configuration changed.');
+      if (record.active?.id !== this.#active.id || record.network === undefined) throw new Error('Machine configuration changed.');
       const rules = await this.#rules(this.#active);
-      const mailbox = rules.filter((rule) => rule['id'] === record.mailbox?.id);
-      if (mailbox.length !== 1) throw new Error('The mailbox permission is unavailable.');
-      verifySbxMailboxRule(mailbox[0], this.#active.name, record.mailbox);
-      verifySbxNetworkRules(rules.filter((rule) => rule['id'] !== record.mailbox?.id));
-      await this.#networkChecks(this.#active, record.mailbox.port);
+      const network = rules.filter((rule) => rule['id'] === record.network?.id);
+      if (network.length !== 1) throw new Error('The network permission is unavailable.');
+      verifySbxOpenNetworkRule(network[0], this.#active.name, record.network);
+      verifySbxNetworkRules(rules.filter((rule) => rule['id'] !== record.network?.id), true);
+      await this.#networkChecks(this.#active, record.network.mailboxPort);
     });
   }
   async stop(): Promise<void> {
@@ -217,7 +217,7 @@ export class OwnedSbxMachine implements Machine {
       }
       if (record?.active !== undefined) {
         await this.#stopOwned(record.active);
-        await this.#revokeMailbox(record);
+        await this.#revokeNetwork(record);
       }
       this.#safeToRelease = true;
       if (closed.some((result) => result.status === 'rejected')) throw new Error('Some Agent channels could not close.');
@@ -232,7 +232,7 @@ export class OwnedSbxMachine implements Machine {
       if (stored === undefined) return;
       let record = await this.#record();
       await this.#engine();
-      record = await this.#revokeMailbox(record);
+      record = await this.#revokeNetwork(record);
       // Save each completed removal so an interrupted deletion can continue from its journal.
       for (const reference of [...record.retained, ...record.active === undefined ? [] : [record.active]]) {
         await this.#stopOwned(reference);
@@ -274,7 +274,7 @@ export class OwnedSbxMachine implements Machine {
       }
       this.#started = false;
       await this.#identity(original);
-      record = await this.#revokeMailbox(record);
+      record = await this.#revokeNetwork(record);
       await this.#stopOwned(original);
       this.#safeToRelease = true;
       let candidate: OwnedSbx | undefined;
@@ -391,8 +391,11 @@ export class OwnedSbxMachine implements Machine {
       const baseline = verifySbxBoundary(rootProbe, limits, 0, undefined, record.kit.workspace, this.#storage());
       const active: OwnedSbx = { ...reference, limits, baseline };
       await this.#boundary(active);
-      verifySbxNetworkRules(await this.#rules(active));
-      await this.#networkChecks(active);
+      const rules = await this.#rules(active);
+      verifySbxNetworkRules(rules, true);
+      // An operator's global allows do not conflict with open access and are never changed.
+      // Only a policy without such grants can assert deny-all before our scoped start grant.
+      if (!rules.some(rule => rule['decision'] === 'allow')) await this.#networkChecks(active);
       // Caller alone publishes the binding, after first admission or verified data transfer.
       return active;
     } catch (error) {
@@ -458,7 +461,9 @@ export class OwnedSbxMachine implements Machine {
     return [...unique.values()];
   }
   async #networkChecks(reference: SbxReference, mailboxPort?: number): Promise<void> {
-    const checks: [string, boolean][] = [['blobot-admission.invalid:443', false]];
+    // No packets are sent by policy check. A running Machine admits arbitrary destinations;
+    // without global allows, initial/replacement admission can also verify the closed baseline.
+    const checks: [string, boolean][] = [['blobot-admission.invalid:443', mailboxPort !== undefined]];
     if (mailboxPort !== undefined) checks.push([`localhost:${mailboxPort}`, true]);
     for (const [target, allowed] of checks) {
       // A documented denial exits 1 with JSON. Other commands still require exit 0.
@@ -466,7 +471,20 @@ export class OwnedSbxMachine implements Machine {
       verifySbxNetworkCheck(value, reference.name, target, allowed);
     }
   }
-  async #revokeMailbox(record: SbxRecord): Promise<SbxRecord> {
+  async #revokeNetwork(record: SbxRecord): Promise<SbxRecord> {
+    if (record.network !== undefined && record.active !== undefined) {
+      const found = (await this.#rules(record.active)).filter((rule) => rule['id'] === record.network?.id);
+      if (found.length > 1) throw new Error('Ambiguous network permission.');
+      if (found.length === 1) {
+        verifySbxOpenNetworkRule(found[0], record.active.name, record.network);
+        await this.#run(['policy', 'rm', 'network', '--sandbox', record.active.name, '--id', record.network.id]);
+        if ((await this.#rules(record.active)).some((rule) => rule['id'] === record.network?.id)) throw new Error('Network permission could not be revoked.');
+      }
+      const { network: _network, ...next } = record;
+      await this.#options.registry.save(next);
+      record = next;
+    }
+    // A journal from the staged exact-mailbox implementation may still own that old rule.
     if (record.mailbox === undefined || record.active === undefined) return record;
     const found = (await this.#rules(record.active)).filter((rule) => rule['id'] === record.mailbox?.id);
     if (found.length > 1) throw new Error('Ambiguous mailbox permission.');

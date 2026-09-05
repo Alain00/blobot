@@ -24,7 +24,23 @@ longer exists. Runtime errors/requests retain their existing carriers. Implement
 verify Internet reach while preserving the host/Machine boundary; no box is enabled by this
 documentation amendment alone.
 
-## New frontier: host-service reach under open Internet
+## Host-service reach accepted
+
+Guillermo answered the explicit host/local-network question: “si pero el agente tendria los
+mismos permisos que te deja tener si lo corres en tu maquina ni mas ni menos”. Implement open
+network reach including host/local services, preserving the selected harness approval policy.
+No automatic trust increase, credential import, SSH forwarding or new filesystem mount follows.
+The prior host-service exclusion is superseded. Network reach is not service authorization;
+the mailbox keeps its bearer check. Its old port-revocation claim no longer holds while the
+Machine has open network access. Effective guest capabilities can differ from the host because
+the OS, files, login and native fencing differ; do not promise literal capability equality.
+
+The Internet and host-network choices are now settled. Continue implementation and validation
+without asking again. The following is the evidence that prompted the accepted amendment.
+
+The author then explicitly deferred network restrictions to another effort, calling an
+arbitrary whitelist inefficient. No domain-filter/editor work remains in this goal. Network
+policy must not be reopened merely to complete the historical ticket's original checklist.
 
 The [owned RC5 fixture](research/46-open-internet-boundary.md) tested the two candidate native
 policies. `allow **` plus private CIDR denies reached both a public HTTPS site and a synthetic
@@ -35,9 +51,8 @@ removed and the global policy was unchanged.
 
 The Internet decision is accepted and is not being asked again. The newly exposed choice is
 whether the author also accepts network reach to host/local services with sbx's open policy.
-That reach was excluded in the earlier host boundary and cannot be inferred from permission
-to access Internet. If it stays excluded, additional boundary work is needed before activating
-open Internet. No broader host permission has been implemented or accepted yet.
+That reach was excluded in the earlier host boundary and required the separate answer recorded
+above. The author has now explicitly accepted it; no additional host fence is required here.
 
 ## Prior context (Internet allowlist superseded above)
 

@@ -33,9 +33,15 @@ external APIs, sites and development downloads without a blobot hostname editor 
 to widen the list. Native runtime behavior and approval posture remain their existing controls;
 this does not silently grant tools broader approvals or undo the accepted inner-fence policy.
 
-The Machine's separation from the host remains: Internet access does not add host services,
-host credentials, SSH forwarding, sibling Machines or other host mounts. The mailbox is still
-the one explicitly admitted host service. Engine protocol limitations and operator/organization
+After a synthetic sbx probe showed that its open policy also reaches host-loopback services,
+Guillermo accepted host/local-network reach: “si pero el agente tendria los mismos permisos
+que te deja tener si lo corres en tu maquina ni mas ni menos”. Opening the network does not
+change the selected approval posture, grant tools new approvals or imply service authorization.
+Host credentials, SSH forwarding and additional host mounts remain excluded; the mailbox still
+requires its per-Agent bearer. Its port is no longer isolated by a destination policy.
+The guest has its own OS, files and login, so this is approval-policy continuity, not a claim
+that all effective capabilities are identical to execution on the host. The already accepted
+optional inner-fence policy remains separate. Engine protocol limitations and operator/organization
 network policy must be disclosed rather than described as restrictions imposed by the harness.
 No destination-filtering, credential-containment or lossless proxy-denial guarantee follows from
 this choice. Implementation and measurements belong to

@@ -4,6 +4,15 @@ Blocked by: 04, 05, 09, 13
 
 # Does a sandbox answer the fourth trust level
 
+## Current network amendment, 2026-09-06
+
+Guillermo accepted open Internet and host/local-network services with the same selected harness
+approval policy, and deferred network restrictions to another effort. The Machine's network
+choice does not grant additional tool approvals or justify a trust level by a domain boundary.
+The historical fixed-egress/host-service-isolation premises below are superseded by
+[Egress from a box](15-egress-from-a-box.md). Guest files, credentials and native-fence behavior
+still differ from local execution; do not infer identical effective capabilities.
+
 ## Question
 
 Ticket 14 of `first-demo` is **reopened** on whether `trusting` should be the ceiling, from the

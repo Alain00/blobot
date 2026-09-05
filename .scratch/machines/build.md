@@ -769,3 +769,26 @@ The remaining non-obvious question is whether to broaden network reach to host/l
 with sbx's open policy. This was not part of the accepted Internet answer. Preserve all other
 host mounts/credential/approval decisions and await the answer before choosing that boundary.
 The egress ticket stays claimed. Image preservation and box activation remain unfinished.
+
+## 2026-09-06 — open-network lifecycle implemented and resolved
+
+[Egress from a box: the allowlist, and how a block is said](issues/15-egress-from-a-box.md)
+is resolved. Guillermo accepted host/local-network reach with unchanged harness approval
+posture and explicitly deferred network restrictions to another effort. The implementation
+creates one exact owned scoped wildcard permission after Machine admission; validates it before
+turns; and revokes it at stop, replacement or removal. Old exact-mailbox journals migrate by
+owned ID. Global allows may coexist and global policy is never written. Per-runtime domain
+lists and a custom list-denial transcript collector are no longer required.
+
+[Validation](research/47-open-network-lifecycle.md): core 973 passed / 47 skipped; desktop
+621 passed / 1 skipped; typechecks and builds pass. The two real RC5 lifecycle tests passed
+in 183 seconds, covering open HTTPS, host HTTP, migration, revocation/recovery, two Machines,
+sleep/reopen and the existing legacy replacement/recovery flow. A final dedicated network
+run added direct TCP to an owned host-loopback listener and passed in 41 seconds. Test cleanup
+removed the owned boxes and preserved global policy. No providers, real credentials or user
+workspaces were used. No approval adapter code changed; existing policy regressions passed.
+
+Continue at [What a sandbox lets blobot say](issues/09-what-a-machine-lets-blobot-say.md), now
+unblocked. Apply current worktree/network/native-policy amendments instead of its historical
+clone/domain-list premises. Network restrictions are outside this effort. Full root/home/Docker
+preservation is still claimed and unfinished, and production box activation remains gated.

@@ -4,6 +4,17 @@ Blocked by: 04, 15
 
 # What a sandbox lets blobot say
 
+## Current network amendment, 2026-09-06
+
+Guillermo selected open Internet, accepted reach to host/local-network services and deferred
+destination restrictions to another effort. The harness's selected approval policy remains
+unchanged. This supersedes the domain-list, sole-host-port and dedicated proxy-denial-line
+premises below; do not ship a promise that the box bounds where a credential can be sent.
+The [egress decision](15-egress-from-a-box.md) owns the mechanism. Disclosure must distinguish
+network reach from authorization, and from the files/credentials actually present in a guest.
+The approved wording must not claim identical effective safety to running on the Mac, a
+network-isolated host, or a special box-only increase in approval authority.
+
 ## Question
 
 Everything the app tells the user is built to be true under *prompting only*. A sandbox changes

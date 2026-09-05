@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SBX_DEVELOPMENT_PIN, verifySbxBoundary, verifySbxMailboxRule, verifySbxReference, verifySbxVersion, verifySbxNetworkRules, verifySbxNetworkCheck, verifySbxStopped, readSbxNetworkRules } from './observations.js';
+import { SBX_DEVELOPMENT_PIN, verifySbxBoundary, verifySbxMailboxRule, verifySbxOpenNetworkRule, verifySbxReference, verifySbxVersion, verifySbxNetworkRules, verifySbxNetworkCheck, verifySbxStopped, readSbxNetworkRules } from './observations.js';
 
 const limits = { maxCpus: 2, maxMemoryBytes: 2 * 1024 ** 3 };
 const sample = () => ({
@@ -103,6 +103,30 @@ describe('limited sbx observation admission', () => {
     expect(() => verifySbxMailboxRule(rule, 'blobot-alice', expected)).not.toThrow();
     for (const patch of [{ id: 'foreign' }, { origin: 'local' }, { scope: 'global' }, { resources: ['**'] }, { sandbox_id: 'engine-uuid' }]) {
       expect(() => verifySbxMailboxRule({ ...rule, ...patch }, 'blobot-alice', expected)).toThrow();
+    }
+  });
+  it('binds an open network grant to its recorded Machine and one exact rule identity', () => {
+    const expected = { id: 'owned-open-rule', mailboxPort: 3456 };
+    const rule = { id: expected.id, scope: 'sandbox:blobot-alice', applies_to: 'sandbox:blobot-alice',
+      sandbox_id: 'blobot-alice', origin: 'scoped', layer: 'local', resource_type: 'network',
+      decision: 'allow', status: 'active', editable: true, resources: ['**'] };
+    expect(() => verifySbxOpenNetworkRule(rule, 'blobot-alice', expected)).not.toThrow();
+    for (const patch of [{ id: 'foreign' }, { scope: 'global' }, { sandbox_id: 'blobot-bob' },
+      { origin: 'kit' }, { layer: 'organization' }, { status: 'inactive' }, { decision: 'deny' },
+      { resources: ['example.com'] }, { resources: ['**', 'localhost:3456'] }, { editable: false }]) {
+      expect(() => verifySbxOpenNetworkRule({ ...rule, ...patch }, 'blobot-alice', expected)).toThrow();
+    }
+    for (const mailboxPort of [0, 65536, 1.5, NaN]) {
+      expect(() => verifySbxOpenNetworkRule(rule, 'blobot-alice', { ...expected, mailboxPort })).toThrow();
+    }
+  });
+  it('can retain operator global allows for open access while still rejecting unowned scoped grants', () => {
+    const global = { id: 'operator-rule', scope: 'global', status: 'active', decision: 'allow', resource_type: 'network', resources: ['**'] };
+    expect(() => verifySbxNetworkRules([global], true)).not.toThrow();
+    expect(() => verifySbxNetworkRules([global])).toThrow();
+    for (const patch of [{ scope: 'sandbox:blobot-alice' }, { scope: undefined }, { status: 'inactive' },
+      { decision: 'ask' }, { resources: [] }, { resources: [null] }]) {
+      expect(() => verifySbxNetworkRules([{ ...global, ...patch }], true)).toThrow();
     }
   });
 });

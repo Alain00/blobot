@@ -1,17 +1,19 @@
 Type: grilling
-Status: claimed
+Status: resolved
 Blocked by: 19
 
 Current continuation, 2026-09-06: Guillermo rejected the fixed list and selected Internet access
 without blobot destination limits beyond the harness's own behavior. The
 [focused decision round](../egress-decision-round.md) records the answer. Implement this amended
-scope while preserving host separation and the exact mailbox door. The older allowlist,
+scope with the network amendment below and the mailbox's bearer authorization. The older allowlist,
 editability and generic proxy-log transcript requirements below are superseded.
 
-The [measured open-network probe](../research/46-open-internet-boundary.md) exposes a new
-decision: the native wildcard also reaches host-loopback services despite private CIDR denies.
-The Internet choice is accepted; widening the host-service boundary is not. Keep this ticket
-claimed and production guarded pending that answer or a verified additional boundary.
+The [measured open-network probe](../research/46-open-internet-boundary.md) exposed that the
+native wildcard also reaches host-loopback services despite private CIDR denies. Guillermo
+explicitly accepted host/local-network reach while retaining the harness's selected approval
+policy. Implement open scoped network permission with no automatic trust increase or additional
+mounts/credential imports. The historical exact mailbox-port fence is superseded; bearer
+authentication still authorizes mailbox calls. No product answer remains pending for network.
 
 # Egress from a box: the allowlist, and how a block is said
 
@@ -377,3 +379,39 @@ Claimed after the individual-Team entry point was completed in `1aa70a7`. The fi
 product choice is recorded in the [decision round](../egress-decision-round.md). Exact host
 classification, release-artifact validation, policy enforcement and denial-event integration
 remain implementation/research work. The ticket is not resolved and box activation is closed.
+
+## Answer
+
+Resolved 2026-09-06 under the author's amended scope. Guillermo selected open Internet,
+explicitly accepted access to host/local-network services after the measured sbx consequence,
+and required the harness's selected approval policy to stay unchanged. He then deferred
+restrictions to another effort because an arbitrary whitelist is inefficient. No domain catalog,
+editor, widening request or dedicated blobot-list-denial transcript collector is part of this
+implementation. The original list-building checklist and historical continuation above are
+superseded by these answers. [Decision record](../egress-decision-round.md).
+
+Implemented one owned `**` allow per awake Machine, created after identity/mount admission and
+recorded by exact scoped rule ID. Start/beforeWork validate its shape and effective admission;
+stop/replacement/removal revoke only owned IDs. Legacy exact-mailbox journals migrate without
+adopting arbitrary matching rules. Compatible global allows are retained, and global settings
+are never changed. Missing or malformed grants refuse through the existing lifecycle path.
+The unused per-runtime `allowedHosts` contract is removed; provider/approval code is unchanged.
+
+The mailbox port is no longer a network fence; its per-Agent bearer still authorizes calls.
+Host/local-network reach is accepted, while credential imports, SSH forwarding and extra host
+mounts remain excluded. Service access is not service authorization. Guest files, OS, login
+and native-fence behavior differ from the host; preserving approval posture is not a claim
+of identical effective capabilities or total risk. Engine protocol and organization-policy
+limits remain engine/operator constraints. No other engine or unrestricted-protocol guarantee
+is implied by the Internet choice.
+
+[Implementation and validation](../research/47-open-network-lifecycle.md): core **973 passed /
+47 skipped**, desktop **621 passed / 1 skipped**, both typechecks and builds pass. Real RC5
+tests passed for HTTPS with/without proxy handling, host HTTP and direct TCP, rule migration,
+revocation/restart, two Machines, sleep/reopen, legacy replacement and interrupted-copy recovery.
+All owned test Machines were removed and the standalone network test verified unchanged global
+policy. No provider, inference, credentials or user workspace was used in these fixtures.
+
+Full root/home/Docker preservation, production runtime admission and the Machine UI remain
+with their existing tickets. This resolves the amended egress implementation without opening
+those gates. Continue with [What a sandbox lets blobot say](09-what-a-machine-lets-blobot-say.md).

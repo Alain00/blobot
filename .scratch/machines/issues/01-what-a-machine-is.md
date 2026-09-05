@@ -3,6 +3,17 @@ Status: resolved
 
 # What a Machine is, and what grain it hangs at
 
+## Host-network amendment, 2026-09-06
+
+After the measured open-policy consequence, Guillermo accepted access to services on the Mac
+and local network, conditional on retaining the harness's selected approval policy: “si pero
+el agente tendria los mismos permisos que te deja tener si lo corres en tu maquina ni mas ni
+menos”. The older host-service exclusion and exact-port network fence are superseded. The
+mailbox's per-Agent bearer remains its authorization boundary. This does not import host
+credentials, enable SSH forwarding or add host mounts. Approval posture is not widened by
+network reach; distinct guest files, login, OS and the accepted native-fence behavior preclude
+a promise of identical effective capabilities. The Internet/network decisions are answered.
+
 ## Internet-access amendment, 2026-09-06
 
 Guillermo chose Internet access without blobot's own destination allowlist, beyond restrictions
