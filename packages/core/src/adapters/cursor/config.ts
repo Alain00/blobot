@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { DEFAULT_TRUST, type TrustLevel } from '../../trust.js';
+import type { MachineKind } from '../../machines/machine.js';
 import { cursorCliConfig } from './permissions.js';
 
 /**
@@ -36,10 +37,11 @@ export function defaultCursorConfigDir(agentId: string, home = homedir()): strin
 export function writeCursorConfig(options: {
   readonly dir: string;
   readonly trust?: TrustLevel;
+  readonly machineKind?: MachineKind;
 }): string {
   mkdirSync(options.dir, { recursive: true });
   const path = join(options.dir, 'cli-config.json');
-  const posture = cursorCliConfig(options.trust ?? DEFAULT_TRUST);
+  const posture = cursorCliConfig(options.trust ?? DEFAULT_TRUST, options.machineKind ?? 'local');
   const merged = { ...existingConfig(path), ...posture };
   writeFileSync(path, `${JSON.stringify(merged, null, 2)}\n`);
   return path;

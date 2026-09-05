@@ -72,8 +72,13 @@ requirements remain in force.
 [Where the boundary goes](issues/04-where-the-boundary-goes.md) is claimed for the author's
 [native/box protection and separate-controls decision](boundary-decision-round.md).
 This is the image ticket's existing inner-fence dependency, not a new engine decision.
-No proposal is accepted yet. The image ticket remains claimed and its complete-state migration
-is still unfinished. Pause at the decision round, as the author requested for non-obvious choices.
+The author subsequently accepted the three restated rules with “ok”. Conditional research
+then found a narrower decision: Claude can acknowledge session startup after native sandbox
+initialization failed, with no normal status channel exposing the failure. Its new native
+policy is prepared but activation is withheld pending the
+[startup-versus-tool-failure follow-up](boundary-decision-round.md#follow-up-native-initialization-failure).
+Cursor's ACP configuration is not evidence of an effective native fence; its disclosure is corrected.
+The image ticket remains claimed and its complete-state migration is still unfinished.
 
 **Main integration, 2026-09-05.** The incoming September 4 planning fork predates the
 accepted local/box scope and uses the numbers now held by the image and engine tickets.

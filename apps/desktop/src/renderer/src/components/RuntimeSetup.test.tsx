@@ -64,6 +64,7 @@ const READY: UiRuntimeChoice = {
   version: '2.1.251',
   remedies: [],
   trustLevels: ['careful', 'normal', 'trusting', 'unattended'],
+  localProtection: 'Synthetic local reach description supplied by the adapter.',
 };
 
 const drawn: { unmount: () => void; host: HTMLElement }[] = [];
@@ -129,6 +130,7 @@ describe('the readiness line', () => {
       <HireAgent runtimes={[READY]} onClose={() => undefined} onHired={() => undefined} />,
     );
     expect(onScreen()).not.toContain('sign in');
+    expect(onScreen()).toContain(READY.localProtection);
   });
 
   it('does not gate the picker on any of it', async () => {

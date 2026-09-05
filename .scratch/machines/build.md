@@ -591,3 +591,46 @@ differences, the microVM as the common box boundary, and separate location/appro
 These are proposals only. Pause for Guillermo's answers as instructed; do not implement a
 security-policy choice on his behalf. The image ticket stays claimed, and the measured
 metadata/maintenance/restore/cutover work is not resolved by this pause.
+
+## 2026-09-05 — accepted boundary policy, native failure timing still pending
+
+Guillermo accepted the three restated boundary rules with “ok”: native local protections with
+disclosed differences/project settings preserved, optional inner fences disabled in box only
+where independent of approvals, and separate placement/approval controls. ADR-0006 and the
+approval-posture glossary entry record these accepted decisions.
+
+Conditional research42 confirms Claude's scalar precedence, merged project lists and the
+explicit `autoAllowBashIfSandboxed:false` needed to preserve approval posture. It also measures
+a native backend initialization failure that still produces successful initialize/get_settings
+and exit0. The normal channel does not report it. Later Bash wrapping retries and throws by
+source, not by a new paid turn. A status query in another process cannot certify this session.
+This refutes the stronger startup assumption and requires the author's
+[focused follow-up](boundary-decision-round.md#follow-up-native-initialization-failure).
+
+The `claudeSandboxFor` helper is prepared but **not connected** to session/new or session/load;
+an activation-guard test keeps this explicit. It uses no blanket localhost exemption, no
+additional Git roots and no user/project file mutation. Once the author decides, update the
+helper's comment, connect both session paths only if permitted, change the honest current
+local description and validate the actual accepted failure contract.
+
+Research43 executes Cursor's exact shipped config/permission modules and shows ACP uses
+`insecure_none` with both sandbox settings; the interactive route's preflight is not ACP's.
+The Cursor local configuration is preserved. Box-specific configuration is prepared with
+identical approval mode/arrays. Codex's coupled mode stays unchanged. No box guard was opened.
+
+The runtime picker and Settings receive adapter-owned local reach descriptions through the
+existing runtime dispatch, without provider branches in React or conflating reach with sign-in.
+Current Claude disclosure says its new required sandbox is not activated; Cursor states no
+verified OS sandbox through ACP. The UI consumes the description as an independent fact.
+
+Validation: **core 949 passed / 46 skipped; desktop 610 passed / 1 skipped**. Both typechecks
+and builds pass. Logs are `/private/tmp/blobot-boundary-{core-tests,desktop-tests,desktop-build}.log`.
+Research42: 10 cases/16 assertions, four real credential-free CLI handshakes, no user frames.
+Research43: exact bundle/config tests and credential-free CLI initialize in an owned isolated
+Docker container. Both fixtures cleaned their owned resources; no sign-in, paid turn or
+shared engine mutation occurred. The native shell failure itself is not newly live-certified.
+
+The boundary ticket stays claimed. Pause for the focused decision as the author instructed;
+do not reopen the three accepted rules. Full-state image migration, box activation and the
+remaining Machines goal remain unfinished. Main integration remains `1167d61`; this checkpoint
+does not push the application branch or change the accepted worktree/storage/image decisions.

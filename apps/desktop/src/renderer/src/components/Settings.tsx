@@ -154,6 +154,9 @@ export function Settings({
                         {READINESS_WORD[entry.readiness]}
                         {entry.version === undefined ? '' : ` · ${entry.version}`} · {entry.detail}
                       </span>
+                      {entry.localProtection !== undefined && (
+                        <span className="sub muted">{entry.localProtection}</span>
+                      )}
                     </span>
                     <span style={{ flex: 1 }} />
                     {/* At most one, and often none: a door labelled *sign in* beside a runtime

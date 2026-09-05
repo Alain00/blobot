@@ -43,6 +43,9 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
   files are outside it. A Machine is **not** a home: what an AgentProfile keeps for itself across teams is a
   different object. On screen a Machine is said by kind and in plain words; the mechanism behind
   a kind is never named. See `.scratch/machines/`.
+- **Approval posture** — when an Agent's runtime asks the operator before acting. Separate
+  from where the Agent executes and what it can reach: choosing a Machine does not itself
+  grant more permission. See `docs/adr/0006-machine-boundaries-and-approval-posture.md`.
 
 ## Runtimes
 

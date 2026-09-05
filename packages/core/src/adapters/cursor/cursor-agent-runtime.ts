@@ -218,7 +218,11 @@ export class CursorAgentRuntime implements AgentRuntime {
       // The posture goes to disk before the child exists, so there is no window in which the
       // process runs under somebody else's permissions. The file is in blobot's own data
       // directory and nothing is ever written into the AgentWorkspace, which is a checkout.
-      writeCursorConfig({ dir: this.#configDir, trust: this.trust });
+      writeCursorConfig({
+        dir: this.#configDir,
+        trust: this.trust,
+        machineKind: this.#options.machine?.kind ?? 'local',
+      });
       await this.#connect();
       this.#setLifecycle('ready');
     } catch (error) {

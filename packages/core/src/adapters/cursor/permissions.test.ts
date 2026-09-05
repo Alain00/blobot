@@ -68,9 +68,19 @@ describe('what blobot vouches for on a Cursor session', () => {
     for (const rule of normal) expect(trusting).toContain(rule);
   });
 
-  it('keeps the sandbox on with network as a constant, never a dial', () => {
+  it('preserves the local sandbox setting without treating it as an effective ACP fence', () => {
     for (const trust of LEVELS) {
       expect(cursorCliConfig(trust).sandbox).toEqual({ mode: 'enabled', networkAccess: 'allow_all' });
+    }
+  });
+
+  it('disables only the optional inner fence in a box, preserving every approval rule', () => {
+    for (const trust of [...LEVELS, 'unattended'] as const) {
+      const local = cursorCliConfig(trust, 'local');
+      const box = cursorCliConfig(trust, 'box');
+      expect(box.sandbox).toEqual({ mode: 'disabled', networkAccess: 'allow_all' });
+      expect(box.approvalMode).toBe('allowlist');
+      expect(box.permissions).toEqual(local.permissions);
     }
   });
 

@@ -885,6 +885,8 @@ export interface UiRuntimeChoice {
    * write rather than merely discouraged.
    */
   readonly trustLevels: readonly TrustLevel[];
+  /** Configured local reach and its limits; distinct from the presence/sign-in probe. */
+  readonly localProtection?: string;
 }
 
 /**

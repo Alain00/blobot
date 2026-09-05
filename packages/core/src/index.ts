@@ -175,6 +175,11 @@ export type {
 // The Claude Code adapter. Exported from the full entry point only: it spawns a process, so
 // it has no business in `@blobot/core/domain`, which the renderer imports.
 export { ClaudeAgentRuntime } from './adapters/claude/claude-agent-runtime.js';
+export { CLAUDE_LOCAL_PROTECTION } from './adapters/claude/sandbox.js';
+export { CURSOR_LOCAL_PROTECTION } from './adapters/cursor/permissions.js';
+export { CODEX_LOCAL_PROTECTION } from './adapters/codex/permissions.js';
+export { FX_LOCAL_PROTECTION } from './adapters/fx/permissions.js';
+export { OPENCODE_LOCAL_PROTECTION } from './adapters/opencode/config.js';
 export {
   CLAUDE_POSTURE_MODE,
   CLAUDE_TRUST_LEVELS,

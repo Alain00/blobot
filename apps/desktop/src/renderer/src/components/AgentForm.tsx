@@ -264,6 +264,9 @@ function AgentFields({
               )}
             </span>
           )}
+          {runtime?.localProtection !== undefined && (
+            <span className="note muted">{runtime.localProtection}</span>
+          )}
           {fixing && runtime !== undefined && remedy !== undefined && (
             <RuntimeSetup
               runtime={runtime}

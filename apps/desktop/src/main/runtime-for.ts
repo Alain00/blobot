@@ -3,6 +3,11 @@ import {
   CLAUDE_CEILINGS,
   CLAUDE_TRUST_LEVELS,
   CODEX_CEILINGS,
+  CLAUDE_LOCAL_PROTECTION,
+  CURSOR_LOCAL_PROTECTION,
+  CODEX_LOCAL_PROTECTION,
+  FX_LOCAL_PROTECTION,
+  OPENCODE_LOCAL_PROTECTION,
   ClaudeAgentRuntime,
   CodexAgentRuntime,
   CursorAgentRuntime,
@@ -182,4 +187,16 @@ export const CEILING_TABLES: Readonly<Record<string, Readonly<Record<string, num
  */
 export function trustLevelsFor(runtimeId: string): readonly TrustLevel[] {
   return runtimeId === 'claude-code' ? CLAUDE_TRUST_LEVELS : ATTENDED_TRUST_LEVELS;
+}
+
+/** Adapter-owned descriptions of local reach, not authentication or a live attestation. */
+export function localProtectionFor(runtimeId: string): string | undefined {
+  const descriptions: Readonly<Record<string, string>> = {
+    'claude-code': CLAUDE_LOCAL_PROTECTION,
+    cursor: CURSOR_LOCAL_PROTECTION,
+    codex: CODEX_LOCAL_PROTECTION,
+    fx: FX_LOCAL_PROTECTION,
+    opencode: OPENCODE_LOCAL_PROTECTION,
+  };
+  return Object.hasOwn(descriptions, runtimeId) ? descriptions[runtimeId] : undefined;
 }

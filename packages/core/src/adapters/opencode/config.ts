@@ -210,3 +210,5 @@ export function agentKeyFor(name: string): string {
   if (key === 'build' || key === 'plan') return `blobot-${key}`;
   return key;
 }
+export const OPENCODE_LOCAL_PROTECTION =
+  'Local execution has no OS sandbox. Tools run with your account’s access; approval rules still apply.';

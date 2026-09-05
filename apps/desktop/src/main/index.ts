@@ -89,7 +89,7 @@ import {
   scheduledRoutines,
   toRunRow,
 } from './routine-rows.js';
-import { CEILING_TABLES, trustLevelsFor } from './runtime-for.js';
+import { CEILING_TABLES, localProtectionFor, trustLevelsFor } from './runtime-for.js';
 import { ceilingIsSane, ceilingRows, resolveCeiling } from './context-ceilings.js';
 import type {
   EditAgentResult,
@@ -264,6 +264,7 @@ function asUiPermission(pending: PendingPermission): UiPermissionRequest {
  * login where the binary was found and nothing at all where it was not.
  */
 function asUiRuntime(detection: RuntimeDetection): UiRuntimeChoice {
+  const localProtection = localProtectionFor(detection.runtimeId);
   return {
     runtimeId: detection.runtimeId,
     label: detection.label,
@@ -279,6 +280,7 @@ function asUiRuntime(detection: RuntimeDetection): UiRuntimeChoice {
     // Static per runtime, unlike the remedies above, and looked up in the one module allowed to
     // know what a `runtime_id` means. Three levels or four, and the renderer is not told why.
     trustLevels: trustLevelsFor(detection.runtimeId),
+    ...(localProtection === undefined ? {} : { localProtection }),
   };
 }
 

@@ -385,6 +385,33 @@ relayed to their own efforts.
 
 ## Comments
 
+**2026-09-05 — conditional validation found an unresolved startup contract.**
+[Claude native policy research](../research/42-claude-native-sandbox-policy.md) confirms
+scalar override and merged project lists but refutes successful initialize as a certificate
+of backend initialization, even with `failIfUnavailable:true`. The required startup guarantee
+has no established normal SDK/ACP status channel. Native policy is prepared and tested but
+not connected to sessions; the author's accepted requirement remains binding until he answers
+the [focused follow-up](../boundary-decision-round.md#follow-up-native-initialization-failure).
+
+[Cursor/Codex research](../research/43-cursor-codex-inner-sandbox.md) corrects the older Cursor
+fence description above: ACP's actual provider returns `insecure_none` with either sandbox
+setting. The prepared box configuration disables only the optional setting and keeps identical
+allowlist/permissions; local behavior is unchanged. Codex's coupled mode remains unchanged.
+All box activation guards remain closed. Adapter-owned local reach descriptions now appear in
+the runtime picker and Settings, independently of credential presence and approval controls.
+Core 949 tests and desktop 610 tests pass; both typechecks and builds pass. This is an
+implementation checkpoint, not a resolved ticket or complete Machines implementation.
+
+**2026-09-05 — Guillermo accepted the three restated rules with “ok”.** The accepted policy
+is native local protections with disclosed differences and retained project settings;
+microVM as the common box boundary, disabling only independently optional inner protections;
+and separate placement/approval controls. This settles the product choice, including retaining
+inseparable Codex behavior and deferring an additional external local wrapper. The latter's
+credential masking is not attributed to box. ADR-0006 records the architecture and the glossary
+now names approval posture. Implementation and conditional validation are in progress; the
+ticket remains claimed. The answer does not certify unmeasured precedence or authorize paid
+provider turns, real sign-ins, managed settings or changes to shared engine configuration.
+
 **2026-09-05 — claimed for the live decision round after implementation checkpoint `65ec602`.**
 The author delegates basic engineering choices but requires `grill-with-docs` and a pause for
 non-obvious product/trust choices. This independent frontier is now opened because the image

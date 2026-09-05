@@ -1,6 +1,7 @@
-# Where the boundary goes — proposed decision round
+# Where the boundary goes — accepted policy, implementation in progress
 
-2026-09-05. **Awaiting Guillermo's answers.** This is a proposal, not an ADR or a resolution.
+2026-09-05. **Guillermo accepted the three rules with “ok” after they were restated in full.**
+The product policy is accepted; conditional validation and implementation are still in progress.
 Owner: [Where the boundary goes](issues/04-where-the-boundary-goes.md).
 The image ticket needs the box inner-fence answer; disclosure and trust need the same policy.
 
@@ -10,7 +11,7 @@ are different concepts in the existing domain. A box is the accepted microVM bou
 including its approved host worktree/shared-Git mounts. The runtime can read its own login
 inside it. Nothing in this round changes those accepted decisions.
 
-## Proposed choices
+## Accepted choices
 
 1. **Local: use native protections, and say their limits.** Enable Claude's available inner
    protection, keep Codex/Cursor's existing protections, and preserve all already accepted
@@ -50,6 +51,41 @@ inside it. Nothing in this round changes those accepted decisions.
 - Full-state migration is still open and remains separately guarded. These product answers do
   not certify preservation, egress, sign-in or a real provider turn inside a box.
 
-On answers: record only what the author accepts on the ticket, update domain docs/ADR only
-where a decision actually changes them, perform the conditional probes, and resolve the ticket
-only after its factual conditions and implementation requirements have been met.
+The alternatives above remain the history of the proposal, not additional selected options.
+The author accepted native local protections with disclosed differences and preserved project
+settings, the microVM as the common box boundary with only independently optional inner
+protections disabled, and separate placement/approval controls. This does not authorize
+changing approval posture to turn off an inseparable runtime fence. The external srt wrapper
+remains deferred. The accepted architecture is recorded in ADR-0006. Resolve the ticket only
+after its factual conditions and implementation requirements have been met.
+
+## Follow-up: native initialization failure
+
+Research after the author's acceptance found two facts that supersede the earlier assumptions:
+
+- [Claude, pinned CLI and SDK](research/42-claude-native-sandbox-policy.md): settings precedence
+  and preserved project arrays are measured. However, a deliberately failed native backend
+  still permits `initialize`/`get_settings` and exit0 with `failIfUnavailable:true`. Normal
+  protocol/stderr do not expose this failure. The embedded code retries initialization when
+  wrapping Bash and throws if it remains unavailable; that later tool failure was read, not
+  executed by a model turn. Missing-dependency startup refusal and backend initialization are
+  different conditions. No documented session-status check was found.
+- [Cursor, pinned ACP path](research/43-cursor-codex-inner-sandbox.md): enabled and disabled
+  sandbox config both produce `insecure_none` in ACP's actual permission provider. The
+  interactive command's native sandbox/preflight does not establish ACP containment. Local
+  behavior is preserved and the UI no longer implies a verified native fence. Codex's current
+  coupled mode stays unchanged.
+
+**One product decision is pending, not the three already accepted rules again.** Accept the
+native Claude contract in which missing dependencies can refuse startup and backend failure
+can instead refuse a protected Bash invocation, while the session and non-shell tools may
+remain usable? Or retain the strict session-admission requirement, keeping activation withheld
+until an integration can establish it? Preserved project exclusions remain exceptions under
+either native-policy discussion.
+
+Recommendation: accept the native contract with explicit disclosure, then validate its actual
+failure path before activation. This changes the accepted failure timing, not approval posture.
+No answer is inferred. The prepared `claudeSandboxFor` helper is NOT connected to session/new
+or session/load. It omits `allowLocalBinding`: in-process MCP needs no exemption, so this change
+does not widen access to arbitrary local services. The research fixture's broader setting was
+a measurement input, not the selected production policy.
