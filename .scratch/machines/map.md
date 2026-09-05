@@ -79,8 +79,14 @@ and its complete-state migration is still unfinished. All box activation gates r
 **Profile overview checkpoint, 2026-09-06.**
 [What lives in an agent's home, and what map.md may say](issues/06-what-lives-in-an-agents-home.md)
 is implemented, validated and resolved after acceptance of its [focused proposal](home-decision-round.md).
-Continue with [What an agent addressed outside a team may do, and what its transcript is](issues/07-what-a-dmd-agent-may-do.md).
-Its conversation behavior remains a human decision; the accepted index does not cancel it.
+The behavior of [What an agent addressed outside a team may do, and what its transcript is](issues/07-what-a-dmd-agent-may-do.md)
+is now accepted and resolved; continue with its entry-point UI.
+
+**Current implementation frontier.** The profile-conversation behavior is resolved. Its
+[first decision round](profile-conversation-decision-round.md) was accepted after explanation:
+direct contact through a visible individual Team with its own workspace and transcript.
+Implement the accepted behavior and then its entry-point UI; no further product answer is
+pending for this choice. Continue the remaining frontier after completing that flow.
 
 **Main integration, 2026-09-05.** The incoming September 4 planning fork predates the
 accepted local/box scope and uses the numbers now held by the image and engine tickets.
@@ -264,6 +270,8 @@ none is discarded, and the destination is unchanged:
   which, because the first blocking result turned out to be a platform's and not a library's.
 
 ## Decisions so far
+
+- [What an agent addressed outside a team may do, and what its transcript is](issues/07-what-a-dmd-agent-may-do.md): contact from a profile opens a visible individual Team, with ordinary worktree/tools/history and existing approval/lifecycle rules; exact membership is rechecked before opening, and the screen ticket completes the entry point.
 
 - [What lives in an agent's home, and what map.md may say](issues/06-what-lives-in-an-agents-home.md): a bounded, fresh profile-membership overview on every turn; existing standing instructions, no shared file or new personal-memory writer, and no other-team work contents or added authority.
 

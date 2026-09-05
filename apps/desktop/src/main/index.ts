@@ -45,6 +45,7 @@ import { encodeTeamIcon, suggestTeamIcon } from './team-icon.js';
 import {
   TeamCreationError,
   createTeam,
+  individualTeamOf,
   deleteTeam,
   measureTeam,
   publishAgentBranch,
@@ -1990,6 +1991,15 @@ void app.whenReady().then(async () => {
   ipcMain.handle('blobot:selectTeam', async (_event, teamId: string): Promise<TeamOpenResult> => {
     const team = store?.teamById(teamId);
     if (team === undefined) return { ok: false, error: 'That team is no longer in the database.' };
+    if (team.id === current()?.team.id) return { ok: true };
+    return switchTo(team);
+  });
+
+  ipcMain.handle('blobot:selectIndividualTeam', async (
+    _event, profileId: string, teamId: string,
+  ): Promise<TeamOpenResult> => {
+    const team = store === undefined ? undefined : individualTeamOf(store, profileId, teamId);
+    if (team === undefined) return { ok: false, error: 'This is no longer an individual team for that agent. Choose again.' };
     if (team.id === current()?.team.id) return { ok: true };
     return switchTo(team);
   });

@@ -293,7 +293,7 @@ shared writable directory, physical `map.md` or personal-memory tool is introduc
    rights. Withholding paths is not an OS fence, particularly locally, and no live claim about
    an Agent refraining from filesystem discovery is made. Existing profile editing and team
    Handbook tools keep their scope. No home screen is required for this composed index;
-   [The profile conversation on screen](18-the-profile-conversation-on-screen.md) still owns
+   [Where a profile is addressed from, on screen](18-the-profile-conversation-on-screen.md) still owns
    the conversation UI after its behavior is decided by
    [What an agent addressed outside a team may do, and what its transcript is](07-what-a-dmd-agent-may-do.md).
 

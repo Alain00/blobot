@@ -148,6 +148,8 @@ const api: BlobotApi = {
     ipcRenderer.invoke('blobot:createTeam', spec) as Promise<TeamCreationResult>,
   selectTeam: (teamId: string) =>
     ipcRenderer.invoke('blobot:selectTeam', teamId) as Promise<TeamOpenResult>,
+  selectIndividualTeam: (profileId: string, teamId: string) =>
+    ipcRenderer.invoke('blobot:selectIndividualTeam', profileId, teamId) as Promise<TeamOpenResult>,
   editTeam: (teamId: string, profileIds: readonly string[], leadProfileId?: string) =>
     ipcRenderer.invoke(
       'blobot:editTeam',

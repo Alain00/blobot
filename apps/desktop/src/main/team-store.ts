@@ -295,7 +295,7 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
   }
   const profiles = spec.profileIds.map((profileId) => {
     const profile = deps.store.profileById(profileId);
-    if (profile === undefined) {
+    if (profile === undefined || profile.deletedAt !== undefined) {
       throw new TeamCreationError('unknown_agent', 'One of the chosen agents no longer exists.');
     }
     return profile;
@@ -395,6 +395,20 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
  */
 export async function prepareWorkspace(name: string): Promise<WorkspaceInspection> {
   return preparePath(join(homedir(), 'blobot'), name);
+}
+
+/**
+ * Recheck the audience when opening an individual team from a profile. A chooser snapshot
+ * may predate a roster edit; it must not silently open a team that now includes somebody else.
+ * Names are mutable labels, never identity. Ordinary team navigation remains unrestricted.
+ */
+export function individualTeamOf(store: SqliteStore, profileId: string, teamId: string): Team | undefined {
+  const profile = store.profileById(profileId);
+  if (profile === undefined || profile.deletedAt !== undefined) return undefined;
+  const team = store.teamById(teamId);
+  if (team === undefined) return undefined;
+  const members = store.agentsOfTeam(teamId);
+  return members.length === 1 && members[0]?.profileId === profileId ? team : undefined;
 }
 
 /** The creation flow's first screen: what is at the path the user picked. */

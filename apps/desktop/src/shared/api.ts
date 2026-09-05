@@ -1375,6 +1375,8 @@ export interface BlobotApi {
   seenRoutineRuns(agentId: string): Promise<void>;
   createTeam(spec: NewTeamSpec): Promise<TeamCreationResult>;
   selectTeam(teamId: string): Promise<TeamOpenResult>;
+  /** Rechecks that this is still an active one-member team of this profile before opening. */
+  selectIndividualTeam(profileId: string, teamId: string): Promise<TeamOpenResult>;
   /**
    * Change who is on a team. The whole roster, not a delta: the screen shows a set of ticks
    * and this is what they say.

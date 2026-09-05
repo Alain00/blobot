@@ -16,6 +16,7 @@ import {
 import {
   TeamCreationError,
   createTeam,
+  individualTeamOf,
   deleteTeam,
   editAgentProfile,
   editTeamRoster,
@@ -126,6 +127,12 @@ beforeEach(() => {
 afterEach(() => opened.close());
 
 describe('creating a team', () => {
+  it('refuses a profile retired after the creation form opened, before making workspaces', async () => {
+    store.tombstoneProfile(spec.profileIds[0]!, clock.now());
+    await expect(createTeam(spec, { store, clock, workspaces })).rejects.toMatchObject({ code: 'unknown_agent' });
+    expect(store.listTeams()).toHaveLength(0);
+    expect(workspaces.provisioned).toHaveLength(0);
+  });
   it('writes the team and gives every agent its own copy of the repository', async () => {
     const team = await createTeam(spec, { store, clock, workspaces, inspect: () => workspaces.inspect() });
 
@@ -268,6 +275,44 @@ describe('creating a team', () => {
     );
     const team = await createTeam({ ...spec, profileIds: [solo.id] }, { store, clock, workspaces, inspect: () => workspaces.inspect() });
     expect(store.agentsOfTeam(team.id)[0]?.runtimeId).toBe('something-unproven');
+  });
+});
+
+describe('opening an individual team from a profile', () => {
+  async function solo() {
+    return createTeam({ ...spec, profileIds: [spec.profileIds[0]!] }, {
+      store, clock, workspaces, inspect: () => workspaces.inspect(),
+    });
+  }
+
+  it('finds only the chosen membership identity and keeps its ordinary team history', async () => {
+    const team = await solo();
+    expect(individualTeamOf(store, spec.profileIds[0]!, team.id)?.id).toBe(team.id);
+    expect(individualTeamOf(store, spec.profileIds[1]!, team.id)).toBeUndefined();
+    expect(individualTeamOf(store, 'missing', team.id)).toBeUndefined();
+    expect(individualTeamOf(store, spec.profileIds[0]!, 'missing')).toBeUndefined();
+    expect(store.listTeams()).toHaveLength(1);
+    expect(workspaces.provisioned).toHaveLength(1);
+  });
+
+  it('rejects a stale selection after somebody joins, but accepts the team after they leave', async () => {
+    const team = await solo();
+    const first = store.agentsOfTeam(team.id)[0]!;
+    store.createAgent({ ...first, id: 'joiner', profileId: spec.profileIds[1]!, name: 'Bob' });
+    expect(individualTeamOf(store, spec.profileIds[0]!, team.id)).toBeUndefined();
+    store.tombstoneAgent('joiner', clock.now());
+    expect(individualTeamOf(store, spec.profileIds[0]!, team.id)?.id).toBe(team.id);
+    store.tombstoneAgent(first.id, clock.now());
+    expect(individualTeamOf(store, spec.profileIds[0]!, team.id)).toBeUndefined();
+  });
+
+  it.each(['team', 'profile'])('rejects a deleted %s without deleting its history', async (kind) => {
+    const team = await solo();
+    if (kind === 'profile') store.tombstoneProfile(spec.profileIds[0]!, clock.now());
+    else store.tombstoneTeam(team.id, clock.now());
+    expect(individualTeamOf(store, spec.profileIds[0]!, team.id)).toBeUndefined();
+    expect(store.listTeams({ includeDeleted: true }).map((entry) => entry.id)).toContain(team.id);
+    if (kind === 'profile') expect(store.teamById(team.id)?.id).toBe(team.id);
   });
 });
 

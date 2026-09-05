@@ -55,3 +55,14 @@ The DM's own words — *produces no branch and no pull request*, and what its tr
 And *the home on screen* was in a loop, `06` → `12` → `06`, that this ticket inherited: it is
 refused back to `06` by name — if `06` says a home exists at all, `06` owns its screen question or
 hands it here in words.
+
+## Amendment, 2026-09-06 — accepted individual-Team entry point
+
+The author accepted the visible one-member Team described in
+[What an agent addressed outside a team may do, and what its transcript is](07-what-a-dmd-agent-may-do.md).
+This ticket draws that outcome, as its first acceptance criterion explicitly allows, rather
+than a separate profile transcript. Add an entry from the profile row, let the user choose an
+existing individual Team or start the current creation flow with that profile preselected,
+and open the ordinary Agent/Team working surface. Its existing unread/permission/context/
+compaction surfaces are the honest furniture for this choice. The Agent is allowed ordinary
+tools/files/commits under its configured Machine; no conversation-only guarantee is added.

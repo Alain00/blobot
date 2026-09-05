@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 01, 06
 
 # What an agent addressed outside a team may do, and what its transcript is
@@ -60,3 +60,65 @@ A two-click quick team delivers the DM's ergonomics with zero model change: work
 handbook, compaction, permissions and publish all work, and a second member joins later without
 migrating anything. Whatever this ticket concludes has to be better than that, and "it feels more
 like messaging a colleague" is a real answer if it is argued rather than assumed.
+
+## Comments
+
+**2026-09-06 — claimed after profile overview commit `7f5ef42`.** The accepted home is a
+composed membership overview, not a physical execution directory. The opening assumption that
+the Machine ticket gave the profile somewhere to run is therefore not a settled premise.
+Review the direct-conversation alternatives against that boundary, then ask Guillermo through
+grill-with-docs; no conversation scope or tool authority is inferred from the overview approval.
+
+The [first decision round](../profile-conversation-decision-round.md) compares a visible
+individual-Team entry point with a distinct profile conversation. Await the author before
+implementing either. The screen ticket explicitly supports the individual-Team alternative.
+
+**2026-09-06 — individual Team accepted.** After an explanation of the visible team, separate
+workspace/worktree, persistent history and normal tool permissions, Guillermo answered “si esta
+bien asi”. Implement the accepted entry point; the updated decision round records ordinary
+create/continue/editor behavior under the author's delegation of basic implementation choices.
+
+## Answer
+
+Guillermo accepted the explained **visible one-member Team** on 2026-09-06. Contact from a
+profile is an entry point to an ordinary Team. It creates no separate profile conversation,
+transcript owner, shared session, fourth approval posture or profile-level Machine.
+
+- **Work and verbs.** The Agent may converse, use its runtime's ordinary tools, create files
+  and commits, and use the Team's existing routines/Handbook facilities, under its configured
+  Machine and approval posture. No “tool-free” or new containment promise is made. A new
+  workspace can be prepared through the current team-creation flow, with its path disclosed
+  before creation, and gives the Agent the normal isolated worktree. Unlike the historical
+  proposed DM, this choice can produce a branch and a pull request.
+- **Transcript and lifecycle.** Team/Agent identities own all persistence, unread marks,
+  permission requests, context accounting, compaction and handoffs just as today. A retired
+  profile leaves its existing Teams intact. A closed or unanswered permission request keeps
+  the existing cancellation behavior. The conversation never imports another Team's history.
+- **Create and continue.** Present existing active one-member Teams of the exact profile by
+  name and let the user choose. Creation is an explicit option through the existing flow,
+  preselected to this profile. No arbitrary recent Team or name-based identity match is used.
+  Once another Agent joins, it is an ordinary multi-member Team and no longer a choice in
+  this entry point. It remains accessible in the normal Team list.
+- **Mailbox.** It remains Team-scoped. A one-member Team has no other peer to address; this
+  entry point creates no way to message the profile's other memberships. Adding another member
+  later enables normal within-Team communication. Existing self/unknown-recipient refusals
+  remain in force.
+- **Trying an Agent and briefing it.** A hired profile can be tried with no repository chosen
+  in advance, using the ordinary auto-created folder. “Before hiring” does not introduce a
+  temporary anonymous runtime/profile lifecycle. Conversations can help draft standing
+  instructions; the user saves them through the existing profile editor. The earlier home
+  decision still rules out a new automatic shared-memory or self-editing tool.
+
+Implementation seam: `individualTeamOf` rechecks profile, Team and live membership in main
+before `selectIndividualTeam` invokes the normal Team switch. A stale chooser cannot open a
+Team that gained another member, lost this member, was deleted or belongs to another profile.
+Creation now refuses a profile retired after the form was opened, before making workspaces.
+No migration or separate conversation store is needed. The normal single-member creation and
+history behavior already exists; the entry-point UI is explicitly owned by
+[Where a profile is addressed from, on screen](18-the-profile-conversation-on-screen.md).
+
+Five new tests exercise retirement before creation, exact profile identity, nonexistent
+targets, roster changes and Team/profile deletion. Main/preload/renderer contract typecheck
+passes. Complete desktop tests/build are recorded in the build checkpoint. Core behavior is
+unchanged from the validated profile-overview commit. Next complete the screen ticket so the
+accepted flow is reachable before returning to the older frontier.

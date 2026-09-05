@@ -671,9 +671,10 @@ Continue the full Machines goal at the next frontier. The image ticket remains c
 complete-state migration remains unfinished. Box runtime preparation and production activation
 guards remain closed; this resolution does not certify provider turns inside a box, Linux
 native failure behavior, egress, onboarding or preservation. Do not re-ask the boundary choices.
+
 ## 2026-09-06 — profile overview implemented and resolved
 
-Guillermo accepted the focused home proposal with “ok”.
+Guillermo accepted the focused home proposal with “ok”. Implementation commit: `7f5ef42`.
 [What lives in an agent's home, and what map.md may say](issues/06-what-lives-in-an-agents-home.md)
 is resolved: a bounded projection of active membership names/roles and teammates, refreshed at
 each actual prompt delivery. SQLite selects no work/path fields, core consumes a narrow source,
@@ -693,3 +694,23 @@ Next: [What an agent addressed outside a team may do, and what its transcript is
 The thin overview does not silently decide or cancel that conversation. Claim it and use
 grill-with-docs for its non-obvious behavior. Continue the full Machines goal; full-state image
 preservation and the box activation gates remain unfinished. No application branch push.
+
+## 2026-09-06 — individual-Team behavior accepted and guarded
+
+Guillermo accepted the explained visible one-member Team.
+[What an agent addressed outside a team may do, and what its transcript is](issues/07-what-a-dmd-agent-may-do.md)
+is resolved. Existing teams retain their worktree, history, tools, permissions and compaction.
+The profile entry point offers explicit selection among its individual Teams or creation with
+the profile preselected. No shared profile session, automatic instruction editing or cross-team
+mailbox is introduced. A main-process guard rechecks current membership before opening, and
+creation refuses profiles retired since the form opened.
+
+Five added tests cover these identity/lifecycle edges. Desktop: **615 passed / 1 skipped**,
+typecheck and build pass. Logs: `/private/tmp/blobot-individual-team-desktop-{tests,build}.log`.
+Core is unchanged from `7f5ef42` (971 passed / 46 skipped, types/build passed).
+
+Continue immediately with [Where a profile is addressed from, on screen](issues/18-the-profile-conversation-on-screen.md)
+to connect the accepted entry point, then return to the remaining frontier. The author
+delegates routine implementation/design choices; no further answer is pending for the accepted
+individual-Team behavior. Full-state image preservation and all box activation gates remain
+unfinished. The application branch has not been pushed.
