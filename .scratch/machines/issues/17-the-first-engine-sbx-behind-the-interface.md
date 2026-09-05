@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 14
 
 # The first engine: sbx behind the interface, and a box's life
@@ -104,3 +104,42 @@ Remote-SSH open, with its egress hosts and its write into the data volume named 
 1, 2, 9) first, because everything else stands on a box that starts; lifecycle, pool, the door
 rule and the daemon (4, 5, 6, 7, 11) second. A claimant takes the first and splits the second off
 by name.
+
+## Execution split, 2026-09-05
+
+This session takes the first half: kit declaration, stable Agent-id naming, exec transport,
+explicit environment delivery and the mechanism that disables host ssh-agent access.
+[A box's lifecycle, engine setup, and the pool](19-a-box-lifecycle-and-engine-setup.md) owns
+the second half, including setup/sign-in mechanisms and the outstanding lifecycle handoffs.
+The original question list above is retained as history; the split governs ownership now.
+
+## Answer — 2026-09-05
+
+The first implementation seam is complete: a root blobot kit and a transport for an
+already-prepared box, under `packages/core/src/machines/sbx/`. The original lifecycle/setup
+questions are transferred, not answered implicitly. [Implementation status](../build.md)
+and [measured kit/SSH evidence](../research/09-sbx-kit-and-ssh-boundary.md) carry the details.
+
+- The kit declares exactly two explicitly sized private volumes, no vendor kit inheritance,
+  and a harmless Node version entrypoint. A synchronous root install gives the mounted roots
+  to UID 1000. The image tag and capacity values remain caller inputs, not product defaults.
+  Names use the immutable Agent id without slugging or truncation.
+- Launch configuration travels in a length-prefixed stdin header before untouched protocol
+  bytes, never interpolated into host argv or shell code. Guest environment changes must be
+  explicitly allowlisted; host credential/SSH environment is not forwarded to the client.
+  Pinned modules resolve in the guest, and JSON config patches run there before the runtime.
+  This supplies Cursor's needed primitive without wiring its host config path into a box.
+- Tests cover a six MiB protocol payload, multiline values, guest package/version checks,
+  config merging and symlink refusal, EOF, spawn errors and nonzero exit. A real v0.39 fixture
+  also verified UID 1000, config-before-launch and both volumes across stop/exec. It did not
+  run a provider or establish the future blobot image's acceptance.
+- **The proposed SSH switch is not a kit field.** Installed v0.39 is not an admissible Agent
+  engine under this map. RC2 exposes a daemon-wide setting and requires restart for existing
+  forwarders. Clearing environment alone is not isolation. Actual admission, shared-daemon
+  consent and the unanswered prerelease choice therefore belong to
+  [A box's lifecycle, engine setup, and the pool](19-a-box-lifecycle-and-engine-setup.md).
+
+`machineFor('box')` and all adapter box guards remain closed. No placement default changed,
+no new engine was installed and no daemon settings or sign-ins were changed. This resolution
+closes the kit/transport seam, not the product's Docker activation or any unanswered human
+choice. Next session starts at the named lifecycle/setup successor.

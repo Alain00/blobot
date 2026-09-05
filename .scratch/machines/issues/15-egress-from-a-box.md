@@ -1,6 +1,6 @@
 Type: grilling
 Status: open
-Blocked by: 17
+Blocked by: 19
 
 # Egress from a box: the allowlist, and how a block is said
 

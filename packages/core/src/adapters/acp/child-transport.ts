@@ -31,6 +31,9 @@ export function childTransport(
   };
 
   child.on('error', (error) => announceClose(error.message));
+  // A guest bootstrap can refuse before consuming the pending protocol input. Its closed
+  // pipe must fail this transport, not crash the Electron main process with an unhandled EPIPE.
+  child.stdin.on('error', (error) => announceClose(error.message));
   child.on('exit', (code, signal) => {
     announceClose(
       code === 0 || code === null
@@ -43,6 +46,9 @@ export function childTransport(
 
   if (onStderr !== undefined) {
     createInterface({ input: child.stderr }).on('line', onStderr);
+  } else {
+    // Diagnostics still need draining when nobody displays them, or a full pipe stalls exec.
+    child.stderr.resume();
   }
 
   return {

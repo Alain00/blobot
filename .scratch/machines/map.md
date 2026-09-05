@@ -102,12 +102,13 @@ stale pointer on a ticket is corrected by this table rather than by editing nine
 
 | question | owner | readers |
 |---|---|---|
-| setup and sign-in: the screen, the buttons, the four facts, caching | `08` | `12` draws it, `17` supplies costs |
-| setup and sign-in: the mechanism (installer, `sbx login`, the daemon, tiers inside a box) | `17` | `08`, `09` |
+| setup and sign-in: the screen, the buttons, the four facts, caching | `08` | `12` draws it, `19` supplies costs |
+| setup and sign-in: the mechanism (installer, `sbx login`, the daemon, tiers inside a box) | `19` | `08`, `09` |
 | every word on screen, including the account named | `09` | `08`, `12` |
 | the rail, the user's VS Code door, the sign-in card, the folder-step row | `12` | `09`, `10` |
 | what crosses into a box, the volumes' adopt-or-refuse, git identity, `origin`, ADR-0003's second amendment | `05` | `13`, `15`, `17` |
-| the box object, naming by Agent id, the environment layer's travel, the door rule, the pool, the daemon | `17` | `05`, `08`, `14` |
+| root kit, naming by Agent id and the environment layer's travel | `17` | `05`, `13`, `19` |
+| the box object, SSH admission, the door rule, the pool and the shared daemon | `19` | `05`, `08`, `14`, `15` |
 | the interface, the null engine, the `fs`/`terminal` invariant, the verdict on the four constraints | `14` | `17` |
 | the image's contents and how the bridge is installed without bundled CLIs | `13` | `05`, `17` |
 | the allowlist and how a block is said | `15` | `09` |
@@ -174,6 +175,7 @@ none is discarded, and the destination is unchanged:
 - [Can a sandboxed agent still reach the mailbox](issues/02-can-an-agent-reach-the-mailbox.md): yes on every kind, by a different door each; the mailbox's three constants survive unchanged and the **carrier** (the hostname minted in `endpointFor` plus the one door the kind opens) is a property of the Machine kind. Linux is read, not run; the Docker door has since been run (`research/08`, comment on the ticket). Evidence in `research/02`, `research/03`, `research/08`.
 
 - [The engine, the Machine interface, and a box's lifecycle](issues/14-the-engine-and-the-machine-interface.md): the Agent-bound interface and null engine are implemented across all five launch paths, with explicit environment layers and shared client-capability protection; box activation remains the engine's work. [Build status](build.md).
+- [The first engine: sbx behind the interface, and a box's life](issues/17-the-first-engine-sbx-behind-the-interface.md): root kit and stdin-framed exec implemented and fixture-tested across stop/start; SSH disable is daemon-wide, so production admission and setup continue in [A box's lifecycle, engine setup, and the pool](issues/19-a-box-lifecycle-and-engine-setup.md). No Agent runs in Docker yet.
 
 Query the issue status and blocking lines for the current frontier; the former recharting
 snapshot is superseded by the interface's resolution.
