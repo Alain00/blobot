@@ -182,7 +182,17 @@ export type Item =
 export function continuesSpeaker(item: Item, previous: Item | undefined): boolean {
   if (previous === undefined) return false;
   if (item.kind !== 'agent') return false;
-  return previous.kind === 'agent' && previous.agentId === item.agentId;
+  return continuesAgent(item.agentId, previous);
+}
+
+/**
+ * The same rule for something that is not an item: a live block whose steps sit under a caption
+ * the same agent has just finished writing. That caption is settled prose with running calls
+ * beneath it, which is one item short of the fold's threshold and therefore a loose row, so
+ * without this the face and the name are drawn twice with one sentence between them.
+ */
+export function continuesAgent(agentId: string, previous: Item | undefined): boolean {
+  return previous?.kind === 'agent' && previous.agentId === agentId;
 }
 
 /**
@@ -201,8 +211,85 @@ export function isPending(
   items: readonly Item[],
   agentId: string,
 ): boolean {
-  if (status !== 'starting' && status !== 'thinking' && status !== 'working') return false;
+  if (!isInFlight(status)) return false;
   return !items.some((item) => item.kind === 'agent' && item.agentId === agentId && item.live);
+}
+
+/**
+ * Whether this agent is inside a turn, which is what bounds {@link liveTailOf}'s tail.
+ *
+ * `responding` is not in here and that is the whole of what keeps one face on screen: while an
+ * agent is streaming prose there is no live block, so the message's own face is the only one,
+ * and the two are never mounted at the same time.
+ */
+export function isInFlight(status: AgentStatus): boolean {
+  return status === 'starting' || status === 'thinking' || status === 'working';
+}
+
+/**
+ * One agent's turn while it is still a turn: its face, and the calls that have not returned.
+ *
+ * `.scratch/live-steps/issues/03`. The transcript used to draw running calls as loose mono lines
+ * in the shared column with nothing on them saying whose they were, and a pending bubble under
+ * all of them. In a team pane that is unreadable the moment two agents run at once: six lines
+ * interleaved in call-start order, attributable to nobody. A block per agent is the only shape
+ * that survives more than one of them, and it is the shape the settled transcript already uses —
+ * a face, a name, and then the thing being done.
+ */
+export interface LiveBlock {
+  readonly agentId: string;
+  /** In flight, in the order they were called. Empty is legal: that is the block with the dots. */
+  readonly items: readonly Item[];
+}
+
+/**
+ * Split the rows into what has settled and what is still happening.
+ *
+ * The tail is the trailing run of loose tool rows belonging to agents whose turn is in flight —
+ * loose rather than unsettled, so a batch stays together: a call that returns while its
+ * neighbours are still running does not jump out of the block and back into the column above it.
+ * It leaves when the whole batch does, which is when {@link rowsOf} folds them.
+ *
+ * `live` is what bounds it, and it has to be a status rather than the items: a lone completed
+ * call never reaches `WORTH_FOLDING`, so it stays a loose row for the rest of the session, and a
+ * tail defined by looseness alone would keep a face and a live block on screen over it forever.
+ *
+ * **Permission rows are never in here.** An unanswered one is the whole of what the reader has
+ * to act on, it carries its own buttons, and the agent holding it is `waiting`, which is not a
+ * turn in flight. It stays a row of its own at the altitude it stopped at.
+ */
+export function liveTailOf(
+  rows: readonly Row[],
+  live: (agentId: string) => boolean,
+): { readonly settled: readonly Row[]; readonly blocks: readonly LiveBlock[] } {
+  let cut = rows.length;
+  while (cut > 0) {
+    const row = rows[cut - 1] as Row;
+    if (row.kind !== 'item' || row.item.kind !== 'tool' || !live(row.item.agentId)) break;
+    cut -= 1;
+  }
+  if (cut === rows.length) return { settled: rows, blocks: [] };
+
+  // First appearance, not roster order: an agent's first call in the tail cannot change, so the
+  // blocks hold still while the reader is looking at them, which roster order would also do and
+  // this does without knowing the roster.
+  const order: string[] = [];
+  const byAgent = new Map<string, Item[]>();
+  for (const row of rows.slice(cut)) {
+    if (row.kind !== 'item' || row.item.kind !== 'tool') continue;
+    const { agentId } = row.item;
+    const held = byAgent.get(agentId);
+    if (held === undefined) {
+      order.push(agentId);
+      byAgent.set(agentId, [row.item]);
+    } else {
+      held.push(row.item);
+    }
+  }
+  return {
+    settled: rows.slice(0, cut),
+    blocks: order.map((agentId) => ({ agentId, items: byAgent.get(agentId) ?? [] })),
+  };
 }
 
 /** What an agent last said, for the rail's preview line. Undefined until it has spoken. */

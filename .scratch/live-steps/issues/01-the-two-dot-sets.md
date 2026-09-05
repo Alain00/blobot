@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: resolved
 
 # Two sets of three dots, forty pixels apart
 
@@ -67,3 +67,24 @@ throws away the half that is needed. It is:
 
 The two-dot-set frame cannot be produced by any scenario in `mock/scenarios/`, and the reason is
 stated on the rule rather than in a component.
+
+## Answer
+
+**The dots stand down; the face stays, and becomes the head of the live block.** Built
+2026-09-05, together with 03, 04 and 05 — see the note below on why 01 could not land alone.
+
+`isPending` keeps its three states and its live-message exclusion, and is now only asked about
+the case where there is nothing else to see: an agent that is `starting` or `thinking` with no
+call open. The moment a call opens, the block's body *is* the calls, and the dots at the end of
+each of those lines are the only in-flight device on screen. One moving thing per running call,
+which is also what makes the count of them legible as concurrency.
+
+The face does not stand down with them, because it was never the duplicate. It is attribution,
+and 03 is what gives it a job.
+
+**Why this could not ship on its own.** The narrow version — hide the pending bubble while a
+call runs — regresses the team pane: two agents running would lose the only thing in the
+transcript saying which of them was doing anything. The other narrow version — keep the face,
+drop the dots — leaves a face and a name with an empty body under it, below the calls it is
+supposed to be about. Both are worse than what they replace. The frontier order this map was
+written in was wrong about that, and the session that took 01 took 03 with it.

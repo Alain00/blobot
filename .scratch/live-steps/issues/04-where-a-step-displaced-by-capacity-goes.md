@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 03
 
 # A step displaced by capacity has nowhere honest to go
@@ -54,3 +54,19 @@ whatever this ticket decides. The author's list conflates the two; keep them apa
 
 The word "capacity" is either gone from the design or has a successor statement attached to it,
 and the rule is stated where the block is built rather than in a component.
+
+## Answer
+
+**No cap. The live list is as long as the batch.** Decided by the author, 2026-09-05: *"I don't
+like the idea of +3 running, it adds more text to the screen"* — which settles it against the
+alternative the ticket held in reserve, on a reason the ticket did not have and should have: the
+overflow line is a fourth figure in a region that already carries the fold's count, and it is
+paying text for a problem the cap invented.
+
+So the word *capacity* is gone from the design. A step leaves the live block for exactly one
+reason — it finished, and the fold above took it — and that exit was already built and already
+argued. The length of the block is how many calls are open, which is a fact worth reading rather
+than a quantity to manage.
+
+`DESIGN.md`'s cap of **two animations in the air** is untouched and is a different cap. It bounds
+how many lines may be *closing* at once, not how many may be *shown*.

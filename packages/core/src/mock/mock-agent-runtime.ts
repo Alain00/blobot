@@ -367,6 +367,18 @@ export class MockAgentRuntime implements AgentRuntime {
           messageId = this.#nextMessageId();
           break;
         }
+        case 'parallel': {
+          // Every call starts before the first one sleeps, because `#runTool` emits its
+          // `started` and its `in_progress` before its first await — which is what a real
+          // batch looks like on the wire — and then they return on their own durations, in
+          // whatever order those put them.
+          const cancelled = await Promise.all(
+            step.tools.map((tool) => this.#runTool(queue, tool, abort.signal)),
+          );
+          if (cancelled.some(Boolean)) return this.#endCancelled(queue, turnId);
+          messageId = this.#nextMessageId();
+          break;
+        }
         case 'message_agent': {
           await this.#runPeerMessage(queue, step, turnId);
           break;

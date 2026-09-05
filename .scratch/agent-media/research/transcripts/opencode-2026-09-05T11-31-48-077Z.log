@@ -1,0 +1,92 @@
+runtime=opencode annotate=false uriOnly=false
+workspace=/tmp/blobot-picture-probe-nsWkqK
+picture server on 127.0.0.1:44289
+picture server http://127.0.0.1:44289/
+initialize ok: {"protocolVersion":1,"agentCapabilities":{"loadSession":true,"mcpCapabilities":{"http":true,"sse":true},"promptCapabilities":{"embeddedContext":true,"image":true},"sessionCapabilities":{"close":{},"fork":{},"list":{},"resume":{}}},"authMethods":[{"description":"Run `opencode auth login` in the terminal","name":"Login with opencode","id":"opencode-login"}],"agentInfo":{"name":"OpenCode","version":"
+mcp <- initialize
+mcp <- notifications/initialized
+mcp <- tools/list
+session ses_f8ea9283affekVf5zc0AnSBIqs
+update available_commands_update
+update agent_thought_chunk [text(The user wants me to call two tools)]
+update agent_thought_chunk [text(: show_text and show)]
+update agent_thought_chunk [text(_picture, both take no arguments. I)]
+update agent_thought_chunk [text( should call)]
+update agent_thought_chunk [text( them both)]
+update agent_thought_chunk [text( and)]
+update agent_thought_chunk [text( then reply)]
+update agent_thought_chunk [text( with "DONE".)]
+update agent_thought_chunk [text( I)]
+update agent_thought_chunk [text('ll call them)]
+update agent_thought_chunk [text( in parallel since)]
+update agent_thought_chunk [text( they're independent.)]
+update tool_call
+update tool_call_update
+mcp <- tools/call
+TOOL CALLED: show_text
+update tool_call_update [text(the codeword is AUBERGINE-7)]
+update tool_call
+update tool_call_update
+mcp <- tools/call
+TOOL CALLED: show_picture
+update tool_call_update [text(), image EXACT-MATCH]
+mcp <- notifications/cancelled
+mcp <- notifications/cancelled
+update agent_thought_chunk [text(The user has)]
+update agent_thought_chunk [text( shown)]
+update agent_thought_chunk [text( me a)]
+update agent_thought_chunk [text( picture,)]
+update agent_thought_chunk [text( and)]
+update agent_thought_chunk [text( the)]
+update agent_thought_chunk [text( system says)]
+update agent_thought_chunk [text( the)]
+update agent_thought_chunk [text( model doesn't support image)]
+update agent_thought_chunk [text( input. I need to inform the user)]
+update agent_thought_chunk [text( about)]
+update agent_thought_chunk [text( this limitation)]
+update agent_thought_chunk [text(. However)]
+update agent_thought_chunk [text(, I also)]
+update agent_thought_chunk [text( need to check)]
+update agent_thought_chunk [text( if there)]
+update agent_thought_chunk [text( were)]
+update agent_thought_chunk [text( any other instructions. The)]
+update agent_thought_chunk [text( user originally)]
+update agent_thought_chunk [text( asked to)]
+update agent_thought_chunk [text( call show_text and show_picture, then)]
+update agent_thought_chunk [text( reply with DONE. I've)]
+update agent_thought_chunk [text( done)]
+update agent_thought_chunk [text( that. The)]
+update agent_thought_chunk [text( picture)]
+update agent_thought_chunk [text( showed)]
+update agent_thought_chunk [text( an error message)]
+update agent_thought_chunk [text( about)]
+update agent_thought_chunk [text( not)]
+update agent_thought_chunk [text( supporting image input)]
+update agent_thought_chunk [text(. I should inform the)]
+update agent_thought_chunk [text( user about that. But the)]
+update agent_thought_chunk [text( instruction was)]
+update agent_thought_chunk [text( to not describe)]
+update agent_thought_chunk [text( what)]
+update agent_thought_chunk [text( they return. However)]
+update agent_thought_chunk [text(, the system)]
+update agent_thought_chunk [text( message)]
+update agent_thought_chunk [text( says to)]
+update agent_thought_chunk [text( inform the user when)]
+update agent_thought_chunk [text( there)]
+update agent_thought_chunk [text('s)]
+update agent_thought_chunk [text( an error. So)]
+update agent_thought_chunk [text( I should)]
+update agent_thought_chunk [text( mention)]
+update agent_thought_chunk [text( the error. Let)]
+update agent_thought_chunk [text( me)]
+update agent_thought_chunk [text( respond accordingly)]
+update agent_thought_chunk [text(.)]
+update agent_message_chunk [text(The)]
+update agent_message_chunk [text( image tool)]
+update agent_message_chunk [text( returned)]
+update agent_message_chunk [text( an error: this)]
+update agent_message_chunk [text( model does not support image input.)]
+update usage_update
+prompt result {"stopReason":"end_turn","usage":{"inputTokens":148,"outputTokens":143,"totalTokens":56931,"cachedReadTokens":56640},"_meta":{}}
+wire  -> /home/alain/Projects/personal/blobot/.scratch/agent-media/research/transcripts/opencode-2026-09-05T11-31-48-077Z.jsonl
+notes -> /home/alain/Projects/personal/blobot/.scratch/agent-media/research/transcripts/opencode-2026-09-05T11-31-48-077Z.log

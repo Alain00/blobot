@@ -80,9 +80,32 @@ the rows, `ToolLine`), `styles.css` (`.tool.now`, `.inflight`, `.dots`), and
 arrive and shut transitions exist. The team pane already draws one pending bubble per running
 agent. The fold already counts and names what it swallowed.
 
+**Reached, 2026-09-05.** All five tickets are resolved, the frontier is empty, and the code is
+built. Do not run `/wayfinder` on this map: there is no next ticket. Decisions are binding; if one
+is wrong, reopen its ticket and say so on it rather than quietly contradicting it. What was
+decided *while* building, and what is left over, is on `build.md`.
+
 ## Decisions so far
 
-Nothing yet. The frontier is 01 and 02.
+- **01 — the dots stand down, the face stays.** `isPending` is now only asked about the case
+  where there is nothing else to see: `starting` or `thinking` with no call open. Under a running
+  call the line's own three dots are the only in-flight device. The face was never the duplicate.
+  *And 01 could not land alone* — both narrow versions of it are worse than what they replace,
+  which is why this session took 03 with it.
+- **02 — `.parallel([...])` and `tool(...)`.** The player forks with `Promise.all`, every call is
+  open before any of them sleeps, and `works-through-a-list` carries two batches whose durations
+  disagree with their order on purpose. Completion order is not call order, and no serial
+  scenario could ever have said so.
+- **03 — the live tail, one block per agent.** `liveTailOf` splits the rows; the tail is bounded
+  by `isInFlight` rather than by whether a call returned, so a batch stays together and a lone
+  finished call does not hold a face over it forever. The swallow is hoisted, because it diffs a
+  list the tail had emptied. Verified in the team pane: Bob's running call under Bob's own face.
+- **04 — no cap, and no overflow line.** The author's, and it settles the hole: a step leaves the
+  block for exactly one reason, it finished. `DESIGN.md`'s two-in-the-air is a cap on motion and
+  is untouched.
+- **05 — one face, by construction.** `responding` is out of `isInFlight`, so a block and a live
+  message are never mounted together. The real two-faces case was a *settled* caption above the
+  block, and `continuesAgent` groups the first block under it.
 
 ## Fog
 

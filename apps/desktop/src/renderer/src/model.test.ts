@@ -7,7 +7,9 @@ import {
   continuesSpeaker,
   failuresIn,
   initialState,
+  continuesAgent,
   isPending,
+  liveTailOf,
   lastLineOf,
   itemsFor,
   messagesIn,
@@ -408,6 +410,103 @@ describe('the pending indicator', () => {
     for (const status of ['idle', 'responding', 'waiting', 'failed'] as const) {
       expect(isPending(status, [], 'alice')).toBe(false);
     }
+  });
+});
+
+describe('the live tail', () => {
+  const call = (
+    id: string,
+    agentId: string,
+    status: 'running' | 'completed',
+  ): Item => ({
+    kind: 'tool',
+    id,
+    at: 1,
+    agentId,
+    title: id,
+    toolKind: 'read',
+    status,
+  });
+  const said: Item = { kind: 'agent', id: 's', at: 1, agentId: 'alice', text: 'Reading.', live: false };
+  const inFlight = (): boolean => true;
+  const idle = (): boolean => false;
+
+  it('takes the trailing calls out of the settled rows and attributes them', () => {
+    const rows = rowsOf([said, call('t1', 'alice', 'running'), call('t2', 'alice', 'running')]);
+    const { settled, blocks } = liveTailOf(rows, inFlight);
+    expect(settled).toHaveLength(1);
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]?.agentId).toBe('alice');
+    expect(blocks[0]?.items.map((item) => item.id)).toEqual(['t1', 't2']);
+  });
+
+  /**
+   * The reason the tail is bounded by a status and not by whether a call has returned: a batch
+   * whose first member finishes must not have that member jump out of the block and back into
+   * the column above it. They leave together, when the fold takes them.
+   */
+  it('keeps a finished call in the block while its batch is still running', () => {
+    const rows = rowsOf([
+      said,
+      call('t1', 'alice', 'completed'),
+      call('t2', 'alice', 'running'),
+    ]);
+    const { blocks } = liveTailOf(rows, inFlight);
+    expect(blocks[0]?.items.map((item) => item.id)).toEqual(['t1', 't2']);
+  });
+
+  /**
+   * And the reason it has to be bounded at all. One completed call never reaches the fold's
+   * threshold, so it is a loose row for the rest of the session; a tail defined by looseness
+   * alone would hold a face and a live block over it forever.
+   */
+  it('is empty once the turn is over', () => {
+    const rows = rowsOf([said, call('t1', 'alice', 'completed')]);
+    const { settled, blocks } = liveTailOf(rows, idle);
+    expect(blocks).toHaveLength(0);
+    expect(settled).toEqual(rows);
+  });
+
+  /** The whole point of the block: two agents running at once are two blocks, not one column. */
+  it('splits a tail between the agents in it', () => {
+    const rows = rowsOf([
+      said,
+      call('a1', 'alice', 'running'),
+      call('b1', 'bob', 'running'),
+      call('a2', 'alice', 'running'),
+    ]);
+    const { blocks } = liveTailOf(rows, inFlight);
+    expect(blocks.map((block) => block.agentId)).toEqual(['alice', 'bob']);
+    expect(blocks[0]?.items.map((item) => item.id)).toEqual(['a1', 'a2']);
+    expect(blocks[1]?.items.map((item) => item.id)).toEqual(['b1']);
+  });
+
+  /**
+   * An unanswered permission is the whole of what the reader has to act on, it carries its own
+   * buttons, and the agent holding it is `waiting` rather than mid-turn. It stays a row.
+   */
+  it('never takes a permission row', () => {
+    const asking: Item = {
+      kind: 'permission',
+      id: 'p',
+      at: 1,
+      agentId: 'alice',
+      toolCallId: 't1',
+      title: 'rm -rf dist',
+      canAllow: true,
+      canAllowAlways: true,
+    };
+    const rows = rowsOf([said, asking]);
+    const { settled, blocks } = liveTailOf(rows, inFlight);
+    expect(blocks).toHaveLength(0);
+    expect(settled).toEqual(rows);
+  });
+
+  /** A caption with its own calls under it is the face said twice, one sentence apart. */
+  it('groups the block under a caption the same agent just wrote', () => {
+    expect(continuesAgent('alice', said)).toBe(true);
+    expect(continuesAgent('bob', said)).toBe(false);
+    expect(continuesAgent('alice', undefined)).toBe(false);
   });
 });
 

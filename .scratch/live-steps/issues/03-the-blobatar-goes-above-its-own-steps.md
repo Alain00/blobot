@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 01, 02
 
 # The blobatar goes above its own live steps
@@ -69,3 +69,34 @@ so the live block becomes the same shape as everything under it rather than a se
 
 Two agents running concurrently in the team pane produce two blocks, each with its own face, and
 a screenshot of that frame is on this ticket.
+
+## Answer
+
+**Adopted, and for the reason the ticket gave rather than the one that raised it.** Built
+2026-09-05 as `liveTailOf` in `model.ts` and `Live` in `Conversation.tsx`.
+
+The transcript splits into `settled` and a **live tail**: the trailing run of loose tool rows
+belonging to agents whose turn is in flight, grouped into one block per agent in first-appearance
+order. Everything above it is handed to `Rows` exactly as before.
+
+Three things the ticket did not settle, decided while building:
+
+- **The tail is bounded by a status, not by whether a call has returned.** A batch whose first
+  member finishes must not have that member jump out of the block and back into the column above
+  it; and a lone completed call never reaches `WORTH_FOLDING`, so a tail defined by looseness
+  alone would hold a face over it for the rest of the session. `isInFlight` — `starting`,
+  `thinking`, `working`, and deliberately not `responding` — is what closes it.
+- **The swallow had to be hoisted.** `useSwallowed` diffs a row that was loose against an item
+  that is folded, and the tail takes the loose ones out of what `Rows` sees. Left where it was it
+  would have been diffing a list the tail had already emptied, and the fold would silently have
+  stopped being seen to take anything. It is measured over the whole row list in `Conversation`
+  now and passed down.
+- **Nothing travels.** `shut` is still a height collapse in flow. A finished step collapses where
+  it stands and the fold's count goes up; nothing crosses the face, which is the scar `DESIGN.md`
+  already carries from the hour that animation was out of flow.
+
+**Verified in the team pane**, `--demo` at 8s: Bob's running `read src/auth.ts` is drawn under
+Bob's own cyan face while Alice's turn sits above it. Before this it was an anonymous mono line
+in the shared column, and with two agents running it was an unreadable interleave. The
+two-blocks-at-once case is covered by `liveTailOf`'s test rather than by a screenshot, because no
+demo script yet puts two agents in flight in the same frame — a leftover, on `build.md`.

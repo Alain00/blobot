@@ -46,6 +46,13 @@ export type ScenarioStep =
   | { readonly kind: 'say'; readonly text: string; readonly overMs?: number }
   | { readonly kind: 'wait'; readonly ms: number }
   | { readonly kind: 'tool'; readonly tool: ToolStep }
+  /**
+   * One batch of calls, in flight at the same time.
+   *
+   * A separate step rather than an option on `tool` because the player has to fork here: a
+   * scenario is a `for…await` and everything else in this union is one thing after another.
+   */
+  | { readonly kind: 'parallel'; readonly tools: readonly ToolStep[] }
   | {
       readonly kind: 'message_agent';
       readonly to: string;
@@ -128,16 +135,22 @@ export class Scenario {
   }
 
   callTool(title: string, kind: ToolKind, options: CallToolOptions = {}): Scenario {
-    const tool: ToolStep = {
-      title,
-      kind,
-      durationMs: options.durationMs ?? 400,
-      outcome: options.outcome ?? { status: 'completed', exit: 0 },
-      ...(options.asks === undefined ? {} : { asks: options.asks }),
-      ...(options.rawInput === undefined ? {} : { rawInput: options.rawInput }),
-      ...(options.diff === undefined ? {} : { diff: options.diff }),
-    };
-    return this.#with({ kind: 'tool', tool });
+    return this.#with({ kind: 'tool', tool: tool(title, kind, options) });
+  }
+
+  /**
+   * A batch: every call starts together and each returns on its own `durationMs`.
+   *
+   * The player is a `for…await` over the steps, so before this existed no scenario could put
+   * two calls in flight and the demo was structurally incapable of the one shape a real turn
+   * has that a queue does not. `.scratch/live-steps/issues/02`.
+   *
+   * **Give them different durations.** The case worth checking is calls finishing *out of
+   * order*: anything that quietly assumes completion order is call order passes every serial
+   * scenario in this file and fails on the first real batch.
+   */
+  parallel(tools: readonly ToolStep[]): Scenario {
+    return this.#with({ kind: 'parallel', tools });
   }
 
   /**
@@ -228,6 +241,24 @@ export class Scenario {
   end(stopReason: StopReason = 'end_turn'): Scenario {
     return this.#with({ kind: 'end', stopReason });
   }
+}
+
+/**
+ * One call, as data rather than as a step — what `parallel` takes a list of.
+ *
+ * `callTool` is this plus the appending, and is still the way to write a lone call: a batch of
+ * one is a batch a reader has to notice is a batch.
+ */
+export function tool(title: string, kind: ToolKind, options: CallToolOptions = {}): ToolStep {
+  return {
+    title,
+    kind,
+    durationMs: options.durationMs ?? 400,
+    outcome: options.outcome ?? { status: 'completed', exit: 0 },
+    ...(options.asks === undefined ? {} : { asks: options.asks }),
+    ...(options.rawInput === undefined ? {} : { rawInput: options.rawInput }),
+    ...(options.diff === undefined ? {} : { diff: options.diff }),
+  };
 }
 
 export function scenario(name: string): Scenario {

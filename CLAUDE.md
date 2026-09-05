@@ -646,6 +646,31 @@ problem, because four Handbooks do not fold into one the way four statuses fold 
   see this**, because `#wake` passes it no `HandoffWatch` and its shape assumes an operator
   prompt with names in it. That is a ticket, not a fix.
 
+- **A turn in flight is one block per agent, with its face on it.** `.scratch/live-steps/`, five
+  tickets, all resolved and built. Two sets of three dots used to sit forty pixels apart — the
+  running call's, at the end of its line, and the pending bubble's underneath it — the same glyph
+  saying the same thing twice, which is the duplicate this column had already refused twice in
+  `DESIGN.md`. And the calls were loose mono lines in the shared column with nothing on them
+  saying whose they were, so two agents running at once in a team pane was an interleave nobody
+  could read. `liveTailOf` splits the transcript into what has settled and a **live tail**: the
+  trailing loose calls of every agent mid-turn, one attributed block each, face over its own
+  steps, in the order the settled transcript already uses. The dots survive only where they are
+  the only thing to see, before the first call opens. **The list is not capped** — a call pushed
+  out of a full window is still running and cannot enter a fold whose line counts what finished,
+  so a cap buys a shorter block by claiming a call ended when it did not, and the author refused
+  the `+3 more running` that would have made it honest. Bounded by a **status** rather than by
+  looseness (`isInFlight`, which deliberately excludes `responding`), so a batch stays together
+  when its first member returns, a lone finished call does not hold a face over it forever, and a
+  block and a streaming message are never mounted at once — which is how there is only ever one
+  face. The one that really did draw twice was a *settled* caption above the block, one item short
+  of the fold's threshold, and `continuesAgent` groups the block under it. And the mock can
+  finally produce any of this: `MockAgentRuntime` played `for (const step of scenario.steps)` and
+  awaited each one, so no scenario could ever put two calls in flight and every review of the live
+  transcript had been conducted against a queue. `.parallel([tool(...), …])` forks with
+  `Promise.all`; `works-through-a-list` carries two batches whose durations **disagree with their
+  order**, because the case that matters is calls finishing out of order and nothing serial can
+  spring that trap.
+
 Next: **the dictation done-when by hand** — a Spanish sentence with identifiers into a real
 agent, locally and through one provider (the `whisper-cli` workflow ran and its hashes are
 pinned; the engine's release URL is private for now, on `build.md`). Then **brief a real
@@ -655,6 +680,42 @@ whether ticket 04's empty-state block actually opens the conversation, and do it
 well, since it is the runtime that confabulated. Then surfacing whether an agent resumed or
 started fresh, and a ticket for fx's diagnostics in the message voice. Each effort's `build.md`
 has the order and the reasons.
+
+**Charted but not built:** `.scratch/agent-media/` — **an agent showing the user a picture**, ten
+tickets, two resolved, frontier 03 and 04. Raised 2026-09-05 and narrowed by the author to one
+arrow and one payload: *a coding agent that sends me back screenshots of how my app looks*. It
+starts from a defect rather than a want. `adapters/acp/session-updates.ts:76` takes the text of a
+content block and drops the update when there is none, so an image from a runtime becomes **no
+event at all** — which is happening today to any operator with a browser MCP server installed,
+since ADR-0003 loads their servers on all five runtimes. ADR-0004 does not decide this: every
+reason it gives is about what blobot puts *into* an agent's context from outside its
+AgentWorkspace, and none survives the reversal. Agent to agent is out and ticket 02 records why.
+The two things that make it more than a rendering change are that a picture is a **claim about the
+world** with no defeaters, where text has always carried its own, and that the agent has to be
+allowed to take one at all — which found a live defect on the way in: `npx` is on `TRUSTING_BASH`,
+so `npx playwright screenshot` already runs unprompted at `trusting` and `unattended`, a prefix
+rule hiding an arbitrary verb, which is what `gh api` was removed for. Ticket 02 is resolved:
+ADR-0004's three reasons are inapplicable to the reversal one at a time, so **do not cite it
+against this map**, and the risk of this arrow is **credibility, not confidentiality** — an
+AgentWorkspace isolates agents from each other and never an agent from the user who owns the
+repository. Agent to agent is deferred rather than refused, blocked on provenance, because a peer
+has no frame to read one off. The protocol half of ticket 01 is answered at desk
+(`research/01-the-protocol-half.md`): both shapes are legal, forwarding an MCP tool's image output
+untransformed is what ACP's content design is *for*, there is **no client capability for receiving
+content** so the drop is ungated on all five, and `ImageContent.annotations` already carries
+`audience` and `lastModified`, which is why ticket 07 must not design a frame before the live half
+measures whether anyone sets them. **The live half is now run** against four of the five
+(`cursor-agent` is not installed here), one turn each, harness in `research/probe/` and raw wire in
+`research/transcripts/`: **four runtimes, four different shapes, and no two put a picture in the
+same place.** Claude sends it canonically and **three times over**; Codex sends it **only** in
+`rawOutput.result.content`, MCP's envelope rather than ACP's; OpenCode sends it canonically plus a
+`data:` URL of its own; **fx stringifies the whole result into a text block and truncates it at 200
+characters mid-base64, saying nothing.** So `adapters/acp/` does not cover this, the first measured
+thing that it does not. `annotations` are stripped, so `audience` and `lastModified` are
+unavailable and every fact on a frame is one blobot measured or one an agent claimed. And on
+OpenCode the picture arrived byte-exact while the **model** refused it, which also means
+`AgentRuntime.accepts` may be lying there — a shipped-behaviour defect against ADR-0004, on the
+map's *Found on the way* list rather than in it.
 
 The mock is not a stepping stone to be discarded: ticket 08 makes it a **shipped demo mode** that
 reproduces every observed trap on purpose — ragged deltas, a cancelled tool reporting

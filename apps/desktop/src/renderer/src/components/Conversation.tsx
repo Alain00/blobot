@@ -4,15 +4,19 @@ import type { AgentStatus, ToolKind } from '@blobot/core/domain';
 import type { PermissionChoice, UiAgent, UiPermissionOutcome } from '../../../shared/api.js';
 import {
   compactionLine,
+  continuesAgent,
   continuesSpeaker,
   failuresIn,
   filesChangedIn,
+  isInFlight,
   isPending,
+  liveTailOf,
   messagesIn,
   notesIn,
   rowsOf,
   toolsIn,
   type Item,
+  type LiveBlock,
   type Pane,
   type Row,
 } from '../model.js';
@@ -81,6 +85,34 @@ export function Conversation({
   const disarm = useLatest(onDisarmRoutine);
   const removeEntry = useLatest(onRemoveHandbookEntry);
   const rows = rowsOf(items);
+  /*
+   * The swallow is measured over the *whole* row list and always has been, and now has to be
+   * hoisted to say so: it diffs a row that was loose against an item that is folded, and the
+   * live tail below takes the loose ones out of what `Rows` is handed. Left inside `Rows` it
+   * would be diffing a list the tail had already emptied, and no fold would ever be seen
+   * taking anything.
+   */
+  const flying = useSwallowed(rows);
+  const inPane = agents.filter((agent) => pane.kind === 'team' || pane.agentId === agent.id);
+  const { settled, blocks } = liveTailOf(rows, (agentId) =>
+    isInFlight(statuses[agentId] ?? 'idle'),
+  );
+  /*
+   * The blocks with steps under them, and then the agents that are in a turn with nothing to
+   * show for it yet — `starting` and `thinking`, where the dots are the only sign the message
+   * landed. One shape for both, so the face does not unmount and remount the instant the first
+   * call opens. Not while the team is starting: on a cold start nobody has said anything to
+   * anybody, and a face under an empty transcript claims an answer is on its way.
+   */
+  const live: LiveBlock[] = opening
+    ? []
+    : [
+        ...blocks.filter((block) => inPane.some((agent) => agent.id === block.agentId)),
+        ...inPane
+          .filter((agent) => !blocks.some((block) => block.agentId === agent.id))
+          .filter((agent) => isPending(statuses[agent.id] ?? 'idle', items, agent.id))
+          .map((agent) => ({ agentId: agent.id, items: [] })),
+      ];
   const earlier = useLoadEarlier(stream, onLoadEarlier);
   // Where the pending faces look, and null whenever the user is not in the composer.
   const composer = useComposerFocus();
@@ -146,59 +178,117 @@ export function Conversation({
               </button>
             </div>
           )}
-          <Rows rows={rows} cast={cast} />
+          <Rows rows={settled} cast={cast} flying={flying} />
 
-
-          {/* Whoever is about to speak, under the last thing said. In the team pane that can be
-              two agents at once, which is the claim the demo makes. */}
-          {/* Not while the team is starting. `starting` is a pending status because an agent
-              whose runtime is still coming up has usually just been sent something and the dots
-              are the only sign of it — but on a cold start nobody has said anything to anybody,
-              and three dots under an empty transcript claim an answer is on its way. The rail
-              and the header carry the state there. */}
-          {(opening ? [] : agents)
-            .filter((agent) => pane.kind === 'team' || pane.agentId === agent.id)
-            .filter((agent) => isPending(statuses[agent.id] ?? 'idle', items, agent.id))
-            .map((agent) => (
-              <div className="msg pending" key={agent.id}>
-                {/* The one face in the transcript that is drawn live, and the only one that may
-                    be. `animated` is off in here because a settled message must not wear a pose
-                    or move — both would be a claim about *now* on a record of *then* — and
-                    because a transcript grows all day and this switches a blobatar to a dozen
-                    SVG nodes. Neither applies to this block: it is not a record of anything, it
-                    exists only while a turn is in flight, and there are at most as many of them
-                    as there are agents on the team.
-
-                    So it can look at the composer while the user is in it. `isPending` excludes
-                    `waiting` and `failed`, which is why this never argues with the rule that
-                    gives `waiting` the pointer: the two faces are never the same face. */}
-                <Blob
-                  name={agent.name}
-                  size={28}
-                  status={statuses[agent.id] ?? 'idle'}
-                  hue={agent.hue}
-                  shape={agent.shape}
-                  animated
-                  lookAt={composer}
-                />
-                <div className="body">
-                  <div className="hdr">
-                    <span className="nm">{agent.name}</span>
-                  </div>
-                  {/* Three dots rather than the status word: the word is already on this agent
-                      in the header and the rail, and what is missing here is the reassurance
-                      that the message landed, which is a shape, not a reading task. */}
-                  <div className="dots" aria-label={`${agent.name} is ${statuses[agent.id] ?? 'idle'}`}>
-                    <i />
-                    <i />
-                    <i />
-                  </div>
-                </div>
-              </div>
-            ))}
+          {/* What has not finished becoming a record: one block per agent that is mid-turn, its
+              own face over its own calls. Under everything settled, because that is the
+              direction this column reads and the direction a finished step travels when the
+              fold takes it. */}
+          {live.map((block, index) => (
+            <Live
+              key={block.agentId}
+              block={block}
+              agent={byId.get(block.agentId)}
+              composer={composer}
+              status={statuses[block.agentId] ?? 'idle'}
+              grouped={index === 0 && continuesAgent(block.agentId, lastItemOf(settled.at(-1)))}
+            />
+          ))}
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * One agent's turn while it is still one: its face, its name, and the calls in flight under it.
+ *
+ * `.scratch/live-steps/issues/01` and `03`. Two things were wrong with what this replaces. The
+ * running call drew three dots at the end of its line and the pending bubble drew three more
+ * forty pixels below it — the same glyph, the same keyframes, saying the same thing twice, which
+ * is the duplicate `DESIGN.md` has already ruled against twice in this column. And the calls
+ * themselves were loose lines in the shared column with nothing on them saying whose they were,
+ * so two agents running at once in a team pane was an unreadable interleave.
+ *
+ * The face answers both. It carries the attribution the lines never had, and it takes the dots
+ * back for the one case where they are the only thing there is to see — `starting` and
+ * `thinking`, before the first call opens. Under a running call the dots are gone from here,
+ * because the line's own are already saying it.
+ *
+ * **The list is not capped.** A call pushed out of a full window would still be running, and it
+ * could not go into the fold above, whose whole line is a count of what *finished* — so a cap
+ * buys a shorter block by making the interface claim a call ended when it did not. A batch is
+ * two to five calls; the length of this list is how many are open, which is a fact worth being
+ * able to read rather than a quantity to manage. `.scratch/live-steps/issues/04`.
+ */
+function Live({
+  block,
+  agent,
+  composer,
+  status,
+  grouped,
+}: {
+  block: LiveBlock;
+  agent: UiAgent | undefined;
+  composer: Element | null;
+  status: AgentStatus;
+  /**
+   * The row above is this same agent still talking, so the face and the name are already on
+   * screen a line up. The caption an agent writes before a call is the ordinary case — it is
+   * settled prose with running calls under it, which is below the fold's threshold and stays a
+   * loose row — and drawn ungrouped it put the same face twice in a row with one sentence
+   * between them. `continuesSpeaker`'s rule, applied to a block instead of to a message.
+   */
+  grouped: boolean;
+}): React.JSX.Element {
+  return (
+    <div className={grouped ? 'msg live grouped' : 'msg live'}>
+      {/* The one face in the transcript that is drawn live, and the only one that may be.
+          `animated` is off on a settled message because a record of *then* must not wear a pose
+          or move, and because a transcript grows all day and this switches a blobatar to a dozen
+          SVG nodes. Neither applies here: this is not a record of anything, it exists only while
+          a turn is in flight, and there are at most as many of them as there are agents.
+
+          So it can look at the composer while the user is in it. The block never coexists with a
+          live message — `isInFlight` leaves `responding` out — so the two faces an agent could
+          wear are never on screen together. */}
+      {grouped ? (
+        <div className="gutter" />
+      ) : (
+        <Blob
+          name={agent?.name ?? block.agentId}
+          size={28}
+          status={status}
+          hue={agent?.hue}
+          shape={agent?.shape}
+          animated
+          lookAt={composer}
+        />
+      )}
+      <div className="body">
+        {!grouped && (
+          <div className="hdr">
+            <span className="nm">{agent?.name ?? block.agentId}</span>
+          </div>
+        )}
+        {block.items.length === 0 ? (
+          <div
+            className="dots"
+            aria-label={`${agent?.name ?? block.agentId} is ${status}`}
+          >
+            <i />
+            <i />
+            <i />
+          </div>
+        ) : (
+          <div className="steps">
+            {block.items.map((item) => (
+              <ToolLine key={item.id} item={item as Extract<Item, { kind: 'tool' }>} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -222,8 +312,16 @@ interface RowCast {
 }
 
 /** The transcript itself: every row of it, with the time rules between them. */
-function Rows({ rows, cast }: { rows: readonly Row[]; cast: RowCast }): React.JSX.Element {
-  const flying = useSwallowed(rows);
+function Rows({
+  rows,
+  cast,
+  flying,
+}: {
+  rows: readonly Row[];
+  cast: RowCast;
+  /** Measured over the whole transcript by the parent, because the live tail is not in `rows`. */
+  flying: readonly Flight[];
+}): React.JSX.Element {
   return (
     <>
       {rows.map((row, index) => {

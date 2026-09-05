@@ -1,4 +1,4 @@
-import { Scenario, scenario } from '../scenario.js';
+import { Scenario, scenario, tool } from '../scenario.js';
 
 /**
  * The checked-in scenarios. These are what the tests assert against and what demo mode
@@ -156,21 +156,26 @@ export const asksBeforeDeleting: Scenario = scenario('asks-before-deleting')
 export const worksThroughAList: Scenario = scenario('works-through-a-list')
   .think('Fifteen files, and they only make sense in order.')
   .say('Reading the scene layer first, so I know what is already there.')
-  .callTool('ls src/scene', 'read', {
-    rawInput: { path: 'src/scene' },
-    durationMs: 120,
-    outcome: { status: 'completed', output: 'Desk.tsx  Lights.tsx  objects.tsx\n', exit: 0 },
-  })
-  .callTool('read src/scene/Desk.tsx', 'read', {
-    rawInput: { path: 'src/scene/Desk.tsx' },
-    durationMs: 180,
-    outcome: { status: 'completed', output: '… 84 lines\n', exit: 0 },
-  })
-  .callTool('read src/scene/objects.tsx', 'read', {
-    rawInput: { path: 'src/scene/objects.tsx' },
-    durationMs: 210,
-    outcome: { status: 'completed', output: '… 140 lines\n', exit: 0 },
-  })
+  // A batch, and the durations disagree with the order on purpose: started `ls`, `Desk`,
+  // `objects`, they return `Desk`, `objects`, `ls`. Completion order is not call order, and
+  // anything that assumes it is passes every serial scenario in this file.
+  .parallel([
+    tool('ls src/scene', 'read', {
+      rawInput: { path: 'src/scene' },
+      durationMs: 380,
+      outcome: { status: 'completed', output: 'Desk.tsx  Lights.tsx  objects.tsx\n', exit: 0 },
+    }),
+    tool('read src/scene/Desk.tsx', 'read', {
+      rawInput: { path: 'src/scene/Desk.tsx' },
+      durationMs: 140,
+      outcome: { status: 'completed', output: '… 84 lines\n', exit: 0 },
+    }),
+    tool('read src/scene/objects.tsx', 'read', {
+      rawInput: { path: 'src/scene/objects.tsx' },
+      durationMs: 260,
+      outcome: { status: 'completed', output: '… 140 lines\n', exit: 0 },
+    }),
+  ])
   .say('Nothing owns selection yet. Checking whether anything already reaches for one.')
   .callTool('grep -rn "useSelection" src/', 'execute', {
     rawInput: { command: 'grep -rn "useSelection" src/' },
@@ -206,25 +211,29 @@ export const worksThroughAList: Scenario = scenario('works-through-a-list')
     },
     outcome: { status: 'completed', output: 'ok\n', exit: 0 },
   })
-  .say('Now the interaction wrapper that every desk object shares.')
-  .callTool('src/scene/Interactive.tsx', 'edit', {
-    rawInput: { path: 'src/scene/Interactive.tsx' },
-    durationMs: 260,
-    diff: {
-      oldText: '',
-      newText: 'export function Interactive({ id, children }: Props) {\n  const set = useSelection();\n  return (\n    <group onPointerOver={() => set.hover(id)} onPointerOut={() => set.hover(null)}>\n      {children}\n    </group>\n  );\n}\n',
-    },
-    outcome: { status: 'completed', output: 'ok\n', exit: 0 },
-  })
-  .callTool('src/scene/HoverLabel.tsx', 'edit', {
-    rawInput: { path: 'src/scene/HoverLabel.tsx' },
-    durationMs: 300,
-    diff: {
-      oldText: '',
-      newText: 'export function HoverLabel() {\n  const id = useHovered();\n  if (!id) return null;\n  return <Html center>{labels[id]}</Html>;\n}\n',
-    },
-    outcome: { status: 'completed', output: 'ok\n', exit: 0 },
-  })
+  .say('Now the two wrappers. They do not touch each other, so they go together.')
+  // The second batch, and a batch of writes rather than of reads: two new files that share no
+  // symbol. A turn's parallelism is not a reading-only phenomenon.
+  .parallel([
+    tool('src/scene/Interactive.tsx', 'edit', {
+      rawInput: { path: 'src/scene/Interactive.tsx' },
+      durationMs: 300,
+      diff: {
+        oldText: '',
+        newText: 'export function Interactive({ id, children }: Props) {\n  const set = useSelection();\n  return (\n    <group onPointerOver={() => set.hover(id)} onPointerOut={() => set.hover(null)}>\n      {children}\n    </group>\n  );\n}\n',
+      },
+      outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+    }),
+    tool('src/scene/HoverLabel.tsx', 'edit', {
+      rawInput: { path: 'src/scene/HoverLabel.tsx' },
+      durationMs: 180,
+      diff: {
+        oldText: '',
+        newText: 'export function HoverLabel() {\n  const id = useHovered();\n  if (!id) return null;\n  return <Html center>{labels[id]}</Html>;\n}\n',
+      },
+      outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+    }),
+  ])
   .say('Now the objects themselves. The camera is top-down, so I am shaping these to read by silhouette.')
   .callTool('src/scene/objects.tsx', 'edit', {
     rawInput: { path: 'src/scene/objects.tsx' },

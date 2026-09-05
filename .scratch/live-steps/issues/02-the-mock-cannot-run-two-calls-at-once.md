@@ -1,5 +1,5 @@
 Type: task
-Status: open
+Status: resolved
 
 # The mock cannot run two calls at once, so the demo cannot show concurrency
 
@@ -62,3 +62,29 @@ completion order is call order would pass every existing test.
 A checked-in scenario runs at least three calls concurrently, they finish out of order, and it is
 what `many-steps` (or a sibling) plays, so the layout in tickets 03 to 05 is reviewed against a
 real interleaving rather than against a queue.
+
+## Answer
+
+**`.parallel([...])`, taking a list of `ToolStep`s**, with `tool(title, kind, options)` exported
+beside `scenario()` as the way to build one. The second candidate won for the reason the ticket
+gave: it matches the wire shape, and a batch reads as a batch in the scenario file rather than as
+a start and a join a reader has to pair up.
+
+The player forks with `Promise.all` over `#runTool`. Every call emits its `tool_call_started` and
+its `in_progress` before its first await, so all of them are open before any of them sleeps —
+which is what a real batch looks like on the wire — and then each returns on its own
+`durationMs`. Cancellation is unchanged: any member reporting a cancel ends the turn.
+
+`works-through-a-list` carries two batches now. The opening three reads have durations that
+**disagree with their order** (380, 140, 260), so they return `Desk`, `objects`, `ls` — the trap
+the ticket named, and one no serial scenario in this repo could ever have sprung. The second is
+two writes rather than reads, because a turn's parallelism is not a reading-only phenomenon.
+
+`packages/core/src/mock/parallel.test.ts` asserts all three properties: every call open before
+the first terminal update, completion order not equal to call order, and one member failing
+without ending the turn.
+
+**What it found immediately.** With three calls open, three `.tool.now` arrive animations fire in
+the same frame. That is one visual event — the batch appeared — rather than the three competing
+ones `DESIGN.md` caps the *swallow* at two for, so it is left alone. Worth a second look on a
+slower machine.

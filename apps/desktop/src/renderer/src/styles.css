@@ -402,7 +402,7 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 .railbar{display:flex;justify-content:flex-end;padding:0 8px 6px}
 .railadd{display:flex;align-items:center;justify-content:center;padding:4px;color:var(--muted)}
 .railadd:hover{color:var(--ink)}
-.railfind{display:flex;align-items:center;gap:8px;width:calc(100% - 12px);margin:0 6px 10px;padding:7px 9px;border-radius:12px;background:var(--raised);color:var(--muted);text-align:left;font-size:13px}
+.railfind{display:flex;align-items:center;gap:8px;width:calc(100% - 12px);margin:0 6px 10px;padding:7px 9px;border-radius:9px;background:var(--raised);color:var(--muted);text-align:left;font-size:13px}
 .railfind:hover{color:var(--ink)}
 .raillabel{padding:12px 14px 6px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .badge{font-family:var(--mono);font-size:10px;border:1px solid var(--ink);padding:0 4px;line-height:14px}
@@ -757,9 +757,14 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
    quoted turn off the measure. */
 .ran .did .msg,.ran .did .peer{margin-left:0}
 .ran .did .peer{max-width:100%}
-/* Something landed and an answer is coming. Muted, small, and gone the moment there is text
-   to watch instead. */
-.msg.pending .dots{height:21px}
+/* One agent's turn while it is still a turn: the face, and the calls that have not returned.
+   The dots are the whole of the body only before the first call opens; once a line is running,
+   that line's own three dots are already saying it, and a second set forty pixels away is the
+   duplicate this column has refused twice. The calls lose `.tool`'s 40px gutter, because the
+   body they are in has already been inset by the face above them. */
+.msg.live .dots{height:21px}
+.msg.live .steps{display:flex;flex-direction:column;gap:5px;margin-top:1px}
+.msg.live .steps .tool{margin-left:0}
 .tool{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:flex;gap:8px;align-items:baseline;margin-left:40px}
 /* The kind is a fixed column, empty for a tool blobot has no word for. A ragged left edge is
    the reason a stack of calls stops reading as a list, which is the whole value of the fold.

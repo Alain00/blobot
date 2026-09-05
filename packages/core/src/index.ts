@@ -69,7 +69,7 @@ export type { AgentStatus, StatusListener } from './status.js';
 export { AsyncQueue } from './mock/async-queue.js';
 export { raggedFragments } from './mock/ragged.js';
 export type { Fragment } from './mock/ragged.js';
-export { Scenario, scenario } from './mock/scenario.js';
+export { Scenario, scenario, tool } from './mock/scenario.js';
 export type {
   CallToolOptions,
   ScenarioStep,
