@@ -1,8 +1,9 @@
 # Machine runtime builds
 
 The tracked image inputs live here; runtime download pins belong to each adapter's `image.ts`.
-The app currently has empty `builds` arrays and cannot fetch an unpublished candidate. No image
-upgrade, provider sign-in, egress admission or box activation is enabled by this directory.
+[machines-20260905-1](https://github.com/guillermolg00/blobot-machine-images/releases/tag/machines-20260905-1)
+supplies verified public arm64 and amd64 builds for all five adapters. No image upgrade,
+provider sign-in, egress admission or box activation is enabled by this directory alone.
 
 ## Contents and boundaries
 
@@ -85,7 +86,10 @@ existing release. It never edits adapter pins or publishes a draft automatically
 After reviewing and publishing immutable assets, verify anonymous downloads and copy the
 generated `runtime-builds.json` entries into the matching adapter definitions. A private
 GitHub release remains unavailable anonymously; no repository token is added to the app.
-The prepared workflow has not yet run, and Linux amd64 acceptance is still pending CI.
+The first native CI matrix passed on both architectures. All ten public archives subsequently
+passed anonymous full-byte downloads and archive validation; fx arm64 also passed actual Range
+resume and a real `SbxImageStore` load/readiness check. GitHub release immutability is enabled.
+The release's manifest and receipts are the authoritative download and size records.
 
 `SbxImageStore` downloads with a pinned SHA and Range resume, validates the single-image OCI
 and Docker metadata, checks architecture/UID/Docker-volume label, then calls `sbx template

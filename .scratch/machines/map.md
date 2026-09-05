@@ -62,6 +62,11 @@ amended, and it is not to be worked around quietly.
 
 ## Notes
 
+**Pause to integrate main, 2026-09-05 (Guillermo).** Finish the current implementation
+checkpoint, commit it, fetch and integrate Alain's latest `main`, resolve any conflicts and
+validate the combined branch. Then stop before starting further work or UI. This temporarily
+overrides continuous advancement; the full goal and open acceptance gates remain unchanged.
+
 **Continuous implementation goal, 2026-09-05 (Guillermo).** Complete the entire Machines
 implementation, resuming the claimed image ticket. Validate throughout, commit each completed
 ticket separately, and write a checkpoint at each issue boundary so context can be compacted

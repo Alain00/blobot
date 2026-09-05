@@ -564,3 +564,41 @@ runtime downloads must be anonymous. The prepared proposal is a separate public
 runtime release artifacts. The account was checked and this proposed repository was not found.
 No repository was created, source published, workflow dispatched or release made public.
 The image ticket remains claimed; a commit of this checkpoint does not mark it resolved.
+
+### Public artifact repository decision, 2026-09-05 (Guillermo)
+
+The author answered **“ok”** to the explicit question authorizing creation of public
+`guillermolg00/blobot-machine-images` and publication there of the build recipes and images
+that pass validation. This authorizes the reviewed runtime-only publisher tree, native CI
+builds and verified release assets; it does not change the application repository's visibility.
+Record the actual publication receipts and anonymous-download checks before adding app pins.
+
+### Public distribution acceptance, 2026-09-05
+
+[Native CI and public distribution](../research/34-public-runtime-distribution.md) records the
+published immutable release, all ten native build/smoke passes, anonymous whole-file checks
+through the production downloader, actual Range resume, and the actual release's successful
+load/readiness check in sbx. Both architectures are now pinned in every adapter. The release
+is built from `056a3b31fa1838e16fcdd181c7c89528f7baf226` in the separate public repository.
+
+[Rootfs fidelity and maintenance research](../research/35-rootfs-fidelity-and-mount-namespaces.md)
+found that RC5 snapshots lose ACL/mtime fidelity and alter sparse-file content. An authoritative
+PAX transfer restores the seeded content and metadata and survives candidate stop/reopen.
+Private mount namespaces and a child cgroup freezer also pass bounded experiments, including
+recovery after deliberate worker death. **Production complete-state migration remains open:**
+the components must be composed and tested over the entire persistent rootfs, with admission
+of late writers handled explicitly. Snapshot-only replacement and metadata-only patches cannot
+meet the contract. Keep the existing resource-replacement guard until that implementation passes.
+
+[Whole-container freezer and exec admission](../research/36-sibling-freezer-and-exec-admission.md)
+closes the measured late-exec gap and recovers the original after worker death. Core now has a
+tested internal framed `SbxStateChannel` for bounded opaque relay and sanitized failure handling;
+it is not yet connected to resource replacement. The author's next checkpoint includes a commit,
+integration of latest `main` and a pause before UI. This instruction changes session pacing,
+not this ticket's acceptance criteria or claimed status.
+
+[Complete PAX dumpdirs and running-binary replacement](../research/37-complete-pax-dumpdir-and-live-runtime.md)
+validates authoritative absence/type restoration and safe default replacement in a complete
+synthetic chroot. It records negative unlink/overwrite cases and the remaining xattr/socket
+coverage gates. The fixture passes eleven assertions, cleans its own container, and does not
+exercise production migration, real rootfs composition or durable cutover.

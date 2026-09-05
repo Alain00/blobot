@@ -428,3 +428,63 @@ answer, record it on the image ticket, create/push only this reviewed tree, vali
 native builds, review and publish verified assets, then test anonymous downloads before filling
 adapter pins. Do not treat publication success as whole-state preservation acceptance.
 Keep the continuous goal active and the image claimed while awaiting this non-obvious decision.
+
+## 2026-09-05 — public distribution authorized and CI started
+
+Guillermo answered **“ok”** to the public repository and verified-image publication question.
+The image ticket records the scope. Created
+<https://github.com/guillermolg00/blobot-machine-images> from exactly the reviewed 15-file tree,
+initial commit `056a3b31fa1838e16fcdd181c7c89528f7baf226`. The private application repository
+was not pushed or made public. The publisher checkout is still
+`/private/tmp/blobot-machine-publisher.bl_0auk9`.
+
+Dispatched the native 5-runtime × 2-architecture workflow for draft tag `machines-20260905-1`:
+<https://github.com/guillermolg00/blobot-machine-images/actions/runs/33987159409>.
+The CI run, not a local build, must supply final receipts. Research34's public-download fixture
+will compare the published manifest, verify all ten archives through the production downloader
+and archive validator, and exercise HTTP Range resume on fx arm64 before app pins are added.
+It makes no engine calls. Keep only its fx archive for the separate engine-load check.
+
+The research agent `image_preservation_resume` has exclusive sbx access for research35 while
+distribution runs. Its task is to investigate a complete rootfs fidelity mechanism and actual
+candidate stop/reopen, without changing production or relaxing the acceptance requirements.
+Do not run a competing sbx fixture until that agent explicitly releases the engine.
+
+## 2026-09-05 — public images verified; pause for main integration
+
+The public distribution checkpoint is complete. Research34 records the immutable
+`machines-20260905-1` release, ten successful native runtime/architecture build jobs, all ten
+anonymous full-archive downloads through the production verifier, actual HTTP Range resume,
+and successful real-sbx load/readiness/cleanup using the public fx arm64 bytes. Both published
+architectures are now pinned in all five adapters. No application repository push occurred.
+All downloaded archives were removed after verification; the public publisher's README was
+updated and pushed separately as `0cfeb71`.
+
+Research35 found real sparse-content corruption as well as ACL/nanosecond-mtime loss in the
+engine snapshot. Authoritative PAX transfer preserves the tested state. Research36 closes the
+ordinary concurrent-exec admission gap with a VM-local maintenance sibling and whole-container
+freezer, including worker-death recovery. Both fixtures cleaned their sandboxes and ceded sbx.
+Research37 then validated complete incremental PAX dumpdirs with default replacement semantics,
+including type swaps, absence and replacement of running Node/tar binaries in a synthetic chroot.
+Its eleven assertions pass and its Docker container is removed. Use its exact recipe and limits:
+`--unlink-first` fails on the root directory; `--overwrite` damages existing mappings/hardlinks;
+target-only directory xattrs need safe removal and sockets are silently omitted with exit zero.
+The five research37 files are linked from the image ticket and ready for the same checkpoint.
+These are component experiments, not production complete-state migration. The next step remains
+composition of same-base candidate creation, full rootfs/private-volume transfer, mount
+exclusion, checked freeze/quiescence, verification after reopen and durable cutover/recovery.
+
+Core's internal `SbxStateChannel` is the tested protocol foundation for that future composition:
+bounded control/data frames, awaited pipe writes and data consumers, refusal of concurrent
+operations, terminal close after protocol/I/O failures, and sanitized errors. It does not yet
+spawn workers or activate replacement. All existing reconfigure and box-launch guards remain.
+The channel has 10 passing tests and core typecheck passes. The earlier affected image/download
+suites passed 16 tests; core types/build and desktop types/build passed, and compiled adapter
+definitions exactly matched the independently verified release catalog. Full suites will run
+again after integrating `main`, because that changes the combined application.
+
+Guillermo requested this checkpoint's commit, then integration of Alain's latest `main` with
+conflicts resolved and validation, followed by a pause before more work or UI. Keep the image
+ticket claimed; this commit does not resolve its outstanding preservation, sign-in, mailbox,
+egress or activation gates. The overall goal is incomplete. Resume only after this requested
+pause; do not treat the older continuous instruction as permission to start UI now.

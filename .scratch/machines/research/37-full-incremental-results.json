@@ -1,0 +1,848 @@
+{
+  "uuid": "031f46f0-7040-4b88-8031-4724071f5d86",
+  "image": "sha256:74d888efe94fb1544ae5a275964cfa5ba00dd96de9b4bd50bd1e8c7d917a19df",
+  "exitCode": 0,
+  "signal": null,
+  "stderr": "",
+  "observation": {
+    "checks": {
+      "chrootSelfReplacementPasses": true,
+      "completeSyntheticInventoryAndHash": true,
+      "defaultProtectsExistingInode": true,
+      "defaultTypeSwapsAllPass": true,
+      "directoryXattrHoleReproduced": true,
+      "directoryXattrPreclearRepairsFixture": true,
+      "listedDevNullCreateRejected": true,
+      "ordinaryArchiveLeavesAbsences": true,
+      "overwriteDemonstrablyUnsafe": true,
+      "socketOmissionDetected": true,
+      "unlinkFirstAndRecursiveRejectDot": true
+    },
+    "edgeCases": {
+      "chrootRuntimeReplacement": {
+        "absentTargetDeleted": true,
+        "archiveBytes": 124743680,
+        "externalizedBuiltins": [
+          "/usr/share/nodejs/acorn-walk/dist/walk.js",
+          "/usr/share/nodejs/acorn/dist/acorn.js",
+          "/usr/share/nodejs/cjs-module-lexer/dist/lexer.js",
+          "/usr/share/nodejs/cjs-module-lexer/lexer.js",
+          "/usr/share/nodejs/minimatch/dist/cjs/index.bundle.js",
+          "/usr/share/nodejs/undici/undici-fetch.js"
+        ],
+        "extractExit": 0,
+        "extractStderr": "",
+        "inventoryEqual": true,
+        "newNodeInode": true,
+        "newTarInode": true,
+        "noDevNullInsideChroot": true,
+        "nodeAfterReplacement": {
+          "absoluteEscapes": false,
+          "dev": [],
+          "node": "v22.22.1",
+          "payload": "restored",
+          "proc": []
+        },
+        "nodeExit": 0,
+        "nodeStderr": "",
+        "outsideHasNoChild": true,
+        "outsideSentinelUnchanged": true,
+        "rearchiveStable": true,
+        "sourceSha256": "aba4bc4e6c9852ae4ffd333fa5e2af477d429569f817152662900148a18f65fe",
+        "targetSha256": "aba4bc4e6c9852ae4ffd333fa5e2af477d429569f817152662900148a18f65fe"
+      },
+      "clearDirectoryXattrs": {
+        "cleared": [
+          "user.stale",
+          "system.posix_acl_default",
+          "user.stale",
+          "system.posix_acl_default"
+        ],
+        "exit": 0,
+        "inventoryEqual": true,
+        "rearchiveStable": true,
+        "stderr": ""
+      },
+      "excludedName": {
+        "createExit": 0,
+        "dumpdirs": [
+          {
+            "link": "",
+            "name": ".",
+            "pax": {
+              "GNU.dumpdir": "Nexcluded\u0000Yincluded\u0000\u0000",
+              "mtime": "1788635508.123456789"
+            },
+            "type": "5"
+          },
+          {
+            "link": "",
+            "name": "./included",
+            "pax": {
+              "mtime": "1788635508.123456789"
+            },
+            "type": "0"
+          }
+        ],
+        "extractExit": 0,
+        "targetExcludedPreserved": true
+      },
+      "inodeSafety": [
+        {
+          "exit": 0,
+          "flags": [],
+          "newInode": true,
+          "oldMappedBytesUnchanged": true,
+          "outsideHardlinkUnchanged": true,
+          "restoredNewBytes": true,
+          "stderr": ""
+        },
+        {
+          "exit": 2,
+          "flags": [
+            "--unlink-first"
+          ],
+          "newInode": true,
+          "oldMappedBytesUnchanged": true,
+          "outsideHardlinkUnchanged": true,
+          "restoredNewBytes": true,
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n"
+        },
+        {
+          "exit": 0,
+          "flags": [
+            "--overwrite"
+          ],
+          "newInode": false,
+          "oldMappedBytesUnchanged": false,
+          "outsideHardlinkUnchanged": false,
+          "restoredNewBytes": true,
+          "stderr": ""
+        }
+      ],
+      "socketOmission": {
+        "createExit": 0,
+        "createStderr": "tar: ./sock: socket ignored\n",
+        "dumpdirs": [
+          {
+            "link": "",
+            "name": ".",
+            "pax": {
+              "GNU.dumpdir": "Ysock\u0000\u0000",
+              "mtime": "1788637845.806276003"
+            },
+            "type": "5"
+          }
+        ],
+        "extractExit": 0,
+        "restoredSocket": false
+      },
+      "sparseHeaderStability": [
+        {
+          "firstDifferentByte": null,
+          "shaA": "e1cf087a31440f5e12212137f574aecc8c9a71fe5869b59ded4649b65a597dd9",
+          "shaB": "e1cf087a31440f5e12212137f574aecc8c9a71fe5869b59ded4649b65a597dd9",
+          "stable": true,
+          "version": "0.0"
+        },
+        {
+          "firstDifferentByte": 10597394,
+          "shaA": "db7ecfaf2364e4b2a18544703da5d04c0eac0046135bf507d12b4d051cbabdd2",
+          "shaB": "fbfa1c64c7f6e19d4c017b9525ad99d4c45f53c7f924a59d478941849c2b6be8",
+          "stable": false,
+          "version": "0.1"
+        },
+        {
+          "firstDifferentByte": 10597394,
+          "shaA": "a98192b4410276706fd3bd05d54ce5049ed9ccf59947b602a04be1cd724a9860",
+          "shaB": "5c90dfe8b8ac558b48517de9e5dcc2e90d39ef28bedeaa92843fbe86e2ba10c5",
+          "stable": false,
+          "version": "1.0"
+        }
+      ],
+      "staleDirectoryXattr": {
+        "differences": [
+          ".",
+          "dir"
+        ],
+        "equal": false,
+        "exit": 0,
+        "stderr": "",
+        "targetInventory": {
+          "files": {
+            ".": {
+              "children": [
+                "dir"
+              ],
+              "gid": 0,
+              "mode": 16877,
+              "mtimeNs": "1788635508123456789",
+              "uid": 0,
+              "xattrs": {
+                "user.target-only": "cm9vdA=="
+              }
+            },
+            "dir": {
+              "children": [],
+              "gid": 0,
+              "mode": 16877,
+              "mtimeNs": "1788635508123456789",
+              "uid": 0,
+              "xattrs": {
+                "user.target-only": "ZGly"
+              }
+            }
+          },
+          "hardlinks": []
+        }
+      },
+      "typeSwaps": [
+        {
+          "equal": true,
+          "exit": 0,
+          "flags": [],
+          "from": "file",
+          "stderr": "",
+          "to": "dir"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--unlink-first"
+          ],
+          "from": "file",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "dir"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--recursive-unlink"
+          ],
+          "from": "file",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "dir"
+        },
+        {
+          "equal": true,
+          "exit": 0,
+          "flags": [],
+          "from": "file",
+          "stderr": "",
+          "to": "symlink"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--unlink-first"
+          ],
+          "from": "file",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "symlink"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--recursive-unlink"
+          ],
+          "from": "file",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "symlink"
+        },
+        {
+          "equal": true,
+          "exit": 0,
+          "flags": [],
+          "from": "file",
+          "stderr": "",
+          "to": "fifo"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--unlink-first"
+          ],
+          "from": "file",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "fifo"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--recursive-unlink"
+          ],
+          "from": "file",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "fifo"
+        },
+        {
+          "equal": true,
+          "exit": 0,
+          "flags": [],
+          "from": "dir",
+          "stderr": "",
+          "to": "file"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--unlink-first"
+          ],
+          "from": "dir",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: ./item: Cannot unlink: Directory not empty\ntar: Exiting with failure status due to previous errors\n",
+          "to": "file"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--recursive-unlink"
+          ],
+          "from": "dir",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "file"
+        },
+        {
+          "equal": true,
+          "exit": 0,
+          "flags": [],
+          "from": "dir",
+          "stderr": "",
+          "to": "symlink"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--unlink-first"
+          ],
+          "from": "dir",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: ./item: Cannot unlink: Directory not empty\ntar: Exiting with failure status due to previous errors\n",
+          "to": "symlink"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--recursive-unlink"
+          ],
+          "from": "dir",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "symlink"
+        },
+        {
+          "equal": true,
+          "exit": 0,
+          "flags": [],
+          "from": "dir",
+          "stderr": "",
+          "to": "fifo"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--unlink-first"
+          ],
+          "from": "dir",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: ./item: Cannot unlink: Directory not empty\ntar: Exiting with failure status due to previous errors\n",
+          "to": "fifo"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--recursive-unlink"
+          ],
+          "from": "dir",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "fifo"
+        },
+        {
+          "equal": true,
+          "exit": 0,
+          "flags": [],
+          "from": "symlink",
+          "stderr": "",
+          "to": "file"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--unlink-first"
+          ],
+          "from": "symlink",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "file"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--recursive-unlink"
+          ],
+          "from": "symlink",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "file"
+        },
+        {
+          "equal": true,
+          "exit": 0,
+          "flags": [],
+          "from": "symlink",
+          "stderr": "",
+          "to": "dir"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--unlink-first"
+          ],
+          "from": "symlink",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "dir"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--recursive-unlink"
+          ],
+          "from": "symlink",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "dir"
+        },
+        {
+          "equal": true,
+          "exit": 0,
+          "flags": [],
+          "from": "symlink",
+          "stderr": "",
+          "to": "fifo"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--unlink-first"
+          ],
+          "from": "symlink",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "fifo"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--recursive-unlink"
+          ],
+          "from": "symlink",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "fifo"
+        },
+        {
+          "equal": true,
+          "exit": 0,
+          "flags": [],
+          "from": "fifo",
+          "stderr": "",
+          "to": "file"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--unlink-first"
+          ],
+          "from": "fifo",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "file"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--recursive-unlink"
+          ],
+          "from": "fifo",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "file"
+        },
+        {
+          "equal": true,
+          "exit": 0,
+          "flags": [],
+          "from": "fifo",
+          "stderr": "",
+          "to": "dir"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--unlink-first"
+          ],
+          "from": "fifo",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "dir"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--recursive-unlink"
+          ],
+          "from": "fifo",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "dir"
+        },
+        {
+          "equal": true,
+          "exit": 0,
+          "flags": [],
+          "from": "fifo",
+          "stderr": "",
+          "to": "symlink"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--unlink-first"
+          ],
+          "from": "fifo",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "symlink"
+        },
+        {
+          "equal": false,
+          "exit": 2,
+          "flags": [
+            "--recursive-unlink"
+          ],
+          "from": "fifo",
+          "stderr": "tar: .: Cannot unlink: Invalid argument\ntar: Exiting with failure status due to previous errors\n",
+          "to": "symlink"
+        }
+      ]
+    },
+    "environment": {
+      "kernel": "6.12.76-linuxkit",
+      "node": "v22.22.1",
+      "package": "tar\t1.35+dfsg-4ubuntu0.4",
+      "tar": "tar (GNU tar) 1.35\nCopyright (C) 2023 Free Software Foundation, Inc.\nLicense GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n\nWritten by John Gilmore and Jay Fenlason."
+    },
+    "fixturePassed": true,
+    "modes": {
+      "incremental": {
+        "bytes": 10608640,
+        "createExit": 0,
+        "createStderr": "",
+        "differences": [],
+        "dumpdirs": [
+          {
+            "dumpdir": "Y--option-looking\u0000Yabsolute\u0000Ycapability\u0000Ydangling\u0000Ddir\u0000Dempty\u0000Yfifo\u0000Yfile\u0000Ylong-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\u0000Yrelative\u0000Ysparse\u0000Ywith\nnewline\u0000\u0000",
+            "name": "."
+          },
+          {
+            "dumpdir": "Ychild\u0000Yhardlink\u0000\u0000",
+            "name": "./dir"
+          },
+          {
+            "dumpdir": "\u0000",
+            "name": "./empty"
+          }
+        ],
+        "extractExit": 0,
+        "extractStderr": "",
+        "hardlinksEqual": true,
+        "inventoryEqual": true,
+        "rearchiveStable": true,
+        "repeatSha256": "e1cf087a31440f5e12212137f574aecc8c9a71fe5869b59ded4649b65a597dd9",
+        "repeatStable": true,
+        "sourceSha256": "e1cf087a31440f5e12212137f574aecc8c9a71fe5869b59ded4649b65a597dd9",
+        "sourceSparse": {
+          "blocks": 8,
+          "extents": [
+            [
+              1048576,
+              1052672
+            ]
+          ],
+          "gid": 0,
+          "mode": 33188,
+          "mtimeNs": "1788635508123456789",
+          "sha256": "a58469631d395c2da91a52eba04776568a8e79a7ae04aa055dfea2edec96fa8f",
+          "size": 2097152,
+          "uid": 0,
+          "xattrs": {}
+        },
+        "targetSha256": "e1cf087a31440f5e12212137f574aecc8c9a71fe5869b59ded4649b65a597dd9",
+        "targetSparse": {
+          "blocks": 8,
+          "extents": [
+            [
+              1048576,
+              1052672
+            ]
+          ],
+          "gid": 0,
+          "mode": 33188,
+          "mtimeNs": "1788635508123456789",
+          "sha256": "a58469631d395c2da91a52eba04776568a8e79a7ae04aa055dfea2edec96fa8f",
+          "size": 2097152,
+          "uid": 0,
+          "xattrs": {}
+        }
+      },
+      "listedNull": {
+        "createExit": 2,
+        "createStderr": "tar: /dev/null: Cannot truncate: Invalid argument\ntar: Exiting with failure status due to previous errors\n"
+      },
+      "ordinary": {
+        "bytes": 10608640,
+        "createExit": 0,
+        "createStderr": "",
+        "differences": [
+          ".",
+          "deleted-base",
+          "dir",
+          "dir/target-only",
+          "empty",
+          "empty/target-only",
+          "removed-tree",
+          "removed-tree/a",
+          "removed-tree/a/b"
+        ],
+        "dumpdirs": [],
+        "extractExit": 0,
+        "extractStderr": "",
+        "hardlinksEqual": true,
+        "inventoryEqual": false,
+        "rearchiveStable": false,
+        "repeatSha256": "b587762caae78c312930c75507661306bae136805dadd71ed39374de618aa1a4",
+        "repeatStable": true,
+        "sourceSha256": "b587762caae78c312930c75507661306bae136805dadd71ed39374de618aa1a4",
+        "sourceSparse": {
+          "blocks": 8,
+          "extents": [
+            [
+              1048576,
+              1052672
+            ]
+          ],
+          "gid": 0,
+          "mode": 33188,
+          "mtimeNs": "1788635508123456789",
+          "sha256": "a58469631d395c2da91a52eba04776568a8e79a7ae04aa055dfea2edec96fa8f",
+          "size": 2097152,
+          "uid": 0,
+          "xattrs": {}
+        },
+        "targetSha256": "b3f30ffe8972ae9b0a555f89a8d2c8e87510df2a72d898453bf987d9619309ce",
+        "targetSparse": {
+          "blocks": 8,
+          "extents": [
+            [
+              1048576,
+              1052672
+            ]
+          ],
+          "gid": 0,
+          "mode": 33188,
+          "mtimeNs": "1788635508123456789",
+          "sha256": "a58469631d395c2da91a52eba04776568a8e79a7ae04aa055dfea2edec96fa8f",
+          "size": 2097152,
+          "uid": 0,
+          "xattrs": {}
+        }
+      }
+    },
+    "sourceInventory": {
+      "files": {
+        "--option-looking": {
+          "gid": 0,
+          "mode": 33188,
+          "mtimeNs": "1788635508123456789",
+          "sha256": "b3cc0475bb78a5026098858e9889acf666d31062d513d303314eca31d36e72f2",
+          "size": 9,
+          "uid": 0,
+          "xattrs": {}
+        },
+        ".": {
+          "children": [
+            "--option-looking",
+            "absolute",
+            "capability",
+            "dangling",
+            "dir",
+            "empty",
+            "fifo",
+            "file",
+            "long-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            "relative",
+            "sparse",
+            "with\nnewline"
+          ],
+          "gid": 0,
+          "mode": 16877,
+          "mtimeNs": "1788635508123456789",
+          "uid": 0,
+          "xattrs": {}
+        },
+        "absolute": {
+          "gid": 0,
+          "mode": 41471,
+          "mtimeNs": "1788635508123456789",
+          "target": "/file",
+          "uid": 0,
+          "xattrs": {}
+        },
+        "capability": {
+          "gid": 0,
+          "mode": 33261,
+          "mtimeNs": "1788635508123456789",
+          "sha256": "956b53a693650d61b2b4d3f035237de469b28522df27c58f7628d7d731e7f1e1",
+          "size": 10577824,
+          "uid": 0,
+          "xattrs": {
+            "security.capability": "AQAAAgAEAAAAAAAAAAAAAAAAAAA="
+          }
+        },
+        "dangling": {
+          "gid": 0,
+          "mode": 41471,
+          "mtimeNs": "1788635508123456789",
+          "target": "/../outside/sentinel",
+          "uid": 0,
+          "xattrs": {}
+        },
+        "dir": {
+          "children": [
+            "child",
+            "hardlink"
+          ],
+          "gid": 1001,
+          "mode": 17896,
+          "mtimeNs": "1788635508123456789",
+          "uid": 1000,
+          "xattrs": {
+            "system.posix_acl_default": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8="
+          }
+        },
+        "dir/child": {
+          "gid": 1001,
+          "mode": 33184,
+          "mtimeNs": "1788635508123456789",
+          "sha256": "b3cc0475bb78a5026098858e9889acf666d31062d513d303314eca31d36e72f2",
+          "size": 9,
+          "uid": 0,
+          "xattrs": {
+            "system.posix_acl_access": "AgAAAAEABgD/////AgAEADkwAAAEAAUA/////xAABAD/////IAAAAP////8="
+          }
+        },
+        "dir/hardlink": {
+          "gid": 1001,
+          "mode": 33256,
+          "mtimeNs": "1788635508123456789",
+          "sha256": "28a23ff25f3ed42151c99c2b633508f5f4797744bc6eac53f4d809b7ed592603",
+          "size": 8,
+          "uid": 1000,
+          "xattrs": {
+            "system.posix_acl_access": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8=",
+            "user.binary": "eAD/"
+          }
+        },
+        "empty": {
+          "children": [],
+          "gid": 0,
+          "mode": 16877,
+          "mtimeNs": "1788635508123456789",
+          "uid": 0,
+          "xattrs": {}
+        },
+        "fifo": {
+          "gid": 0,
+          "mode": 4480,
+          "mtimeNs": "1788635508123456789",
+          "uid": 0,
+          "xattrs": {}
+        },
+        "file": {
+          "gid": 1001,
+          "mode": 33256,
+          "mtimeNs": "1788635508123456789",
+          "sha256": "28a23ff25f3ed42151c99c2b633508f5f4797744bc6eac53f4d809b7ed592603",
+          "size": 8,
+          "uid": 1000,
+          "xattrs": {
+            "system.posix_acl_access": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8=",
+            "user.binary": "eAD/"
+          }
+        },
+        "long-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": {
+          "gid": 0,
+          "mode": 33188,
+          "mtimeNs": "1788635508123456789",
+          "sha256": "b3cc0475bb78a5026098858e9889acf666d31062d513d303314eca31d36e72f2",
+          "size": 9,
+          "uid": 0,
+          "xattrs": {}
+        },
+        "relative": {
+          "gid": 1001,
+          "mode": 41471,
+          "mtimeNs": "1788635508123456789",
+          "target": "file",
+          "uid": 1000,
+          "xattrs": {}
+        },
+        "sparse": {
+          "blocks": 8,
+          "extents": [
+            [
+              1048576,
+              1052672
+            ]
+          ],
+          "gid": 0,
+          "mode": 33188,
+          "mtimeNs": "1788635508123456789",
+          "sha256": "a58469631d395c2da91a52eba04776568a8e79a7ae04aa055dfea2edec96fa8f",
+          "size": 2097152,
+          "uid": 0,
+          "xattrs": {}
+        },
+        "with\nnewline": {
+          "gid": 0,
+          "mode": 33188,
+          "mtimeNs": "1788635508123456789",
+          "sha256": "b3cc0475bb78a5026098858e9889acf666d31062d513d303314eca31d36e72f2",
+          "size": 9,
+          "uid": 0,
+          "xattrs": {}
+        }
+      },
+      "hardlinks": [
+        [
+          "dir/hardlink",
+          "file"
+        ]
+      ]
+    }
+  },
+  "cleanup": {
+    "exitCode": 0,
+    "stderr": "Error response from daemon: No such container: blobot-tar37-031f46f0-7040-4b88-8031-4724071f5d86\n",
+    "onlyOwnedUuidName": "blobot-tar37-031f46f0-7040-4b88-8031-4724071f5d86"
+  }
+}
