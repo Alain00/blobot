@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: none
 
 # What lives in an agent's home, and what map.md may say
@@ -238,3 +238,76 @@ and is not answered by it.
 
 *The home on screen* was in a loop with `12`; `18` refuses it back here by name. If this ticket
 says a home exists, it owns that screen question or hands it to `18` in words.
+
+## Comments
+
+**2026-09-05 — claimed after boundary implementation `2e779ec`.** The continuous goal
+continues with this first unclaimed frontier. The [focused proposal](../home-decision-round.md)
+uses existing profile/membership facts as a composed overview, with no shared file or new
+personal-memory writer. Cross-team information scope is a non-obvious product decision and
+awaits Guillermo; no production implementation of it has started. The handoff narrowing
+requested by the historical amendment is already present on the Machine ticket's September 5
+amendment and need not be reopened or re-confirmed.
+
+**2026-09-06 — proposal accepted.** Guillermo answered “ok” to the focused question: the
+profile overview carries active team names, declared roles and teammates, composed every turn
+from existing records, without paths or other-team work contents. No shared `map.md`, physical
+home mount, or new agent-authored personal memory. Existing profile instructions remain under
+the user's control. Implementation is authorized; the profile-conversation decision remains
+on its own ticket. Names are awareness, not a filesystem fence or cross-team authority.
+
+## Answer
+
+Accepted by Guillermo on 2026-09-06 and implemented: **the profile overview is the whole of
+the proposed map**, alongside existing standing instructions. No additional Home aggregate,
+shared writable directory, physical `map.md` or personal-memory tool is introduced.
+
+1. **Contents.** Active team names, the profile's declared role in each membership, and active
+   teammates' names/roles. No workspace or executable paths, descriptions inferred from work,
+   instructions from another member, transcripts, Handbooks, handoffs or diffs. The source
+   queries only the allowed columns plus internal join/count keys; the composer projects the
+   allowed fields again rather than serializing arbitrary source objects. User-authored labels
+   remain user-authored data: a label could itself contain a path or instruction, so it is
+   bounded and JSON-quoted, not semantically certified or promoted to authority.
+2. **Channel and freshness.** Supplied as composed context immediately before every runtime
+   prompt, including direct user turns, queued user/peer turns, routines, briefing and both
+   compaction turns. The narrow source interface is independent of provider and Machine kind;
+   desktop `startTeam` connects the SQLite projection. Deleted teams and memberships disappear
+   on the next turn; a retired profile's remaining active memberships still count. Legacy
+   Agents without a profile ID receive no overview and are never matched by name.
+3. **Storage and boundaries.** Existing profile/membership rows in blobot's host-owned store
+   remain the only source. If a physical home is introduced later, it must be on this computer,
+   in a place blobot owns, outside every AgentWorkspace; it reaches an Agent as composed
+   context or not at all, never as a shared mount. This change creates no such directory. The
+   overview enters neither the `messages` rows nor the handoff archive automatically. An
+   Agent's own reply/handoff can of course mention information it was told; no output filter is
+   claimed. Historical overview text can remain in provider session history; the current block
+   explicitly supersedes earlier membership metadata, without claiming to erase that history.
+4. **Bounds and accounting.** At most eight memberships and six teammates each, names bounded
+   to 80 characters and roles to 120 with an ellipsis, and a 16,000-character total ceiling.
+   Whole omitted records have explicit counts, including omissions caused by escaped-label
+   expansion. Queries bound both rows and text before materializing them. The injection gauge
+   includes this block, retains lead/wake accounting and resets on each turn rather than
+   accumulating stale counts. Compaction prompts now count their full app-authored text too.
+5. **Authority and UI.** Membership awareness grants no new execution or cross-team messaging
+   rights. Withholding paths is not an OS fence, particularly locally, and no live claim about
+   an Agent refraining from filesystem discovery is made. Existing profile editing and team
+   Handbook tools keep their scope. No home screen is required for this composed index;
+   [The profile conversation on screen](18-the-profile-conversation-on-screen.md) still owns
+   the conversation UI after its behavior is decided by
+   [What an agent addressed outside a team may do, and what its transcript is](07-what-a-dmd-agent-may-do.md).
+
+The archived-handoff narrowing requested by the older amendment was already resolved on
+September 5 in [What a Machine is, and what grain it hangs at](01-what-a-machine-is.md).
+Handoffs remain at the team/agent grain; no reopen is needed. Automatic promotion of Handbook
+entries into standing instructions is outside this accepted home: it remains a separate future
+memory feature rather than a dependency silently introduced here.
+
+Validation: 11 new tests cover safe projections, unrelated/deleted teams, retired profiles,
+changed/deleted teammates, bounded fields/records/escaped text, legacy identity, fresh queued
+delivery, direct/lead/routine/briefing/compaction turns, attachments, persistence and accounting.
+Full core **971 passed / 46 skipped**; desktop **610 passed / 1 skipped**; both typechecks and
+builds pass. The first concurrent desktop run hit the existing dictation test's fixed 20 ms
+wait (609 passed / 1 failed); that test passed in isolation and the full rerun passed. No
+provider inference or live box activation was needed to validate the composition contract.
+Logs: `/private/tmp/blobot-profile-overview-{core-tests,desktop-tests,desktop-tests-rerun,desktop-build}.log`.

@@ -60,6 +60,14 @@ the team was formed.
 - The creation flow reads in the model's order: *your agents*, then the team formed out of them.
   Hiring from inside that flow is a convenience, not how agents come into being.
 
+**Amendment, 2026-09-06 — membership awareness.** The author accepted a Profile overview:
+current team names, declared roles and teammate names/roles may accompany every turn across
+the profile's memberships. This reuses metadata only, not another team's work, transcript or
+Handbook, and grants no new access or messaging authority. It is composed from existing records,
+not a shared writable home or a second runtime instance. Standing instructions remain under
+the user's control. See the answer on
+[What lives in an agent's home, and what map.md may say](../../.scratch/machines/issues/06-what-lives-in-an-agents-home.md).
+
 ## Not decided here
 
 Editing a profile (rename, change role, change runtime), and what an edit means for the teams an

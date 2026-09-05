@@ -161,6 +161,7 @@ export { findAgentByName, namesMentioned } from './orchestrator/roster.js';
 export { InMemoryMessageStore } from './orchestrator/message-store.js';
 export type { AttachmentStore, MessageStore } from './orchestrator/message-store.js';
 export { Orchestrator } from './orchestrator/orchestrator.js';
+export type { ProfileOverview, ProfileOverviewSource } from './orchestrator/profile-overview.js';
 export type { RoutineStore, RoutineTurn } from './orchestrator/orchestrator.js';
 export type {
   BudgetExhausted,

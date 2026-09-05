@@ -58,6 +58,7 @@ import {
 } from './compaction.js';
 import { workingCeiling } from '../context-ceiling.js';
 import { composeLeadBrief, composeWakePrompt } from './envelope.js';
+import { composeProfileOverview, type ProfileOverviewSource } from './profile-overview.js';
 import {
   InMemoryMessageStore,
   type AttachmentStore,
@@ -104,6 +105,8 @@ export interface OrchestratorOptions {
    * line above makes: a tool a model can see is a capability it will believe in.
    */
   readonly handbooks?: HandbookStore;
+  /** Current, bounded membership metadata shared by a profile across its teams. */
+  readonly profileOverviews?: ProfileOverviewSource;
 }
 
 /**
@@ -322,6 +325,7 @@ export class Orchestrator {
    */
   readonly #routines: RoutineStore | undefined;
   readonly #handbooks: HandbookStore | undefined;
+  readonly #profileOverviews: ProfileOverviewSource | undefined;
   readonly #recordedThisTurn = new Map<string, number>();
   readonly #handbookListeners = new Set<(write: HandbookWrite) => void>();
   readonly #routineListeners = new Set<() => void>();
@@ -368,6 +372,7 @@ export class Orchestrator {
     this.#budgetCeiling = options.team.turnBudget;
     this.#routines = options.routines;
     this.#handbooks = options.handbooks;
+    this.#profileOverviews = options.profileOverviews;
 
     for (const agent of this.#agents) {
       const tracker = new AgentStatusTracker(agent.id);
@@ -1185,7 +1190,7 @@ export class Orchestrator {
       let said = '';
       let endedOrdinarily = false;
       try {
-        for await (const event of runtime.sendPrompt(prompt)) {
+        for await (const event of runtime.sendPrompt(this.#withProfileOverview(agent, prompt))) {
           // Publish first, fold second: a consumer sees the event, then the status it caused.
           this.#publish(event);
           tracker.apply(event);
@@ -1295,9 +1300,20 @@ export class Orchestrator {
    */
   #withBrief(agentId: string, text: string): string {
     const brief = this.#leadBrief(agentId);
+    this.#lastWake.set(agentId, { chars: brief?.length ?? 0, messages: 0 });
     if (brief === undefined) return text;
-    this.#lastWake.set(agentId, { chars: brief.length, messages: 0 });
     return `${text}\n\n${brief}`;
+  }
+
+  #withProfileOverview(agent: Agent, prompt: Prompt): Prompt {
+    if (agent.profileId === undefined || this.#profileOverviews === undefined) return prompt;
+    const overview = composeProfileOverview(this.#profileOverviews.profileOverviewOf(agent.profileId));
+    const previous = this.#lastWake.get(agent.id);
+    this.#lastWake.set(agent.id, {
+      chars: (previous?.chars ?? 0) + overview.length + 2,
+      messages: previous?.messages ?? 0,
+    });
+    return { ...prompt, text: `${prompt.text}\n\n${overview}` };
   }
 
   /**
@@ -1376,9 +1392,7 @@ export class Orchestrator {
     // moment available. `said` is the whole of what it wrote: a handoff turn that stopped for
     // any reason at all is a refusal, because a truncated handoff plus a discarded session is
     // worse than either alone.
-    const written = await this.#runCompactionTurn(agent, () =>
-      runtime.sendPrompt({ text: HANDOFF_PROMPT, from: 'peer' }),
-    );
+    const written = await this.#runCompactionTurn(agent, runtime, { text: HANDOFF_PROMPT, from: 'peer' });
     const refuse = (reason: string): void => {
       this.#announceCompaction(agent, runtime, {
         how: 'refused',
@@ -1418,9 +1432,7 @@ export class Orchestrator {
 
     // Not counted, not watched, and deliberately the fresh session's first turn: the handoff
     // has to be in the context before any queued mail is answered against it.
-    await this.#runCompactionTurn(agent, () =>
-      runtime.sendPrompt({ text: resumeFromHandoff(handoff), from: 'peer' }),
-    );
+    await this.#runCompactionTurn(agent, runtime, { text: resumeFromHandoff(handoff), from: 'peer' });
 
     this.#announceCompaction(agent, runtime, {
       how: 'handoff',
@@ -1457,17 +1469,19 @@ export class Orchestrator {
    */
   async #runCompactionTurn(
     agent: Agent,
-    start: () => AsyncIterable<AgentEvent>,
+    runtime: AgentRuntime,
+    prompt: Prompt,
   ): Promise<{ said: string; endedOrdinarily: boolean }> {
     const tracker = this.#trackers.get(agent.id);
     if (tracker === undefined) return { said: '', endedOrdinarily: false };
+    this.#lastWake.set(agent.id, { chars: prompt.text.length, messages: 0 });
     let said = '';
     let endedOrdinarily = false;
     this.#busy.add(agent.id);
     tracker.turnStarted();
     this.#recorder?.turnStarted(agent.id, this.#clock.now());
     try {
-      for await (const event of start()) {
+      for await (const event of runtime.sendPrompt(this.#withProfileOverview(agent, prompt))) {
         if (event.type === 'agent_message_completed') said += `\n${event.text}`;
         // The status fold still sees everything: an agent that is writing is `responding`,
         // whoever it happens to be writing to.

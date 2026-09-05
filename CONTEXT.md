@@ -93,6 +93,9 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
 - **Standing instructions** — what is true of an AgentProfile on *every* team it is on. Folded
   into its Persona, and said as such, so it is never mistaken for this team's framing — which is
   the **Handbook**, and is the thing that sentence was written before there was.
+- **Profile overview** — an AgentProfile's current team memberships, declared roles and
+  teammates. It carries awareness across teams, never their work contents or authority to act
+  in them; it is not a shared personal memory or a place where an Agent executes.
 - **Persona** — an Agent's system prompt. Carries the static facts about its situation (role,
   Workspace, AgentWorkspace path, roster, the rules). Adapter-owned.
 - **Mailbox** — an Agent's queue of undelivered Messages. Delivered as one prompt when the Agent

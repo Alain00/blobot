@@ -11,6 +11,10 @@ import type {
   Team,
 } from '../orchestrator/domain.js';
 import type { AttachmentStore, MessageStore } from '../orchestrator/message-store.js';
+import {
+  PROFILE_OVERVIEW_LIMITS,
+  type ProfileOverview,
+} from '../orchestrator/profile-overview.js';
 import { uuidv7 } from '../ids.js';
 import { PICTURE_LIMIT, measurePicture, type PictureNotDrawn } from '../pictures.js';
 import type { KeptPicture, PictureContent, PictureKept } from '../runtime.js';
@@ -314,6 +318,49 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       .all()
       .filter((row) => row.deletedAt === null)
       .map(toAgentRecord);
+  }
+
+  /**
+   * Bounded membership metadata only. The query cannot pull in paths, instructions or work
+   * contents. A retired profile's remaining memberships still exist; a deleted team does not.
+   * The transaction keeps team and roster reads in one snapshot, without caching between turns.
+   */
+  profileOverviewOf(profileId: string): ProfileOverview {
+    const limits = PROFILE_OVERVIEW_LIMITS;
+    return this.#db.transaction((tx) => {
+      const memberships = tx.select({
+        agentId: agents.id,
+        teamId: teams.id,
+        name: sql<string>`substr(${teams.name}, 1, ${limits.name + 1})`,
+        role: sql<string>`substr(${agents.role}, 1, ${limits.role + 1})`,
+        total: sql<number>`count(*) over ()`,
+      }).from(agents).innerJoin(teams, eq(agents.teamId, teams.id))
+        .where(and(eq(agents.profileId, profileId), isNull(agents.deletedAt), isNull(teams.deletedAt)))
+        .orderBy(asc(teams.createdAt), asc(teams.id), asc(agents.id))
+        .limit(limits.teams).all();
+
+      return {
+        teams: memberships.map((membership) => {
+          const peers = tx.select({
+            name: sql<string>`substr(${agents.name}, 1, ${limits.name + 1})`,
+            role: sql<string>`substr(${agents.role}, 1, ${limits.role + 1})`,
+            total: sql<number>`count(*) over ()`,
+          }).from(agents)
+            .where(and(
+              eq(agents.teamId, membership.teamId), isNull(agents.deletedAt),
+              sql`${agents.id} <> ${membership.agentId}`,
+            ))
+            .orderBy(asc(agents.createdAt), asc(agents.id)).limit(limits.teammates).all();
+          return {
+            name: membership.name,
+            role: membership.role,
+            teammates: peers.map(({ name, role }) => ({ name, role })),
+            omittedTeammates: (peers[0]?.total ?? 0) - peers.length,
+          };
+        }),
+        omittedTeams: (memberships[0]?.total ?? 0) - memberships.length,
+      };
+    });
   }
 
   /**

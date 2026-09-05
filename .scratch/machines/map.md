@@ -76,6 +76,12 @@ local provider. Cursor's ACP setting is not described as a verified native fence
 answer remains pending. Continue the full implementation goal; the image ticket remains claimed
 and its complete-state migration is still unfinished. All box activation gates remain in place.
 
+**Profile overview checkpoint, 2026-09-06.**
+[What lives in an agent's home, and what map.md may say](issues/06-what-lives-in-an-agents-home.md)
+is implemented, validated and resolved after acceptance of its [focused proposal](home-decision-round.md).
+Continue with [What an agent addressed outside a team may do, and what its transcript is](issues/07-what-a-dmd-agent-may-do.md).
+Its conversation behavior remains a human decision; the accepted index does not cancel it.
+
 **Main integration, 2026-09-05.** The incoming September 4 planning fork predates the
 accepted local/box scope and uses the numbers now held by the image and engine tickets.
 Its two questions are preserved under unique identities:
@@ -259,6 +265,8 @@ none is discarded, and the destination is unchanged:
 
 ## Decisions so far
 
+- [What lives in an agent's home, and what map.md may say](issues/06-what-lives-in-an-agents-home.md): a bounded, fresh profile-membership overview on every turn; existing standing instructions, no shared file or new personal-memory writer, and no other-team work contents or added authority.
+
 - [Where the boundary goes: around the bridge, or inside the runtime](issues/04-where-the-boundary-goes.md): native local protection with disclosed limits and inherited project rules; optional box fences disabled independently of approvals, coupled Codex mode retained; protected-command failure may follow startup, verified on the pinned Claude CLI.
 
 - [Where a Workspace lives when the Machine is not this one](issues/05-where-a-workspace-lives.md): host worktrees and shared Git metadata mounted in the staged box lifecycle, Agent commit identity, scoped skills and measured deletion; verified with real Git and sbx, activation remains gated on the remaining tickets.
@@ -314,13 +322,15 @@ In scope, not yet sharp enough to ticket. Graduates as the frontier advances.
   own refusal as the skipped reason; `09` §4 owns the sentence); *compaction off-machine* (the
   archive stays on this computer and the handoff travels as text; `14` checks it); *attachments
   across the boundary* (one zero-token measurement, a 6 MB line over the exec transport; `16`).
-- **Promoting what is true everywhere.** The `handbooks` map left open whether an entry that
-  turns out to be about the person rather than the team can be promoted to standing instructions.
-  A profile with a home meets that question from the other side.
 
 ## Out of scope
 
 Ruled beyond this destination. These do not graduate; they return only as a fresh effort.
+
+- **Automatic promotion to personal memory.** The accepted
+  [profile overview](issues/06-what-lives-in-an-agents-home.md) supplies membership metadata and
+  keeps standing instructions under user control. A Handbook entry becoming a shared personal
+  instruction needs a separate future memory decision; it is not required for Machines.
 
 - [Is remoteness a place to execute, or a blobot instance?](issues/23-is-remoteness-a-place-or-an-instance.md):
   the server/client fork from main is retained as a future question; this effort already fixes

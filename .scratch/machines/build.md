@@ -671,3 +671,25 @@ Continue the full Machines goal at the next frontier. The image ticket remains c
 complete-state migration remains unfinished. Box runtime preparation and production activation
 guards remain closed; this resolution does not certify provider turns inside a box, Linux
 native failure behavior, egress, onboarding or preservation. Do not re-ask the boundary choices.
+## 2026-09-06 — profile overview implemented and resolved
+
+Guillermo accepted the focused home proposal with “ok”.
+[What lives in an agent's home, and what map.md may say](issues/06-what-lives-in-an-agents-home.md)
+is resolved: a bounded projection of active membership names/roles and teammates, refreshed at
+each actual prompt delivery. SQLite selects no work/path fields, core consumes a narrow source,
+and desktop `startTeam` supplies it. Direct, queued, routine, briefing and compaction turns use
+the same composer. Existing instructions remain user-controlled; no shared file, home mount,
+new personal-memory tool or cross-team authority is added. The injection gauge counts the new
+context without accumulating prior wake sizes. Handoffs remain scoped to the same team/Agent.
+
+Validation: **core 971 passed / 46 skipped; desktop 610 passed / 1 skipped**; both typechecks
+and builds pass. Eleven new tests cover the projection/privacy boundary, freshness, bounds,
+deletion/retirement, delivery routes, attachments, persistence and accounting. The first
+concurrent desktop run failed one existing dictation test that waits a fixed 20 ms; isolation
+and a complete rerun both pass. Logs:
+`/private/tmp/blobot-profile-overview-{core-tests,desktop-tests,desktop-tests-rerun,desktop-build}.log`.
+
+Next: [What an agent addressed outside a team may do, and what its transcript is](issues/07-what-a-dmd-agent-may-do.md).
+The thin overview does not silently decide or cancel that conversation. Claim it and use
+grill-with-docs for its non-obvious behavior. Continue the full Machines goal; full-state image
+preservation and the box activation gates remain unfinished. No application branch push.

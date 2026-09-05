@@ -229,6 +229,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     handoffs: new FileHandoffArchive(),
     routines: store,
     handbooks: store,
+    profileOverviews: store,
   });
   await orchestrator.start();
 
