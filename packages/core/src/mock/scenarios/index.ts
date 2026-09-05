@@ -36,6 +36,58 @@ export const bobReviews: Scenario = scenario('bob-reviews')
   .end();
 
 /**
+ * Bob, woken mid-list, does his own batch and answers.
+ *
+ * The counterpart to `works-through-a-list`'s mail, and the whole reason it is there: the demo
+ * had no run in which two agents held calls at the same time, so the team pane's one block per
+ * agent — the thing `.scratch/live-steps/` was built for — could only be argued about from a
+ * unit test. Bob opens three reads while Alice is still editing the scene, and his block draws
+ * under his own face beside hers.
+ *
+ * He answers with a correction rather than a yes, because an agent that only ever confirms is
+ * the kind mock ticket 08 refuses: the reply has to be worth the turn it cost.
+ */
+export const bobChecksTheIdShape: Scenario = scenario('bob-checks-the-id-shape')
+  .think('The id shape is an API question, so the answer is in the serializer and not in the store.')
+  .parallel([
+    tool('read api/schema.ts', 'read', {
+      rawInput: { path: 'api/schema.ts' },
+      durationMs: 420,
+      outcome: { status: 'completed', output: '… 210 lines\n', exit: 0 },
+    }),
+    tool('read api/serialize.ts', 'read', {
+      rawInput: { path: 'api/serialize.ts' },
+      durationMs: 180,
+      outcome: { status: 'completed', output: '… 96 lines\n', exit: 0 },
+    }),
+    tool('grep -rn "objectId" api/', 'execute', {
+      rawInput: { command: 'grep -rn "objectId" api/' },
+      durationMs: 300,
+      outcome: { status: 'completed', output: 'api/schema.ts:41:  objectId: number;\n', exit: 0 },
+    }),
+  ])
+  .say('It is a number on our side, not a string. I will widen the serializer rather than make her cast it.')
+  .callTool('api/serialize.ts', 'edit', {
+    rawInput: { path: 'api/serialize.ts' },
+    durationMs: 260,
+    diff: {
+      oldText: '  objectId: row.object_id,\n',
+      newText: '  objectId: String(row.object_id),\n',
+    },
+    outcome: { status: 'completed', output: 'ok\n', exit: 0 },
+  })
+  .callTool('npm test -- api/serialize', 'execute', {
+    rawInput: { command: 'npm test -- api/serialize' },
+    durationMs: 3_200,
+    outcome: { status: 'completed', output: '4 passing\n', exit: 0 },
+  })
+  .messageAgent(
+    'Alice',
+    'It was a number, not a string. I have made the serializer send it as a string, so your assumption holds now. Tests are green on my branch.',
+  )
+  .end();
+
+/**
  * Alice says she will get Bob involved, and never calls the tool.
  *
  * Ticket 08's thesis, applied to the one failure a kind mock would never produce: the turn is
@@ -234,7 +286,16 @@ export const worksThroughAList: Scenario = scenario('works-through-a-list')
       outcome: { status: 'completed', output: 'ok\n', exit: 0 },
     }),
   ])
-  .say('Now the objects themselves. The camera is top-down, so I am shaping these to read by silhouette.')
+  // Mail in the middle of a long turn, which is where it really lands: Alice does not stop to
+  // wait for Bob, she hands him a piece and keeps going. It is what puts two agents in flight in
+  // the same frame, which no demo script could produce before — the leftover on
+  // `.scratch/live-steps/build.md`.
+  .messageAgent(
+    'Bob',
+    'While I do the scene: does the hover id we put on the store line up with what the API sends back? I am assuming a plain string.',
+    'Added `hovered` to src/store/selection.ts on blobot/checkout/alice; ids are the object names for now.',
+  )
+  .say('Bob is checking the id shape. Now the objects themselves. The camera is top-down, so I am shaping these to read by silhouette.')
   .callTool('src/scene/objects.tsx', 'edit', {
     rawInput: { path: 'src/scene/objects.tsx' },
     durationMs: 480,
@@ -502,6 +563,7 @@ export const writesItDown: Scenario = scenario('writes-it-down')
 export const scenarios = {
   'alice-asks-bob': aliceAsksBob,
   'bob-reviews': bobReviews,
+  'bob-checks-the-id-shape': bobChecksTheIdShape,
   'promises-bob-and-forgets': promisesBobAndForgets,
   'tool-failure-continues': toolFailureContinues,
   'bob-fails-midturn': bobFailsMidturn,

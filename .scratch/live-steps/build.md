@@ -32,11 +32,17 @@ alone: it is one visual event (the batch appeared) rather than the three competi
 
 ## Left over
 
-- **No demo script puts two agents in flight in the same frame.** The team pane's attribution is
-  verified with Bob's block under Alice's finished turn (`--demo`, 8s), and two simultaneous
-  blocks are covered by `liveTailOf`'s test rather than by a screenshot. A script where both
-  agents are genuinely mid-turn at once would be worth having, and would be the first thing to
-  look at if the block order ever needs arguing about.
+- ~~No demo script puts two agents in flight in the same frame.~~ **Spent the same day.**
+  `works-through-a-list` mails Bob from the middle of the list and carries on rather than
+  waiting, and `many-steps` gives him `bob-checks-the-id-shape` — his own batch of three reads,
+  an edit, a test run, and a reply that corrects her rather than agreeing with her. The two turns
+  genuinely overlap, the fold swallows the mail and his whole turn under Alice's block, and the
+  rail shows both agents working.
+
+  **And the first frame of it found ticket 06.** `liveTailOf` takes the *trailing* run of loose
+  calls, which is true of one agent working and false of two: Bob's `npm test` opened, Alice
+  wrote six more rows, and his running call is stranded above them as exactly the unattributed
+  mono line the block was built to abolish. Open, and the frontier.
 - **The face still remounts at the seam** where the block gives way to the message. Unchanged
   from before this effort rather than introduced by it. Ticket 05 names it.
 - **Nothing has met a real batch.** Claude, Codex, Cursor and fx all batch tool calls, and none of

@@ -154,12 +154,18 @@ export const demoScripts = {
    * One turn, twenty-two calls, one answer. The shape a long piece of real work has, and the run
    * the transcript's fold is reviewed against: shut, this is a caption, one mono line and a
    * paragraph; flat, it was a bulleted list of intentions with the answer buried under it.
+   *
+   * **And the one run where two agents hold calls at the same time.** Alice mails Bob from the
+   * middle of the list and carries on rather than waiting, so his three reads open while she is
+   * still editing the scene — which is the only way to look at `.scratch/live-steps/`'s block
+   * per agent doing the thing it was built for. Every other script wakes Bob on a turn Alice has
+   * already finished.
    */
   'many-steps': {
-    summary: 'Alice works through a list of edits and answers at the end',
+    summary: 'Alice works through a list of edits, hands Bob a question, and answers at the end',
     prompt: 'Build the top-down desk scene and wire it into the page.',
     alice: scenarios['works-through-a-list'],
-    bob: scenarios['bob-reviews'],
+    bob: scenarios['bob-checks-the-id-shape'],
   },
   /**
    * An agent schedules itself, and the block that pays for it opens in the turn that did it.

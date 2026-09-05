@@ -80,8 +80,11 @@ the rows, `ToolLine`), `styles.css` (`.tool.now`, `.inflight`, `.dots`), and
 arrive and shut transitions exist. The team pane already draws one pending bubble per running
 agent. The fold already counts and names what it swallowed.
 
-**Reached, 2026-09-05.** All five tickets are resolved, the frontier is empty, and the code is
-built. Do not run `/wayfinder` on this map: there is no next ticket. Decisions are binding; if one
+**Reached and reopened the same day, 2026-09-05.** The five tickets it was chartered with are
+resolved and built. **Ticket 06 is open and is the frontier**: enriching the demo so two agents
+really overlap — which is what ticket 03 was built for and what nothing could produce until 02
+existed — showed that `liveTailOf`'s tail is the *trailing* run of loose calls, so a running call
+with another agent's rows after it is stranded above them with no face on it. Decisions are binding; if one
 is wrong, reopen its ticket and say so on it rather than quietly contradicting it. What was
 decided *while* building, and what is left over, is on `build.md`.
 
