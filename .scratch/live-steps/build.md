@@ -48,3 +48,46 @@ alone: it is one visual event (the batch appeared) rather than the three competi
 - **Nothing has met a real batch.** Claude, Codex, Cursor and fx all batch tool calls, and none of
   them has been watched doing it through this block. The mock reproduces the shape; only a live
   run says whether the ids and the ordering really arrive the way `Promise.all` models them.
+
+## Round two, 2026-09-05: 07 and 08
+
+**`runFrom` could not be consulted from the live path, and that was the whole size of 08.** It
+terminated on the first unsettled item belonging to anybody in the run, so its boundary was
+*defined* to end where the live region began. The fix is one pass: `rowsOf(items, live?)`
+computes the boundary over both halves and returns the live half as a row. `liveTailOf` is gone.
+
+**The two admission predicates were the same function.** `settledWork` and `partnerWork` had been
+character for character identical since length stopped deciding admission, and the doc comment on
+the second still described a difference that no longer existed. Collapsed into `runWork`, which
+is 07's rule arriving in the code: what admits a line is what the line *is*, and who spoke it
+decides only where it comes back out.
+
+**Then the screen put the exception back.** With prose left alone, Alice's live message still
+broke her own run, and Bob's open call landed below it in a principal-less fold reading
+`RAN 1 TOOL` — the stranded line from 06 with a chevron on it. The principal's live prose has to
+be admitted, because the lifted set takes all of it straight back out, so the run reaching past a
+sentence being written hides nothing. A teammate's must not be: that really would take it off the
+screen mid-stream. One `principal: boolean` argument, and it is the only place in `runWork` where
+the speaker matters.
+
+**A batch is bounded by narration.** The live row is the trailing run of the principal's calls,
+extended backwards over settled siblings until it meets something the principal said. Without the
+backwards extension a finished call drops out of the block into a loose line and the agent's face
+draws twice; without the bound at narration the whole turn stays live and nothing folds until it
+ends. The one shape this gets wrong is a turn of many calls with no prose at all between any of
+them, which none of the four runtimes produces and the mock does not either.
+
+**The default is `NOBODY_LIVE`.** `rowsOf(items)` with no status record assumes a settled
+transcript, which is both honest — a row that still says `running` on a transcript nobody is
+watching is a call whose end was never learned — and the reason every existing fold test passed
+unchanged through a rewrite of the function they test.
+
+### Left over
+
+- **The fold's count is live now** (`RAN 17` with a teammate's call open, `RAN 22` without). That
+  is 09 and it is the frontier.
+- **A Routine firing re-addresses an in-flight turn.** `addressed` is reset by every `user` item
+  and a Routine draws in the user's voice. On the map's *Found on the way*; older than this
+  effort.
+- **Still nothing has met a real batch.** Unchanged from round one, and now it would exercise
+  `liveRunIn`'s backwards walk as well as the ids and the ordering.

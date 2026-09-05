@@ -19,6 +19,7 @@ import { useDictation } from './useDictation.js';
 import { settingsSectionOf } from './components/Settings.js';
 import { useComposerRoom } from './useComposerRoom.js';
 import { usePlaySound } from './sound/useSound.js';
+import type { NewTeamSpec } from '../../shared/api.js';
 
 export function App(): React.JSX.Element {
   const [state, dispatch] = useReducer(reduce, initialState);
@@ -39,6 +40,15 @@ export function App(): React.JSX.Element {
   // `--screen=new-team` opens it, for the same reason `--screen=agents` exists: the flow is a
   // surface a screenshot cannot click its way to, and now one of its steps decides who leads.
   const [creating, setCreating] = useState(opened.get('screen') === 'new-team');
+  /**
+   * A team handed over and not yet on screen.
+   *
+   * The bar closes the moment the spec is complete, so the seconds that follow — an Agent per
+   * member, a worktree each, a session in every one — happen behind the ordinary window instead
+   * of under a modal saying *creating…*. It only shows on a first launch, where there is no
+   * window behind it to go back to.
+   */
+  const [starting, setStarting] = useState(false);
   /** *Your agents*, over the working surface. Not a modal: it is a place, not a decision. */
   // `--screen=hire` is the same place with its one dialog open, because the runtime picker and
   // what it now offers to do about a runtime live in there and nowhere a screenshot can reach.
@@ -273,6 +283,27 @@ export function App(): React.JSX.Element {
    */
   const openTeamId = state.snapshot?.team?.id;
   const workspaces = useWorkspaces(openTeamId, state.feed.length);
+  /**
+   * Take the creation bar's spec, close it, and let the rail report what happens.
+   *
+   * Nothing awaits this on screen. A failure lands in the strip above the panes, which is where
+   * *the team you clicked would not open* already goes, because it is the same kind of news
+   * about the same kind of thing. On success the snapshot brings the team in as the open one,
+   * `switchTo` having already made it current in main.
+   */
+  const startTeam = useCallback(
+    (spec: NewTeamSpec) => {
+      setCreating(false);
+      setStarting(true);
+      void window.blobot.createTeam(spec).then((result) => {
+        setStarting(false);
+        if (result.ok) refresh(true);
+        else setOpenError(result.error ?? 'The team could not be created.');
+      });
+    },
+    [refresh],
+  );
+
   const refreshWorkspaces = workspaces.refresh;
   const publish = useCallback(
     (agentId: string, options: { title?: string; draft?: boolean }) => {
@@ -316,8 +347,13 @@ export function App(): React.JSX.Element {
     snapshot.teams.find((row) => row.id === deleting) ??
     (opened.get('screen') === 'delete-team' ? snapshot.teams[0] : undefined);
 
-  // The genuine empty state: a first launch, before any team exists.
-  if (snapshot.team === undefined || creating) {
+  // The genuine empty state: a first launch, before any team exists. Creating a team when one
+  // already exists no longer comes here: the bar floats over the working surface, below, the
+  // way the navigator does, because a team you are forming does not replace the team you are on.
+  if (snapshot.team === undefined) {
+    // The bar has gone and the first team is being made. The same blank the app shows before
+    // its first snapshot, because that is exactly what this is: a window waiting for one.
+    if (starting) return <div className="app" />;
     return (
       // No strip across the top. It said the product's own name and counted the teams, on the
       // one screen where neither is a thing the reader can act on, and it put a second
@@ -325,13 +361,7 @@ export function App(): React.JSX.Element {
       // header for the same reason.
       <div className="app">
         {openError !== undefined && <div className="openerror">{openError}</div>}
-        <NewTeam
-          {...(snapshot.team === undefined ? {} : { onCancel: () => setCreating(false) })}
-          onCreated={() => {
-            setCreating(false);
-            refresh(true);
-          }}
-        />
+        <NewTeam onCreate={startTeam} />
       </div>
     );
   }
@@ -591,6 +621,11 @@ export function App(): React.JSX.Element {
             onClose={() => setDeleting(undefined)}
             onDeleted={() => refresh(true)}
           />
+        )}
+        {/* The same layer the navigator takes, and for the same reason: forming a team is a
+            door, not a place, and the team you are on is still running behind it. */}
+        {creating && (
+          <NewTeam onCancel={() => setCreating(false)} onCreate={startTeam} />
         )}
         {/* Over every other layer, because it is how you leave the one you are on. It is the
             only surface in the app that is not a place: it opens on a key, answers, and goes. */}

@@ -216,7 +216,8 @@ export function isPending(
 }
 
 /**
- * Whether this agent is inside a turn, which is what bounds {@link liveTailOf}'s tail.
+ * Whether this agent is inside a turn, which is what {@link LiveNow} is asked and what bounds
+ * the live half of a run.
  *
  * `responding` is not in here and that is the whole of what keeps one face on screen: while an
  * agent is streaming prose there is no live block, so the message's own face is the only one,
@@ -232,9 +233,14 @@ export function isInFlight(status: AgentStatus): boolean {
  * `.scratch/live-steps/issues/03`. The transcript used to draw running calls as loose mono lines
  * in the shared column with nothing on them saying whose they were, and a pending bubble under
  * all of them. In a team pane that is unreadable the moment two agents run at once: six lines
- * interleaved in call-start order, attributable to nobody. A block per agent is the only shape
- * that survives more than one of them, and it is the shape the settled transcript already uses —
- * a face, a name, and then the thing being done.
+ * interleaved in call-start order, attributable to nobody. A block is the only shape that
+ * survives more than one of them, and it is the shape the settled transcript already uses — a
+ * face, a name, and then the thing being done.
+ *
+ * **One per principal, not one per agent** (`issues/08`, narrowing 03). A teammate's open calls
+ * are inside the run its mail caused, the same place they go the instant they return; the block
+ * that says it is working is the principal's. Empty items is the other legal shape: an agent
+ * asked something with nothing to show for it yet, which is where the dots survive.
  */
 export interface LiveBlock {
   readonly agentId: string;
@@ -243,53 +249,47 @@ export interface LiveBlock {
 }
 
 /**
- * Split the rows into what has settled and what is still happening.
+ * Whether this agent is inside a turn right now, asked of the status record the renderer holds.
  *
- * The tail is the trailing run of loose tool rows belonging to agents whose turn is in flight —
- * loose rather than unsettled, so a batch stays together: a call that returns while its
- * neighbours are still running does not jump out of the block and back into the column above it.
- * It leaves when the whole batch does, which is when {@link rowsOf} folds them.
- *
- * `live` is what bounds it, and it has to be a status rather than the items: a lone completed
- * call never reaches `WORTH_FOLDING`, so it stays a loose row for the rest of the session, and a
- * tail defined by looseness alone would keep a face and a live block on screen over it forever.
- *
- * **Permission rows are never in here.** An unanswered one is the whole of what the reader has
- * to act on, it carries its own buttons, and the agent holding it is `waiting`, which is not a
- * turn in flight. It stays a row of its own at the altitude it stopped at.
+ * It has to be a status rather than a property of the items. A call whose row still says
+ * `running` in a transcript nobody is watching is a call whose end was never learned, and a lone
+ * completed call never reaches the fold's threshold, so it stays a loose row for the rest of the
+ * session — either one, read off the items alone, would hold a live face over a dead turn.
  */
-export function liveTailOf(
-  rows: readonly Row[],
-  live: (agentId: string) => boolean,
-): { readonly settled: readonly Row[]; readonly blocks: readonly LiveBlock[] } {
-  let cut = rows.length;
-  while (cut > 0) {
-    const row = rows[cut - 1] as Row;
-    if (row.kind !== 'item' || row.item.kind !== 'tool' || !live(row.item.agentId)) break;
-    cut -= 1;
-  }
-  if (cut === rows.length) return { settled: rows, blocks: [] };
+export type LiveNow = (agentId: string) => boolean;
 
-  // First appearance, not roster order: an agent's first call in the tail cannot change, so the
-  // blocks hold still while the reader is looking at them, which roster order would also do and
-  // this does without knowing the roster.
-  const order: string[] = [];
-  const byAgent = new Map<string, Item[]>();
-  for (const row of rows.slice(cut)) {
-    if (row.kind !== 'item' || row.item.kind !== 'tool') continue;
-    const { agentId } = row.item;
-    const held = byAgent.get(agentId);
-    if (held === undefined) {
-      order.push(agentId);
-      byAgent.set(agentId, [row.item]);
-    } else {
-      held.push(row.item);
-    }
+/**
+ * What {@link rowsOf} assumes when it is handed no status record: a settled transcript, where
+ * nothing is in flight and every row is a record of something that already happened.
+ */
+const NOBODY_LIVE: LiveNow = () => false;
+
+/**
+ * Everyone the last thing the user said was addressed to, which is who a run may belong to.
+ *
+ * Read off the items and stored nowhere, exactly as {@link rowsOf} reads it, so that the two
+ * halves of the transcript cannot disagree about whose turn is being drawn.
+ */
+export function addressedIn(items: readonly Item[]): ReadonlySet<string> {
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const item = items[index] as Item;
+    if (item.kind === 'user') return new Set(item.agentIds);
   }
-  return {
-    settled: rows.slice(0, cut),
-    blocks: order.map((agentId) => ({ agentId, items: byAgent.get(agentId) ?? [] })),
-  };
+  return new Set();
+}
+
+/**
+ * Whether this agent is one the reader asked, which is what earns a voice of its own.
+ *
+ * `.scratch/live-steps/issues/07`. Everybody else in the turn is machinery the principal
+ * arranged, and folds. An empty set is the honest failure and not a guess: above the top of a
+ * bounded transcript blobot does not know who was asked, so everybody is a candidate — which is
+ * also, for free, why an agent's own pane is unchanged by any of this. {@link itemsFor} filters
+ * the user's `@alice` bubble out of Bob's pane, so nothing is addressed there and Bob is his own
+ * principal.
+ */
+export function isPrincipal(addressed: ReadonlySet<string>, agentId: string): boolean {
+  return addressed.size === 0 || addressed.has(agentId);
 }
 
 /** What an agent last said, for the rail's preview line. Undefined until it has spoken. */
@@ -1400,7 +1400,14 @@ export type Row =
        */
       readonly partnerIds: readonly string[];
       readonly items: readonly Item[];
-    };
+    }
+  /**
+   * The half of a run that has not finished becoming a record: the principal's face over the
+   * calls that are still open. It sits where its run sits rather than at the foot of the column,
+   * so a fan-out with two agents working draws each block under its own fold instead of stacking
+   * both of them below everybody's history.
+   */
+  | ({ readonly kind: 'live'; readonly id: string; readonly at: number } & LiveBlock);
 
 /**
  * Prose past this is not a caption on a call, it is something being explained, and folding it
@@ -1421,14 +1428,45 @@ function speakerOf(item: Item): string | undefined {
   return item.kind === 'user' || item.kind === 'peer' ? undefined : item.agentId;
 }
 
-function settledWork(item: Item): boolean {
+/**
+ * Whether a run may hold this item at all.
+ *
+ * One predicate for the principal and for a teammate, which is `.scratch/live-steps/issues/07`
+ * arriving in the code: what admits a line is what the line *is*, and who spoke it decides only
+ * where it comes back out — {@link runFrom}'s lifted set. There were two of these and they had
+ * been identical since the day length stopped deciding admission; the comment on the second one
+ * still described a difference that was no longer there.
+ *
+ * A **running call is admitted**, and that is ticket 08's whole change. It used to end the run,
+ * which was harmless while one agent worked and false the moment two did: a teammate's open call
+ * cut the principal's turn in half, so one turn drew as two folds with an unattributed mono line
+ * between them. It is taken straight back out by {@link liveRunIn} and drawn under its agent's
+ * face, so the run is computed once over both halves and rendered at two altitudes.
+ *
+ * Admitted only while the agent is **in a turn**. Without a status record — a persisted
+ * transcript nobody is watching — a row that still says `running` is a record of a call whose
+ * end was never learned, and lifting it into a live block would put a face over a dead turn.
+ *
+ * What is still refused is what has to reach the person: a question nobody has answered, and the
+ * disclosures that exist *because* something happened off screen.
+ *
+ * Prose is the one place the speaker still matters, and only because of where it comes back out.
+ * The **principal's** is admitted whether or not it has finished, since {@link runFrom} lifts all
+ * of it straight back out again — letting the run reach past a sentence being written hides
+ * nothing, and refusing to was cutting the turn in half under a teammate whose call was still
+ * open, which left that call in an unattributed `ran 1 tool` of its own. A **teammate's** live
+ * prose is refused, because folding that really would take it off the screen while it is being
+ * written, and `DESIGN.md` binds the three exclusions to the teammate too.
+ */
+function runWork(item: Item, live: LiveNow, principal: boolean): boolean {
   switch (item.kind) {
     case 'tool':
-      return item.status !== 'asking' && item.status !== 'running';
+      if (item.status === 'asking') return false;
+      return item.status !== 'running' || live(item.agentId);
     case 'permission':
       return item.outcome !== undefined;
     case 'agent':
-      return !item.live;
+      return principal || !item.live;
     default:
       return false;
   }
@@ -1556,31 +1594,6 @@ function fileName(path: string): string {
 }
 
 /**
- * Settled work by an agent the prompt did **not** address, which a fold may swallow whole.
- *
- * Deliberately looser than {@link settledWork} on prose alone. That predicate refuses to fold
- * anything longer than a caption, because the paragraph a turn ends on is the answer and the
- * answer never folds. This is not that answer: the reader addressed somebody else, and this is a
- * teammate replying to that somebody. What it is not looser about is liveness.
- *
- * Three kinds and no others. A `system` line, a compaction, a Routine an agent armed and a
- * Handbook write are all disclosures that exist *because* something happened off screen, and
- * answering one with a second thing off screen is not a fold.
- */
-function partnerWork(item: Item): boolean {
-  switch (item.kind) {
-    case 'agent':
-      return !item.live;
-    case 'tool':
-      return item.status !== 'asking' && item.status !== 'running';
-    case 'permission':
-      return item.outcome !== undefined;
-    default:
-      return false;
-  }
-}
-
-/**
  * The run of work starting at `index`, and where it ends. Undefined when nothing starts here.
  *
  * One run holds three things now: the addressed agent's own settled steps, the mail it sent or
@@ -1603,7 +1616,13 @@ function runFrom(
   items: readonly Item[],
   index: number,
   addressed: ReadonlySet<string>,
-): { end: number; principal: string | undefined; said: readonly number[] } | undefined {
+  live: LiveNow,
+): {
+  end: number;
+  principal: string | undefined;
+  said: readonly number[];
+  live: readonly number[];
+} | undefined {
   let principal: string | undefined;
   let end = index;
 
@@ -1623,17 +1642,24 @@ function runFrom(
     const speaker = speakerOf(item);
     if (speaker === undefined) break;
 
-    if (addressed.size === 0 || addressed.has(speaker)) {
+    if (isPrincipal(addressed, speaker)) {
       if (principal !== undefined && principal !== speaker) break;
-      if (!settledWork(item)) break;
+      if (!runWork(item, live, true)) break;
       principal = speaker;
-    } else if (!partnerWork(item)) {
+    } else if (!runWork(item, live, false)) {
       break;
     }
     end += 1;
   }
 
   if (end === index) return undefined;
+
+  // The live half, taken out before anything else is decided about the run, so that everything
+  // below reads as though the run ended where the work still happening begins. That is what
+  // keeps the caption above a running batch lifted out as a loose row for the block to group
+  // under, which is what it did when an open call ended the run outright.
+  const inFlight = liveRunIn(items, index, end, principal, live);
+  const isLive = new Set(inFlight);
 
   /*
    * What the principal actually said to you, which is never inside the block.
@@ -1662,6 +1688,9 @@ function runFrom(
   for (let back = end - 1; back >= index; back -= 1) {
     const item = items[back] as Item;
     if (item.kind === 'peer' || speakerOf(item) !== principal) continue;
+    // Skipped without clearing `trailing`: these are leaving the run, and the prose above them
+    // is the caption on work the reader can still see.
+    if (isLive.has(back)) continue;
     if (item.kind !== 'agent') {
       trailing = false;
       continue;
@@ -1670,7 +1699,66 @@ function runFrom(
   }
   lifted.reverse();
 
-  return { end, principal, said: lifted };
+  return { end, principal, said: lifted, live: inFlight };
+}
+
+/**
+ * The principal's calls that have not finished, and the settled ones that will leave with them.
+ *
+ * A step leaves the block for exactly one reason, it finished (`issues/04`) — so a call that
+ * returns while its neighbours are still open must not jump out of the block and back into the
+ * column above it as a lone unattributed line. Its **batch** is what it leaves with, and a batch
+ * is a run of calls with none of the agent's own narration between them: the walk starts at the
+ * earliest still-open call and extends backwards over contiguous calls until it meets a caption.
+ *
+ * A teammate's items are stepped over rather than stopping it, because they are somebody else's
+ * work happening in the middle of this one's batch and say nothing about where the batch begins.
+ *
+ * Only the principal's. A teammate has no live block in a team pane at all (`issues/08`): its
+ * open calls stay inside the run they were caused by, and what says it is working is that block.
+ * In its own pane it *is* the principal — {@link itemsFor} filters the other agents out before
+ * any of this runs, so nothing is addressed there and {@link isPrincipal} answers yes.
+ */
+function liveRunIn(
+  items: readonly Item[],
+  index: number,
+  end: number,
+  principal: string | undefined,
+  live: LiveNow,
+): number[] {
+  if (principal === undefined || !live(principal)) return [];
+
+  const calls: number[] = [];
+  let open = -1;
+  for (let at = index; at < end; at += 1) {
+    const item = items[at] as Item;
+    if (speakerOf(item) !== principal) continue;
+    if (item.kind !== 'tool') continue;
+    calls.push(at);
+    if (open === -1 && item.status === 'running') open = at;
+  }
+  if (open === -1) return [];
+
+  let from = calls.indexOf(open);
+  while (from > 0) {
+    if (narratedBetween(items, calls[from - 1] as number, calls[from] as number, principal)) break;
+    from -= 1;
+  }
+  return calls.slice(from);
+}
+
+/** Whether the principal said anything of its own between two of its calls, which ends a batch. */
+function narratedBetween(
+  items: readonly Item[],
+  after: number,
+  before: number,
+  principal: string,
+): boolean {
+  for (let at = after + 1; at < before; at += 1) {
+    const item = items[at] as Item;
+    if (speakerOf(item) === principal) return true;
+  }
+  return false;
 }
 
 /** Everyone in a run who is not the principal: teammates who spoke, and the far end of mail. */
@@ -1706,7 +1794,7 @@ function partnerSpoke(run: readonly Item[], principal: string | undefined): bool
  * stored for any of this, and nothing is reordered: where a runtime narrates after its call, the
  * agent's mail out stays on its own line above its own answer and only what came back folds.
  */
-export function rowsOf(items: readonly Item[]): Row[] {
+export function rowsOf(items: readonly Item[], live: LiveNow = NOBODY_LIVE): Row[] {
   const rows: Row[] = [];
   let index = 0;
   let addressed: ReadonlySet<string> = new Set();
@@ -1718,13 +1806,17 @@ export function rowsOf(items: readonly Item[]): Row[] {
     // answering the user directly and none of them is anybody's aside.
     if (start.kind === 'user') addressed = new Set(start.agentIds);
 
-    const found = runFrom(items, index, addressed);
+    const found = runFrom(items, index, addressed, live);
     if (found !== undefined) {
       // The run with everything the principal said to you taken out of it. What is left holds
       // its own order, and so does what came out.
       const said = new Set(found.said);
-      const run = items.slice(index, found.end).filter((_, at) => !said.has(index + at));
+      const inFlight = new Set(found.live);
+      const run = items
+        .slice(index, found.end)
+        .filter((_, at) => !said.has(index + at) && !inFlight.has(index + at));
       const answer = found.said.map((at) => items[at] as Item);
+      const open = found.live.map((at) => items[at] as Item);
       const principal = found.principal;
       const partnerIds = partnersOf(run, principal);
       /*
@@ -1748,10 +1840,27 @@ export function rowsOf(items: readonly Item[]): Row[] {
           partnerIds,
           items: run,
         });
-        for (const said of answer) rows.push({ kind: 'item', at: said.at, item: said });
-        index = found.end;
-        continue;
+      } else {
+        /*
+         * Below the threshold a fold costs more than it saves, so the remainder is drawn flat.
+         * The whole remainder rather than one item and another attempt: both ways in are
+         * monotonic over a prefix, so a run that does not qualify has no sub-run that does, and
+         * re-entering here would only re-derive the same answer one item at a time.
+         */
+        for (const item of run) rows.push({ kind: 'item', at: item.at, item });
       }
+      for (const said of answer) rows.push({ kind: 'item', at: said.at, item: said });
+      if (open.length > 0) {
+        rows.push({
+          kind: 'live',
+          id: `live:${(open[0] as Item).id}`,
+          at: (open[0] as Item).at,
+          agentId: principal as string,
+          items: open,
+        });
+      }
+      index = found.end;
+      continue;
     }
 
     rows.push({ kind: 'item', at: start.at, item: start });

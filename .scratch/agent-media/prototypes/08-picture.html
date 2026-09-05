@@ -1,0 +1,81 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>agent-media 08 · where a Picture draws</title>
+<style>
+  :root{--recessed:#060608;--ground:#0a0a0b;--tray:#0e0e10;--raised:#131315;
+        --ink:#fafaf8;--muted:#8a8a93;--line:#232327;
+        --sans:ui-sans-serif,system-ui,sans-serif;--mono:ui-monospace,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font:14px/1.55 var(--sans);
+       color-scheme:dark}
+  .col{max-width:660px;margin:0 auto;padding:40px 24px 80px}
+  h1{font:12px/1 var(--mono);color:var(--muted);letter-spacing:.08em;text-transform:uppercase;
+     margin:0 0 28px}
+  .turn{margin:0 0 34px}
+  .who{display:flex;align-items:center;gap:8px;margin:0 0 8px}
+  .face{width:18px;height:18px;border-radius:6px;flex:none}
+  .a{background:#c8623f}.b{background:#4f7ec9}
+  .name{font:12px/1 var(--mono);color:var(--muted)}
+  p{margin:0 0 10px}
+  /* the fold, shut */
+  .run{display:flex;align-items:center;gap:6px;font:12px/1 var(--mono);color:var(--muted);
+       padding:6px 0;cursor:default}
+  .run svg{opacity:.7}
+  /* a Picture: the picture, and one line */
+  figure{margin:10px 0 0}
+  figure img{display:block;width:100%;height:auto;max-height:360px;object-fit:contain;
+             object-position:left top;border-radius:4px;cursor:zoom-in}
+  figcaption{font:11px/1.4 var(--mono);color:var(--muted);margin-top:6px}
+  /* not drawn: the only case that is text alone */
+  .undrawn{font:11px/1.4 var(--mono);color:var(--muted);margin-top:10px}
+  .user{background:var(--raised);border-radius:10px;padding:10px 12px;margin:0 0 34px}
+  .note{margin:48px 0 0;padding-top:16px;border-top:1px solid var(--line);
+        font:11px/1.6 var(--mono);color:var(--muted);white-space:pre-wrap}
+</style>
+<div class="col">
+<h1>08 · where a Picture draws</h1>
+
+<div class="user">@alice does the login page still look right after the token rename?</div>
+
+<div class="turn">
+  <div class="who"><span class="face a"></span><span class="name">alice</span></div>
+  <div class="run">▸ ran 4 tools · 2 notes</div>
+  <p>The rename did not reach the submit button, so it is still on the old surface token.</p>
+  <figure>
+    <img alt="" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1280' height='800'><rect width='1280' height='800' fill='%23f4f3ef'/><rect x='0' y='0' width='1280' height='64' fill='%23e6e4dd'/><rect x='440' y='210' width='400' height='380' rx='12' fill='%23ffffff' stroke='%23d8d5cc'/><rect x='476' y='262' width='150' height='18' rx='4' fill='%23bdb9ae'/><rect x='476' y='320' width='328' height='40' rx='6' fill='%23f0eee8' stroke='%23d8d5cc'/><rect x='476' y='380' width='328' height='40' rx='6' fill='%23f0eee8' stroke='%23d8d5cc'/><rect x='476' y='452' width='328' height='42' rx='6' fill='%233d6be0'/><rect x='560' y='466' width='160' height='14' rx='4' fill='%23ffffff'/></svg>">
+    <figcaption>login-page.png · written during this turn</figcaption>
+  </figure>
+</div>
+
+<div class="turn">
+  <div class="who"><span class="face b"></span><span class="name">bob</span></div>
+  <div class="run">▸ ran 2 tools</div>
+  <figure>
+    <img alt="" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='900' height='420'><rect width='900' height='420' fill='%23101012'/><polyline points='40,380 180,300 320,320 460,180 600,210 740,90 860,120' fill='none' stroke='%2359c08a' stroke-width='4'/><line x1='40' y1='400' x2='860' y2='400' stroke='%23444'/></svg>">
+    <figcaption>from playwright_screenshot</figcaption>
+  </figure>
+</div>
+
+<div class="turn">
+  <div class="who"><span class="face a"></span><span class="name">alice</span></div>
+  <div class="run">▸ ran 1 tool</div>
+  <div class="undrawn">a picture from alice · not drawn · its bytes did not arrive whole</div>
+</div>
+
+<div class="note">what this is testing
+
+  the picture, then one mono line, and nothing else. no label, no dimensions, no size,
+  no sentence saying a picture is here. the author, 2026-09-05: the human is not stupid.
+
+  the line carries only what looking cannot answer. shown: the file's own name and its
+  age against the turn. observed: which tool it came out of. the two never draw the same.
+
+  colour is the picture's own pixels and stops at its edge. the frame, the fold and the
+  face are untouched. colour never carries which kind it is.
+
+  the fold stays shut around the calls and the picture is outside it, which is the fold's
+  existing rule rather than a new one: what was shown to you is never in the block.
+
+  not drawn is the only case that is text alone, because there is nothing to look at.
+</div>
+</div>

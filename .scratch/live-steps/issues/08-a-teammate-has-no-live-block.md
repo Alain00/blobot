@@ -1,5 +1,5 @@
 Type: task
-Status: open
+Status: resolved
 Blocked by: 07
 
 # A teammate has no block of its own in the team pane
@@ -71,3 +71,65 @@ line alone leaves one turn drawn as two records with a hole in the middle. Add t
 pane*) already holds: `itemsFor` filters before `rowsOf`, so in Bob's own pane the user's
 `@alice` bubble is gone, `addressed` is never set, and the *nothing addressed* branch makes Bob
 his own principal. Pin it.
+
+## Answer
+
+Built 2026-09-05. The proposal stands as written, and the edge below is decided.
+
+### The shape it took
+
+**One pass, not two.** `rowsOf(items, live?)` computes the run boundary over settled and
+unsettled work together and hands the live half back as a **row of its own**, standing where its
+run stands. `liveTailOf` is gone. It took the *trailing* loose calls off the end of the row list,
+which is true of one agent working and false the moment two are.
+
+- **A running call is admitted to a run** and taken straight back out by `liveRunIn`. That one
+  line is the whole of 06 and of this ticket: a run used to end at the first unsettled line from
+  anybody, so a teammate's open call cut the principal's turn in half and stood between the two
+  halves as an unattributed mono line.
+- **Only the principal gets a live row.** A teammate's open calls stay in the run its mail
+  caused, which is where the same calls go the instant they return.
+- **`settledWork` and `partnerWork` collapsed into one `runWork`.** They had been character for
+  character identical since the day length stopped deciding admission, and the doc comment on the
+  second still described a difference that was not there. What admits a line is what the line
+  *is*; who spoke it decides only where it comes back out. That is 07 in the code.
+- **One exception survives, and it is real**: the *principal's* live prose is admitted (the
+  lifted set takes all of it back out, so letting the run reach past it hides nothing), a
+  *teammate's* is not (folding prose mid-stream would take it off the screen). Found on the
+  screen rather than at the desk — the first build left Alice's `TYPING` breaking her own run and
+  Bob's open call orphaned below it in an unattributed `RAN 1 TOOL`.
+- **Batches are bounded by narration.** The live row is the trailing run of the principal's
+  calls, extended backwards over settled siblings until it meets something the principal said.
+  So a call that returns while its neighbours run does not jump out of the block, and the batch
+  before the last caption still folds.
+- The blocked-out empty block (`starting`, `thinking`, no calls yet) stays at the foot of the
+  column and is now filtered to principals, which is the one place `rowsOf` cannot say it.
+
+### The edge: a teammate still running when the principal's turn ends
+
+**The first candidate. The run stays open and the fold keeps filling; the teammate is never
+promoted.** Two reasons, and neither is the "honest about causation" one the ticket offered:
+
+1. **The second candidate flickers.** Promote Bob when Alice goes idle and he has to be demoted
+   again the moment his reply wakes her, which the mailbox's auto-wake makes the *ordinary* end
+   of this state rather than an unusual one. An agent changing category twice for scheduling
+   reasons is worse than one that never changes.
+2. **The third is the first, described differently.** A run is a contiguous span of items;
+   nothing in the stream marks a principal going idle. "Closed but still counting" and "open"
+   compile to the same code, and only one of them is true.
+
+It costs what 09 is for, and the cost is now measurable rather than predicted: the fold read
+`RAN 17 TOOLS` while Bob's `npm test` was open and `RAN 22 TOOLS` when it was not. **A fold's
+count is a live number now.** `DESIGN.md` says so where it says the rest of this, rather than
+leaving 09 to discover it.
+
+### Done when
+
+- `--demo-scenario=many-steps`, team pane, frames at 6s / 8s / 9.5s / 11s / 12s: no call is drawn
+  outside a face's block, no teammate holds a top-level face, and one prompt is **one fold**.
+  06's two folds and its stranded line are both gone.
+- `--pane=bob`, same run: Bob is his own principal with his own face, his own edit and his own
+  open `npm test`, and Alice's mail folds into `RAN 3 TOOLS 🟠 Alice`. 07's clause 3, live and
+  costing nothing, exactly as the grilling predicted.
+- 549 desktop tests, 753 core, typecheck clean. Eight tests replace the five `liveTailOf` had,
+  including the teammate case, 06's ordering and the own-pane case.

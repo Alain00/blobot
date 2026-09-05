@@ -280,8 +280,8 @@ Other transcript rules:
   `ran 6 tools`, plus `· 1 failed` when something did. Three things are structurally outside a
   block rather than flagged open inside one, so that "the live step never folds" is a property
   of the grouping (`rowsOf`) and not an exception at the render site somebody can forget: a call
-  that is running or asking, a question nobody has answered, and a live answer or any prose long
-  enough to be one. Trailing prose is trimmed off the end for the same reason — the last thing
+  the **principal** is running, a question nobody has answered, and a live answer or any prose
+  long enough to be one. Trailing prose is trimmed off the end for the same reason — the last thing
   said in a turn has no call after it, so it is the answer.
 
   **The header counts calls, never seconds.** A duration is a claim about effort blobot cannot
@@ -316,10 +316,19 @@ Other transcript rules:
   A run has **one principal**, so two agents you addressed in one fan-out never merge — that
   would put one agent's words under the other's name. **A teammate's turn always folds**, however
   short, since it is the thing you did not ask for; mail with nothing behind it does not, because
-  one outbound line nobody has answered yet is already one line and is your agent's own act. And
-  the three exclusions bind the teammate too, the last one harder than anywhere else: an agent
-  nobody addressed is precisely the one whose permission request has no other way of reaching
-  you.
+  one outbound line nobody has answered yet is already one line and is your agent's own act.
+
+  Two of the three exclusions bind the teammate too, the last one harder than anywhere else: an
+  agent nobody addressed is precisely the one whose permission request has no other way of
+  reaching you, and prose it is still writing would be genuinely gone from the screen if the
+  block took it. **The first does not, amended 2026-09-05 (`live-steps` ticket 08): a teammate's
+  running call is inside the block.** The exclusion is about the principal's own work, where a
+  call outside the fold is the thing you can watch happening; a teammate's call outside it is a
+  second live voice at your altitude for work you did not ask for, and — because a run ended at
+  the first unsettled line of anybody's — it also cut the turn in half and left that call
+  standing between two folds with nothing on it saying whose it was. The price is that a fold can
+  now be a live object: its count of calls goes up while you are reading it. That is bought
+  deliberately and it is not yet paid for, which is `live-steps` ticket 09.
 
   **What the principal said to you is never in the block.** All of it comes out and is drawn
   underneath, in order, where consecutive rows from one agent group into one turn the way they
@@ -1223,9 +1232,16 @@ One flat file, one flat namespace, no build step between it and the DOM.
   made, named in full before the arrow is pressed, which is what keeps *make one for me* from
   having become something that happens silently. *Hire an agent* sits under the list and outside
   it, because it is not somebody you can put on the team.
+  **The lead is on the badge.** Pressing an agent in the field makes them the lead and the badge
+  says `LEAD` in mono, the same word the rail's roster uses and named rather than drawn, for the
+  reason that paragraph gives. The × takes them off and is revealed on hover and
+  `:focus-within`, which is *your agents*' rule for retiring. *Added the same day, correcting
+  the first draft:* the lead was the first agent picked and nothing on screen said so, which is
+  a rank assigned by the order somebody happened to press two rows in. It also puts the two
+  gestures the right way round — the press that is easy to hit is the one that changes nothing
+  you cannot see.
   **Everything else came off**, and the test that decided it was whether the answer is
-  recoverable a minute later. The lead is the first agent you picked and is named and changed on
-  the team's own row; the turn budget is ten; the icon is offered by the edit dialog from the
+  recoverable a minute later. The turn budget is ten; the icon is offered by the edit dialog from the
   same detection this screen used to run; the roster and the name are edited on that row too.
   What did **not** come off is ticket 14's disclosure, reduced to the two sentences carrying its
   whole claim and sitting under the folder line: it is the one thing here that is not

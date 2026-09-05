@@ -1,5 +1,5 @@
 Type: task
-Status: open
+Status: resolved
 
 # A running call in the middle of the transcript has no block
 
@@ -83,3 +83,14 @@ unsettled item from anybody, so Bob's open call ended Alice's run and a fresh on
 So the cause is not `liveTailOf`'s trailing-run heuristic alone, and lifting the loose line out of
 the settled rows would leave one turn still drawn as two records. The *done when* here stands and
 gains a clause on 08: **one turn, one fold.**
+
+## Answer
+
+Resolved by 08, 2026-09-05, and by neither of the two candidates this ticket offered. The call is
+not top-level, so it is neither lifted to the live region nor given a face where it stands: it is
+a teammate's call inside the principal's run, which is where the same call goes the instant it
+returns. `rowsOf` computes the run over settled and unsettled work in one pass and a running call
+no longer ends it.
+
+The *done when* is met, with the clause this ticket's own screenshot earned: every call in flight
+is under the face of the agent running it, **and one prompt is one fold**. Frames on 08.

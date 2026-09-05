@@ -85,7 +85,7 @@ resolved and built, and then two agents really overlapped for the first time —
 ticket 03 was built for and what nothing could produce until 02 existed. It found a stranded call
 (06) and, behind it, a decision this map never made.
 
-**The frontier is 08.** The author's framing: *there are two kinds of message, internal from bot
+**The frontier is 09.** The author's framing: *there are two kinds of message, internal from bot
 to bot, which folds and is part of the turn, and public for the user, which the user must see.*
 The settled transcript already does this — `runFrom` folds a teammate's whole turn into the
 principal's block and lifts the principal's own words back out — and the live path built here
@@ -122,9 +122,26 @@ decided *while* building, and what is left over, is on `build.md`.
   consulted live — it terminates on the first unsettled item from anybody, which is where the
   live region starts — so 08 is *compute the boundary once over both halves*, and it owns the
   settled side of 06 too: that screenshot has two folds in it, not one fold and a stray line.
+- **08 — one pass, and only a principal has a live block.** `rowsOf(items, live?)` computes the
+  run over settled and unsettled work together and hands the live half back as a row standing
+  where its run stands; `liveTailOf` is gone. A running call is admitted and taken back out, which
+  is 06 as well: a run used to end at the first unsettled line from anybody. `settledWork` and
+  `partnerWork` collapsed into one predicate, because they had been identical for a day and 07
+  says why. The edge is the first candidate — the run stays open, the teammate is never promoted —
+  since promoting flickers the moment auto-wake answers, and "closed but still counting" is the
+  same code.
+- **06 — a teammate's open call is inside the principal's run.** Neither of its own candidates.
+  Resolved by 08 rather than separately.
 - **05 — one face, by construction.** `responding` is out of `isInFlight`, so a block and a live
   message are never mounted together. The real two-faces case was a *settled* caption above the
   block, and `continuesAgent` groups the first block under it.
+
+## The bill, now measured
+
+08 shipped the cost 09 exists to answer, and it is no longer a prediction: the team pane's fold
+read `RAN 17 TOOLS` while the teammate's `npm test` was open and `RAN 22 TOOLS` when it was not.
+**A fold's count is a live number.** `DESIGN.md` says so where it says the rest of the block's
+rules, and 09 decides whether that is all the pane does while two agents work.
 
 ## Found on the way
 

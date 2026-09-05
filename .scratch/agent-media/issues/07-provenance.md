@@ -1,5 +1,5 @@
 Type: grilling
-Status: open
+Status: resolved
 Blocked by: 04
 
 # What the frame has to say for a picture to be believable
@@ -49,3 +49,130 @@ cannot look at the picture to notice, so the frame is the entire defence.
   visible without hovering anything.
 - Never the word *verified*, and nothing that reads as blobot vouching for content.
 - No em dashes in anything a user reads.
+
+## Answer
+
+**The frame carries only what blobot measured, and the agent's words stay in the agent's voice
+where they always were.** Resolved 2026-09-05, downstream of ticket 01's measurement that
+`annotations` do not survive and ticket 04's split into two sources that know different amounts.
+Exact wording is proposed rather than settled and is marked.
+
+### The frame is blobot's voice, and the caption is not in it
+
+The ticket asked what the minimum honest caption is. The answer is that **blobot writes no
+caption at all.**
+
+An agent will describe its own screenshot in prose, and that prose is the agent's claim. The
+temptation is to lift it into the frame, where it would sit next to facts blobot measured and
+borrow their credibility. There is no need to invent a rule against that, because the transcript
+already has one: it has three voices, and this is simply two of them doing their existing jobs.
+The agent's words draw in the agent's voice, above the picture, as ordinary prose. The frame is
+blobot's own line and contains **nothing the agent said**.
+
+That is also the whole answer to *what happens when the agent's words and the picture disagree*:
+nothing. blobot cannot notice, must not try, and has not lent anything to the claim. A reader who
+distrusts the caption is left with the picture and blobot's measurements, which is exactly the
+position they should be in.
+
+No fourth voice is invented. This is the same refusal that killed a `system` line naming blobot in
+`.scratch/handbooks/` ticket 04.
+
+### What is on the frame, under option 2
+
+Reading the file itself, blobot knows things it can state without qualification. The frame carries
+the two that defeat the actual failure:
+
+**The file's own name**, relative to the AgentWorkspace. Not a name blobot invented, and not the
+tool's name. If the agent wrote `shots/login-page.png`, that is what it is called, and the reader
+can go and look at it.
+
+**When it was written, relative to the turn.** This is the load-bearing one and it is the reason
+this ticket exists. The mundane failure is a screenshot of a stale build, a dead dev server, or the
+wrong route, presented as current. blobot cannot look at the picture, but it can compare the file's
+mtime to when the turn started, which is a fact it holds already. A file written **during** this
+turn and a file that was **already there** are different claims about the world, and only one of
+them is *how your app looks*.
+
+That comparison is the single most valuable thing in this map. It is measured, it is cheap, it
+needs no inference, and it turns an unfalsifiable assertion into one the reader can weigh.
+
+**The dimensions**, because a picture at the wrong size is the second visible tell, and because
+they are free once the file is decoded.
+
+Not on the frame:
+
+- **Bytes.** That is a cost figure and belongs under the gauge, which is ticket 09's.
+- **The branch.** Tempting, since `WORKSPACE` already draws it and it feels like the missing half
+  of *which version is this*. Refused: blobot knows the branch **now**, not the branch when the
+  file was written, and putting it on the frame would assert a link blobot cannot establish. It
+  would be the one claimed fact in a line of measured ones.
+- **Anything about what is in the picture.** blobot provides no inference.
+
+### Option 1's frame is different, and has to be
+
+Under an observed tool result, blobot knows the tool's name, the `toolCallId`, the agent, and the
+moment the update arrived. There is **no file**, so there is no name and, decisively, **no age**.
+`annotations.lastModified` was the protocol's answer and ticket 01 measured it stripped.
+
+So that frame says which tool produced it and that it arrived during this turn, and it says
+nothing else. It must **not** be the same drawing as option 2's, because a reader who cannot tell
+them apart will read option 2's guarantees onto option 1.
+
+This is the repo's existing discipline applied again: *no pull request* and *we could not look* are
+separate states that never draw the same, and `measured` rides `context_compacted` for exactly this
+reason. Two sources that know different amounts get two frames, and the difference is visible
+without hovering anything.
+
+### Proposed copy, for the author
+
+Blobot's voice, mono, in the existing status register. No em dashes.
+
+- option 2, written during the turn: `login-page.png · 1280x800 · written during this turn`
+- option 2, older than the turn: `login-page.png · 1280x800 · written before this turn`
+- option 1: `from playwright_screenshot · received during this turn`
+
+The wording is the author's; the **three states** are not, and neither is the rule that the third
+line never appears on an option 2 frame or vice versa. A relative age in minutes and hours was
+considered and rejected for the *before this turn* case: it invites precision the reader cannot use
+and it changes every time the transcript is re-read.
+
+### The facts live on the frame, not in a detail view
+
+Opening a picture at full size is a plain want and its layout is ticket 08's. But the measurements
+are not allowed to live only behind that interaction: **a defeater you have to go and find does not
+defeat anything.** The reason this ticket is first-class is that a reader forms a belief the moment
+they see the picture, and the frame is the only thing that reaches them at that moment.
+
+### Never
+
+The word *verified*. Any phrasing in which blobot appears to vouch for content. Any frame that
+merges a measured fact and a claimed one into one sentence.
+
+## Amendment, 2026-09-05
+
+**The author, on the frame's length: if the thumbnail is visible, nothing in the frame may explain
+or expose it.** *The human is not stupid.* This narrows the proposed copy above and the narrowing
+is binding.
+
+The test is now one question per fact: **can the reader see it in the picture?** If yes, blobot
+does not say it. What survives is only what the picture cannot show:
+
+- **When it was written, against the turn.** Survives, and it is the reason this ticket exists. A
+  picture cannot show its own age, and the stale-build failure is invisible by construction.
+- **The file's own name.** Survives. Not visible, and it is how the reader goes and looks.
+- **The dimensions.** **Cut.** They were argued in as *free once decoded* and as the second visible
+  tell, and *visible* is exactly what now disqualifies them: a picture at the wrong size looks wrong
+  on screen, which is the reader's job and not blobot's to narrate.
+- **Anything announcing that a picture is present.** Never was on the frame and is now explicitly
+  refused, for ticket 08 and ticket 10 both. A picture is not introduced.
+
+Revised copy:
+
+- shown, written this turn: `login-page.png · written during this turn`
+- shown, older: `login-page.png · written before this turn`
+- observed: `from playwright_screenshot`
+
+The observed frame loses its arrival clause. It said *received during this turn*, and a picture
+drawn inside the turn it arrived in already says that by where it sits. What remains is the one
+fact the reader cannot get from looking: which tool it came out of, and that it is not the other
+kind.

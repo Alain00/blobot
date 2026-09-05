@@ -8,9 +8,10 @@ import {
   continuesSpeaker,
   failuresIn,
   filesChangedIn,
+  addressedIn,
   isInFlight,
   isPending,
-  liveTailOf,
+  isPrincipal,
   messagesIn,
   notesIn,
   rowsOf,
@@ -84,35 +85,36 @@ export function Conversation({
   const answer = useLatest(onAnswerPermission);
   const disarm = useLatest(onDisarmRoutine);
   const removeEntry = useLatest(onRemoveHandbookEntry);
-  const rows = rowsOf(items);
   /*
-   * The swallow is measured over the *whole* row list and always has been, and now has to be
-   * hoisted to say so: it diffs a row that was loose against an item that is folded, and the
-   * live tail below takes the loose ones out of what `Rows` is handed. Left inside `Rows` it
-   * would be diffing a list the tail had already emptied, and no fold would ever be seen
-   * taking anything.
+   * One pass over the items for both halves of the transcript. `rowsOf` computes the run
+   * boundary over settled and unsettled work together and hands back the live half as a row of
+   * its own, standing where its run stands — `.scratch/live-steps/issues/08`. It used to be a
+   * second pass that took the *trailing* loose calls off the end, which is true of one agent
+   * working and false the moment two are: a teammate's open call with the principal's later
+   * rows after it was stranded above them as exactly the unattributed mono line the block exists
+   * to abolish.
    */
+  const rows = rowsOf(items, (agentId) => isInFlight(statuses[agentId] ?? 'idle'));
   const flying = useSwallowed(rows);
   const inPane = agents.filter((agent) => pane.kind === 'team' || pane.agentId === agent.id);
-  const { settled, blocks } = liveTailOf(rows, (agentId) =>
-    isInFlight(statuses[agentId] ?? 'idle'),
-  );
   /*
-   * The blocks with steps under them, and then the agents that are in a turn with nothing to
-   * show for it yet — `starting` and `thinking`, where the dots are the only sign the message
-   * landed. One shape for both, so the face does not unmount and remount the instant the first
-   * call opens. Not while the team is starting: on a cold start nobody has said anything to
-   * anybody, and a face under an empty transcript claims an answer is on its way.
+   * The agents that are in a turn with nothing to show for it yet — `starting` and `thinking`,
+   * where the dots are the only sign the message landed. Same shape as a live row so the face
+   * does not unmount and remount the instant the first call opens.
+   *
+   * Principals only, which is 08 in the one place `rowsOf` cannot say it: a woken teammate is
+   * `thinking` too, and dots under its own face at the top level is the top-level voice this
+   * ticket took away from it. Not while the team is starting either: on a cold start nobody has
+   * said anything to anybody, and a face under an empty transcript claims an answer is on its way.
    */
-  const live: LiveBlock[] = opening
+  const addressed = addressedIn(items);
+  const pending: LiveBlock[] = opening
     ? []
-    : [
-        ...blocks.filter((block) => inPane.some((agent) => agent.id === block.agentId)),
-        ...inPane
-          .filter((agent) => !blocks.some((block) => block.agentId === agent.id))
-          .filter((agent) => isPending(statuses[agent.id] ?? 'idle', items, agent.id))
-          .map((agent) => ({ agentId: agent.id, items: [] })),
-      ];
+    : inPane
+        .filter((agent) => isPrincipal(addressed, agent.id))
+        .filter((agent) => !rows.some((row) => row.kind === 'live' && row.agentId === agent.id))
+        .filter((agent) => isPending(statuses[agent.id] ?? 'idle', items, agent.id))
+        .map((agent) => ({ agentId: agent.id, items: [] }));
   const earlier = useLoadEarlier(stream, onLoadEarlier);
   // Where the pending faces look, and null whenever the user is not in the composer.
   const composer = useComposerFocus();
@@ -124,6 +126,7 @@ export function Conversation({
     pane,
     byId,
     statuses,
+    composer,
     routineArmed,
     onAnswerPermission: answer,
     onDisarmRoutine: disarm,
@@ -178,20 +181,19 @@ export function Conversation({
               </button>
             </div>
           )}
-          <Rows rows={settled} cast={cast} flying={flying} />
+          <Rows rows={rows} cast={cast} flying={flying} />
 
-          {/* What has not finished becoming a record: one block per agent that is mid-turn, its
-              own face over its own calls. Under everything settled, because that is the
-              direction this column reads and the direction a finished step travels when the
-              fold takes it. */}
-          {live.map((block, index) => (
+          {/* Asked, and nothing to show for it yet. At the foot rather than in the rows, because
+              there is no run for it to be the live half of: the prompt has landed and the agent
+              has not answered a word of it. */}
+          {pending.map((block) => (
             <Live
               key={block.agentId}
               block={block}
               agent={byId.get(block.agentId)}
               composer={composer}
               status={statuses[block.agentId] ?? 'idle'}
-              grouped={index === 0 && continuesAgent(block.agentId, lastItemOf(settled.at(-1)))}
+              grouped={continuesAgent(block.agentId, lastItemOf(rows.at(-1)))}
             />
           ))}
         </div>
@@ -305,6 +307,8 @@ interface RowCast {
   pane: Pane;
   byId: Map<string, UiAgent>;
   statuses: Record<string, AgentStatus>;
+  /** Where a live face looks, and null whenever the user is not in the composer. */
+  composer: Element | null;
   routineArmed: Record<string, boolean>;
   onAnswerPermission: (requestId: string, choice: PermissionChoice) => void;
   onDisarmRoutine: (routineId: string) => void;
@@ -319,7 +323,7 @@ function Rows({
 }: {
   rows: readonly Row[];
   cast: RowCast;
-  /** Measured over the whole transcript by the parent, because the live tail is not in `rows`. */
+  /** Measured over the whole row list by the parent, which owns the effect that tracks it. */
   flying: readonly Flight[];
 }): React.JSX.Element {
   return (
@@ -334,7 +338,15 @@ function Rows({
         return (
           <React.Fragment key={row.kind === 'item' ? row.item.id : row.id}>
             {rule !== undefined && <div className="timerule">{rule}</div>}
-            {row.kind === 'steps' ? (
+            {row.kind === 'live' ? (
+              <Live
+                block={row}
+                agent={cast.byId.get(row.agentId)}
+                composer={cast.composer}
+                status={cast.statuses[row.agentId] ?? 'idle'}
+                grouped={rule === undefined && continuesAgent(row.agentId, previous)}
+              />
+            ) : row.kind === 'steps' ? (
               <Steps
                 row={row}
                 cast={cast}
@@ -571,7 +583,12 @@ function useSwallowed(rows: readonly Row[]): readonly Flight[] {
     const before = loose.current;
     const now = new Map<string, Item>();
     for (const row of rows) {
+      // Everything drawn outside a fold, which is what a fold can be seen taking: a loose line,
+      // and a call standing in a live block. Both travel into the same place when they settle.
       if (row.kind === 'item' && row.item.kind === 'tool') now.set(row.item.id, row.item);
+      if (row.kind === 'live') {
+        for (const item of row.items) if (item.kind === 'tool') now.set(item.id, item);
+      }
     }
     loose.current = now;
     if (before === undefined) return;

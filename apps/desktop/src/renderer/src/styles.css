@@ -1014,57 +1014,65 @@ hr{border:0;border-top:1px solid var(--line);margin:0}
 
 
 /* ---------- creating a team ----------
- * The one editorial page in the app. Everywhere else is a working surface where the blobatars
- * are the loudest thing; this is read once, start to finish, before anything exists. So it gets
- * a serif display face, numbered steps and a standfirst, and it still spends no colour: the
- * only saturated things on it are the blobatars in the roster and the one being made.
+ * A bar, not a page. Rewritten 2026-09-05: what stood here was the app's one editorial page,
+ * a display line in the hand face over four numbered steps that folded, and the reason it went
+ * is on `NewTeam.tsx`. What is left borrows the navigator's layer wholesale — same scrim, same
+ * sheet, same cmdk list — because it is the same object doing the same job: it opens over
+ * whatever was there, it answers, and it goes.
  *
- * The controls are the composer's, generalised. A field is the composer's pill with square
- * corners softened; a button is the same pill; the primary one inverts to ink when it is armed,
- * exactly as send does.
+ * The display face, the standfirst and the subhead stayed in this file. They are the modals'
+ * now, which is where they were already shared to, and this was the last screen using them as
+ * a page.
  */
-.newteam{flex:1;overflow:auto;display:flex;justify-content:center;padding:72px 24px 24px}
-.sheet{width:100%;max-width:660px;display:flex;flex-direction:column;gap:34px}
-/* Caveat sets small for its point size, so the display runs larger than a serif would at the
-   same rank, and the standfirst under it does the work of setting the measure. */
+/* The three faces the modals kept when this stopped being a page. The hand is one voice and
+   spent on one line; handwriting on every subhead would make everything look optional. */
 .display{font-family:var(--hand);font-weight:500;font-size:58px;line-height:1;letter-spacing:0;margin:4px 0 0}
 .display.sm{font-size:38px}
-/* The step titles stay sans. The hand is one voice on this page, spent on the one line that is
-   the page's question; handwriting on every subhead would make the steps look optional. */
 .subhead{font-weight:500;font-size:17px;line-height:1.3;margin:0;letter-spacing:-.01em}
 .eyebrow{font-size:10px;letter-spacing:.16em;color:var(--muted)}
 .standfirst{max-width:46ch;color:var(--muted);font-size:14.5px;line-height:1.6;margin:12px 0 0}
-.sheethead{display:flex;align-items:flex-start;gap:16px}
-.sheethead > div{flex:1;min-width:0}
 
-/* A step is its numeral, its question, and the controls under both. The numeral hangs in the
-   left margin on a wide sheet and folds inline when there is no margin to hang in. */
-.step{display:flex;flex-direction:column;gap:12px}
-.stephead{display:flex;align-items:baseline;gap:14px}
-.stepn{font-size:11px;color:var(--muted);letter-spacing:.1em}
-.stepaside{margin-left:auto}
-.stepbody{display:flex;flex-direction:column;gap:10px;align-items:flex-start;padding-left:35px}
-.stepbody > .field,.stepbody > .note,.stepbody > .refusal,.stepbody > .roster,.stepbody > .reposcope{align-self:stretch}
-/* A step you have answered folds to its answer. The numeral and the title stay, so the page
-   still reads as the same four questions from top to bottom; what goes is the tail of a step
-   behind you, which on the folder step is a repository list and an icon.
+/* The field is the whole control: the agents already taken, the caret, and the way on. A row
+   that wraps, because a team of six wraps and a field that scrolls sideways hides its own
+   contents. */
+.navsheet.pickbar .pickfield{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:9px 9px 9px 13px;border-bottom:1px solid var(--line)}
+.navsheet.pickbar [cmdk-input],.navsheet.pickbar .pickinput{flex:1;min-width:110px;width:auto;background:transparent;border:0;outline:none;padding:4px 0;font-size:14px;color:var(--ink);border-bottom:0}
+.navsheet.pickbar [cmdk-input]::placeholder,.navsheet.pickbar .pickinput::placeholder{color:var(--muted)}
+/* An agent in the field is the face, the name and, on one of them, the word LEAD. Pressing the
+   badge makes that agent the lead; the × takes them off and is revealed on hover, which is the
+   rule *your agents* uses for retiring and is the right way round for the same reason: the
+   press that is easy to hit is the one that changes nothing you cannot see.
 
-   The chevron sits after the title. In front of the numeral it would push the numerals of the
-   two steps that fold out of line with the two that do not; pinned to the right edge it is a
-   marker a whole column away from the thing it discloses. It rotates the way the transcript's
-   does, so the app has one disclosure gesture and not two. */
-.stephead.fold{width:100%;padding:0;text-align:left;align-items:baseline;gap:10px}
-.stephead.fold .stepn{margin-right:4px}
-.stephead.fold .subhead{flex:0 0 auto}
-.stephead.fold svg{flex:0 0 auto;align-self:center;color:var(--muted);transition:rotate 180ms var(--ease-out)}
-.stephead.fold svg.shut{rotate:-90deg}
-.stephead.fold:hover svg{color:var(--ink)}
-.stepsum{min-width:0;display:flex;gap:6px;align-items:baseline;font-size:11px;color:var(--muted)}
-.stepsum .pathline{min-width:0}
-.stephead.fold:hover .stepsum{color:var(--ink)}
-
-.sheet .row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.pathline{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+   A **badge and not a pill**: a pill is the composer's shape, for the one thing on a surface you
+   put words into, and a round end beside a round face made two circles in a row saying nothing
+   about each other. The corner is the field's own, so an agent sitting in it reads as an item
+   the field is holding. */
+.navsheet.pickbar .pickchip{display:flex;align-items:center;border-radius:7px;background:var(--ground);font-size:12.5px;color:var(--ink)}
+.navsheet.pickbar .pickchip .who{display:flex;align-items:center;gap:6px;padding:3px 4px 3px 3px}
+.navsheet.pickbar .pickchip .who:hover{color:var(--muted)}
+/* LEAD is named and never drawn, and it is a mono label like every other one in this app. */
+.navsheet.pickbar .pickchip .mono{font-size:9px;letter-spacing:.1em;color:var(--muted)}
+.navsheet.pickbar .pickchip.lead .who:hover{color:var(--ink);cursor:default}
+.navsheet.pickbar .pickchip .off{display:flex;align-items:center;padding:0 6px 0 2px;color:var(--muted);opacity:0}
+.navsheet.pickbar .pickchip:hover .off,.navsheet.pickbar .pickchip:focus-within .off{opacity:1}
+.navsheet.pickbar .pickchip .off:hover{color:var(--ink)}
+/* The two things on the right of the field. The arrow is the one that commits, so it is the
+   one that inverts when it is armed, exactly as the composer's send does. */
+.navsheet.pickbar .pickact,.navsheet.pickbar .pickgo{display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex:0 0 auto;border-radius:999px;color:var(--muted)}
+.navsheet.pickbar .pickact:hover,.navsheet.pickbar .pickgo:hover:not(:disabled){color:var(--ink);background:var(--ground)}
+.navsheet.pickbar .pickgo:not(:disabled){background:var(--ink);color:var(--ground)}
+.navsheet.pickbar .pickgo:not(:disabled):hover{background:var(--ink);color:var(--ground);opacity:.85}
+.navsheet.pickbar .pickgo:disabled{opacity:.35;cursor:default}
+/* Under the field: the folder in mono, then the disclosure in prose. Two registers because they
+   are two kinds of statement — one is a fact about a path, the other is what you are taking on. */
+.navsheet.pickbar .pickfoot{padding:9px 14px;font-size:12px;line-height:1.5;color:var(--muted)}
+.navsheet.pickbar .pickfoot + .pickfoot{padding-top:3px}
+.navsheet.pickbar .refusal{margin:10px 14px 0}
+/* Hiring, at the foot and outside the list, because it is not somebody you can put on the team.
+   Drawn like the doors at the foot of the rail, which is the other place in this app where a
+   row under a list is a way out of it rather than a member of it. */
+.navsheet.pickbar .pickhire{display:block;width:100%;text-align:left;padding:9px 14px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.navsheet.pickbar .pickhire:hover{color:var(--ink)}
 /* Prose, not a row. It was a wrapping flex box, which made every inline `<span>` mid-sentence
    its own flex item on its own line — the note that names `~/blobot` broke after the path and
    started the next line on a comma. Buttons inside a note are inline-flex and still sit in the
@@ -1117,7 +1125,6 @@ textarea.field{resize:vertical;line-height:1.5}
 .disclosure p{margin:0;color:var(--muted)}
 .disclosure p b{color:var(--ink);font-weight:500}
 .disclosure .subhead{margin-bottom:2px}
-.sheetfoot{display:flex;justify-content:flex-end;padding-bottom:48px}
 
 /* ---------- your agents: a roster that exists before any team does ---------- */
 .roster{display:flex;flex-direction:column;gap:6px}
@@ -1155,8 +1162,6 @@ textarea.field{resize:vertical;line-height:1.5}
 .iconpick .row{align-items:center;gap:12px}
 .iconpick .note{max-width:34ch}
 /* the repositories in a folder of repositories, ticked into scope */
-.reposcope{display:flex;flex-direction:column;gap:6px}
-.reposcope .fieldlabel{margin-bottom:2px}
 
 /* ---------- hiring an agent: a modal, because the agent outlives this team ----------
  * Radix owns the dialog, the select and the slider; every rule here is this app's own. The
@@ -1386,8 +1391,6 @@ textarea.field{resize:vertical;line-height:1.5}
 .md code,.md a{overflow-wrap:anywhere}
 
 /* the repositories in a folder of repositories, ticked into scope */
-.reposcope{align-self:stretch;display:flex;flex-direction:column;gap:2px;border-left:1px solid var(--line);padding-left:12px}
-.reposcope .fieldlabel{margin-bottom:4px}
 
 
 /* A team that would not open. A line the user can read and dismiss, not a dialog to clear:

@@ -1,81 +1,94 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Check, ChevronDown, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowRight, Folder, X } from 'lucide-react';
+import { Command } from 'cmdk';
 import type {
   NewTeamSpec,
   UiAgentProfile,
   UiRuntimeChoice,
-  UiTeamIcon,
   UiWorkspaceInspection,
 } from '../../../shared/api.js';
-import { IconPick } from './IconPick.js';
 import { HireAgent } from './AgentForm.js';
 import { Blob } from './Blob.js';
-import { LeadPicker } from './Lead.js';
 
 /**
- * Forming a team: a Workspace, a name, and agents that already exist.
+ * Forming a team, in two questions and nothing else.
  *
- * The order on this screen is the domain model. Agents are hired once and live in *your
- * agents*, on no team; a team is formed **out of** them, and the same agent can be on several
- * at once. Hiring one from here is a convenience, not the way agents come into being.
+ * It was an editorial page — a display line in the hand face, a standfirst, four numbered steps
+ * that folded, a turn budget, a lead picker, an icon control and a disclosure that closed it.
+ * Every one of those had a reason and the reasons still hold; what did not hold is the sum.
+ * Forming a team is the thing standing between a new user and the only thing this app does, and
+ * a page read start to finish is a page, not a door. **Rewritten 2026-09-05 at the author's
+ * direction, in the shape of opening a direct message**: a bar that floats over whatever was
+ * there, a field that is a search and a multi-select at once, an arrow to go on.
  *
- * Two things this screen refuses to do. It never says *authenticated* — detection observes
- * whether a credential is present, which is not the same claim, so the words are ticket 11's
- * four honest states. And **it never gates on detection**: a runtime that reports "needs
- * sign-in" is still selectable, because a negative probe is not proof the user cannot sign in
- * between here and the first turn.
+ * Everything taken off it either has a default nobody argues with or already lives somewhere a
+ * user can reach it. The lead is the first agent picked, which is what it always was until the
+ * picker was touched. The turn budget is ten. The icon is offered by the edit dialog the moment
+ * the team exists, from the same detection this screen used to run. The roster, the lead and the
+ * name are all editable on the team's own row. Nothing is lost that cannot be changed a minute
+ * later, which is the test that decided what stayed.
  *
- * It is the one editorial page in the app, and deliberately so. Everywhere else is a working
- * surface where the blobatars are the loudest thing; this is read once, start to finish, before
- * anything exists — so it is set like a page rather than a form, with a serif display face, its
- * steps numbered, and one question at a time.
- *
- * Ticket 14's disclosure is the last thing on it, above the button that spawns the first agent:
- * stated, never consented to. There is no checkbox, because a checkbox implies the risk has
- * been discharged onto the user, and what actually happened is that blobot picked a default and
- * is telling them what it is.
+ * What did not come off is ticket 14's disclosure, reduced to the two sentences that carry its
+ * whole claim. It is stated and not consented to, as it always was, and it is the one thing here
+ * that is not recoverable later: by the time the user could go looking for it, agents are already
+ * running in a copy of their folder.
  */
 export function NewTeam({
   onCancel,
-  onCreated,
+  onCreate,
 }: {
   onCancel?: () => void;
-  onCreated: () => void;
+  /**
+   * Hand the finished spec over and go.
+   *
+   * The bar does not wait for the team. Creating one instantiates an agent per member, cuts a
+   * worktree each and starts a session in every one, which is seconds — and a modal sitting over
+   * the app saying *creating…* the whole time is a lock on a window that has nothing wrong with
+   * it. So the last thing this surface does is hand over the spec; the rail and the working
+   * surface report what happens next, because they are what a team appears in.
+   */
+  onCreate: (spec: NewTeamSpec) => void;
 }): React.JSX.Element {
-  const [path, setPath] = useState<string>('');
-  const [inspection, setInspection] = useState<UiWorkspaceInspection | undefined>();
-  const [name, setName] = useState('');
-  const [turnBudget, setTurnBudget] = useState(10);
-  const [runtimes, setRuntimes] = useState<readonly UiRuntimeChoice[]>([]);
+  /** Which of the two questions is up. There is no third, and there is no way back to a page. */
+  const [stage, setStage] = useState<'who' | 'where'>('who');
   const [roster, setRoster] = useState<readonly UiAgentProfile[]>([]);
   const [chosen, setChosen] = useState<readonly string[]>([]);
   /**
-   * Who leads, when the user has said. Until they do it is the first agent they ticked, which
-   * is what the picker below the roster shows marked — so a team is never created with a
-   * default recipient nobody was shown.
+   * Who leads, when the user has said. Until then it is the first one they picked.
+   *
+   * It shipped as `chosen[0]` and nothing on screen said so, which is a rank assigned by the
+   * order somebody happened to press two rows in. The badge in the field carries the word now,
+   * and pressing a badge moves it — so the one thing the old page's lead picker did survives
+   * the page, in the control that was already there.
    */
   const [lead, setLead] = useState<string | undefined>();
-  /** `nested` only: the repositories in scope. Every one found is ticked by default. */
-  const [repos, setRepos] = useState<readonly string[]>([]);
-  /**
-   * The team's icon, and where it came from.
-   *
-   * Held together because the second is what makes the first honest: an icon detected in a
-   * folder is *offered*, with the file it was found in named next to it, and the user can take
-   * it off. A mark that appeared out of nowhere and is subtly wrong is worse than no mark.
-   */
-  const [icon, setIcon] = useState<UiTeamIcon | undefined>();
-  const [error, setError] = useState<string | undefined>();
-  /** Inspecting a big folder takes seconds, and a screen that does not say so looks broken. */
-  const [reading, setReading] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState('');
+  const [runtimes, setRuntimes] = useState<readonly UiRuntimeChoice[]>([]);
   const [hiring, setHiring] = useState(false);
+
+  const [name, setName] = useState('');
+  const [path, setPath] = useState('');
+  const [inspection, setInspection] = useState<UiWorkspaceInspection | undefined>();
+  /** `nested` only: the repositories in scope, which is all of them, unpicked and unshown. */
+  const [repos, setRepos] = useState<readonly string[]>([]);
+  /** Inspecting a big folder takes seconds, and a bar that does not say so looks broken. */
+  const [reading, setReading] = useState(false);
+  /**
+   * Making the folder, which is the one piece of work this bar still waits for.
+   *
+   * It waits because it is the last thing that can fail with a sentence belonging *here* — a
+   * path that cannot be written, a name already taken under `~/blobot`. The team itself is
+   * handed over and the bar goes.
+   */
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | undefined>();
+
+  /** The list, so Tab can take whatever the arrow keys have landed on. */
+  const listed = useRef<HTMLDivElement>(null);
 
   const reloadRoster = useCallback(async (): Promise<void> => {
     setRoster(await window.blobot.listAgents());
   }, []);
-
-  /** Ask the machine again. `detectRuntimes` re-detects, so signing one in redraws the picker. */
   const rescan = useCallback((): void => {
     void window.blobot.detectRuntimes().then(setRuntimes);
   }, []);
@@ -85,75 +98,49 @@ export function NewTeam({
     void reloadRoster();
   }, [reloadRoster, rescan]);
 
-  /**
-   * The chosen path lands on screen *first*, and the inspection fills in behind it.
-   *
-   * Looking at a folder means walking two levels of it and asking git about every repository
-   * inside, which is milliseconds on a project and seconds on a home directory. Waiting for
-   * that before showing anything is why picking a folder used to look like it had not worked.
-   */
-  const readWorkspace = async (chosenPath: string, initialize = false): Promise<void> => {
+  // Escape leaves, once there is a team to go back to. Captured on the window rather than on
+  // the field, the way the navigator does it: a layer that ignores Escape reads as stuck.
+  useEffect(() => {
+    if (onCancel === undefined) return;
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      onCancel();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onCancel]);
+
+  const pick = (id: string): void => {
+    setChosen((current) => (current.includes(id) ? current : [...current, id]));
+    setQuery('');
+  };
+  const drop = (id: string): void => {
+    setChosen((current) => current.filter((other) => other !== id));
+    // Nobody is promoted in their place: `leading` falls back to the first still in the field,
+    // which is where an unanswered lead has always landed.
+    setLead((current) => (current === id ? undefined : current));
+  };
+
+  const readWorkspace = async (chosenPath: string): Promise<void> => {
     setError(undefined);
     setPath(chosenPath);
-    if (name === '') setName(basename(chosenPath));
+    if (name.trim() === '') setName(basename(chosenPath));
     setInspection(undefined);
     setReading(true);
     try {
-      const result = initialize
-        ? await window.blobot.initializeWorkspace(chosenPath)
-        : await window.blobot.inspectWorkspace(chosenPath);
+      const result = await window.blobot.inspectWorkspace(chosenPath);
       if ('error' in result) {
-        setInspection(undefined);
+        setPath('');
         setError(result.error);
         return;
       }
       setInspection(result);
-      setRepos(result.repos.map((repo) => repo.path));
+      setRepos(result.repos.filter((repo) => repo.hasCommits).map((repo) => repo.path));
       setPath(result.path);
-      // Offered as soon as the folder is known, because most projects have already answered
-      // the question this asks. A folder with nothing in it to find leaves the team drawn from
-      // its members, which is what every team looked like before icons existed.
-      setIcon(await window.blobot.suggestTeamIcon(result.path));
     } finally {
       setReading(false);
     }
-  };
-
-  /**
-   * The other door out of this step: no folder in mind, so blobot makes one.
-   *
-   * It needs the name, which is why the name is the step above this one. What comes back is an
-   * ordinary git Workspace with one empty commit, so nothing downstream knows the difference
-   * between a folder the user found and one blobot made.
-   */
-  const prepare = async (): Promise<void> => {
-    setError(undefined);
-    setInspection(undefined);
-    setReading(true);
-    try {
-      const result = await window.blobot.prepareWorkspace(name.trim());
-      if ('error' in result) {
-        setError(result.error);
-        return;
-      }
-      setInspection(result);
-      setRepos([]);
-      setPath(result.path);
-      setIcon(undefined);
-    } finally {
-      setReading(false);
-    }
-  };
-
-  /** An icon of the user's own, which replaces whatever was detected and says so. */
-  const chooseIcon = async (): Promise<void> => {
-    const result = await window.blobot.chooseTeamIcon();
-    if (result === undefined) return;
-    if ('error' in result) {
-      setError(result.error);
-      return;
-    }
-    setIcon(result);
   };
 
   const choose = async (): Promise<void> => {
@@ -162,255 +149,252 @@ export function NewTeam({
     await readWorkspace(chosenPath);
   };
 
-  // Every kind of Workspace can carry a team now. What still blocks is a repository with
-  // nothing to branch from, and a folder of repositories with nothing at all in scope.
-  const workspaceUsable =
-    inspection !== undefined &&
+  // What still blocks: a repository with nothing to branch from, and a folder of repositories
+  // with nothing at all in scope. Everything else is a Workspace of one kind or another.
+  const usable =
+    inspection === undefined ||
     (inspection.kind === 'git'
       ? inspection.hasCommits
       : inspection.kind === 'nested'
         ? repos.length > 0 || inspection.looseFiles
         : true);
-  const ready = !reading && workspaceUsable && name.trim() !== '' && chosen.length > 0;
-  /** The marked face. An unticked lead is no longer on the team, so the first ticked leads. */
+  const ready = !reading && !busy && usable && name.trim() !== '' && chosen.length > 0;
+
+  const picked = chosen
+    .map((id) => roster.find((agent) => agent.id === id))
+    .filter((agent): agent is UiAgentProfile => agent !== undefined);
+  /** An unpicked lead is not on the team, so the first one in the field leads instead. */
   const leading = lead !== undefined && chosen.includes(lead) ? lead : chosen[0];
 
   /**
-   * Which settled steps the user has pulled back open.
+   * Make the team, making the folder first when the user never picked one.
    *
-   * A step folds on its own once the step *below* it has been answered, which is the only
-   * signal on this page that means "moved on" — validity alone would fold the name field on the
-   * first keystroke. An entry here overrides that for one step, in whichever direction, and is
-   * kept for the life of the screen, because a step that re-folds itself while you are reading
-   * it is worse than one that stays open.
+   * The two doors the old step 02 offered are one control now: pick a folder, or do not and get
+   * one under `~/blobot` named after the team. It is not silent — the line under the field says
+   * which folder is about to be made, before the arrow is pressed.
    */
-  const [reopened, setReopened] = useState<Record<string, boolean>>({});
-  const settles: Record<string, boolean> = {
-    // The name is settled once there is a folder, because choosing one fills the name in.
-    '01': name.trim() !== '' && path !== '' && !reading,
-    // The folder is settled once somebody has been ticked below it.
-    '02': workspaceUsable && !reading && chosen.length > 0,
-  };
-  const folded = (n: string): boolean => reopened[n] ?? settles[n] ?? false;
-  const toggle = (n: string): void =>
-    setReopened((current) => ({ ...current, [n]: !folded(n) }));
-
   const create = async (): Promise<void> => {
+    if (!ready) return;
     setBusy(true);
     setError(undefined);
+    let workspace = path;
+    let kind = inspection;
+    if (workspace === '') {
+      const made = await window.blobot.prepareWorkspace(name.trim());
+      if ('error' in made) {
+        setBusy(false);
+        setError(made.error);
+        return;
+      }
+      workspace = made.path;
+      kind = made;
+      setPath(made.path);
+      setInspection(made);
+    }
     const spec: NewTeamSpec = {
       name: name.trim(),
-      workspacePath: path,
-      turnBudget,
+      workspacePath: workspace,
+      turnBudget: 10,
       profileIds: chosen,
       ...(leading === undefined ? {} : { leadProfileId: leading }),
-      ...(inspection?.kind === 'nested' ? { repoPaths: repos } : {}),
-      ...(icon === undefined ? {} : { icon: icon.dataUrl }),
+      ...(kind?.kind === 'nested' ? { repoPaths: repos } : {}),
     };
-    const result = await window.blobot.createTeam(spec);
-    setBusy(false);
-    if (result.ok) onCreated();
-    else setError(result.error ?? 'The team could not be created.');
+    onCreate(spec);
+  };
+
+
+  /**
+   * The keys, before cmdk sees them, which is what the capture phase is for.
+   *
+   * Enter is the whole of the ambiguity. With something typed it means *this one*, because the
+   * list is narrowed and the highlighted row is what the typing was for. With nothing typed
+   * there is nothing to mean but *go on*. Tab takes the highlighted row either way, and Backspace
+   * on an empty field takes back the last agent, which is what every field made of items does.
+   */
+  const keys = (event: React.KeyboardEvent): void => {
+    if (event.key === 'Enter' && query === '') {
+      event.preventDefault();
+      event.stopPropagation();
+      if (chosen.length > 0) setStage('where');
+      return;
+    }
+    if (event.key === 'Backspace' && query === '' && chosen.length > 0) {
+      event.preventDefault();
+      drop(chosen[chosen.length - 1] as string);
+      return;
+    }
+    // Space takes the highlighted row, and only with the field empty, where a space is a
+    // character that could not have been meant: a query cannot start with one. Typed into a
+    // query it stays a space, because `Compaign Auditor` has one in the middle of it.
+    if (event.key === 'Tab' || (event.key === ' ' && query === '')) {
+      if (event.key === 'Tab' && event.shiftKey) return;
+      // Whatever the arrow keys landed on, and otherwise the top of the list, which is what
+      // both these keys mean in a field like this: take the obvious one. cmdk highlights the
+      // first row itself once it has laid out, so the fallback is for the frame before that.
+      const on =
+        listed.current?.querySelector('[cmdk-item][data-selected="true"]') ??
+        listed.current?.querySelector('[cmdk-item]');
+      if (on === null || on === undefined) return;
+      event.preventDefault();
+      event.stopPropagation();
+      (on as HTMLElement).click();
+    }
   };
 
   return (
-    <div className="newteam">
-      <div className="sheet">
-        <header className="sheethead">
-          <div>
-            <div className="eyebrow mono">NEW TEAM</div>
-            <h1 className="display">Who is on this one?</h1>
-            <p className="standfirst">
-              A team is a folder to work in and the agents you put on it. Both are things you can
-              change your mind about later.
-            </p>
-          </div>
-          {onCancel !== undefined && (
-            <button className="iconbtn" onClick={onCancel} title="Cancel" aria-label="Cancel">
-              <X size={17} aria-hidden />
-            </button>
-          )}
-        </header>
-
-        {/* The name comes first now, and the reason is the button below it: a folder blobot
-            makes for a team is named after the team, so the team has to be named before that
-            door is open. Picking a folder still fills this in when it is empty, so the user who
-            has a repository in mind loses nothing by the swap. */}
-        <Step
-          n="01"
-          title="What the team is called"
-          folded={folded('01')}
-          onToggle={() => toggle('01')}
-          summary={name.trim()}
-        >
-          <input
-            className="field"
-            value={name}
-            placeholder="checkout"
-            onChange={(event) => setName(event.target.value)}
-          />
-          {/* Load-bearing rather than cosmetic: the branch is `blobot/<team>/<agent>`. */}
-          <div className="note muted">
-            Becomes half of each agent&apos;s branch name, so it has to be unique.
-          </div>
-        </Step>
-
-        <Step
-          n="02"
-          title="The folder they work in"
-          folded={folded('02')}
-          onToggle={() => toggle('02')}
-          summary={
-            <>
-              <span className="pathline">{path}</span>
-              {inspection !== undefined && <span>· {workspaceLine(inspection, repos)}</span>}
-            </>
-          }
-        >
-          <div className="row">
-            <button className="btn" onClick={() => void choose()}>
-              choose a folder…
-            </button>
-            {/* The second door. Disabled without a name rather than hidden, because the thing
-                it is waiting for is the step directly above it and a button that is not there
-                teaches nobody that this way exists. */}
-            <button
-              className="btn"
-              disabled={name.trim() === '' || reading}
-              onClick={() => void prepare()}
-              title={
-                name.trim() === ''
-                  ? 'Name the team first, and blobot names the folder after it'
-                  : 'Make a folder for this team under ~/blobot'
-              }
-            >
-              make one for me
-            </button>
-            <span className="pathline mono">{path === '' ? 'nothing chosen yet' : path}</span>
-          </div>
-          {path === '' && (
-            <div className="note muted">
-              No folder in mind? blobot makes one under <span className="mono">~/blobot</span>,
-              named after the team, as a git repository with one commit, so the agents get
-              branches and diffs like anywhere else.
-            </div>
-          )}
-          {reading && (
-            <div className="note mono muted">looking through this folder for repositories…</div>
-          )}
-          {inspection !== undefined && (
-            <WorkspaceNote inspection={inspection} onInit={() => void readWorkspace(path, true)} />
-          )}
-          {inspection?.kind === 'nested' && (
-            <RepoScope
-              inspection={inspection}
-              chosen={repos}
-              onToggle={(repo) =>
-                setRepos((current) =>
-                  current.includes(repo)
-                    ? current.filter((other) => other !== repo)
-                    : [...current, repo],
-                )
-              }
-            />
-          )}
-          {inspection !== undefined && (
-            <IconPick
-              {...(icon === undefined ? {} : { icon })}
-              onChoose={() => void chooseIcon()}
-              onClear={() => setIcon(undefined)}
-            />
-          )}
-        </Step>
-
-
-        <Step
-          n="03"
-          title="Who joins"
-          aside={
-            <button className="btn" onClick={() => setHiring(true)}>
+    <div
+      className="navscrim"
+      onMouseDown={onCancel === undefined ? undefined : () => onCancel()}
+    >
+      <div className="navsheet pickbar" onMouseDown={(event) => event.stopPropagation()}>
+        {stage === 'who' ? (
+          <div onKeyDownCapture={keys}>
+            <Command label="Who is on this team" loop>
+              <div className="pickfield">
+                {/* The badges and the caret wrap together and the arrow does not wrap with
+                    them: it is the way out of this step, so it holds the right edge however
+                    many rows of agents are above it. */}
+                <div className="pickitems">
+                {/* Pressing a badge makes that agent the lead; the × takes them off, and is
+                    revealed on hover and `:focus-within` the way *your agents* reveals retiring,
+                    for the same reason. It was the whole badge that removed, on the argument
+                    that a target inside a small target is a mis-click on the destructive half —
+                    which is the argument for this arrangement, not against it, now that there
+                    are two things to do here: the press that is easy to hit is the one that
+                    changes nothing you cannot see. */}
+                {picked.map((agent) => (
+                  <span
+                    key={agent.id}
+                    className={`pickchip${agent.id === leading ? ' lead' : ''}`}
+                  >
+                    <button
+                      className="who"
+                      onClick={() => setLead(agent.id)}
+                      title={
+                        agent.id === leading
+                          ? `${agent.name} leads this team`
+                          : `Make ${agent.name} the lead`
+                      }
+                    >
+                      <Blob
+                        name={agent.name}
+                        size={17}
+                        {...(agent.hue === undefined ? {} : { hue: agent.hue })}
+                        {...(agent.shape === undefined ? {} : { shape: agent.shape })}
+                      />
+                      <span className="nm">{agent.name}</span>
+                      {agent.id === leading && <span className="mono">LEAD</span>}
+                    </button>
+                    <button
+                      className="off"
+                      onClick={() => drop(agent.id)}
+                      title={`Take ${agent.name} off`}
+                      aria-label={`Take ${agent.name} off`}
+                    >
+                      <X size={11} aria-hidden />
+                    </button>
+                  </span>
+                ))}
+                <Command.Input
+                  autoFocus
+                  value={query}
+                  onValueChange={setQuery}
+                  placeholder={picked.length === 0 ? 'Who is on this team?' : ''}
+                />
+                </div>
+                <button
+                  className="pickgo"
+                  disabled={chosen.length === 0}
+                  onClick={() => setStage('where')}
+                  title="Next"
+                  aria-label="Next"
+                >
+                  <ArrowRight size={15} aria-hidden />
+                </button>
+              </div>
+              <Command.List ref={listed}>
+                {/* Two different facts. An empty roster is not a failed search, and telling
+                    somebody who has never hired anybody that nobody answers to that name is
+                    the app blaming them for its own empty state. */}
+                <Command.Empty>
+                  {roster.length === 0 ? 'Nobody hired yet' : 'Nobody by that name'}
+                </Command.Empty>
+                {roster
+                  .filter((agent) => !chosen.includes(agent.id))
+                  .map((agent) => (
+                    <Command.Item
+                      key={agent.id}
+                      value={rowOf(agent)}
+                      keywords={[agent.name, agent.role, agent.runtimeLabel]}
+                      onSelect={() => pick(agent.id)}
+                    >
+                      <Blob
+                        name={agent.name}
+                        size={20}
+                        {...(agent.hue === undefined ? {} : { hue: agent.hue })}
+                        {...(agent.shape === undefined ? {} : { shape: agent.shape })}
+                      />
+                      <span>{agent.name}</span>
+                      <span className="r">{agent.role}</span>
+                    </Command.Item>
+                  ))}
+              </Command.List>
+            </Command>
+            {/* The only other thing you can do from here, and the only way out of an empty
+                roster. Outside the list on purpose: it is not somebody you can put on the team,
+                and while it was a row in there it was the row cmdk highlighted, because the
+                roster arrives a frame late and for that frame it was the only row there was.
+                With no agents to Tab to, an ordinary Tab lands on it. */}
+            <button className="pickhire" onClick={() => setHiring(true)}>
               hire an agent
             </button>
-          }
-        >
-          {roster.length === 0 ? (
-            <div className="note muted">
-              Nobody hired yet. Agents exist on their own: hire one and it can join this team and
-              any other.
-            </div>
-          ) : (
-            <div className="roster">
-              {roster.map((agent) => {
-                const picked = chosen.includes(agent.id);
-                return (
-                  <button
-                    key={agent.id}
-                    className={`listrow pick${picked ? ' on' : ''}`}
-                    onClick={() =>
-                      setChosen(
-                        picked ? chosen.filter((id) => id !== agent.id) : [...chosen, agent.id],
-                      )
-                    }
-                  >
-                    {/* The same face it will wear in the rail and the transcript, so the roster
-                        is recognisably the same set of agents rather than a list of names. */}
-                    <Blob name={agent.name} size={34} hue={agent.hue} shape={agent.shape} />
-                    <span className="who">
-                      <span className="nm">
-                        <b>{agent.name}</b> <span className="muted">{agent.role}</span>
-                      </span>
-                      {/* Where the model shows: an agent is on N teams, and this is one more. */}
-                      <span className="sub mono muted">
-                        {agent.runtimeLabel}
-                        {agent.teams.length === 0
-                          ? ' · on no team'
-                          : ` · on ${agent.teams.join(', ')}`}
-                      </span>
-                    </span>
-                    <span className={`tick${picked ? ' on' : ''}`}>
-                      {picked && <Check size={14} aria-hidden />}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          <LeadPicker
-            chosen={roster.filter((agent) => chosen.includes(agent.id))}
-            {...(leading === undefined ? {} : { lead: leading })}
-            onPick={setLead}
-          />
-        </Step>
-
-        <Step n="04" title="How far they go on their own">
-          <div className="row">
-            <input
-              className="field narrow"
-              type="number"
-              min={1}
-              max={100}
-              value={turnBudget}
-              onChange={(event) => setTurnBudget(Math.max(1, Number(event.target.value) || 1))}
-            />
-            <span className="note muted">
-              Agent turns per prompt from you, before the team halts and asks.
-            </span>
           </div>
-        </Step>
-
-        <Disclosure
-          agents={roster.filter((agent) => chosen.includes(agent.id)).map((agent) => agent.name)}
-          path={path}
-          kind={inspection?.kind}
-        />
-
-        {error !== undefined && <div className="refusal">{error}</div>}
-
-        <div className="sheetfoot">
-          <button className="btn primary" disabled={!ready || busy} onClick={() => void create()}>
-            {busy ? 'creating…' : 'create team'}
-          </button>
-        </div>
+        ) : (
+          <>
+            <div className="pickfield">
+              <div className="pickitems">
+              <input
+                className="pickinput"
+                autoFocus
+                value={name}
+                placeholder="Name this team"
+                onChange={(event) => setName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter') return;
+                  event.preventDefault();
+                  void create();
+                }}
+              />
+              </div>
+              <button
+                className="pickact"
+                onClick={() => void choose()}
+                title="Choose a folder"
+                aria-label="Choose a folder"
+              >
+                <Folder size={15} aria-hidden />
+              </button>
+              <button
+                className="pickgo"
+                disabled={!ready}
+                onClick={() => void create()}
+                title="Create the team"
+                aria-label="Create the team"
+              >
+                <ArrowRight size={15} aria-hidden />
+              </button>
+            </div>
+            <Where
+              path={path}
+              name={name.trim()}
+              inspection={inspection}
+              repos={repos}
+              reading={reading}
+              busy={busy}
+              {...(error === undefined ? {} : { error })}
+            />
+          </>
+        )}
       </div>
 
       {hiring && (
@@ -420,7 +404,7 @@ export function NewTeam({
           onClose={() => setHiring(false)}
           onHired={async (profileId) => {
             await reloadRoster();
-            setChosen((current) => [...current, profileId]);
+            pick(profileId);
             setHiring(false);
           }}
         />
@@ -430,282 +414,74 @@ export function NewTeam({
 }
 
 /**
- * What the user is taking on, once, at the moment they point autonomous processes at a folder
- * they care about.
+ * The one line under the name, and the two sentences under that.
  *
- * It is a statement and not a step: no number, no control, nothing to agree to. The one thing
- * it must never do is claim more protection than blobot can deliver, so it says what blobot
- * actually arranged (each runtime is set to prompt) rather than naming commands it can only name
- * on some runtimes. See the 2026-08-29 amendment on ticket 14, which took a list of OpenCode's
- * out of this copy.
+ * The line is the folder: which one, and what kind, in the words the old step used. When there
+ * is no folder it is the folder about to be **made**, named in full before the arrow is pressed,
+ * which is what keeps *make one for me* from having become something that happens silently.
  *
- * The failure it must not make twice is the opposite one. Until ticket 14's 2026-08-30
- * amendment this paragraph said the runtime decided what counts "not a list blobot wrote", and
- * the paragraph above promised edits inside the copy never ask. Both were true of an OpenCode
- * agent and false of a Claude one, in the same product, on the same screen. blobot writes a list
- * for each runtime now, so the copy says so without naming what is on it.
- *
- * It names the levels and does not offer them. The control is on the agent, because an
- * AgentWorkspace is per agent and a team-wide switch would imply trusting Alice says something
- * about Bob. What this paragraph owes the reader is knowing the choice exists and where it
- * lives, which is one sentence, on the screen where the consequence is being taken on.
- *
- * ## The fourth level, 2026-08-31
- *
- * `unattended` is the first level for which *"each runtime is set to prompt"* is false, and the
- * copy could not keep saying it. `first-demo/14` predicted this exactly -- *"a fourth level makes
- * that disclosure false for the agents it applies to, so the copy has to change with it, and the
- * honest version of that copy is hard to write without it reading as a warning nobody heeds."*
- *
- * What this draft does about that: it **splits the claim instead of weakening it**. The first
- * three levels keep the sentence they always had, unqualified, because it is still true of them.
- * The fourth gets its own sentence, and that sentence says the two things a warning would have
- * buried: *the runtime decides, not blobot*, and what is refused outright anyway.
- *
- * The second half was rewritten the day it shipped. It first said *it can refuse as well as
- * allow* -- a warning about a classifier denying silently, which was a guess, and three live runs
- * found the opposite: `auto` approved `chmod`, a `git push` that reached a real remote, and
- * `sudo`, with no request reaching blobot at all. So the copy stopped predicting the runtime's
- * behaviour and started stating blobot's own, which is a deny list this app controls and a test
- * covers. See `adapters/claude/permissions.ts`.
- *
- * `and on some runtimes unattended` is the only place in this app where the copy admits the
- * levels are not the same everywhere. It says *some runtimes* and does not say which, which is
- * the same line `AgentRuntime.accepts` draws: the user learns the shape of the limit here and
- * meets its specifics on the agent form, where the row is either there or it is not.
+ * The two sentences are ticket 14's disclosure at its shortest. What it may claim is unchanged:
+ * it says what blobot arranged and never what a runtime will do, and it does not name commands,
+ * because blobot can only name them on some runtimes. The levels are not listed here any more —
+ * the control is on the agent, where it always was, and the hire form is a click away in the
+ * step above this one.
  */
-function Disclosure({
-  agents,
+function Where({
   path,
-  kind,
+  name,
+  inspection,
+  repos,
+  reading,
+  busy,
+  error,
 }: {
-  agents: readonly string[];
   path: string;
-  kind: UiWorkspaceInspection['kind'] | undefined;
+  name: string;
+  inspection: UiWorkspaceInspection | undefined;
+  repos: readonly string[];
+  reading: boolean;
+  busy: boolean;
+  error?: string;
 }): React.JSX.Element {
-  // Named once anybody is chosen, because the sentence is about those two agents and a folder
-  // the user just picked, not about a product.
-  const who =
-    agents.length === 0
-      ? 'Every agent on this team'
-      : agents.length === 1
-        ? (agents[0] as string)
-        : `${agents.slice(0, -1).join(', ')} and ${agents.at(-1) as string}`;
-  const get = agents.length > 1 ? 'each get' : 'gets';
-  const where = path === '' ? 'this folder' : basename(path);
-  // A copy has no branch, and this is the sentence that would quietly promise one.
-  const copy = kind === 'plain' ? 'their own copy' : 'their own copy, on their own branch';
-
-
+  const refusal =
+    error ??
+    (inspection?.kind === 'git' && !inspection.hasCommits
+      ? 'No commits here, so there is nothing to branch a workspace from.'
+      : inspection?.kind === 'nested' && repos.length === 0 && !inspection.looseFiles
+        ? 'Nothing in this folder to work in.'
+        : undefined);
   return (
-    <section className="disclosure">
-      <h2 className="subhead">Before you create this team</h2>
-      <p>
-        {who} {get} {copy} of <b>{where}</b>. Inside that copy they read, edit and run commands,
-        and how much of that they do without asking you is set on each agent, where you hired
-        it: careful, normal, trusting, and on some runtimes unattended.
-      </p>
-      <p>
-        Everything blobot has not vouched for, they ask about, and the question appears in the
-        conversation with the agent waiting for you. That is the first three levels. An agent
-        set to <b>unattended</b> asks its own runtime instead of asking you, so it keeps going
-        while you are away: the runtime decides, not blobot. Deleting, publishing and changing
-        who can do what are refused outright at that level, because nobody is there to ask.
-      </p>
-      <p>
-        They also have whatever tools your own MCP servers provide, and they are asked about
-        like anything else. The one exception is the mailbox blobot gives them to talk to each
-        other, which never asks.
-      </p>
-      <p>
-        <b>blobot is not a sandbox.</b>
-      </p>
-    </section>
-  );
-}
-
-/**
- * One numbered step. The numeral is the editorial device that makes this a page, not a form.
- *
- * A step that has been answered **folds to its own answer** — `01 · checkout` — and the body
- * comes back on a click. The page is still read start to finish, which is what this screen is
- * for; what folds is the tail of a step behind you, and the numeral and the title stay on
- * screen, so the whole shape of what is being asked is never hidden. The gesture is the
- * transcript's: a chevron that rotates, and the same word for the same act.
- *
- * The chevron sits **after the title**, not in front of the numeral and not out at the right
- * edge. In front it would push the numerals of the two steps that fold out of line with the two
- * that do not; out at the edge it is a marker a whole column away from the thing it discloses.
- */
-function Step({
-  n,
-  title,
-  aside,
-  summary,
-  folded = false,
-  onToggle,
-  children,
-}: {
-  n: string;
-  title: string;
-  aside?: React.ReactNode;
-  summary?: React.ReactNode;
-  folded?: boolean;
-  onToggle?: () => void;
-  children: React.ReactNode;
-}): React.JSX.Element {
-  const head = (
     <>
-      <span className="stepn mono">{n}</span>
-      <h2 className="subhead">{title}</h2>
+      {refusal !== undefined && <div className="refusal">{refusal}</div>}
+      <div className="pickfoot mono muted">
+        {reading
+          ? 'looking through this folder…'
+          : busy
+            ? 'creating…'
+            : path !== ''
+              ? `${path}${inspection === undefined ? '' : ` · ${workspaceLine(inspection, repos)}`}`
+              : `~/blobot/${name === '' ? '…' : name} · blobot makes this folder`}
+      </div>
+      <div className="pickfoot">
+        Each agent gets its own copy of this folder and asks before anything blobot has not
+        vouched for. blobot is not a sandbox.
+      </div>
     </>
   );
-  return (
-    <section className="step">
-      {onToggle === undefined ? (
-        <div className="stephead">
-          {head}
-          {aside !== undefined && <span className="stepaside">{aside}</span>}
-        </div>
-      ) : (
-        <button className="stephead fold" aria-expanded={!folded} onClick={onToggle}>
-          {head}
-          <ChevronDown size={13} className={folded ? 'shut' : ''} aria-hidden />
-          {folded && summary !== undefined && <span className="stepsum mono">{summary}</span>}
-        </button>
-      )}
-      {!folded && <div className="stepbody">{children}</div>}
-    </section>
-  );
 }
 
-/**
- * The folder step's answer in one line: what kind of Workspace it is, in the same words the
- * note below it uses when the step is open. A summary that said something the open step does
- * not say would be a second source of truth about the same folder.
- */
-function workspaceLine(
-  inspection: UiWorkspaceInspection,
-  repos: readonly string[],
-): string {
-  if (inspection.kind === 'plain') return 'a copy per agent';
-  if (inspection.kind === 'nested')
-    return `${repos.length} of ${inspection.repos.length} repositories`;
+/** What kind of Workspace this is, in one clause. */
+function workspaceLine(inspection: UiWorkspaceInspection, repos: readonly string[]): string {
+  if (inspection.kind === 'plain') return 'a copy per agent, no branch and no diff';
+  if (inspection.kind === 'nested') return `${repos.length} repositories`;
   return `git · ${inspection.dirty ? 'uncommitted changes' : 'clean'}`;
-}
-
-
-/**
- * What the chosen folder is, and therefore what the agents are about to get.
- *
- * Every kind is usable now; the note's job is that the *guarantees* differ and a user told
- * nothing will assume the strongest. A copy has no branch, no diff and no recovery, and this
- * is the only place that can say so before the team exists.
- */
-function WorkspaceNote({
-  inspection,
-  onInit,
-}: {
-  inspection: UiWorkspaceInspection;
-  onInit: () => void;
-}): React.JSX.Element {
-  if (inspection.kind === 'plain') {
-    return (
-      <div className="note">
-        <span className="muted">
-          Not a git repository, which is fine. Each agent gets its own copy of this folder. No
-          branch, no diff of what changed, and blobot cannot recover a copy that is deleted.{' '}
-        </span>
-        {/* Offered, never silent: creating a `.git` in someone's directory is a real change.
-            A choice now rather than a gate — the team works either way. */}
-        <button className="btn" onClick={onInit}>
-          run git init here
-        </button>
-      </div>
-    );
-  }
-  if (inspection.kind === 'nested') {
-    return (
-      <div className="note mono muted">
-        {inspection.repos.length} repositories in this folder · each agent gets a worktree of the
-        ones you pick{inspection.looseFiles ? ', and a copy of everything else' : ''}
-      </div>
-    );
-  }
-  if (!inspection.hasCommits) {
-    return (
-      <div className="refusal">
-        No commits yet, so there is nothing to branch an agent&apos;s workspace from. Make one
-        commit and choose the folder again.
-      </div>
-    );
-  }
-  return (
-    <div className="note mono muted">
-      git{inspection.branch === undefined ? '' : ` · on ${inspection.branch}`}
-      {inspection.dirty
-        ? ' · uncommitted changes live in no agent’s workspace, so the agents will not see them'
-        : ' · clean'}
-    </div>
-  );
-}
-
-/**
- * Which repositories the agents may work in.
- *
- * Everything found is ticked, because that is what the user pointed at. Unticking is how a
- * `~/code` with twenty projects avoids twenty `blobot/<team>/<agent>` branches and twenty
- * checkouts per agent — and a repository left out is **absent** from the agent's workspace
- * rather than present and off limits, which is the only version of "out of scope" an agent
- * with shell access cannot ignore.
- */
-function RepoScope({
-  inspection,
-  chosen,
-  onToggle,
-}: {
-  inspection: UiWorkspaceInspection;
-  chosen: readonly string[];
-  onToggle: (repo: string) => void;
-}): React.JSX.Element {
-  return (
-    <div className="reposcope">
-      <div className="fieldlabel mono">REPOSITORIES IN SCOPE</div>
-      {inspection.repos.map((repo) => {
-        const on = chosen.includes(repo.path);
-        return (
-          <button
-            key={repo.path}
-            className={`listrow pick${on ? ' on' : ''}`}
-            onClick={() => onToggle(repo.path)}
-            // A repository with no commits has nothing to branch from. It is skipped with a
-            // reason rather than refusing the whole team — one empty project in a folder of
-            // twenty must not stop anybody working.
-            disabled={!repo.hasCommits}
-          >
-            <span className="who">
-              <span className="nm">
-                <b>{repo.path}</b>
-              </span>
-              <span className="sub mono muted">
-                {repo.hasCommits
-                  ? `${repo.branch ?? 'detached'}${repo.dirty ? ' · uncommitted changes' : ''}`
-                  : 'no commits yet, nothing to branch from, so it is left out'}
-              </span>
-            </span>
-            <span className={`tick${on && repo.hasCommits ? ' on' : ''}`}>
-              {on && repo.hasCommits && <Check size={14} aria-hidden />}
-            </span>
-          </button>
-        );
-      })}
-      {chosen.length === 0 && !inspection.looseFiles && (
-        <div className="refusal">Nothing is in scope. Pick at least one repository.</div>
-      )}
-    </div>
-  );
 }
 
 function basename(path: string): string {
   return path.replace(/\/+$/, '').split('/').pop() ?? '';
+}
+
+/** One roster row's value in the list. Ids, so two agents called Alice are two rows. */
+function rowOf(agent: UiAgentProfile): string {
+  return `agent:${agent.id}`;
 }

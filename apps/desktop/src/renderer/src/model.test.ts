@@ -9,7 +9,6 @@ import {
   initialState,
   continuesAgent,
   isPending,
-  liveTailOf,
   lastLineOf,
   itemsFor,
   messagesIn,
@@ -413,7 +412,7 @@ describe('the pending indicator', () => {
   });
 });
 
-describe('the live tail', () => {
+describe('the live half of a run', () => {
   const call = (
     id: string,
     agentId: string,
@@ -427,63 +426,128 @@ describe('the live tail', () => {
     toolKind: 'read',
     status,
   });
-  const said: Item = { kind: 'agent', id: 's', at: 1, agentId: 'alice', text: 'Reading.', live: false };
+  const said = (id: string, agentId: string, text: string): Item => ({
+    kind: 'agent',
+    id,
+    at: 1,
+    agentId,
+    text,
+    live: false,
+  });
+  const caption: Item = said('s', 'alice', 'Reading.');
+  const prompt = (agentIds: readonly string[]): Item => ({
+    kind: 'user',
+    id: 'u',
+    at: 0,
+    agentIds,
+    text: 'go',
+  });
   const inFlight = (): boolean => true;
   const idle = (): boolean => false;
+  const live = (rows: readonly Row[]): Extract<Row, { kind: 'live' }>[] =>
+    rows.filter((row): row is Extract<Row, { kind: 'live' }> => row.kind === 'live');
+  const folds = (rows: readonly Row[]): Extract<Row, { kind: 'steps' }>[] =>
+    rows.filter((row): row is Extract<Row, { kind: 'steps' }> => row.kind === 'steps');
 
-  it('takes the trailing calls out of the settled rows and attributes them', () => {
-    const rows = rowsOf([said, call('t1', 'alice', 'running'), call('t2', 'alice', 'running')]);
-    const { settled, blocks } = liveTailOf(rows, inFlight);
-    expect(settled).toHaveLength(1);
-    expect(blocks).toHaveLength(1);
-    expect(blocks[0]?.agentId).toBe('alice');
-    expect(blocks[0]?.items.map((item) => item.id)).toEqual(['t1', 't2']);
+  it('takes the open calls out of the run and attributes them', () => {
+    const rows = rowsOf([caption, call('t1', 'alice', 'running'), call('t2', 'alice', 'running')], inFlight);
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'live']);
+    expect(live(rows)[0]?.agentId).toBe('alice');
+    expect(live(rows)[0]?.items.map((item) => item.id)).toEqual(['t1', 't2']);
   });
 
   /**
-   * The reason the tail is bounded by a status and not by whether a call has returned: a batch
-   * whose first member finishes must not have that member jump out of the block and back into
-   * the column above it. They leave together, when the fold takes them.
+   * A call that returns while its neighbours are still open must not jump out of the block and
+   * back into the column above it as a lone unattributed line. It leaves when its batch does.
    */
   it('keeps a finished call in the block while its batch is still running', () => {
-    const rows = rowsOf([
-      said,
-      call('t1', 'alice', 'completed'),
-      call('t2', 'alice', 'running'),
-    ]);
-    const { blocks } = liveTailOf(rows, inFlight);
-    expect(blocks[0]?.items.map((item) => item.id)).toEqual(['t1', 't2']);
+    const rows = rowsOf([caption, call('t1', 'alice', 'completed'), call('t2', 'alice', 'running')], inFlight);
+    expect(live(rows)[0]?.items.map((item) => item.id)).toEqual(['t1', 't2']);
+  });
+
+  /** And a batch is bounded by the agent narrating: what it said before this one is not in it. */
+  it('ends a batch at the caption above it, so the earlier one still folds', () => {
+    const rows = rowsOf(
+      [
+        call('t1', 'alice', 'completed'),
+        call('t2', 'alice', 'completed'),
+        said('c', 'alice', 'Now the test.'),
+        call('t3', 'alice', 'running'),
+      ],
+      inFlight,
+    );
+    expect(rows.map((row) => row.kind)).toEqual(['steps', 'item', 'live']);
+    expect(toolsIn(folds(rows)[0]!.items)).toBe(2);
+    expect(live(rows)[0]?.items.map((item) => item.id)).toEqual(['t3']);
   });
 
   /**
-   * And the reason it has to be bounded at all. One completed call never reaches the fold's
-   * threshold, so it is a loose row for the rest of the session; a tail defined by looseness
-   * alone would hold a face and a live block over it forever.
+   * The reason it is a status and not a property of the items. A row that still says `running`
+   * on a transcript nobody is watching is a call whose end was never learned, and a face over it
+   * would be a live block on a dead turn.
    */
   it('is empty once the turn is over', () => {
-    const rows = rowsOf([said, call('t1', 'alice', 'completed')]);
-    const { settled, blocks } = liveTailOf(rows, idle);
-    expect(blocks).toHaveLength(0);
-    expect(settled).toEqual(rows);
+    const rows = rowsOf([caption, call('t1', 'alice', 'completed')], idle);
+    expect(live(rows)).toHaveLength(0);
   });
 
-  /** The whole point of the block: two agents running at once are two blocks, not one column. */
-  it('splits a tail between the agents in it', () => {
-    const rows = rowsOf([
-      said,
-      call('a1', 'alice', 'running'),
+  /**
+   * `.scratch/live-steps/issues/08`, and the whole of it. A woken teammate gets no voice of its
+   * own while the principal holds the turn: its open call is inside the run its mail caused,
+   * which is the same place the call goes the instant it returns.
+   */
+  it('gives a teammate no block of its own, and folds its open call into the principal run', () => {
+    const rows = rowsOf(
+      [
+        prompt(['alice']),
+        call('a1', 'alice', 'completed'),
+        { kind: 'peer', id: 'm', at: 1, fromId: 'alice', toId: 'bob', text: 'have a look' },
+        call('b1', 'bob', 'running'),
+      ],
+      inFlight,
+    );
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'steps']);
+    expect(folds(rows)[0]?.agentId).toBe('alice');
+    expect(folds(rows)[0]?.items.map((item) => item.id)).toEqual(['a1', 'm', 'b1']);
+    expect(live(rows)).toHaveLength(0);
+  });
+
+  /**
+   * `.scratch/live-steps/issues/06`, which is the same fault seen from the other side. Bob's
+   * call opened, Alice wrote six more rows, and it used to end her run where it stood: one turn
+   * came back as two folds with an unattributed mono line between them.
+   */
+  it('is one fold when a teammate open call has the principal own later work after it', () => {
+    const rows = rowsOf(
+      [
+        prompt(['alice']),
+        call('a1', 'alice', 'completed'),
+        { kind: 'peer', id: 'm', at: 1, fromId: 'alice', toId: 'bob', text: 'have a look' },
+        call('b1', 'bob', 'running'),
+        said('c', 'alice', 'Checking it.'),
+        call('a2', 'alice', 'completed'),
+        call('a3', 'alice', 'completed'),
+      ],
+      inFlight,
+    );
+    expect(folds(rows)).toHaveLength(1);
+    expect(rows.some((row) => row.kind === 'item' && row.item.kind === 'tool')).toBe(false);
+  });
+
+  /** In its own pane it is the principal, and nothing about any of this reaches it. */
+  it('gives a teammate its block back in its own pane', () => {
+    const items: Item[] = [
+      prompt(['alice']),
+      { kind: 'peer', id: 'm', at: 1, fromId: 'alice', toId: 'bob', text: 'have a look' },
       call('b1', 'bob', 'running'),
-      call('a2', 'alice', 'running'),
-    ]);
-    const { blocks } = liveTailOf(rows, inFlight);
-    expect(blocks.map((block) => block.agentId)).toEqual(['alice', 'bob']);
-    expect(blocks[0]?.items.map((item) => item.id)).toEqual(['a1', 'a2']);
-    expect(blocks[1]?.items.map((item) => item.id)).toEqual(['b1']);
+    ];
+    const rows = rowsOf(itemsFor(items, { kind: 'agent', agentId: 'bob' }), inFlight);
+    expect(live(rows)[0]?.agentId).toBe('bob');
   });
 
   /**
    * An unanswered permission is the whole of what the reader has to act on, it carries its own
-   * buttons, and the agent holding it is `waiting` rather than mid-turn. It stays a row.
+   * buttons, and it is the one thing an agent nobody addressed has to reach the user with.
    */
   it('never takes a permission row', () => {
     const asking: Item = {
@@ -496,16 +560,15 @@ describe('the live tail', () => {
       canAllow: true,
       canAllowAlways: true,
     };
-    const rows = rowsOf([said, asking]);
-    const { settled, blocks } = liveTailOf(rows, inFlight);
-    expect(blocks).toHaveLength(0);
-    expect(settled).toEqual(rows);
+    const rows = rowsOf([caption, asking], inFlight);
+    expect(live(rows)).toHaveLength(0);
+    expect(rows.map((row) => row.kind)).toEqual(['item', 'item']);
   });
 
   /** A caption with its own calls under it is the face said twice, one sentence apart. */
   it('groups the block under a caption the same agent just wrote', () => {
-    expect(continuesAgent('alice', said)).toBe(true);
-    expect(continuesAgent('bob', said)).toBe(false);
+    expect(continuesAgent('alice', caption)).toBe(true);
+    expect(continuesAgent('bob', caption)).toBe(false);
     expect(continuesAgent('alice', undefined)).toBe(false);
   });
 });
