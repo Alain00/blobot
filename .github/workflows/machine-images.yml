@@ -22,19 +22,19 @@ jobs:
           - { runner: ubuntu-24.04-arm, arch: arm64 }
     runs-on: ${{ matrix.platform.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22.22.1'
       # The archive and sbx inventory identify the OCI manifest, not a classic config ID.
-      - uses: docker/setup-docker-action@v5
+      - uses: docker/setup-docker-action@77e84dbf09b47d1e29270283c22f16145aa85ca1 # v5
         with:
           version: v29.6.1
           set-host: true
           daemon-config: '{"features":{"containerd-snapshotter":true}}'
-      - uses: docker/setup-buildx-action@v4
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
         with:
           driver: docker
           version: v0.35.0
@@ -48,7 +48,7 @@ jobs:
           RUNTIME: ${{ matrix.runtime }}
           ARCH: ${{ matrix.platform.arch }}
         run: node images/machines/smoke.mjs --runtimes "$RUNTIME" --arch "$ARCH" --receipts out --results "out/$RUNTIME-$ARCH-smoke.json"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: machine-${{ matrix.runtime }}-${{ matrix.platform.arch }}
           path: out/*
@@ -65,13 +65,13 @@ jobs:
     env:
       RELEASE_TAG: ${{ inputs.release_tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22.22.1'
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: machine-*
           path: assets

@@ -3,7 +3,7 @@
 The tracked image inputs live here; runtime download pins belong to each adapter's `image.ts`.
 [machines-20260905-1](https://github.com/guillermolg00/blobot-machine-images/releases/tag/machines-20260905-1)
 supplies verified public arm64 and amd64 builds for all five adapters. No image upgrade,
-provider sign-in, egress admission or box activation is enabled by this directory alone.
+provider sign-in or box activation is enabled by this directory alone.
 
 ## Contents and boundaries
 
@@ -11,7 +11,8 @@ Every image derives from the same multi-platform Docker shell digest in `inputs.
 Node 22.22.1, Git, guest Docker/Compose, sudo, Python 3, bubblewrap and socat inherited from that
 base. Node is required by blobot's guest transport even for native ACP runtimes. `uvx` is not
 installed. A project MCP server can use the interpreters actually present; downloading a new
-dependency still needs the eventual egress policy. Kernel Landlock and usable unprivileged
+dependency uses the accepted open Internet/host/LAN reach under the selected runtime's own
+restrictions; Blobot adds no destination allowlist. Kernel Landlock and usable unprivileged
 namespaces require their own live fence acceptance.
 
 | Runtime | CLI baseline | ACP launch |
@@ -77,11 +78,34 @@ disk or the figure shown before an actual download. Published receipts provide t
 
 ## CI and distribution
 
+The current public publisher is
+[`guillermolg00/blobot-machine-images`](https://github.com/guillermolg00/blobot-machine-images).
+Release `machines-20260905-1` was built from publisher commit
+[`056a3b31fa1838e16fcdd181c7c89528f7baf226`](https://github.com/guillermolg00/blobot-machine-images/commit/056a3b31fa1838e16fcdd181c7c89528f7baf226)
+by [native CI run 33987159409](https://github.com/guillermolg00/blobot-machine-images/actions/runs/33987159409).
+The publisher is a source snapshot, with no parent commit linking it to this repository.
+As verified on 2026-09-06, Guillermo (`guillermolg00`) is its owner and sole listed
+collaborator with write access; its workflow token may create releases during workflow runs.
+The separate public repository supplies anonymous downloads because this source repository
+is private. Availability and future publication depend on that publisher; the app checks the
+pinned archive hash and refuses replacement bytes even if a release asset is changed.
+
 The manual `machine-images` workflow builds all five runtimes on native Linux arm64/amd64
 runners, runs smoke checks and uploads each archive with its receipt. With an optional new
 `machines-*` release tag it verifies all ten results and creates a **draft** release. The
 release assembly refuses missing architectures, failed smoke checks, corrupt bytes and an
 existing release. It never edits adapter pins or publishes a draft automatically.
+It writes to the repository where the workflow runs (`GITHUB_REPOSITORY`), so a run in
+`Alain00/blobot` creates a private draft there, not a new public runtime release. Public
+publication requires a reviewed source snapshot in the publisher and a workflow run there;
+the resulting source commit and CI run must be recorded with each adapter-pin update.
+
+Actions in this source workflow are pinned to full commit hashes. Dependabot opens weekly
+GitHub Actions update PRs for review. This does not retroactively attest the existing release
+or change the publisher's workflow: its next reviewed snapshot must carry these pins too.
+Docker Engine and Buildx installations remain version-selected (`v29.6.1`/`v0.35.0`) by
+their pinned setup actions, rather than verified against an independent checked-in archive
+hash. CI receipts are checks of the produced bytes, not independent build attestations.
 
 After reviewing and publishing immutable assets, verify anonymous downloads and copy the
 generated `runtime-builds.json` entries into the matching adapter definitions. A private
@@ -98,7 +122,9 @@ checked before load; RC5 inventory exposes only an abbreviated manifest digest a
 Shared images outlive Agent removal; no automatic garbage collection is introduced here.
 Any future explicit cleanup must account for active and retained recovery Machines.
 
-Acceptance evidence and the remaining state-preservation work belong to
+Acceptance evidence and the deferred state-preservation scope belong to
 [The image: one per runtime](../../.scratch/machines/issues/13-the-image-one-per-runtime.md),
 with reproducible fixtures under its research links. Signed-out startup does not prove
-provider login, paid turns, mailbox delivery or migration crash recovery.
+provider login, paid turns, mailbox delivery or migration crash recovery. Post-creation
+resizing and automatic image migration remain deferred; a changed image/kit does not silently
+replace an existing Machine or copy its login.
