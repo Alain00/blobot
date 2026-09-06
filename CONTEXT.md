@@ -48,6 +48,11 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
 - **Approval posture** — when an Agent's runtime asks the operator before acting. Separate
   from where the Agent executes and what it can reach: choosing a Machine does not itself
   grant more permission. See `docs/adr/0006-machine-boundaries-and-approval-posture.md`.
+- **Shared Git trust** — the worktree's common Git metadata is writable. Blobot's host Git
+  controls skip repository hooks and fsmonitor, disable external diff/textconv, and restrict
+  configured transports. This leaves Agent Git unchanged and does not make hostile metadata,
+  filters or credential helpers safe; other host tools do not inherit these overrides.
+  A sandbox is not an independent repository. See `docs/machines.md`.
 
 ## Runtimes
 

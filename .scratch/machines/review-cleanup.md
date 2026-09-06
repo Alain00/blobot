@@ -73,3 +73,9 @@ clean-host installer and Linux/KVM acceptance remain in
 Independent axes: Standards — no new confirmed P1/P2, one download hardening and
 organization cleanup applied; Spec — two P2 findings corrected. The parent's
 additional integration pass corrected one setup-cancellation P2.
+
+## Subsequent PR comments
+
+Copilot and Claude’s 33 inline comments and 11 summary points were assessed in
+[the follow-up response ledger](review-pr-comments.md). Its validation supersedes the
+counts above: core 1,135 passed / 47 skipped; desktop 684 passed / 1 skipped.

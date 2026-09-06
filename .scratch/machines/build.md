@@ -1,5 +1,32 @@
 # Machines implementation
 
+## 2026-09-06 — Copilot and Claude PR review addressed
+
+Reviewed all 33 inline comments and 11 additional summary points against code and
+accepted decisions. [The response ledger](review-pr-comments.md) records each verdict,
+fix, measured evidence and retained limit. Commits `4ba7311`, `756c061`, `563adfe`.
+
+Corrected pending first-start visibility/cancellation, VM shutdown and ownership
+recovery, mailbox admission/eviction/retry, local runtime failures, corrupted
+placement isolation, cleanup outcomes, shared image progress/cancellation and cache
+retention. Added verified ownership inventory/removal, readable per-Agent failures,
+local retries, host resource ceilings and sleep-setting repair. Host Git controls
+now neutralize the measured monitor/hook/transport paths; shared Git remains a trust
+input and explicit UI Git operations skip hooks. CI actions are SHA-pinned and the
+public image publisher is documented. Generic process helpers moved out of ACP.
+
+Research79 reproduces nested Git denial without common-directory permission and
+passes ordinary/nested commits plus loopback binding through the real pinned Claude
+bridge/CLI after correction. It uses isolated configuration and a deterministic local
+provider, not an account. The accepted local native policy is documented as applying
+independently of the disabled-by-default box preview.
+
+Final core 1,135 passed / 47 skipped; desktop 684 passed / 1 skipped. Both typechecks
+and builds pass, image-manifest tests 3/3, actual Electron interactions pass. The
+managed engine login’s no-browser fallback/account acceptance remains an explicit
+release blocker. Automatic image migration, resize and unsafe shared-template GC
+were not silently added. Existing state-preservation evidence remains tested.
+
 ## 2026-09-06 — per-Agent composition resolved
 
 [The composition root question](issues/24-a-per-agent-composition-root.md) is resolved

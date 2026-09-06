@@ -7,6 +7,7 @@ final fetch found no incoming main commits. Git/GitHub identity is Guillermo,
 
 ## What is committed
 
+- `4ba7311`, `756c061`, `563adfe`: all applicable PR review fixes, native regression and ownership/UI integration. [Every reviewer point is assessed here](review-pr-comments.md).
 - `b657256`: operational engine setup, guest sign-in, placement and preview UI;
   queue/cancellation/shutdown fixes, independent review and Electron captures.
 - `7a2b0f1`: Codex launch environment correction plus actual published runtime
@@ -19,7 +20,7 @@ work. Do not stage or revert it while continuing Machines.
 
 ## Current state and next work
 
-Read [the preview guide](../../docs/machines.md), [review](review.md),
+Read [the PR comment responses](review-pr-comments.md), [the preview guide](../../docs/machines.md), [review](review.md),
 [current evidence ledger](research/53-first-box-evidence-ledger.md), then
 [the map](map.md). The operational screen ticket is resolved. The image and
 first-box tickets remain claimed for account/platform acceptance; their old
@@ -30,6 +31,8 @@ Production box activation is off. For development review start Electron with
 handshakes pass; Codex/Cursor initialize and require authentication; fx needs login
 before initialize. Eight actual login challenges/cancellation paths pass, without
 completing any account login. Do not describe this as authenticated runtime coverage.
+
+Additional explicit blocker: managed engine OAuth when no browser opens still lacks a surfaced fallback challenge; real macOS/Ubuntu login, cancellation and keyring acceptance remain required. Local Claude native protection applies even with box preview off; research79 now measures ordinary/nested Git and loopback on macOS.
 
 Remaining release checklist: completed vendor sign-in and private login persistence/
 isolation, authenticated turns with mailbox/permissions/attachments/cancel/resume,
@@ -43,7 +46,7 @@ its original vendor templates retained. No agent is still doing background work.
 
 ## Validation
 
-Core 1,102 passed / 47 skipped; desktop 638 passed / 1 skipped. Both typechecks and
+Core 1,135 passed / 47 skipped; desktop 684 passed / 1 skipped. Both typechecks and
 builds pass. The Electron fixture asserts mixed placement submission and checks
 login/composer spacing and narrow creation; screenshots are linked from research71.
 Native CI build/smoke covers all five published runtimes on arm64 and amd64; it

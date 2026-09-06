@@ -32,3 +32,9 @@ Observed and checked:
 
 These are interaction/layout checks, not successful account authentication,
 end-to-end provider execution, or Guillermo's still-pending visual review.
+
+Repeated after PR comment fixes on 2026-09-06. The Agent pane no longer embeds engine
+onboarding; Settings includes a separate ownership inventory. The mixed placement,
+login/composer geometry and 840×660 creation checks still pass. Component tests also
+cover local retry, initial download cancellation, ownership removal confirmation,
+nonpreset limits and corrupt sleep-preference repair.

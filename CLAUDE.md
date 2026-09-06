@@ -198,6 +198,18 @@ up. Read it before starting work.
   session grants and saved rules share an ACP kind. Both Machine kinds retain the same
   advertised approval choices. `DESIGN.md` and first-demo's permission ticket record the amendment.
 
+- **Machines per Agent (`local`/`box`), implemented as a preview.** Teams can mix installed
+  runtimes and sbx RC5 sandboxes on this computer. The Agent worktree and common `.git` are
+  shared read/write; its home/login and installed software stay private. Internet/host/LAN
+  reach is open under the selected harness approval posture. Box activation requires
+  `BLOBOT_MACHINES_PREVIEW=1`; post-creation resizing and automatic image migration remain
+  deferred. Local Claude's native sandbox policy applies independently of this preview flag.
+  Missing local runtimes fail by Agent name and can retry from their conversation; peers keep
+  working. Read [the flow and boundaries](docs/machines.md),
+  [ADR-0006](docs/adr/0006-machine-boundaries-and-approval-posture.md),
+  [implementation history](.scratch/machines/build.md) and
+  [the PR review responses](.scratch/machines/review-pr-comments.md).
+
 - **Agents exist independently of teams** — `docs/adr/0001-agents-exist-independently-of-teams.md`,
   the repo's first ADR, and the reason `CONTEXT.md` now has an **AgentProfile**. An agent is
   hired once, on no team, and can be on several at the same time; joining a team instantiates an
@@ -306,8 +318,8 @@ up. Read it before starting work.
   argv is core's and never the renderer's: two ids travel, and the command is looked up on the
   far side. Nothing concludes from an exit code, because an installer can exit 0 having installed
   nothing, so the screen ends on detection asked again in the same four words. Detection still
-  gates nothing, with one addition: a launch whose agent's runtime is `not_installed` is refused
-  by name rather than surfacing as `spawn opencode ENOENT`. xterm is handed a monochrome palette,
+  gates nothing, with one addition: an Agent whose local runtime is `not_installed` fails
+  by name while its peers start, and offers retry after installation. xterm is handed a monochrome palette,
   because a terminal is quoted and not exempt from the governing rule. `.scratch/runtime-readiness/`
   has the decisions; `claude auth login` is the one path not run live.
 
@@ -575,7 +587,7 @@ problem, because four Handbooks do not fold into one the way four statuses fold 
   list chosen by criteria (OpenAI, Deepgram, Mistral), one key per provider in
   `dictation-keys.json` (`safeStorage` where the OS can, plain **and stated** where it cannot,
   `basic_text` never) or in `BLOBOT_<PROVIDER>_API_KEY`, which always wins and is **stripped
-  from every runtime's environment** by `adapters/acp/child-env.ts`. **Local first**: a
+  from every runtime's environment** by `process/child-env.ts`. **Local first**: a
   readiness scan from RAM, arch and disk (four words, `unfit` / `untested` / `fit` / `slow`, the
   last two measured by a real sentence in *say something*), three whisper.cpp weights and a
   `whisper-cli` blobot builds in its own CI (the repo's first workflow) fetched to
@@ -781,7 +793,10 @@ problem, because four Handbooks do not fold into one the way four statuses fold 
   once a team had settled its two hundredth tool call. `AppState.settled` is a counter now.
   `.scratch/file-sidebar/build.md` has what was decided at the keyboard.
 
-Next: **the dictation done-when by hand** — a Spanish sentence with identifiers into a real
+Next: **Machines account/platform acceptance and Guillermo's product review** — follow
+`.scratch/machines/handoff.md` and the evidence ledger before enabling box execution by default.
+The draft PR stays unready until Guillermo finishes his review. Remaining independent work:
+**the dictation done-when by hand** — a Spanish sentence with identifiers into a real
 agent, locally and through one provider (the `whisper-cli` workflow ran and its hashes are
 pinned; the engine's release URL is private for now, on `build.md`). Then **brief a real
 agent**, which is the only thing left in that effort and what every
