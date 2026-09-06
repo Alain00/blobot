@@ -88,7 +88,8 @@ export class SleepingRuntime implements AgentRuntime {
   }
 
   /** Run a user-requested sign-in with the Machine awake and no provider session attached. */
-  async remedy<T>(work: (signal: AbortSignal) => Promise<T>): Promise<T> {
+  async remedy<T>(work: (signal: AbortSignal) => Promise<T>, signal?: AbortSignal): Promise<T> {
+    signal?.throwIfAborted();
     if (this.#closed || this.#busy !== 0 || this.#lifecycle === 'starting') {
       throw new Error('Wait for this agent to finish before signing in.');
     }
@@ -98,21 +99,22 @@ export class SleepingRuntime implements AgentRuntime {
     this.#setLifecycle('starting');
     const abort = new AbortController();
     this.#remedyAbort = abort;
+    const cancelled = signal === undefined ? abort.signal : AbortSignal.any([abort.signal, signal]);
     try {
       let result!: T;
       await this.#serialize(async () => {
-        abort.signal.throwIfAborted();
+        cancelled.throwIfAborted();
         try {
           this.#unsubscribeRuntime();
           this.#startedOnce = true;
           await this.#runtime.stop();
-          abort.signal.throwIfAborted();
+          cancelled.throwIfAborted();
           this.#setPower('waking');
-          await this.#options.machine.start(this.#options.startRequest);
-          abort.signal.throwIfAborted();
+          await this.#options.machine.start({ ...this.#options.startRequest, signal: cancelled });
+          cancelled.throwIfAborted();
           this.#setPower('awake');
-          result = await work(abort.signal);
-          abort.signal.throwIfAborted();
+          result = await work(cancelled);
+          cancelled.throwIfAborted();
         } finally {
           try {
             await this.#options.machine.stop();

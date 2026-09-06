@@ -166,6 +166,29 @@ describe('the threshold', () => {
 });
 
 describe('a session that fills up', () => {
+  it('drains a pending handoff before shutdown finishes and never restarts the stopped runtime', async () => {
+    let release!: (path: string) => void;
+    let writing = false;
+    const h = await harness({ agents: [alice], scripts: { [alice.id]: [
+      scenarios['fills-up-and-keeps-going'], scenario('handoff').say('Keep this handoff.').end(),
+    ] }, archive: { write: () => { writing = true; return new Promise((resolve) => { release = resolve; }); } } });
+    const turn = h.orchestrator.promptFromUser([alice.id], 'Work.');
+    await h.clock.runAll();
+    expect(writing).toBe(true);
+    h.orchestrator.dispose();
+    await h.runtimes.get(alice.id)!.stop();
+    let drained = false;
+    const closing = h.orchestrator.drained().then(() => { drained = true; });
+    await Promise.resolve();
+    expect(drained).toBe(false);
+    await expect(h.orchestrator.promptFromUser([alice.id], 'Too late.')).rejects.toThrow('closing');
+    release('/handoffs/kept.md');
+    await h.clock.runAll();
+    await closing;
+    await turn;
+    expect(h.runtimes.get(alice.id)!.lifecycle).toBe('stopped');
+    expect(h.compacted()).toEqual([]);
+  });
   it('asks the agent for a handoff and starts it again, carrying what it wrote', async () => {
     const h = await harness({
       scripts: {

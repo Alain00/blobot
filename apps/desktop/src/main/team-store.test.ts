@@ -137,6 +137,14 @@ describe('creating a team', () => {
     const joiner = hireAgent({ name: 'Charlie', role: 'Review', runtimeId: 'codex' }, { store, clock });
     await editTeamRoster(team.id, [...spec.profileIds, joiner.id], deps);
     expect(store.agentsOfTeam(team.id).find((agent) => agent.profileId === joiner.id)?.machine).toEqual(box);
+    const next = hireAgent({ name: 'Diana', role: 'Review', runtimeId: 'codex' }, { store, clock });
+    await expect(editTeamRoster(team.id, [...spec.profileIds, joiner.id, next.id], deps, undefined,
+      { [joiner.id]: { kind: 'local' } })).rejects.toThrow('new team member');
+    expect(store.agentsOfTeam(team.id)).toHaveLength(3);
+    await editTeamRoster(team.id, [...spec.profileIds, joiner.id, next.id], deps, undefined,
+      { [next.id]: { kind: 'local' } });
+    expect(store.agentsOfTeam(team.id).find((agent) => agent.profileId === next.id)?.machine?.kind ?? 'local').toBe('local');
+    expect(store.agentsOfTeam(team.id).find((agent) => agent.profileId === joiner.id)?.machine).toEqual(box);
   });
 
   it('validates member placement before creating rows or workspaces', async () => {

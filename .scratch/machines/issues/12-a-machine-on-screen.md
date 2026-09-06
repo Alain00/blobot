@@ -1,5 +1,5 @@
 Type: prototype
-Status: claimed
+Status: resolved
 Blocked by: 05, 09
 
 # A Machine on screen, and where a profile is addressed from
@@ -763,3 +763,34 @@ Guest login is checked separately from a successful bridge session handshake.
 Core 1,080/47; desktop 626/1; both typechecks/builds pass. Actual published Claude
 launch and same-Machine reopen are measured in [the acceptance receipt](../research/64-production-box-launch-acceptance.md).
 Engine/guest-login operations and the production controls remain claimed.
+
+
+## Resolution — operational preview, 2026-09-06
+
+Implemented under Guillermo's explicit autonomous-completion and design delegation.
+The operational screen is resolved; this is not his personal visual approval or
+completion of the separate image/account/platform acceptance tickets.
+
+Creation and later joiners support persisted Team defaults and per-Agent overrides.
+Limits are chosen before creation, then shown read-only in Settings. Settings and
+creation expose inline engine setup with Docker account/terms, signature/hash
+verification, cancellation and a fresh status check. No terminal or Docker command
+is shown. Agent conversations show their own runtime sign-in methods, browser/device
+or requested one-time input, queued messages, cancellation, retry and the existing
+host working-folder opener. Runtime-specific mechanisms remain in the adapters.
+
+The login card uses the composer's existing measured notice area. Mixed-Team
+Workspace rows name sandbox members, and narrow creation screens scroll without
+losing the Create control. [Electron verification and captures](../research/71-machine-screen-verification.md)
+record the actual rendered interactions and their synthetic fixture boundaries.
+
+Shutdown now closes admission and drains pending starts, login/image work, runtime
+turns and compaction continuations before SQLite closes. Independent Standards/Spec
+reviews found five actionable issues; all were corrected and rechecked in
+[the implementation review](../review.md).
+
+**Release gate:** ordinary builds disable box activation before any engine call.
+Development review requires `BLOBOT_MACHINES_PREVIEW=1`. The interface discloses this;
+[the first-box evidence ledger](../research/53-first-box-evidence-ledger.md) retains
+actual account/provider-turn and Linux/KVM acceptance. The preview is not a claim
+that those checks passed. Existing local behavior remains available.

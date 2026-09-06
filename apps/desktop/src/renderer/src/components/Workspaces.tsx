@@ -491,6 +491,7 @@ export function WorkspacePanel({
           key={status.agentId}
           status={status}
           named
+          sandbox={agents.find((agent) => agent.id === status.agentId)?.machine?.kind === 'box'}
           {...faceOf(agents, status.agentId)}
           looking={looking}
           onPublish={(options) => onPublish(status.agentId, options)}
@@ -502,6 +503,7 @@ export function WorkspacePanel({
 }
 
 function Row({
+  sandbox = false,
   status,
   named = false,
   hue,
@@ -512,6 +514,7 @@ function Row({
   onPlan,
 }: {
   status: UiWorkspaceStatus;
+  sandbox?: boolean;
   /**
    * Whether the row says whose it is. The panel's rows do, because they are a list; the line
    * under an agent's composer does not, because the pane it sits in is already that agent and
@@ -561,6 +564,7 @@ function Row({
             </>
           )}
         </span>
+        {sandbox && <span className="wsseg">sandbox on this computer</span>}
         {segments(status).map((segment) => (
           <span key={segment} className="wsseg">
             {segment}

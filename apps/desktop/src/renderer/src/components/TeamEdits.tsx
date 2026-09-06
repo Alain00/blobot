@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { MachinePlacement } from '@blobot/core/domain';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Check, X } from 'lucide-react';
 import type {
@@ -11,6 +12,7 @@ import type {
 import { Blob } from './Blob.js';
 import { IconPick } from './IconPick.js';
 import { LeadPicker } from './Lead.js';
+import { MachinePick } from './MachinePick.js';
 import { usePlaySound } from '../sound/useSound.js';
 
 /**
@@ -248,6 +250,9 @@ export function EditTeam({
   onSaved: () => void;
 }): React.JSX.Element {
   const [roster, setRoster] = useState<readonly UiAgentProfile[]>([]);
+  const [memberMachines, setMemberMachines] = useState<Readonly<Record<string, MachinePlacement>>>({});
+  const [previewEnabled, setPreviewEnabled] = useState(false);
+  useEffect(() => { void window.blobot.engineSetup().then((view) => setPreviewEnabled(view.previewEnabled)).catch(() => {}); }, []);
   const [chosen, setChosen] = useState<readonly string[]>([]);
   /**
    * Who leads. Seeded from the team, and undefined is a real value here in a way it is not on
@@ -318,7 +323,8 @@ export function EditTeam({
     // restarts. A roster change does all three, and putting them in one transaction would make
     // a new icon fail for a reason that has nothing to do with it.
     if (icon?.dataUrl !== team.icon) await window.blobot.setTeamIcon(team.id, icon?.dataUrl);
-    const result = await window.blobot.editTeam(team.id, chosen, leading);
+    const result = await window.blobot.editTeam(team.id, chosen, leading,
+      Object.fromEntries(Object.entries(memberMachines).filter(([id]) => joining.some((agent) => agent.id === id))));
     setBusy(false);
     if (!result.ok) {
       setError(result.error ?? 'The team could not be changed.');
@@ -392,6 +398,18 @@ export function EditTeam({
                   );
                 })}
               </div>
+
+              {joining.length > 0 && <details className="machinedisclosure">
+                <summary>Where new members work</summary>
+                {joining.map((agent) => <div key={agent.id} className="machinemember">
+                  <span>{agent.name}</span>
+                  <MachinePick label={`Where ${agent.name} works`} value={memberMachines[agent.id] ?? team.defaultMachine ?? { kind: 'local' }} previewEnabled={previewEnabled}
+                    onChange={(value) => setMemberMachines((current) => ({ ...current, [agent.id]: value }))} />
+                </div>)}
+                <p>Sandboxes use a private home and runtime login. Their working folder and shared Git history stay writable on this computer.
+                  They can reach the Internet and local network with the runtime’s selected approval settings.</p>
+                <p>Each sandbox has an 8 GiB home and 20 GiB for Docker data. CPU and memory limits are fixed after creation.</p>
+              </details>}
 
               <IconPick
                 {...(icon === undefined ? {} : { icon })}

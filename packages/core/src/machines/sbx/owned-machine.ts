@@ -146,12 +146,14 @@ export class OwnedSbxMachine implements Machine {
     }
   }
   async start(request: MachineStartRequest): Promise<MachineLocation> {
+    request.signal?.throwIfAborted();
     if (!Number.isInteger(request.mailboxPort) || request.mailboxPort < 1 || request.mailboxPort > 65535) throw new Error('Invalid mailbox port.');
     if (request.runtime !== undefined && request.runtime.image !== this.#options.kit.image) {
       throw new Error('The runtime image does not match this Machine.');
     }
     return this.#locked(async () => {
       await this.#engine();
+      request.signal?.throwIfAborted();
       let record = await this.#record();
       if (record.active === undefined) {
         const active = await this.#create(record, this.#options.limits);
@@ -161,6 +163,7 @@ export class OwnedSbxMachine implements Machine {
       const active = record.active;
       if (active === undefined) throw new Error('Machine creation did not complete.');
       try {
+        request.signal?.throwIfAborted();
         this.#safeToRelease = false;
         await this.#boundary(active);
         record = await this.#revokeNetwork(record);
@@ -176,6 +179,7 @@ export class OwnedSbxMachine implements Machine {
         verifySbxNetworkRules(after.filter((rule) => rule['id'] !== network.id), true);
         await this.#networkChecks(active, network.mailboxPort);
         await this.#identity(active);
+        request.signal?.throwIfAborted();
         this.#active = active;
         this.#started = true;
         return this.#location;

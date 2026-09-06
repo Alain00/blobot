@@ -1,11 +1,12 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  LocalMachine, OwnedSbxMachine, SbxEngine, SbxImageStore, SbxRegistry, SBX_INITIAL_STORAGE,
+  LocalMachine, OwnedSbxMachine, SbxEngine, SbxImageStore, SbxRegistry, SBX_INITIAL_STORAGE, SBX_INSTALL_VERSION,
   boxWorkspaceMounts, machinePlacement, runtimeImageBuild, sbxCommandRunner,
   type AgentRecord, type Machine, type MachineDetection, type MachineLocation, type MachineReadiness,
   type MachineSpawnRequest, type MachineStartRequest, type MachineTransport, type SbxPtyRunner,
   type SleepingRuntime, type Team,
+  type RuntimeImageBuild,
 } from '@blobot/core';
 import { imageFor } from './runtime-for.js';
 
@@ -13,10 +14,14 @@ import { imageFor } from './runtime-for.js';
 export class DesktopMachines {
   readonly registry: SbxRegistry;
   readonly #imageStores = new Map<string, SbxImageStore>();
-  constructor(readonly directory: string) { this.registry = new SbxRegistry(join(directory, 'agents')); }
+  readonly #abort = new AbortController();
+  readonly #downloads = new Set<Promise<void>>();
+  constructor(readonly directory: string, readonly previewEnabled = process.env['BLOBOT_MACHINES_PREVIEW'] === '1') {
+    this.registry = new SbxRegistry(join(directory, 'agents'));
+  }
 
   get executable(): string {
-    const installed = join(this.directory, 'engine', 'v0.42.0-rc5', 'bin', 'sbx');
+    const installed = join(this.directory, 'engine', SBX_INSTALL_VERSION, 'bin', 'sbx');
     return existsSync(installed) ? installed : 'sbx';
   }
   engine(): SbxEngine { return new SbxEngine(sbxCommandRunner(this.executable)); }
@@ -28,6 +33,25 @@ export class DesktopMachines {
       this.#imageStores.set(executable, images);
     }
     return images;
+  }
+
+  async installImage(build: RuntimeImageBuild, signal?: AbortSignal): Promise<void> {
+    signal?.throwIfAborted();
+    const task = this.images().install(build, { signal: this.#abort.signal });
+    this.#downloads.add(task);
+    const settled = task.finally(() => this.#downloads.delete(task));
+    if (signal === undefined) return settled;
+    // Cancelling one Agent releases only its wait. Other Agents may need this same image.
+    return new Promise<void>((resolve, reject) => {
+      const abort = () => reject(signal.reason);
+      signal.addEventListener('abort', abort, { once: true });
+      settled.then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
+      if (signal.aborted) abort();
+    });
+  }
+  async close(): Promise<void> {
+    this.#abort.abort();
+    await Promise.allSettled([...this.#downloads]);
   }
 
   forAgent(record: AgentRecord, team: Team): Machine {
@@ -61,9 +85,14 @@ export class DesktopBoxMachine implements Machine {
     return (await this.#prepare(false))!.reconcile();
   }
   async start(request: MachineStartRequest): Promise<MachineLocation> {
+    if (!this.services.previewEnabled) throw new Error('Sandboxes are awaiting release validation. This build has sandbox preview disabled.');
+    request.signal?.throwIfAborted();
     const ready = await this.services.engine().start();
+    request.signal?.throwIfAborted();
     if (ready.state !== 'ready') throw new Error(ready.detail);
-    return (await this.#prepare(true))!.start(request);
+    const owned = (await this.#prepare(true, request.signal))!;
+    request.signal?.throwIfAborted();
+    return owned.start(request);
   }
   async beforeWork(): Promise<void> {
     if (this.#owned === undefined) throw new Error('This sandbox has not started.');
@@ -100,7 +129,8 @@ export class DesktopBoxMachine implements Machine {
     return this.#owned.signInRuntime(this.record.runtimeId, perform);
   }
 
-  async #prepare(forWork: boolean): Promise<OwnedSbxMachine | undefined> {
+  async #prepare(forWork: boolean, signal?: AbortSignal): Promise<OwnedSbxMachine | undefined> {
+    signal?.throwIfAborted();
     if (this.#owned !== undefined) return this.#owned;
     const placement = machinePlacement(this.record.machine);
     if (placement.kind !== 'box') throw new Error('This agent has no sandbox.');
@@ -128,7 +158,9 @@ export class DesktopBoxMachine implements Machine {
           stored.active.limits.maxMemoryBytes !== placement.limits.maxMemoryBytes)) {
         throw new Error('The saved resource limits do not match this sandbox. Its data was kept.');
       }
-      await this.services.images().install(build);
+      await this.services.installImage(build, signal);
+      // The shared download may be used by peers; cancellation never aborts their install.
+      signal?.throwIfAborted();
     }
     const owned = new OwnedSbxMachine({
       agentId: this.record.id, registry: this.services.registry, kit, limits: placement.limits,

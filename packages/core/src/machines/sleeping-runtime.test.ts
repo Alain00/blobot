@@ -39,6 +39,23 @@ const consume = async (stream: AsyncIterable<AgentEvent>) => {
 };
 
 describe('sleeping Agent execution', () => {
+  it('cancels a sign-in while preparing its Machine without entering the login', async () => {
+    const f = fixture();
+    await f.runtime.start();
+    const abort = new AbortController();
+    const login = vi.fn();
+    f.starts.mockImplementationOnce(async ({ signal }) => {
+      expect(signal).toBeDefined();
+      abort.abort();
+      signal!.throwIfAborted();
+      return f.machine.location();
+    });
+    await expect(f.runtime.remedy(login, abort.signal)).rejects.toThrow();
+    expect(login).not.toHaveBeenCalled();
+    expect(f.stops).toHaveBeenCalledTimes(1);
+    expect(f.runtime.power).toBe('asleep');
+    await f.runtime.stop();
+  });
   it('runs sign-in without an attached provider and retries the latest conversation afterward', async () => {
     const f = fixture();
     await f.runtime.start();

@@ -992,6 +992,7 @@ export async function editTeamRoster(
   profileIds: readonly string[],
   deps: CreateTeamDeps,
   leadProfileId?: string,
+  memberMachines: Readonly<Record<string, MachinePlacement>> = {},
 ): Promise<readonly AgentRemoval[]> {
   const team = deps.store.teamById(teamId);
   if (team === undefined) throw new TeamCreationError('unknown_agent', 'That team is already gone.');
@@ -1016,6 +1017,10 @@ export async function editTeamRoster(
     });
 
   const slugs = [...staying.map((member) => refSlug(member.name)), ...joining.map((profile) => refSlug(profile.name))];
+  const placements = new Map(Object.entries(memberMachines).map(([id, value]) => {
+    if (!joining.some((profile) => profile.id === id)) throw new Error('Machine placement can only be chosen for a new team member.');
+    return [id, machinePlacement(value)] as const;
+  }));
   if (new Set(slugs).size !== slugs.length) {
     throw new TeamCreationError('duplicate_agent', 'Two of those agents would share one branch name.');
   }
@@ -1034,7 +1039,7 @@ export async function editTeamRoster(
     });
     deps.store.createAgent({
       id,
-      ...(team.defaultMachine === undefined ? {} : { machine: team.defaultMachine }),
+      machine: placements.get(profile.id) ?? machinePlacement(team.defaultMachine),
       teamId: team.id,
       profileId: profile.id,
       name: profile.name,

@@ -49,6 +49,31 @@ function pool(limit: number): {
 }
 
 describe('the live teams', () => {
+  it('drains an in-flight start on shutdown and refuses to publish or start another team', async () => {
+    let finish!: (live: Fake) => void;
+    let finishClose!: () => void;
+    let closeCalls = 0;
+    const live: Fake = { team: { id: 'late' }, working: false, closed: false,
+      close: () => { closeCalls += 1; return new Promise<void>((resolve) => { finishClose = () => { live.closed = true; resolve(); }; }); } };
+    const teams = new TeamPool<Fake>({ limit: 3, isWorking: () => false,
+      start: () => new Promise((resolve) => { finish = resolve; }) });
+    const selecting = teams.select(team('late'));
+    const joining = teams.select(team('late'));
+    const refused = Promise.all([expect(selecting).rejects.toThrow('closing'), expect(joining).rejects.toThrow('closing')]);
+    let closed = false;
+    const closing = teams.closeAll().then(() => { closed = true; });
+    finish(live);
+    await refused;
+    expect(closed).toBe(false);
+    expect(teams.live).toEqual([]);
+    expect(closeCalls).toBe(1);
+    finishClose();
+    await closing;
+    expect(live.closed).toBe(true);
+    await expect(teams.select(team('next'))).rejects.toThrow('closing');
+    await teams.closeAll();
+    expect(closeCalls).toBe(1);
+  });
   it('starts a team the first time it is selected', async () => {
     const { pool: teams, started } = pool(3);
     const alpha = await teams.select(team('alpha'));

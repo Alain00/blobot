@@ -949,3 +949,29 @@ core/desktop types and builds pass. Remaining: operational engine installation,
 browser/guest-login IPC, creation controls and the minimal Machine UI. Engine and
 login source research is in [62](research/62-engine-installation-integration.md)
 and [63](research/63-guest-login-ui-mechanisms.md). No UI box offer is enabled yet.
+
+
+## 2026-09-06 — operational setup/login/UI and shutdown review
+
+[A Machine on screen](issues/12-a-machine-on-screen.md#resolution--operational-preview-2026-09-06)
+is implemented and resolved under the author's design/autonomy delegation. Engine
+installation and browser login, guest login methods and callback relay, persisted
+placement for new/joining members, inline remedies, queue retry and read-only limits
+are connected. [The Electron review](research/71-machine-screen-verification.md)
+checks mixed placement, login/composer layout and narrow creation/settings screens.
+
+Independent [Standards/Spec review](review.md) corrected shutdown races with pending
+Team starts and compaction, missing stored limits/placement labels, and activation
+before unfinished acceptance. Ordinary builds now refuse box activation; explicit
+development preview is required. Real account login, authenticated provider turns
+and Linux/KVM remain open in the evidence ledger. This checkpoint does not close
+the image/first-box acceptance tickets or Guillermo's personal review.
+
+Actual macOS private-prefix installation is measured in research65, login challenge
+parsing/cancellation in research67, Claude's scoped browser environment in research68,
+and 6 MiB JSON plus progressive SSE/cancellation/reconnection in research69.
+
+Validation: core 1,098 passed / 47 skipped; desktop 632 passed / 1 skipped;
+core and desktop typechecks/builds pass. Electron submission asserts the persisted
+mixed placement; layout checks and final screenshots pass. The Codex-only runtime
+launch fix and its actual follow-up receipt are recorded in the next image checkpoint.

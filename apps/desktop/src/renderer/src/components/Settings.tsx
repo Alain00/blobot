@@ -6,7 +6,7 @@ import { RuntimeMark } from './RuntimeMark.js';
 import { RuntimeSetup } from './RuntimeSetup.js';
 import { ContextCeilings } from './ContextCeilings.js';
 import { Dictation } from './Dictation.js';
-import { MachineSleepSettings } from './MachineSleepSettings.js';
+import { MachineSettings } from './MachineSettings.js';
 import { useSoundSettings } from '../sound/useSound.js';
 
 /**
@@ -173,7 +173,7 @@ export function Settings({
           )}
 
           {section === 'context' && <ContextCeilings />}
-          {section === 'machines' && <MachineSleepSettings />}
+          {section === 'machines' && <MachineSettings />}
 
           {section === 'sound' && <SoundSection />}
 

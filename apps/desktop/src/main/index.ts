@@ -78,6 +78,8 @@ import { isWorking, type RunningTeam } from './running-team.js';
 import { TeamPool } from './team-pool.js';
 import { MachinePreferences } from './machine-preferences.js';
 import { DesktopBoxMachine, DesktopMachines } from './machines.js';
+import { EngineSetup } from './engine-setup.js';
+import { MachineLogins, type MachineLoginAccess } from './machine-login.js';
 import { DictationHost, TRYOUT_TEAM } from './dictation.js';
 import { DictationSettingsHost } from './dictation-settings.js';
 import { SpeechFiles, type SpeechTarget } from './speech-files.js';
@@ -321,6 +323,18 @@ function asStepRequest(
 let routines: RoutineRunner | undefined;
 let machinePreferences: MachinePreferences | undefined;
 let machines: DesktopMachines | undefined;
+let engineSetup: EngineSetup | undefined;
+let machineLogins: MachineLogins | undefined;
+
+function boxAccess(teamId: string, agentId: string): MachineLoginAccess {
+  const live = pool.find(teamId), record = store?.agentById(agentId);
+  const machine = live?.machines?.get(agentId), execution = live?.executions?.get(agentId);
+  if (live === undefined || record?.teamId !== teamId || !(machine instanceof DesktopBoxMachine) || execution === undefined) {
+    throw new Error('Open this agent’s team to manage its sandbox.');
+  }
+  return { record, machine, execution, retry: () => live.orchestrator.retryAgent(agentId),
+    pendingMessages: () => live.orchestrator.mailbox(agentId).length };
+}
 
 function machinesOf(teamId: string) {
   const team = store?.teamById(teamId);
@@ -409,6 +423,7 @@ function teamSummaries(): UiTeamSummary[] {
       name: team.name,
       workspacePath: team.workspacePath,
       workspaceKind: team.workspaceKind,
+      ...(team.defaultMachine === undefined ? {} : { defaultMachine: team.defaultMachine }),
       ...(team.icon === undefined ? {} : { icon: team.icon }),
       // The members rather than a count of them: the rail draws every team as its faces, and
       // a face is seeded by the agent's name. Same query the count came from.
@@ -732,6 +747,7 @@ function snapshot(): UiSnapshot {
       role: agent.role,
       runtimeLabel: team.runtimeLabels[agent.id] ?? 'unknown',
       ...(team.powerOf === undefined ? {} : { machinePower: team.powerOf(agent.id) }),
+      ...(agent.machine === undefined ? {} : { machine: agent.machine }),
       workspacePath: agent.workspacePath,
       ...faceOf(agent.id),
       ...(team.branches[agent.id] === undefined ? {} : { branch: team.branches[agent.id] }),
@@ -1115,6 +1131,13 @@ async function createWindow(): Promise<void> {
 void app.whenReady().then(async () => {
   machinePreferences = new MachinePreferences(join(app.getPath('userData'), 'machine-preferences.json'));
   machines = new DesktopMachines(join(app.getPath('userData'), 'machines'));
+  engineSetup = new EngineSetup(machines, { changed: () => send('blobot:machines'), openPackage: (path) => shell.openPath(path),
+    configuredMachines: () => (store?.listTeams() ?? []).flatMap((team) =>
+      (store?.agentsOfTeam(team.id) ?? []).flatMap((agent) => agent.machine?.kind === 'box' ? [{
+        teamId: team.id, agentId: agent.id, teamName: team.name, agentName: agent.name, limits: agent.machine.limits,
+      }] : [])),
+  });
+  machineLogins = new MachineLogins(boxAccess, () => send('blobot:machines'), (url) => shell.openExternal(url));
   await machinePreferences.load().catch(() => {
     process.stderr.write('[machines] Saved sleep settings could not be read; automatic sleep is disabled. The file was kept.\n');
   });
@@ -1673,6 +1696,7 @@ void app.whenReady().then(async () => {
       teamId: string,
       profileIds: readonly string[],
       leadProfileId?: string,
+      memberMachines?: Readonly<Record<string, import('@blobot/core').MachinePlacement>>,
     ): Promise<TeamDeletionResult> => {
       if (store === undefined) return { ok: false, error: 'No database is open.' };
       const wasLive = pool.find(teamId) !== undefined;
@@ -1681,7 +1705,7 @@ void app.whenReady().then(async () => {
         const agentMachines = machinesOf(teamId);
         const removals = await editTeamRoster(teamId, profileIds, {
           store, clock, ...(agentMachines === undefined ? {} : { machines: agentMachines }),
-        }, leadProfileId);
+        }, leadProfileId, memberMachines);
         return { ok: true, removals: removals.map(asUiRemoval) };
       } catch (error) {
         return { ok: false, error: describe(error) };
@@ -1989,6 +2013,15 @@ void app.whenReady().then(async () => {
   // The Dictation section (ticket 10). Every action answers with the whole section.
   ipcMain.handle('blobot:dictationSettings', () => dictationSettings.view());
   ipcMain.handle('blobot:machineIdleAfterMs', () => machinePreferences?.idleAfterMs);
+  ipcMain.handle('blobot:engineSetup', () => engineSetup?.view());
+  ipcMain.handle('blobot:startEngineSetup', (_event, kind: 'install' | 'sign_in' | 'check') => engineSetup?.start(kind));
+  ipcMain.handle('blobot:cancelEngineSetup', (_event, id: string) => engineSetup?.cancel(id));
+  ipcMain.handle('blobot:agentMachine', (_event, teamId: string, agentId: string) => machineLogins?.view(teamId, agentId));
+  ipcMain.handle('blobot:startMachineLogin', (_event, teamId: string, agentId: string, method: string) => machineLogins?.start(teamId, agentId, method));
+  ipcMain.handle('blobot:openMachineLogin', (_event, teamId: string, agentId: string, id: string) => machineLogins?.open(teamId, agentId, id));
+  ipcMain.handle('blobot:answerMachineLogin', (_event, teamId: string, agentId: string, id: string, value: string) => machineLogins?.respond(teamId, agentId, id, value));
+  ipcMain.handle('blobot:cancelMachineLogin', (_event, teamId: string, agentId: string, id: string) => machineLogins?.cancel(teamId, agentId, id));
+  ipcMain.handle('blobot:retryMachine', (_event, teamId: string, agentId: string) => boxAccess(teamId, agentId).retry());
   ipcMain.handle('blobot:setMachineIdleAfterMs', async (_event, value: number) => {
     if (machinePreferences === undefined) throw new Error('Machine preferences are not available.');
     const saved = await machinePreferences.setIdleAfterMs(value);
@@ -2133,14 +2166,29 @@ function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+let closing: Promise<void> | undefined;
+let closed = false;
+function closeApplication(): Promise<void> {
+  return closing ??= (async () => {
+    stopStep();
+    routines?.stop();
+    // Stop readers/writers and guest sign-in before closing their durable state.
+    const results = await Promise.allSettled([
+      engineSetup?.close(), machineLogins?.close(), machines?.close(), pool.closeAll(), dictation.stop(), demo?.close(),
+    ]);
+    if (results.some((result) => result.status === 'rejected')) console.warn('Some application services could not close cleanly.');
+    opened?.close();
+    opened = undefined;
+    store = undefined;
+    closed = true;
+  })();
+}
+
+app.on('before-quit', (event) => {
+  if (closed) return;
+  event.preventDefault();
+  void closeApplication().then(() => app.quit());
+});
 app.on('window-all-closed', () => {
-  // A login nobody is watching any more is a process holding a terminal open forever.
-  stopStep();
-  // And a tick with no window to fire into is the background daemon issue 02 refused.
-  routines?.stop();
-  void pool.closeAll();
-  void dictation.stop();
-  void demo?.close();
-  opened?.close();
-  if (process.platform !== 'darwin') app.quit();
+  void closeApplication().then(() => { if (process.platform !== 'darwin') app.quit(); });
 });

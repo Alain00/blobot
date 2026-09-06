@@ -9,6 +9,9 @@ import type {
 } from '../../../shared/api.js';
 import { HireAgent } from './AgentForm.js';
 import { Blob } from './Blob.js';
+import type { MachinePlacement } from '@blobot/core/domain';
+import { MachinePick } from './MachinePick.js';
+import { EngineSetupControls } from './MachineSettings.js';
 
 /**
  * Forming a team, in two questions and nothing else.
@@ -85,6 +88,9 @@ export function NewTeam({
    */
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [defaultMachine, setDefaultMachine] = useState<MachinePlacement>({ kind: 'local' });
+  const [memberMachines, setMemberMachines] = useState<Readonly<Record<string, MachinePlacement>>>({});
+  const [previewEnabled, setPreviewEnabled] = useState(false);
 
   /** The list, so Tab can take whatever the arrow keys have landed on. */
   const listed = useRef<HTMLDivElement>(null);
@@ -99,6 +105,7 @@ export function NewTeam({
   useEffect(() => {
     rescan();
     void reloadRoster();
+    void window.blobot.engineSetup().then((view) => setPreviewEnabled(view.previewEnabled)).catch(() => {});
   }, [reloadRoster, rescan]);
 
   // Escape leaves, once there is a team to go back to. Captured on the window rather than on
@@ -202,6 +209,9 @@ export function NewTeam({
       profileIds: chosen,
       ...(leading === undefined ? {} : { leadProfileId: leading }),
       ...(kind?.kind === 'nested' ? { repoPaths: repos } : {}),
+      ...(defaultMachine.kind === 'local' ? {} : { defaultMachine }),
+      ...(Object.keys(memberMachines).length === 0 ? {} : { memberMachines:
+        Object.fromEntries(Object.entries(memberMachines).filter(([id]) => chosen.includes(id))) }),
     };
     onCreate(spec);
   };
@@ -423,6 +433,28 @@ export function NewTeam({
               busy={busy}
               {...(error === undefined ? {} : { error })}
             />
+            <div className="pickmachines">
+              <span className="mono muted">WHERE THEY WORK</span>
+              <MachinePick label="Where this team works" value={defaultMachine} onChange={setDefaultMachine} previewEnabled={previewEnabled} />
+              <details className="machinedisclosure">
+                <summary>Choose for each agent</summary>
+                {picked.map((agent) => <div className="machinemember" key={agent.id}>
+                  <span>{agent.name}</span>
+                  <MachinePick label={`Where ${agent.name} works`} value={memberMachines[agent.id] ?? defaultMachine} previewEnabled={previewEnabled}
+                    onChange={(value) => setMemberMachines((current) => ({ ...current, [agent.id]: value }))} />
+                  {memberMachines[agent.id] !== undefined && <button className="btn tiny" onClick={() => setMemberMachines((current) => {
+                    const next = { ...current }; delete next[agent.id]; return next;
+                  })}>use team default</button>}
+                </div>)}
+              </details>
+              {picked.some((agent) => (memberMachines[agent.id] ?? defaultMachine).kind === 'box') && <>
+                <p className="note muted">First use downloads about 600–800 MB per runtime, shared across agents, plus the sandbox engine.</p>
+                <p className="note muted">Each sandbox has an 8 GiB private home and 20 GiB for Docker data. CPU and memory limits stay fixed after creation.</p>
+                <p className="note muted">Working folders and shared Git history stay writable on this computer. Sandboxes can reach the Internet and your local network.
+                  The runtime keeps the approval settings selected for each agent.</p>
+                <details className="machinedisclosure"><summary>Set up sandboxes</summary><EngineSetupControls compact /></details>
+              </>}
+            </div>
           </>
         )}
       </div>

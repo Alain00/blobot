@@ -268,6 +268,7 @@ export class Orchestrator {
   readonly #retries = new Map<string, Promise<void>>();
   #pendingAdmissions = 0;
   readonly #inFlight = new Set<Promise<void>>();
+  #disposed = false;
   readonly #eventListeners = new Set<(event: AgentEvent) => void>();
   readonly #statusListeners = new Set<(agentId: string, status: AgentStatus) => void>();
   readonly #commandListeners = new Set<
@@ -516,6 +517,7 @@ export class Orchestrator {
   }
 
   dispose(): void {
+    this.#disposed = true;
     for (const unsubscribe of this.#subscriptions) unsubscribe();
     // A request nobody will ever answer now: the window is closing or the team is being
     // stopped. Cancelling releases the bridge's RPC instead of leaving the process wedged on
@@ -572,6 +574,7 @@ export class Orchestrator {
     text: string,
     attachmentIds: readonly string[] = [],
   ): Promise<void> {
+    if (this.#disposed) throw new Error('This team is closing.');
     const agents = agentIds.map((agentId) => this.#requireAgent(agentId));
     const attachments = attachmentIds.map((id) => {
       const found = this.#store.attachment(id);
@@ -690,6 +693,7 @@ export class Orchestrator {
    * turn, so a lead being briefed still gets its lead brief.
    */
   async promptForBriefing(agentId: string): Promise<void> {
+    if (this.#disposed) throw new Error('This team is closing.');
     const agent = this.#requireAgent(agentId);
     // A session runs one turn at a time. Unlike a peer message there is no mailbox to fall back
     // on: the knock is a knock, and one that arrives while the agent is mid-turn is not a thing
@@ -732,6 +736,7 @@ export class Orchestrator {
     text: string,
     run: { readonly runId: string; readonly permissionExpiryMs: number },
   ): Promise<RoutineTurn> {
+    if (this.#disposed) throw new Error('This team is closing.');
     const agent = this.#requireAgent(agentId);
     // Nothing is committed and nothing runs. A session runs one turn at a time, and the two
     // existing paths into `#runTurn` both reach it through a mailbox that knows that; this one
@@ -1028,6 +1033,7 @@ export class Orchestrator {
    * the background.
    */
   async handleMessageAgent(call: PeerMessageCall): Promise<PeerMessageAck> {
+    if (this.#disposed) throw new Error('This team is closing.');
     const sender = this.#requireAgent(call.from);
     const recipient = this.#resolveRecipient(call.agent, sender);
     // Before the commit, because a message that is refused must not exist: it is not in the
@@ -1095,6 +1101,7 @@ export class Orchestrator {
 
   /** A deliberate retry after sign-in or another remedy, scoped to this member only. */
   retryAgent(agentId: string): Promise<void> {
+    if (this.#disposed) return Promise.reject(new Error('This team is closing.'));
     this.#requireAgent(agentId);
     const pending = this.#retries.get(agentId);
     if (pending !== undefined) return pending;
@@ -1134,6 +1141,11 @@ export class Orchestrator {
     }
   }
 
+  /** Shutdown drains every continuation, even when an independent turn has failed. */
+  async drained(): Promise<void> {
+    while (this.#inFlight.size > 0) await Promise.allSettled([...this.#inFlight]);
+  }
+
   // ------------------------------------------------------------------ internals
 
   #canDeliver(agentId: string): boolean {
@@ -1148,6 +1160,7 @@ export class Orchestrator {
    * unwatched, which is the actual product and also what makes the turn budget mandatory.
    */
   async #wake(agentId: string): Promise<void> {
+    if (this.#disposed) return;
     if (this.#busy.has(agentId)) return;
     if (!this.#canDeliver(agentId)) return;
     const agent = this.#agents.find((candidate) => candidate.id === agentId);
@@ -1210,6 +1223,7 @@ export class Orchestrator {
     counted = true,
     delivery: readonly Message[] = [],
   ): Promise<void> {
+    if (this.#disposed) return;
     const runtime = this.#runtimes.get(agent.id);
     const tracker = this.#trackers.get(agent.id);
     if (runtime === undefined || tracker === undefined) return;
@@ -1412,6 +1426,7 @@ export class Orchestrator {
    * cheap; a compaction timer would turn that into background spend nobody asked for.
    */
   async #maybeCompact(agent: Agent): Promise<void> {
+    if (this.#disposed) return;
     if ((agent.compaction ?? DEFAULT_COMPACTION) === 'off') return;
     if (this.#compacting.has(agent.id)) return;
     /**
@@ -1494,6 +1509,7 @@ export class Orchestrator {
       })
       .catch(() => undefined);
 
+    if (this.#disposed) return;
     try {
       await runtime.restart();
     } catch {

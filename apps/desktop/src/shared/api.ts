@@ -17,6 +17,8 @@ import type {
   SpeechModelId,
   SpeechReadiness,
 } from '@blobot/core/domain';
+import type { EngineSetupView, UiAgentMachine } from './machines.js';
+export type { EngineSetupView, UiAgentMachine, UiLoginChallenge, SetupProgress } from './machines.js';
 
 /**
  * Re-exported so the renderer takes it from here with everything else it is allowed to know.
@@ -171,6 +173,7 @@ export interface UiAgent {
   readonly runtimeLabel: string;
   /** Execution power, independent of work status and runtime sign-in. */
   readonly machinePower?: MachinePower;
+  readonly machine?: import('@blobot/core/domain').MachinePlacement;
   readonly workspacePath: string;
   readonly branch?: string;
   /** The blobatar's hue, when the user chose one. Absent means the name derives it. */
@@ -273,6 +276,7 @@ export interface UiTeamMember {
 
 /** A row in the rail's team list. Every team the user has created, running or not. */
 export interface UiTeamSummary {
+  readonly defaultMachine?: import('@blobot/core/domain').MachinePlacement;
   readonly id: string;
   readonly name: string;
   readonly workspacePath: string;
@@ -1233,6 +1237,16 @@ export type UiDictationStart =
   | { readonly ok: false; readonly error: string };
 
 export interface BlobotApi {
+  engineSetup(): Promise<EngineSetupView>;
+  startEngineSetup(kind: 'install' | 'sign_in' | 'check'): Promise<string>;
+  cancelEngineSetup(id: string): Promise<void>;
+  agentMachine(teamId: string, agentId: string): Promise<UiAgentMachine>;
+  startMachineLogin(teamId: string, agentId: string, method: string): Promise<string>;
+  openMachineLogin(teamId: string, agentId: string, id: string): Promise<void>;
+  answerMachineLogin(teamId: string, agentId: string, id: string, value: string): Promise<void>;
+  cancelMachineLogin(teamId: string, agentId: string, id: string): Promise<void>;
+  retryMachine(teamId: string, agentId: string): Promise<void>;
+  onMachines(listener: () => void): () => void;
   machineIdleAfterMs(): Promise<number>;
   setMachineIdleAfterMs(value: number): Promise<number>;
   snapshot(): Promise<UiSnapshot>;
@@ -1386,6 +1400,7 @@ export interface BlobotApi {
     teamId: string,
     profileIds: readonly string[],
     leadProfileId?: string,
+    memberMachines?: Readonly<Record<string, import('@blobot/core/domain').MachinePlacement>>,
   ): Promise<TeamDeletionResult>;
   /**
    * Removes every agent's workspace, then the team. The transcript stays in the database.

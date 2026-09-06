@@ -15,6 +15,21 @@ function fixture() {
   return { run, engine: new SbxEngine(run) };
 }
 describe('explicit sbx engine setup and readiness', () => {
+  it('onboarding reuses configured isolation without a shared restart or consent prompt', async () => {
+    const { run, engine } = fixture();
+    const confirm = vi.fn(async () => true);
+    expect((await engine.setup(confirm)).state).toBe('ready');
+    expect(confirm).not.toHaveBeenCalled();
+    expect(run.mock.calls.some(([args]) => args.includes('restart') || args.includes('set'))).toBe(false);
+  });
+  it('onboarding refuses an uninterpretable setting instead of overwriting it', async () => {
+    const { run, engine } = fixture();
+    run.mockResolvedValueOnce({ code: 0, stdout: '{}' });
+    run.mockResolvedValueOnce({ code: 0, stdout: JSON.stringify({ client: SBX_DEVELOPMENT_PIN, server: { ...SBX_DEVELOPMENT_PIN, state: 'running' } }) });
+    run.mockResolvedValueOnce({ code: 0, stdout: '{"key":"ssh.agentForwardingEnabled","type":"string","value":"unknown"}' });
+    await expect(engine.setup(async () => true)).rejects.toThrow('could not be checked');
+    expect(run.mock.calls.some(([args]) => args.includes('restart') || args.includes('set'))).toBe(false);
+  });
   it('runs only browser login and refreshes even after an abandoned remedy', async () => {
     const { run, engine } = fixture();
     const perform = vi.fn(async () => { throw new Error('closed'); });

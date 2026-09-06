@@ -49,6 +49,9 @@ export class TeamPool<T extends PoolableTeam> {
   readonly #starting = new Map<string, Promise<T>>();
   /** Teams held live by something other than the user looking at them. See {@link hold}. */
   readonly #pinned = new Set<string>();
+  #closed = false;
+  #closing: Promise<void> | undefined;
+  readonly #closingTeams = new Set<Promise<void>>();
 
   constructor(options: TeamPoolOptions<T>) {
     this.#options = options;
@@ -107,7 +110,9 @@ export class TeamPool<T extends PoolableTeam> {
   }
 
   async #bring(team: Team, how: 'select' | 'hold'): Promise<T> {
+    if (this.#closed) throw new Error('The application is closing.');
     const settle = (live: T): T => {
+      if (this.#closed) throw new Error('The application is closing.');
       if (how === 'select') this.#promote(live);
       return live;
     };
@@ -126,6 +131,8 @@ export class TeamPool<T extends PoolableTeam> {
     } finally {
       this.#starting.delete(team.id);
     }
+    // closeAll owns in-flight starts as well as live teams; never publish one after shutdown.
+    if (this.#closed) throw new Error('The application is closing.');
     // A second selection may have landed while this one was starting.
     const raced = this.find(team.id);
     if (raced !== undefined) {
@@ -136,12 +143,14 @@ export class TeamPool<T extends PoolableTeam> {
     if (how === 'select') this.#live.unshift(live);
     else this.#live.splice(1, 0, live);
     await this.#evict();
+    if (this.#closed) throw new Error('The application is closing.');
     return live;
   }
 
   /** Drop a team on purpose — it was deleted, or its agents changed under it. */
   async release(teamId: string): Promise<void> {
     this.#pinned.delete(teamId);
+    await this.#starting.get(teamId)?.catch(() => undefined);
     const live = this.find(teamId);
     if (live === undefined) return;
     this.#live = this.#live.filter((candidate) => candidate !== live);
@@ -150,10 +159,17 @@ export class TeamPool<T extends PoolableTeam> {
 
   /** Quitting. Everything stops, working or not: the window is going away regardless. */
   async closeAll(): Promise<void> {
+    if (this.#closing !== undefined) return this.#closing;
+    this.#closed = true;
     this.#pinned.clear();
     const closing = this.#live;
     this.#live = [];
-    await Promise.all(closing.map((live) => this.#close(live, 'closed')));
+    this.#closing = Promise.all([
+      ...closing.map((live) => this.#close(live, 'closed')),
+      ...[...this.#starting.values()].map((starting) => starting.then((live) => this.#close(live, 'closed'), () => {})),
+      ...this.#closingTeams,
+    ]).then(() => {});
+    await this.#closing;
   }
 
   /**
@@ -185,14 +201,16 @@ export class TeamPool<T extends PoolableTeam> {
     await Promise.all(doomed.map((live) => this.#close(live, 'over_limit')));
   }
 
-  async #close(live: T, reason: 'over_limit' | 'closed'): Promise<void> {
-    this.#options.onEvict?.(live, reason);
+  #close(live: T, reason: 'over_limit' | 'closed'): Promise<void> {
     // A team that throws on the way out must not take the switch down with it: the user asked
     // for a different team, and they get one either way.
-    try {
-      await live.close();
-    } catch {
+    const closing = (async () => {
+      try { this.#options.onEvict?.(live, reason); }
+      finally { await live.close(); }
+    })().catch(() => {
       // The bridge is already gone, or never came up. Nothing here can act on it.
-    }
+    }).finally(() => this.#closingTeams.delete(closing));
+    this.#closingTeams.add(closing);
+    return closing;
   }
 }

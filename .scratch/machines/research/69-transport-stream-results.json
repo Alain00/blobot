@@ -1,0 +1,201 @@
+{
+  "startedAt": "2026-09-06T01:30:08.996Z",
+  "sharedWith": "68-browser-env-first-results.json",
+  "cleanup": {
+    "stopped": true,
+    "boxes": [],
+    "images": [
+      {
+        "id": "94670d5b2a24",
+        "repository": "docker.io/docker/sandbox-templates",
+        "tag": "claude-code-docker",
+        "flavor": "claude-code-docker",
+        "created_at": "2026-09-04T18:58:46Z",
+        "size": 936879795
+      },
+      {
+        "id": "5fc81bc7a127",
+        "repository": "docker.io/docker/sandbox-templates",
+        "tag": "shell-docker",
+        "flavor": "shell-docker",
+        "created_at": "2026-09-04T18:54:27Z",
+        "size": 588725040
+      }
+    ],
+    "imagesUnchanged": true,
+    "temporaryRootRemoved": true
+  },
+  "transport": {
+    "startedAt": "2026-09-06T01:30:40.183Z",
+    "rounds": [
+      {
+        "mode": "whole-line",
+        "host": {
+          "writes": 2,
+          "falseReturns": 1,
+          "drains": 0,
+          "peakWritableLength": 6291457,
+          "finalWritableLength": 0
+        },
+        "stderr": [
+          {
+            "jsonBytes": 6291456,
+            "wireBytes": 6291457,
+            "sha256": "e669c94b00e5e30aa849e7a58931ac29ee6047163a6492c1c4781ad920d1094f",
+            "validJson": true,
+            "readChunks": 221,
+            "writeChunks": 97,
+            "writeBackpressure": 71,
+            "maxDrainWaitMs": 1,
+            "outputMs": 14,
+            "eofSeen": true
+          }
+        ],
+        "returned": {
+          "jsonBytes": 6291456,
+          "sha256": "e669c94b00e5e30aa849e7a58931ac29ee6047163a6492c1c4781ad920d1094f",
+          "lines": 1,
+          "validJson": true
+        },
+        "closeReason": null,
+        "ms": 362.71558300000106,
+        "passed": true
+      },
+      {
+        "mode": "chunked-slow-reader",
+        "host": {
+          "writes": 193,
+          "falseReturns": 190,
+          "drains": 0,
+          "peakWritableLength": 6258686,
+          "finalWritableLength": 0
+        },
+        "stderr": [
+          {
+            "jsonBytes": 6291456,
+            "wireBytes": 6291457,
+            "sha256": "e669c94b00e5e30aa849e7a58931ac29ee6047163a6492c1c4781ad920d1094f",
+            "validJson": true,
+            "readChunks": 241,
+            "writeChunks": 97,
+            "writeBackpressure": 55,
+            "maxDrainWaitMs": 371,
+            "outputMs": 395,
+            "eofSeen": true
+          }
+        ],
+        "returned": {
+          "jsonBytes": 6291456,
+          "sha256": "e669c94b00e5e30aa849e7a58931ac29ee6047163a6492c1c4781ad920d1094f",
+          "lines": 1,
+          "validJson": true
+        },
+        "closeReason": null,
+        "ms": 742.9491250000028,
+        "passed": true
+      }
+    ],
+    "source": {
+      "jsonBytes": 6291456,
+      "wireBytes": 6291457,
+      "sha256": "e669c94b00e5e30aa849e7a58931ac29ee6047163a6492c1c4781ad920d1094f",
+      "validJson": true
+    },
+    "finishedAt": "2026-09-06T01:30:41.298Z",
+    "passed": true
+  },
+  "sse": {
+    "startedAt": "2026-09-06T01:30:41.299Z",
+    "requests": [
+      {
+        "method": "GET",
+        "path": "/agents/research69/mcp",
+        "authenticated": true,
+        "lastEventId": null,
+        "sent": [
+          {
+            "id": 1,
+            "ms": 181.96754200000214
+          },
+          {
+            "id": 2,
+            "ms": 364.08791700000074
+          }
+        ],
+        "closed": true,
+        "closedMs": 370.51879199999894
+      },
+      {
+        "method": "GET",
+        "path": "/agents/research69/mcp",
+        "authenticated": true,
+        "lastEventId": "2",
+        "sent": [
+          {
+            "id": 3,
+            "ms": 181.33970899999986
+          },
+          {
+            "id": 4,
+            "ms": 364.0875840000008
+          },
+          {
+            "id": 5,
+            "ms": 544.5313339999993
+          }
+        ],
+        "closed": true,
+        "closedMs": 547.9022089999999
+      }
+    ],
+    "handlerScope": "Synthetic generic mailbox-shaped SSE; no provider credential or message delivery",
+    "guest": {
+      "first": {
+        "events": [
+          {
+            "id": 1,
+            "ms": 190
+          },
+          {
+            "id": 2,
+            "ms": 373
+          }
+        ],
+        "aborted": true,
+        "stderrBytes": 0,
+        "code": null,
+        "signal": "SIGTERM"
+      },
+      "second": {
+        "events": [
+          {
+            "id": 3,
+            "ms": 191
+          },
+          {
+            "id": 4,
+            "ms": 373
+          },
+          {
+            "id": 5,
+            "ms": 555
+          }
+        ],
+        "aborted": false,
+        "stderrBytes": 0,
+        "code": 0,
+        "signal": null
+      }
+    },
+    "passed": true,
+    "finishedAt": "2026-09-06T01:30:42.571Z"
+  },
+  "passed": true,
+  "finishedAt": "2026-09-06T01:30:50.886Z",
+  "postflightSourceHashes": {
+    "packages/core/src/machines/sbx/transport.ts": "fe6b6a14942e3db34686cb24be037433e1837bf0e65d1003c350186d06c1e322",
+    "packages/core/src/machines/sbx/bootstrap.ts": "d294e7b939af907c9c2141903f8c4d0e81f887ae5ffd4d1c81c6fbacabcf466a",
+    "packages/core/src/adapters/acp/child-transport.ts": "196472d0d3d9653ce4c63578238937ff1c550b0327a888841f6fe93dca3621d9",
+    ".scratch/machines/research/69-transport-stream-probes.mts": "9a026af29148d505692c430c05441e3d7e2fd94c2740c7bc1723b105cee315e0"
+  }
+}

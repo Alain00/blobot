@@ -297,6 +297,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       // shutdown and the bridge logging a cleanup failure, and it does not cost the team its
       // memory: a closed session still resumes (research 15 §7a).
       await Promise.all([...runtimes.values()].map((runtime) => runtime.stop().catch(() => {})));
+      await orchestrator.drained();
       await mcp.stop();
     },
   };

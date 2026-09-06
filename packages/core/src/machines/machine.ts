@@ -65,6 +65,8 @@ export type MachineReconcileOutcome =
   | { readonly state: 'absent' | 'lost'; readonly detail: string };
 
 export interface MachineStartRequest {
+  /** Cancel preparation between native operations, retaining any already-created storage. */
+  readonly signal?: AbortSignal;
   readonly mailboxPort: number;
   readonly runtime?: MachineRuntimeRequirements;
 }

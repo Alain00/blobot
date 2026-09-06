@@ -23,11 +23,13 @@ import {
   CURSOR_MACHINE_IMAGE,
   FX_MACHINE_IMAGE,
   OPENCODE_MACHINE_IMAGE,
+  CLAUDE_LOGIN, CODEX_LOGIN, CURSOR_LOGIN, FX_LOGIN, OPENCODE_LOGIN,
   type AgentRuntime,
   type Machine,
   type PictureStore,
   type TrustLevel,
   type RuntimeImageDefinition,
+  type RuntimeLogin,
 } from '@blobot/core';
 
 export interface RuntimeRequest {
@@ -139,6 +141,13 @@ const MACHINE_IMAGES: Readonly<Record<string, RuntimeImageDefinition>> = {
 
 export function imageFor(runtimeId: string): RuntimeImageDefinition | undefined {
   return Object.hasOwn(MACHINE_IMAGES, runtimeId) ? MACHINE_IMAGES[runtimeId] : undefined;
+}
+
+const RUNTIME_LOGINS: Readonly<Record<string, RuntimeLogin>> = {
+  'claude-code': CLAUDE_LOGIN, codex: CODEX_LOGIN, cursor: CURSOR_LOGIN, fx: FX_LOGIN, opencode: OPENCODE_LOGIN,
+};
+export function loginFor(runtimeId: string): RuntimeLogin | undefined {
+  return Object.hasOwn(RUNTIME_LOGINS, runtimeId) ? RUNTIME_LOGINS[runtimeId] : undefined;
 }
 
 /**

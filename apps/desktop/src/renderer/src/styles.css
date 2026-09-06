@@ -16,6 +16,43 @@
 .machinesleep { max-width:560px; }
 .machinesleep .field { display:grid; gap:8px; max-width:280px; }
 .machinesleep input { padding:8px; color:var(--ink); background:var(--raised); border:1px solid var(--line); }
+.machinesettings { display:grid; gap:36px; max-width:640px; }
+.machineregister { margin-top:28px; }
+.machineregister dl>div { display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px; padding:12px 0; border-bottom:1px solid var(--line); font-size:13px; }
+.machineregister dd { margin:0; font-size:12px; }
+.machinesetup .subhead,.machinesettings section>.subhead { margin-bottom:14px; }
+.machineactions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.machinedisclosure { color:var(--muted); font-size:12px; line-height:1.55; margin-top:14px; }
+.machinedisclosure summary { cursor:pointer; width:fit-content; }
+.machinedisclosure summary:hover,.machinedisclosure summary:focus-visible { color:var(--ink); }
+.machinedisclosure p { margin:10px 0; }
+.machinedisclosure a { color:inherit; text-decoration:underline; text-underline-offset:3px; }
+.pickmachines { padding:12px 14px 16px; }
+.navsheet.pickbar { max-height:calc(86vh - 24px); overflow-y:auto; }
+.navsheet.pickbar>.pickfield { position:sticky; top:0; z-index:1; background:var(--raised); }
+.pickmachines>.mono { display:block; font-size:10px; margin-bottom:8px; }
+.machinepick { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.machinepick>.selecttrigger { flex:1; min-width:180px; }
+.machinelimits { display:flex; gap:6px; }
+.machinelimits .selecttrigger { min-width:90px; padding:8px 10px; }
+.machinemember { display:grid; gap:7px; margin-top:14px; }
+.machinemember>.btn { justify-self:start; }
+.pickmachines .machinesetup { margin-top:12px; }
+.pickmachines .note { font-size:12px; line-height:1.55; margin:10px 0; }
+.pickmachines .machineactions .btn { font-size:12px; }
+.agentmachine { width:100%; max-width:900px; padding:8px 16px; background:var(--raised); border-radius:12px; flex:none; font-size:12px; }
+.machinelimits .selecttrigger { white-space:nowrap; }
+.agentmachinehead { display:flex; align-items:center; flex-wrap:wrap; gap:10px; padding:5px 0; color:var(--muted); text-align:left; }
+.agentmachinehead:hover { color:var(--ink); }
+.agentmachinehead .mono { font-size:10px; }
+.agentmachinebody { padding:10px 0 4px; max-height:44vh; overflow:auto; }
+.agentmachinebody .note { margin:0 0 10px; font-size:12px; line-height:1.55; }
+.agentmachinebody .machineactions .btn { font-size:12px; }
+.machinelogin { margin:10px 0 16px; }
+.machinelogincode { user-select:all; font:14px var(--mono); padding:8px 12px; background:var(--raised); border-radius:8px; }
+.machinelogininput { display:flex; gap:8px; align-items:flex-end; margin-top:12px; }
+.machinelogininput label { display:grid; gap:7px; flex:1; min-width:0; }
+.machinelogininput input { width:100%; }
 
 :root{
   /* EXPLORATION 2026-09-04: Tomorrow Night, sampled off the reference rather than guessed at.

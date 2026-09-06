@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { PanelRight } from 'lucide-react';
 import { Agents } from './components/Agents.js';
 import { Composer } from './components/Composer.js';
+import { AgentMachine } from './components/AgentMachine.js';
 import { Conversation } from './components/Conversation.js';
 import { Details } from './components/Details.js';
 import { FileTree } from './components/FileTree.js';
@@ -574,18 +575,18 @@ export function App(): React.JSX.Element {
               : {
                   /* Unbriefed, and only then: the card is the invitation and the tray's door is
                      absent while it is up, so the two are never both on screen. */
-                  ...((state.handbooks[pane.agentId] ?? []).length > 0
-                    ? {}
-                    : {
-                        notice: (
+                  notice: <>
+                    {snapshot.agents.filter((agent) => agent.id === pane.agentId && agent.machine?.kind === 'box')
+                      .map((agent) => <AgentMachine key={`${team.id}:${agent.id}`} teamId={team.id} agent={agent} status={state.statuses[agent.id] ?? 'idle'} />)}
+                    {(state.handbooks[pane.agentId] ?? []).length === 0 && (
                           <HandbookNotice
                             agentName={nameOf(pane.agentId)}
                             teamName={snapshot.team?.name ?? 'this team'}
                             busy={(state.statuses[pane.agentId] ?? 'idle') !== 'idle'}
                             onBrief={() => void window.blobot.brief(pane.agentId)}
                           />
-                        ),
-                      }),
+                    )}
+                  </>,
                   footer: (
                     <ComposerFooter
                       key={pane.agentId}

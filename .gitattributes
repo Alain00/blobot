@@ -1,0 +1,2 @@
+# Machine research receipts are generated evidence; keep fixtures and conclusions reviewable.
+.scratch/machines/research/*results.json linguist-generated=true

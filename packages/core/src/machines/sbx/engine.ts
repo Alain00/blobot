@@ -82,6 +82,20 @@ export class SbxEngine {
     return this.readiness('work');
   }
 
+  /** Explicit onboarding. Only this action may change shared SSH forwarding settings. */
+  async setup(confirm: () => Promise<boolean>): Promise<MachineReadiness> {
+    await this.command(['daemon', 'start', '--detach']);
+    verifySbxVersion(await this.json(['version', '--json']));
+    const settings = await this.json(['settings', 'get', '--json', 'ssh.agentForwardingEnabled']);
+    if (settings['key'] === 'ssh.agentForwardingEnabled' && settings['type'] === 'bool' && settings['value'] === false) {
+      return this.readiness('work');
+    }
+    if (settings['key'] !== 'ssh.agentForwardingEnabled' || settings['type'] !== 'bool' || settings['value'] !== true) {
+      throw new Error('Sandbox isolation settings could not be checked.');
+    }
+    return this.configureIsolation(confirm);
+  }
+
   /** The engine owns its browser flow. An exit is not evidence of successful sign-in. */
   async signIn(perform: SbxPtyRunner): Promise<{ readonly completed: boolean; readonly readiness: MachineReadiness }> {
     let completed = false;

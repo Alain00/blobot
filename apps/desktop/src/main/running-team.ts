@@ -35,6 +35,7 @@ export interface RunningTeam {
  */
 export function isWorking(live: RunningTeam): boolean {
   return live.agents.some((agent) => {
+    if (live.executions?.get(agent.id)?.lifecycle === 'starting') return true;
     const status = live.orchestrator.statusOf(agent.id);
     return status !== 'idle' && status !== 'failed';
   });

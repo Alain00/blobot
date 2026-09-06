@@ -60,6 +60,7 @@ async function screen(initialProfile?: UiAgentProfile): Promise<HTMLElement> {
   prepareWorkspace.mockClear();
   (globalThis as unknown as { window: { blobot: unknown } }).window.blobot = {
     listAgents: vi.fn(async () => [ALICE, BOB]),
+    engineSetup: vi.fn(async () => ({ previewEnabled: false })),
     detectRuntimes: vi.fn(async () => []),
     chooseWorkspace: vi.fn(async () => CHECKOUT.path),
     inspectWorkspace: vi.fn(async () => CHECKOUT),

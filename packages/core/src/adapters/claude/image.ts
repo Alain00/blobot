@@ -7,7 +7,7 @@ export const CLAUDE_MACHINE_IMAGE: RuntimeImageDefinition = {
   moduleRoot: '/opt/blobot',
   executable: '/opt/blobot/bin/claude',
   sharedSkillLocations: ['/home/agent/.claude/skills'],
-  allowedEnvironment: [...MACHINE_GIT_ENVIRONMENT, 'CLAUDE_CODE_EXECUTABLE'],
+  allowedEnvironment: [...MACHINE_GIT_ENVIRONMENT, 'CLAUDE_CODE_EXECUTABLE', 'BROWSER'],
   builds: [
     {
       arch: 'arm64',

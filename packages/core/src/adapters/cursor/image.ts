@@ -7,7 +7,7 @@ export const CURSOR_MACHINE_IMAGE: RuntimeImageDefinition = {
   moduleRoot: '/opt/blobot',
   executable: '/opt/blobot/bin/cursor-agent',
   sharedSkillLocations: ['/home/agent/.cursor/skills'],
-  allowedEnvironment: [...MACHINE_GIT_ENVIRONMENT, 'CURSOR_CONFIG_DIR', 'CURSOR_API_KEY', 'CURSOR_AUTH_TOKEN', 'NO_COLOR'],
+  allowedEnvironment: [...MACHINE_GIT_ENVIRONMENT, 'CURSOR_CONFIG_DIR', 'CURSOR_API_KEY', 'CURSOR_AUTH_TOKEN', 'NO_COLOR', 'NO_OPEN_BROWSER'],
   builds: [
     {
       arch: 'arm64',

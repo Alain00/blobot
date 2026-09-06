@@ -62,6 +62,18 @@ amended, and it is not to be worked around quietly.
 
 ## Notes
 
+**Latest implementation checkpoint, 2026-09-06.**
+The operational [Machine screens](issues/12-a-machine-on-screen.md#resolution--operational-preview-2026-09-06)
+are implemented and technically reviewed. The [preview guide](../../docs/machines.md)
+explains setup, placement, login, queues, sleep and boundaries; the
+[review](review.md) records corrected findings. Development preview is explicit
+(`BLOBOT_MACHINES_PREVIEW=1`); ordinary builds refuse sandbox activation before
+calling the engine. Image/account/platform acceptance remains on the claimed
+[image](issues/13-the-image-one-per-runtime.md) and
+[first-box measurement](issues/16-measure-the-first-box.md) tickets. Historical
+checkpoint prose below records earlier states and does not override this one.
+Post-creation resize and a selectable inheritance editor are deferred explicitly.
+
 **Current sizing scope, 2026-09-06.** Under the author's autonomy delegation,
 [post-creation CPU/RAM changes](issues/25-post-creation-resource-changes.md) are
 deferred after actual restoration and native-route evidence. Choose limits at
@@ -260,7 +272,7 @@ stale pointer on a ticket is corrected by this table rather than by editing nine
 | the image's contents and how the bridge is installed without bundled CLIs | `13` | `05`, `17` |
 | the allowlist and how a block is said | `15` | `09` |
 | whether `local` gets an inner fence, and the two controls kept apart | `04` | `09`, `10` |
-| the fifth level on a box | `10` | — |
+| unchanged harness approval posture across placement kinds | `10` | — |
 
 **Absorbed, 2026-09-04:** `.scratch/sandboxing/` no longer exists. Its five tickets are `02`,
 `03`, `04`, `09` and `10` here, each carrying an `## Amendment` recording what the wider
@@ -322,6 +334,8 @@ none is discarded, and the destination is unchanged:
 
 ## Decisions so far
 
+- [A Machine on screen, and where a profile is addressed from](issues/12-a-machine-on-screen.md#resolution--operational-preview-2026-09-06): operational setup, placement, login, queues and limits are implemented behind the explicit development preview; personal/product and platform acceptance remain separate.
+
 - [A per-agent composition root: config, MCP servers, skills](issues/24-a-per-agent-composition-root.md): existing Agent/adapter composition owns launch configuration; local inheritance stays native and box user scope belongs to its private home, without a generic relocation or inheritance editor.
 
 - [Does a sandbox answer the fourth trust level](issues/10-does-a-machine-answer-the-fourth-level.md): Machine choice preserves the selected harness policy; the historical box-only fifth level is withdrawn under the accepted open-network/shared-Git boundary.
@@ -358,41 +372,19 @@ snapshot is superseded by the interface's resolution.
 
 ## Not yet specified
 
-In scope, not yet sharp enough to ticket. Graduates as the frontier advances.
-
-- **The four constraints a future kind puts on this one** (ticket `01`, point 8): the Machine as
-  a `spawn` provider whose box dials blobot; an orchestrator that depends on neither Electron nor
-  the renderer's process, one SQLite per user; sleep as stop-and-keep-volumes and wake as
-  `session/load`; a mailbox that can wake a sleeping agent. Each is checked by the ticket that
-  fixes the interface it names, and none is built here.
-- **What the desktop must already be so a second client can exist.** A phone is a second
-  renderer over a network; the IPC surface is an API and every channel already leads with a team
-  id. Whether anything in `apps/desktop/src/main` still assumes one window is unexamined.
-- **One sign-in per machine rather than per box.** Two candidates: a template box logged in once
-  and cloned per agent (refresh-token rotation unmeasured), or the engine's own proxy-managed
-  OAuth, which keeps the token host-side and injects it — measured for Docker's own kit, not for
-  blobot's image (`16`). Load-bearing since the 2026-09-05 preference; ticketed the day `16`'s
-  probe answers, and the question it carried about the *no credential storage* rule is settled (2026-09-05, on
-  `08` and `15`): the engine's own store on the user's machine is the CLI's file, not blobot's
-  database.
-- **Apple `container` as the second engine**, when its host door is something other than a
-  `sudo` pf redirect or a bind on the vmnet gateway (`research/06`).
-
-- **Two agents on one Machine.** If a Machine is per profile or per team, two agents share a
-  place. Whether that reintroduces what ticket 10 refused — *never a shared directory* — depends
-  on whether the sharing is of a directory or only of a host, and that reads `01`.
-- **A Windows box.** A box is already a Linux guest on a macOS host, and the guest path question
-  is `05`'s now; what is left as fog is whether a Windows host is a variant of `box` or a kind.
-- **Whether a Machine has an identity on screen.** A Team has an icon detected from its Workspace
-  and drawn as a sticker on the folder. Whether a Machine earns anything similar, or is a word
-  and a hairline, is downstream of `12`.
-- **Folded, 2026-09-05, so nobody looks for them here**: *two agents on one Machine* (answered by
-  `01` point 4); *a Routine whose Machine is unreachable* (the runner already records the launch's
-  own refusal as the skipped reason; `09` §4 owns the sentence); *compaction off-machine* (the
-  archive stays on this computer and the handoff travels as text; `14` checks it); *attachments
-  across the boundary* (one zero-token measurement, a 6 MB line over the exec transport; `16`).
+No unidentified in-scope decision remains. The concrete remaining acceptance work
+belongs to [Measure the first box](issues/16-measure-the-first-box.md) and
+[The image: one per runtime](issues/13-the-image-one-per-runtime.md). The Machine
+interface constraints are resolved by their existing tickets. Per-Agent ownership,
+screen identity, attachment transport and routine failure have explicit owners and
+are not future fog.
 
 ## Out of scope
+
+- Additional engines (including Apple `container`), Windows hosts and sharing one
+  runtime login among multiple Agent homes need separate capability/ownership
+  acceptance. This build uses sbx on supported macOS/Ubuntu hosts and the accepted
+  private per-Agent login. A second client/phone is already excluded below.
 
 - A selectable per-Agent MCP/skills/rules inheritance editor: [composition resolution](issues/24-a-per-agent-composition-root.md) preserves the accepted local/box roots and adapter seams; a portable exclusion control needs its own capability effort.
 
@@ -441,7 +433,7 @@ Ruled beyond this destination. These do not graduate; they return only as a fres
   Returns as a fresh effort.
 - **A second client, and a relay to reach the desktop from outside** — a phone answering a
   `waiting` from anywhere. The desktop is the server and the relay forwards bytes it cannot read;
-  a fresh effort, with the *second client* fog above as its only footprint here.
+  a fresh effort, with the current Machine interfaces retaining its constraints.
 - **blobot as a service, and blobot cloud** — the orchestrator without a window, boxes beside
   it, Routines with the laptop shut, priced by awake-seconds and stored gigabytes. Sketched on
   2026-09-04 as a per-user runner, a gateway of paired devices, a machine plane behind `Machine`

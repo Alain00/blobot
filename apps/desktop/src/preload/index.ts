@@ -45,6 +45,8 @@ import type {
   UiSpeechMeasurement,
   UiSpeechTarget,
   DictationPatch,
+  EngineSetupView,
+  UiAgentMachine,
 } from '../shared/api.js';
 
 /**
@@ -53,6 +55,19 @@ import type {
  * renderer that will eventually filter on `runtime_id`.
  */
 const api: BlobotApi = {
+  engineSetup: () => ipcRenderer.invoke('blobot:engineSetup') as Promise<EngineSetupView>,
+  startEngineSetup: (kind) => ipcRenderer.invoke('blobot:startEngineSetup', kind) as Promise<string>,
+  cancelEngineSetup: (id) => ipcRenderer.invoke('blobot:cancelEngineSetup', id) as Promise<void>,
+  agentMachine: (teamId, agentId) => ipcRenderer.invoke('blobot:agentMachine', teamId, agentId) as Promise<UiAgentMachine>,
+  startMachineLogin: (teamId, agentId, method) => ipcRenderer.invoke('blobot:startMachineLogin', teamId, agentId, method) as Promise<string>,
+  openMachineLogin: (teamId, agentId, id) => ipcRenderer.invoke('blobot:openMachineLogin', teamId, agentId, id) as Promise<void>,
+  answerMachineLogin: (teamId, agentId, id, value) => ipcRenderer.invoke('blobot:answerMachineLogin', teamId, agentId, id, value) as Promise<void>,
+  cancelMachineLogin: (teamId, agentId, id) => ipcRenderer.invoke('blobot:cancelMachineLogin', teamId, agentId, id) as Promise<void>,
+  retryMachine: (teamId, agentId) => ipcRenderer.invoke('blobot:retryMachine', teamId, agentId) as Promise<void>,
+  onMachines: (listener) => {
+    ipcRenderer.on('blobot:machines', listener);
+    return () => { ipcRenderer.removeListener('blobot:machines', listener); };
+  },
   machineIdleAfterMs: () => ipcRenderer.invoke('blobot:machineIdleAfterMs') as Promise<number>,
   setMachineIdleAfterMs: (value) => ipcRenderer.invoke('blobot:setMachineIdleAfterMs', value) as Promise<number>,
   snapshot: () => ipcRenderer.invoke('blobot:snapshot') as Promise<UiSnapshot>,
@@ -150,12 +165,13 @@ const api: BlobotApi = {
     ipcRenderer.invoke('blobot:selectTeam', teamId) as Promise<TeamOpenResult>,
   selectIndividualTeam: (profileId: string, teamId: string) =>
     ipcRenderer.invoke('blobot:selectIndividualTeam', profileId, teamId) as Promise<TeamOpenResult>,
-  editTeam: (teamId: string, profileIds: readonly string[], leadProfileId?: string) =>
+  editTeam: (teamId, profileIds, leadProfileId, memberMachines) =>
     ipcRenderer.invoke(
       'blobot:editTeam',
       teamId,
       profileIds,
       leadProfileId,
+      memberMachines,
     ) as Promise<TeamDeletionResult>,
   deleteTeam: (teamId: string, clean?: boolean) =>
     ipcRenderer.invoke('blobot:deleteTeam', teamId, clean === true) as Promise<TeamDeletionResult>,

@@ -1,0 +1,221 @@
+{
+  "startedAt": "2026-09-06T01:30:08.996Z",
+  "root": "/private/tmp/blobot-browser-env-BLf2hV",
+  "execEvents": [
+    {
+      "event": "exec",
+      "executable": "/usr/bin/dash",
+      "browserPresent": true,
+      "browserIsTrue": true,
+      "blockedUnexpectedOpener": false
+    },
+    {
+      "event": "exec",
+      "executable": "/opt/blobot/runtime/claude",
+      "browserPresent": true,
+      "browserIsTrue": true,
+      "blockedUnexpectedOpener": false
+    }
+  ],
+  "challenge": {
+    "origin": "https://claude.com",
+    "path": "/cai/oauth/authorize",
+    "stateLength": 43,
+    "pkceLength": 43,
+    "inputPresent": true,
+    "codePresent": false,
+    "redirect": {
+      "origin": "https://platform.claude.com",
+      "path": "/oauth/code/callback"
+    }
+  },
+  "cleanup": {
+    "stopped": true,
+    "boxes": [],
+    "images": [
+      {
+        "id": "94670d5b2a24",
+        "repository": "docker.io/docker/sandbox-templates",
+        "tag": "claude-code-docker",
+        "flavor": "claude-code-docker",
+        "created_at": "2026-09-04T18:58:46Z",
+        "size": 936879795
+      },
+      {
+        "id": "5fc81bc7a127",
+        "repository": "docker.io/docker/sandbox-templates",
+        "tag": "shell-docker",
+        "flavor": "shell-docker",
+        "created_at": "2026-09-04T18:54:27Z",
+        "size": 588725040
+      }
+    ],
+    "imagesUnchanged": true,
+    "temporaryRootRemoved": true
+  },
+  "scope": "Exact published Linux Claude subscription login; only attempt-scoped BROWSER=/bin/true; no opener replacement, URL opening, code input, auth completion or inference.",
+  "build": {
+    "imageId": "sha256:3b4535de48403a040fa7302506592d41d4107bf5134a59bbbd93e03a36b72192",
+    "archiveSha256": "75881fe4b412dc3cf7daf36071d75e7f1a8c093ecc845c21ec909b43cb6c11ea",
+    "bytes": 693360640,
+    "cliVersion": "2.1.260"
+  },
+  "minimumFreeBytes": 23028256768,
+  "engine": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "beforeImages": [
+    {
+      "id": "94670d5b2a24",
+      "repository": "docker.io/docker/sandbox-templates",
+      "tag": "claude-code-docker",
+      "flavor": "claude-code-docker",
+      "created_at": "2026-09-04T18:58:46Z",
+      "size": 936879795
+    },
+    {
+      "id": "5fc81bc7a127",
+      "repository": "docker.io/docker/sandbox-templates",
+      "tag": "shell-docker",
+      "flavor": "shell-docker",
+      "created_at": "2026-09-04T18:54:27Z",
+      "size": 588725040
+    }
+  ],
+  "sourceHashes": {
+    "adapters/login.ts": "f23a12026797d1ceff458d3fb365623256a8cfb297d56b96864916ff3dd13061",
+    "adapters/claude/login.ts": "3682e8028f553cb1546d01b1ebc481068a4a6b67b9a9f8368dd8a5543b21db4f",
+    "adapters/claude/image.ts": "1c2e341cc1586635f80ed90b658392338ba0e2dafbd16653fbb93496f95a34e5",
+    "machines/sbx/transport.ts": "fe6b6a14942e3db34686cb24be037433e1837bf0e65d1003c350186d06c1e322",
+    "machines/sbx/bootstrap.ts": "d294e7b939af907c9c2141903f8c4d0e81f887ae5ffd4d1c81c6fbacabcf466a",
+    "machines/sbx/owned-machine.ts": "7af7cfa4e418cc8284e0ebb616cd7e642ddfe8141bf1565f81385259fe2359c5"
+  },
+  "observerSha256": "bcac0793eea84dead93b400a8136b29aa3b128104638b5764c717e6c48d62513",
+  "installMs": 12749.622374999999,
+  "box": {
+    "id": "e9f551bc-1cd7-47d4-8ae6-662046f3e034",
+    "name": "blobot-0844b793-414a-4bc0-a0e1-35cd3f7e5b65"
+  },
+  "before": {
+    "browserPresent": false,
+    "python": true,
+    "truePath": "/usr/bin/gnutrue",
+    "files": [
+      {
+        "path": "/bin/true",
+        "mode": 41471,
+        "symlink": "gnutrue",
+        "sha256": null
+      },
+      {
+        "path": "/usr/bin/python3",
+        "mode": 41471,
+        "symlink": "python3.14",
+        "sha256": null
+      },
+      {
+        "path": "/opt/blobot/runtime/claude",
+        "mode": 33261,
+        "symlink": null,
+        "sha256": "9811afb5f97224c2c5d3d0ee1e8c316117d298d5ec3e095d5ff0c1dd0e889ca5"
+      },
+      {
+        "path": "/usr/local/bin/xdg-open",
+        "mode": 33261,
+        "symlink": null,
+        "sha256": "be03173a8dfd14e5fab65f92814273c3fe871a024fc0a3468253ccbba46fcfc4"
+      },
+      {
+        "path": "/usr/bin/sensible-browser",
+        "mode": 33261,
+        "symlink": null,
+        "sha256": "89db115dab14c0e7ce7a7e0f32ad5c5712a63b9818364d28e234d5ebbd9fc5cb"
+      }
+    ],
+    "rows": [
+      {
+        "pid": 1,
+        "startTicks": "8",
+        "executable": "/usr/bin/tini",
+        "ownedLogin": false
+      },
+      {
+        "pid": 115,
+        "startTicks": "72",
+        "executable": "/usr/bin/dockerd",
+        "ownedLogin": false
+      },
+      {
+        "pid": 122,
+        "startTicks": "91",
+        "executable": "/usr/bin/containerd",
+        "ownedLogin": false
+      },
+      {
+        "pid": 2,
+        "startTicks": "9",
+        "executable": "/usr/bin/dash",
+        "ownedLogin": false
+      },
+      {
+        "pid": 3,
+        "startTicks": "9",
+        "executable": "/usr/lib/cargo/bin/coreutils/sleep",
+        "ownedLogin": false
+      },
+      {
+        "pid": 61,
+        "startTicks": "55",
+        "executable": "/usr/local/bin/clipboard-bridge",
+        "ownedLogin": false
+      }
+    ]
+  },
+  "ordinaryBefore": {
+    "browserPresent": false,
+    "uid": 1000
+  },
+  "command": {
+    "executable": "/opt/blobot/bin/claude",
+    "args": [
+      "auth",
+      "login",
+      "--claudeai"
+    ],
+    "environment": {
+      "BROWSER": "/bin/true"
+    },
+    "observer": "/usr/bin/python3"
+  },
+  "challengeMs": 2158.0389159999977,
+  "runError": {
+    "name": "AbortError",
+    "kind": "aborted",
+    "messageCharacters": 26
+  },
+  "loginMs": 2168.300124999998,
+  "ordinaryAfter": {
+    "browserPresent": false,
+    "uid": 1000
+  },
+  "after": {
+    "browserPresent": false,
+    "filesUnchanged": true,
+    "ownedLoginProcesses": [],
+    "newProcesses": []
+  },
+  "trueExecuted": false,
+  "unexpectedOpenerBlocked": false,
+  "passed": false,
+  "finishedAt": "2026-09-06T01:30:50.886Z"
+}
