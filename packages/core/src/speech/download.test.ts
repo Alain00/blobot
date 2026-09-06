@@ -143,4 +143,30 @@ describe('a verified download', () => {
       .toEqual({ ok: false, kind: 'checksum', error: CHECKSUM_MISMATCH });
     await expect(stat(to)).rejects.toThrow();
   });
+
+  it.each([0, 2])('cancels an oversized body before writing beyond its pin, with %i bytes already held', async (held) => {
+    const to = join(await dir(), 'runtime.tar');
+    if (held > 0) await writeFile(`${to}.part`, 'x'.repeat(held));
+    let pulled = 0;
+    const cancel = vi.fn();
+    const seen: number[] = [];
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (pulled++ < 100) controller.enqueue(Buffer.from('xx'));
+        else controller.close();
+      },
+      cancel,
+    }, { highWaterMark: 0 });
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(body, { status: held > 0 ? 206 : 200 }));
+    const outcome = await downloadVerified({ url: `${base}/oversized`, to, bytes: 4,
+      sha256: createHash('sha256').update('xxxx').digest('hex'), fetch: fetcher,
+      onProgress: (received) => seen.push(received) });
+    expect(outcome).toEqual({ ok: false, kind: 'checksum', error: CHECKSUM_MISMATCH });
+    expect(fetcher.mock.calls[0]?.[1]?.headers).toEqual(held > 0 ? { Range: `bytes=${held}-` } : {});
+    expect(seen).toEqual(held > 0 ? [4] : [2, 4]);
+    expect(pulled).toBeLessThan(100);
+    expect(cancel).toHaveBeenCalledOnce();
+    await expect(stat(`${to}.part`)).rejects.toThrow();
+    await expect(stat(to)).rejects.toThrow();
+  });
 });

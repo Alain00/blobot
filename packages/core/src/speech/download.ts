@@ -15,7 +15,7 @@ export interface DownloadRequest {
   readonly sha256: string;
   /** Where the verified file ends up. The `.part` sits beside it. */
   readonly to: string;
-  /** The size, when known, so the figure can say `412 MB of 574 MB` before the first byte. */
+  /** Exact expected bytes: both the progress total and the maximum written download size. */
   readonly bytes?: number;
   readonly onProgress?: (received: number, total: number | undefined) => void;
   readonly signal?: AbortSignal;
@@ -84,10 +84,17 @@ export async function downloadVerified(request: DownloadRequest): Promise<Downlo
   const freshHash = append ? hash : createHash('sha256');
 
   let out: Awaited<ReturnType<typeof open>> | undefined;
+  let exceededSize = false;
   try {
     out = await open(part, append ? 'a' : 'w');
     for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
       request.signal?.throwIfAborted();
+      if (request.bytes !== undefined && received + chunk.byteLength > request.bytes) {
+        exceededSize = true;
+        // Ending the async iteration cancels the response body. Never write excess bytes,
+        // even when the response advertises another size or never reaches EOF.
+        break;
+      }
       // Await disk writes too: ENOSPC must reject the download, never emit an unhandled
       // stream error or leave a promise waiting forever for a drain that cannot happen.
       await out.writeFile(chunk);
@@ -101,11 +108,14 @@ export async function downloadVerified(request: DownloadRequest): Promise<Downlo
   } catch (error) {
     await out?.close().catch(() => {});
     if (request.signal?.aborted === true) return cancelled(part);
-    // A failed write can be partial. Resume from bytes actually on disk, not bytes fetched.
-    return { ok: false, kind: 'network', error: describe(error), received: (await stat(part).catch(() => undefined))?.size ?? 0 };
+    if (!exceededSize) {
+      // A failed write can be partial. Resume from bytes actually on disk, not bytes fetched.
+      return { ok: false, kind: 'network', error: describe(error), received: (await stat(part).catch(() => undefined))?.size ?? 0 };
+    }
+    // A response that fails while being cancelled is still an oversized, invalid artifact.
   }
 
-  if ((request.bytes !== undefined && received !== request.bytes) || freshHash.digest('hex') !== request.sha256.toLowerCase()) {
+  if (exceededSize || (request.bytes !== undefined && received !== request.bytes) || freshHash.digest('hex') !== request.sha256.toLowerCase()) {
     await rm(part, { force: true });
     return { ok: false, kind: 'checksum', error: CHECKSUM_MISMATCH };
   }
