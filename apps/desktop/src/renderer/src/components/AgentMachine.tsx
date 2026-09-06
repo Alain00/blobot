@@ -19,8 +19,9 @@ export function AgentMachine({ teamId, agent, status }: {
     void window.blobot.agentMachine(teamId, agent.id).then((next) => { if (request === latest.current) setView(next); })
       .catch(() => { if (request === latest.current) setError('This sandbox could not be checked. Reopen the team and try again.'); });
   }, [teamId, agent.id]);
+  // Sleep changes power without changing runtime status. Recheck the cached-readiness label.
+  useEffect(() => { refresh(); }, [refresh, agent.machinePower]);
   useEffect(() => {
-    refresh();
     const unsubscribe = [window.blobot.onMachines(refresh),
       window.blobot.onStatus((changedTeam, changedAgent) => { if (changedTeam === teamId && changedAgent === agent.id) refresh(); }),
       window.blobot.onMessage((changedTeam) => { if (changedTeam === teamId) refresh(); })];

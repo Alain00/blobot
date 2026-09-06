@@ -25,7 +25,7 @@ it('keeps a typed one-time code across status refreshes and sends it only to the
   } });
   const host = document.createElement('div'); document.body.append(host); root = createRoot(host);
   await act(async () => root!.render(<AgentMachine teamId="team" agent={agent} status="failed" />));
-  expect(host.textContent).toContain('Your message is waiting');
+  expect(host.textContent).toContain('Your message is queued until this agent can work');
   const input = host.querySelector('input')!;
   await act(async () => {
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'one-use#state');
@@ -38,4 +38,27 @@ it('keeps a typed one-time code across status refreshes and sends it only to the
   expect(answer).toHaveBeenCalledWith('team', 'alice', 'attempt', 'one-use#state');
   expect(host.querySelector('input')).toBeNull();
   expect(host.textContent).not.toContain('one-use#state');
+});
+
+it('refreshes readiness when the Machine sleeps without a runtime status event', async () => {
+  const agent: UiAgent = { id: 'alice', name: 'Alice', role: 'Engineer', runtimeLabel: 'Runtime', workspacePath: '/fixture',
+    accepts: { images: true, textFiles: true }, machinePower: 'awake',
+    machine: { kind: 'box', limits: { maxCpus: 2, maxMemoryBytes: 4 * 1024 ** 3 } } };
+  let view: UiAgentMachine = { placement: agent.machine!, power: 'awake', pendingMessages: 0, methods: [],
+    detection: { subject: { kind: 'agent', agentId: 'alice' }, readiness: 'ready', detail: 'Runtime checked.' } };
+  const read = vi.fn(async () => structuredClone(view));
+  Object.defineProperty(window, 'blobot', { configurable: true, value: {
+    agentMachine: read,
+    engineSetup: async () => ({ readiness: { state: 'ready' }, canInstall: true, kvmAvailable: true }),
+    onMachines: () => () => {}, onStatus: () => () => {}, onMessage: () => () => {},
+  } });
+  const host = document.createElement('div'); document.body.append(host); root = createRoot(host);
+  await act(async () => root!.render(<AgentMachine teamId="team" agent={agent} status="idle" />));
+  await act(async () => host.querySelector<HTMLButtonElement>('.agentmachinehead')!.click());
+  expect(host.textContent).toContain('ready · Runtime checked.');
+  expect(host.textContent).not.toContain('last check');
+  view = { ...view, power: 'asleep' };
+  await act(async () => root!.render(<AgentMachine teamId="team" agent={{ ...agent, machinePower: 'asleep' }} status="idle" />));
+  expect(read).toHaveBeenCalledTimes(2);
+  expect(host.textContent).toContain('last check: ready · Runtime checked.');
 });
