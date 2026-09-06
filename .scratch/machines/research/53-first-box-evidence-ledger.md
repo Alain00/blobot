@@ -7,13 +7,29 @@ existing local measurements, receipts and test source; it does not close the tic
 or certify anything beyond those records. “Accepted evidence” means an observed
 result usable at its stated scope, not permission to activate every box runtime.
 
-**The remaining first-box gaps are real vendor sign-in, runtime-specific mailbox
-delivery/turns on the published images, a large single-line test through actual
-sbx, and Linux/KVM sbx acceptance.** Build/distribution, signed-out startup for four
-runtimes, ordinary host worktrees, and macOS engine mechanics have substantial
-existing evidence and should not be repeated as though unmeasured.
+## Current acceptance, after the operational preview
 
-## Historical checklist reconciled
+**Still open:** completed vendor sign-in and credential persistence/isolation,
+authenticated provider turns with actual mailbox delivery/permissions/resume,
+and Linux/KVM sbx acceptance. Ordinary builds refuse box activation. Explicit
+`BLOBOT_MACHINES_PREVIEW=1` permits development review, not release certification.
+
+| Current measurement | Accepted result | Remaining limit |
+| --- | --- | --- |
+| [Private engine installation](65-private-engine-prefix.md) | Actual pinned macOS archive, hash/signature and preserved rootfs metadata; private-prefix daemon/VM and production installer cache-hit pass, original daemon restored. | Fresh Gatekeeper/quarantine journey and Linux GUI installation not measured. |
+| [Production login challenges](67-production-login-challenges.md) | Eight supported method challenges recognized by production parsers, then cancelled/cleaned. | No browser approval, device completion, submitted code, positive login or provider turn. |
+| [Claude browser suppression](68-claude-browser-env.md) | Exact published CLI invokes `/bin/true` through its scoped `BROWSER`; no opener binary modification. | Does not complete login or certify every platform opener. |
+| [6 MiB JSON and SSE](69-large-json-and-mailbox-streaming.md) | Exact 6,291,456-byte JSON plus LF returns through actual sbx with matching length/SHA, single/chunked writes and EOF; delayed reader exercises drain. Progressive generic SSE cancels and explicitly reconnects. | Public write API does not promise bounded producer memory. Short generic curl SSE is not every MCP client's reconnect/long-idle behavior. |
+| [Published Claude desktop launch](64-production-box-launch-acceptance.md) | Production Machine/runtime, ACP session/default mode and authenticated MCP handshake, fresh and same-Machine reopen. | Desktop guest login gate refuses signed-out; direct signed-out protocol probe is not an admitted product turn or old-session resume. |
+| [Published OpenCode desktop launch](72-desktop-runtime-launch-acceptance.md) | Production Machine/runtime, ACP1, session/new and authenticated PeerMessageServer handshake, fresh and reopen. | No credential/login, tool call, prompt or session resume. |
+| [Published Codex/Cursor launch](72-desktop-runtime-launch-acceptance.md) | ACP1 fresh/reopen; session/new explicitly requires authentication. Codex's missing adapter-generated CODEX_CONFIG allowlist entry was fixed and remeasured. | No MCP/session success. Transport reaches host-child SIGKILL fallback; guest cleanup is established by full Machine stop/removal, not individually observed CLI exit. |
+| fx | Existing signed-out initialize auth refusal; current production login challenges above. | Requires actual login before initialize/session/MCP/turn acceptance. |
+
+These current receipts supersede the gap descriptions in the historical snapshot
+below at their stated scope. All real Machines/temporary fixtures from the latest
+measurements were cleaned, with original vendor templates retained.
+
+## Historical checklist reconciled (snapshot before research64–72)
 
 | Historical measurement | Accepted evidence and exact record | Platform/version | Still not proved, or superseded premise |
 | --- | --- | --- | --- |
@@ -29,7 +45,7 @@ existing evidence and should not be repeated as though unmeasured.
 | Local `_meta`, Keychain and third Claude turn | [07 §5](07-the-first-box.md): two real local Claude turns; `_meta` reaches SDK and shell fence/network behavior observed. [42](42-claude-native-sandbox-policy.md), [43](43-cursor-codex-inner-sandbox.md), [44](44-claude-required-bash-failure.md) add exact policy/config and synthetic-provider failure evidence. | 07: Darwin 25.6.0/arm64, Claude 2.1.260, bridge 0.70.0/SDK 0.3.232; 42–44 keep their own stated scopes. | Ticket 16 explicitly transferred item 5/third turn to 04. Keychain authentication with the entire bridge under srt is not certified by 07; 44 uses a fabricated local provider and usage constants, not paid inference or login. Do not duplicate that ticket's spend. |
 | Linux/KVM repeat | [34](34-public-runtime-distribution.md), [review34 jobs/builds](34-ci-release-review.json): native Ubuntu 24.04 amd64 and Ubuntu 24.04-arm jobs built/smoked all five; no emulation claim is needed. | Native Linux CI Docker, both architectures; source 056a3b31fa1838e16fcdd181c7c89528f7baf226. | **No Linux-host sbx/KVM or amd64 sbx was measured.** Docker CI is not this engine acceptance: daemon/install, mailbox/SSE, worktrees, SSH boundary, resources, stop/reopen and provider integration remain platform-specific. |
 
-## Runtime ledger: handshake is not login or mailbox delivery
+## Historical runtime ledger (before the current desktop launch receipts)
 
 The strongest local sbx startup receipts are the individual research 29 reports.
 Their root kit has no credentials or host mounts and uses UID 1000, private home 8 GiB
@@ -70,27 +86,23 @@ receipts are not interchangeable with the former's live sbx evidence.
 
 ## Minimum remaining real evidence
 
-1. **Mechanical, current transport:** one valid attachment-sized JSON line through
-   actual RC5 `spawnSbxTransport`, exact source/guest/returned length and digest,
-   chunked writes/backpressure and EOF. The attachment source limit is still
-   [4,000,000 bytes](../../../packages/core/src/orchestrator/bounds.ts:80), expanding
-   to roughly 5.33 MB base64 before JSON overhead. The existing local 6 MiB plain-text
-   test proves bootstrap framing only.
-2. **Published-image runtime matrix:** fresh Machine/home, real runtime
-   `session/new` and authenticated mailbox handshake where possible without a turn;
-   bearer and peer delivery through the actual mailbox, one controlled tool turn
-   where needed, permission round trip, stop reason and actual usage. Record exact
-   released manifest, runtime/bridge version and whether login or a prompt was
-   necessary. Do not promote 29's initialize to this result.
-3. **Human sign-in frontier:** measure the chosen vendor login route and fresh
-   in-guest status for each runtime, including fx's blocked initialize. Browser/device
-   callback, credential persistence and possible proxy-managed sharing need explicit
-   observations; synthetic owned-lifecycle sign-in is already tested and need not
-   be respent. No credential values need enter a report.
-4. **Current lifecycle/stream/platform coverage:** RC5 SSE lifetime/reconnect and
-   runtime cleanup; Linux/KVM/amd64 sbx acceptance on its actual host. CLI diagnostic
-   cold/error timing is a separate shared-daemon measurement if still required by
-   setup/caching. CI Docker architecture smoke already covers its narrower subject.
+1. Complete the supported vendor login methods with the owner's accounts. Observe
+   fresh positive guest status, persistence after sleep/reopen and isolation from
+   a second Agent. No credential values belong in the report. Historical shared
+   login/proxy options are not part of the accepted private per-Agent login route.
+2. On each published runtime, run authenticated turns with actual mailbox tool
+   delivery, permission round trips, attachments, cancellation, usage/stop reasons
+   and session resume. Current Claude/OpenCode signed-out handshakes and synthetic
+   callbacks cannot settle these observations. Codex/Cursor/fx need login first.
+3. Repeat the engine/system installer and lifecycle acceptance on supported Ubuntu
+   arm64/amd64 hosts with KVM, including worktrees, SSH boundary, volumes, stop/reopen
+   and runtime integration. Native Docker CI already proves its narrower subject.
+4. Check real runtime MCP streaming over meaningful idle periods and reconnection;
+   research69's explicit short curl reconnect is a mechanical transport check only.
+   Complete fresh macOS installer/quarantine behavior on a suitable clean host.
+
+The large JSON transport gap is closed by research69. Do not repeat it or treat
+Mac signed-out startup as a substitute for these account/platform checks.
 
 The existing [network47](47-open-network-lifecycle.md) live logs were read:
 `/private/tmp/blobot-open-network-live.log` records 2 tests passed in 183.01 s;

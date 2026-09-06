@@ -11,13 +11,18 @@ against the later measured RC5, worktree, image, adapter and network evidence fi
 Do not repeat superseded clone/allowlist/base work or infer provider/platform results
 that were not measured. The remaining live acceptance checks stay explicit.
 
-[The evidence ledger](../research/53-first-box-evidence-ledger.md) reconciles the
-historical checklist without respending superseded probes. Four signed-out ACP
-initializes were observed in RC5/arm64; fx returns its authentication gate. Ten
-native Docker CI smokes cover published image architectures, not sbx Linux/KVM.
-Real guest login/session/MCP/turn evidence per runtime, attachment-sized JSON
-through real sbx and the remaining platform coverage are still open. This ticket
-is not resolved by the ledger or by another ticket's synthetic runtime fixtures.
+[The evidence ledger](../research/53-first-box-evidence-ledger.md#current-acceptance-after-the-operational-preview)
+now credits actual 6 MiB JSON/EOF/backpressure and short generic SSE/cancel/reconnect;
+private-prefix macOS installation; eight production sign-in challenges and
+cancellation; published Claude/OpenCode ACP/session/MCP and same-Machine reopen;
+Codex/Cursor ACP followed by explicit authentication refusal. Codex's discovered
+launch allowlist omission was fixed and remeasured. All fixtures are cleaned.
+
+**Still claimed:** completed real account sign-in, credential persistence/isolation,
+authenticated provider turns/mailbox/permissions/session resume, actual client
+streaming/reconnection, clean-host installer behavior and Linux/KVM acceptance.
+Ten native Docker CI smokes cover published architectures, not sbx/KVM. Default
+builds refuse activation; explicit preview does not discharge these checks.
 
 ## Question
 
