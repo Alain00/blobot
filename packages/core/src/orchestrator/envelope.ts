@@ -23,6 +23,7 @@ export function composePersona(
   team: Team,
   roster: readonly Agent[],
   handbook: readonly HandbookEntry[] = [],
+  personalPath?: string,
 ): string {
   const teammates = roster.filter((member) => member.id !== agent.id);
   const lines = [
@@ -30,6 +31,12 @@ export function composePersona(
     `You work in your own copy of the workspace at ${agent.workspacePath}.`,
     // Every runtime starts in its own AgentWorkspace; a repeated cd also defeats prefix rules.
     'Your shell already starts there. Run commands as they are, without changing directory first.',
+    ...(personalPath === undefined ? [] : [
+      `Your personal folder is ${JSON.stringify(personalPath)}, also available as BLOBOT_PERSONAL_DIR in your shell.`,
+      'Keep your reusable scripts, utilities and personal files there. The same folder follows you across teams,',
+      'including concurrent work. Keep project-specific files and configuration in this workspace.',
+      'This folder preserves files; installing or loading skills and MCP configuration is managed separately.',
+    ]),
     '',
     teammates.length === 0
       ? 'You have no teammates on this team yet.'

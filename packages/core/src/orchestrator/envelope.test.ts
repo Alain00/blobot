@@ -47,6 +47,16 @@ function peerMessage(body: string, context?: string): Message {
 describe('the persona', () => {
   const persona = composePersona(bob, team, [alice, bob]);
 
+  it('distinguishes reusable personal files from project work and keeps standing instructions last', () => {
+    const personal = composePersona({ ...bob, instructions: 'Follow my own writing style.' }, team, [alice, bob], [], '/profiles/bob/files');
+    expect(personal).toContain('Your personal folder is "/profiles/bob/files"');
+    expect(personal).toContain('BLOBOT_PERSONAL_DIR');
+    expect(personal).toContain('The same folder follows you across teams');
+    expect(personal).toContain('Keep project-specific files and configuration in this workspace');
+    expect(personal.endsWith('Follow my own writing style.')).toBe(true);
+    expect(persona).not.toContain('BLOBOT_PERSONAL_DIR');
+  });
+
   it('states the situation that never changes', () => {
     expect(persona).toContain('You are Bob, reviewer, on the team "demo"');
     expect(persona).toContain('/agents/bob');

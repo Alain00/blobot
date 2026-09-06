@@ -48,6 +48,42 @@ environment. This opt-in does not certify the pending checks below.
 
 ## Boundaries
 
+Each AgentProfile now has one persistent personal folder, created on its first execution under
+`<app userData>/profiles/<profileId>/files`. Local and sandbox memberships use those same files
+through `BLOBOT_PERSONAL_DIR`; their persona also states the path. The folder supports ordinary
+read/write files and executable scripts, with normal filesystem concurrency. Profile renames,
+team removal, Machine deletion and profile retirement retain it, including when no memberships
+remain. Profiles with different IDs receive different folders. Legacy Agent rows without a
+profile ID receive no inferred personal identity.
+
+This folder is separate from `/home/agent`: runtime logins, sessions, caches, private Docker data
+and existing installed software retain their current ownership. Skills/MCP installation,
+discovery, composition, credentials and management UI are deferred. Putting a definition in the
+folder preserves the file; it does not activate it in a harness. Project-specific files remain in
+the Workspace. Local execution retains the operator's HOME and native approvals; local Claude's
+shell fence allows writing the exact personal folder beside its existing Git metadata paths.
+
+For both new and existing sandboxes, the pinned RC5 engine adds the personal bind before the
+runtime starts. The app removes the engine's auxiliary `/mnt/host` alias and verifies the exact
+mount set and folder identity as root and the Agent UID. The mount is transient, so each wake
+reattaches it from the saved profile reference; the same Machine and private volumes survive.
+A failed attachment stops that Machine and retains its ownership record and files. A missing,
+changed or replaced personal folder fails explicitly instead of creating an empty replacement.
+The host-owned receipt at `<app userData>/profiles.records/<profileId>.json` lives outside the
+entire personal data root, so losing that root or a whole profile directory is detected after
+relaunch. The receipt and `.blobot-personal-id` marker identify the folder; preserve both when
+backing it up or restoring it. Existing files in runtime homes are not automatically imported.
+
+The personal folder is a deliberate writable bridge between one profile's teams: changes there
+can affect its work elsewhere. It does not grant a sandbox another profile's folder or another
+team's Workspace. This is not a claim of an additional OS fence for local execution. Shared
+personal bytes live on the host filesystem and are outside the private 8/20 GiB volumes; no
+per-profile quota or cross-computer storage provider is introduced in this effort.
+
+The [personal storage measurement](../.scratch/machines/research/80-personal-directory.md)
+records concurrent local/box use, adding the folder to an existing Machine, sleep/reopen,
+ownership validation and removal on macOS RC5. Linux/KVM host acceptance remains separate.
+
 The Agent's worktree and common Git metadata are writable, including repository
 configuration/hooks. Internet and host/local-network access are allowed, retaining
 the runtime's chosen approval policy. The Machine does not grant a bypass mode.

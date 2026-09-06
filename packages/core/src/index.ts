@@ -20,6 +20,8 @@ export type {
 
 export { sameCommands } from './commands.js';
 export { LocalMachine } from './machines/local-machine.js';
+export { PersonalDirectories, PERSONAL_DIRECTORY_ENV } from './personal/personal-directory.js';
+export type { PersonalDirectory, PersonalDirectoryReference } from './personal/personal-directory.js';
 export { SleepingRuntime } from './machines/sleeping-runtime.js';
 export type { SleepingRuntimeOptions } from './machines/sleeping-runtime.js';
 export { DEFAULT_MACHINE_IDLE_MS, machineIdleMs } from './machines/power.js';

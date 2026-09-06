@@ -210,6 +210,12 @@ up. Read it before starting work.
   [implementation history](.scratch/machines/build.md) and
   [the PR review responses](.scratch/machines/review-pr-comments.md).
 
+- **Personal files belong to the AgentProfile.** Its memberships share one writable
+  `PersonalDirectory` on this computer, across local and sandbox execution. Machines borrow
+  it; removal and profile retirement retain it. This is separate from each runtime's HOME and
+  from the Workspace. Skills/MCP management and UI remain a separate effort. See
+  [the scoped contract](.scratch/machines/proposal-personal-agent-state.md) and `docs/machines.md`.
+
 - **Agents exist independently of teams** — `docs/adr/0001-agents-exist-independently-of-teams.md`,
   the repo's first ADR, and the reason `CONTEXT.md` now has an **AgentProfile**. An agent is
   hired once, on no team, and can be on several at the same time; joining a team instantiates an

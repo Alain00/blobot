@@ -70,6 +70,18 @@ the user's control. See the answer on
 
 ## Not decided here
 
+**Amendment, 2026-09-06 — persistent personal files.** Guillermo subsequently requested a
+shared personal folder for the same profile across teams and execution contexts. This extends
+the reusable part beyond the definition: a `PersonalDirectory` belongs to `AgentProfile`, while
+Workspace, conversation, mailbox, runtime HOME and Machine retain their existing ownership.
+Its files persist when a membership or Machine is removed and when the profile is retired.
+Local execution and sandboxes on this computer use the same host-backed folder. Attaching it
+does not import existing runtime homes or configure native skill/MCP discovery. That integration,
+credential handling and the interface are separate work. This explicitly supersedes ticket 06's
+earlier restriction that any future physical home could never be shared as a mount; the profile
+overview's metadata scope is unchanged. See
+[the personal-directory contract](../../.scratch/machines/proposal-personal-agent-state.md).
+
 Editing a profile (rename, change role, change runtime), and what an edit means for the teams an
 agent is already on. Today a profile is hired and retired, nothing in between.
 

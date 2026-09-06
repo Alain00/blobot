@@ -3,8 +3,27 @@ import { ClaudeAgentRuntime } from './claude-agent-runtime.js';
 import { FakeBridge } from './fake-bridge.js';
 import { claudeSandboxFor } from './sandbox.js';
 import { claudeModeFor, vouchedTools } from './permissions.js';
+import { LocalMachine } from '../../machines/local-machine.js';
+import { PersonalDirectories } from '../../personal/personal-directory.js';
 
 describe('native policy independent of approvals', () => {
+  it('permits the exact personal folder beside Git metadata without changing approvals on new and resumed sessions', async () => {
+    const personal = new PersonalDirectories('/fixture/profiles').forProfile('ana');
+    for (const resumeSessionId of [undefined, 'prior-session']) {
+      const bridge = new FakeBridge();
+      const runtime = new ClaudeAgentRuntime({ agentId: 'ana-blue', cwd: '/fixture/work', spawn: () => bridge,
+        machine: new LocalMachine({ agentId: 'ana-blue', workspacePath: '/fixture/work' }, { personalDirectory: personal }),
+        gitDirectories: ['/fixture/repo/.git'], ...(resumeSessionId === undefined ? {} : { resumeSessionId }) });
+      try {
+        await runtime.start();
+        const session = bridge.received.find(message => message.method === (resumeSessionId === undefined ? 'session/new' : 'session/load'))!;
+        expect(session.params).toMatchObject({ _meta: { claudeCode: { options: { sandbox: {
+          enabled: true, autoAllowBashIfSandboxed: false, allowUnsandboxedCommands: false,
+          filesystem: { allowWrite: ['/fixture/repo/.git', '/fixture/profiles/ana/files'] },
+        } } } } });
+      } finally { await runtime.stop(); }
+    }
+  });
   it('does not let the SDK auto-approve sandboxed Bash or silently fall back', () => {
     expect(claudeSandboxFor('local')).toEqual({
       enabled: true,

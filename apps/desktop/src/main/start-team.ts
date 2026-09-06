@@ -174,6 +174,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       continue;
     }
     machines.set(agent.id, machine);
+    personas.set(agent.id, composePersona(agent, team, agents, store.handbookOf(team.id, agent.name), machine.location().personalPath));
     const endpoint = mcp.endpointFor(agent.id, machine.mailboxHostname);
     // The whole difference between a relaunch and a resume. Undefined on a first launch, and
     // a session the provider has forgotten is not fatal: the adapter falls back to a new one.

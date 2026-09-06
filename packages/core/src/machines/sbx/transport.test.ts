@@ -41,6 +41,18 @@ async function runHeader(header: Buffer, input = Buffer.alloc(0), env: NodeJS.Pr
 }
 
 describe('sbx launch framing', () => {
+  it('carries only the Machine-owned personal directory and removes inherited profile paths', async () => {
+    const config = options();
+    const request = { command: { kind: 'exec' as const, executable: process.execPath,
+      args: ['-e', 'console.log(process.env.BLOBOT_PERSONAL_DIR ?? "absent")'] }, cwd: config.moduleRoot };
+    const active = await runHeader(prepareSbxExec({ ...config, personalPath: '/profiles/ana/files' }, request).header,
+      undefined, { BLOBOT_PERSONAL_DIR: '/profiles/other/files' });
+    expect(active.stdout.toString().trim()).toBe('/profiles/ana/files');
+    const absent = await runHeader(prepareSbxExec(config, request).header, undefined, { BLOBOT_PERSONAL_DIR: '/profiles/other/files' });
+    expect(absent.stdout.toString().trim()).toBe('absent');
+    expect(() => prepareSbxExec({ ...config, allowedEnvironment: ['BLOBOT_PERSONAL_DIR'] },
+      { ...request, env: { BLOBOT_PERSONAL_DIR: '/profiles/other/files' } })).toThrow();
+  });
   it('keeps values off argv and preserves the first protocol bytes even in one combined write', async () => {
     const config = options();
     const persona = 'Actúa como Alice.\nQuotes: "\'`$()\\. Unicode: 🪴';
