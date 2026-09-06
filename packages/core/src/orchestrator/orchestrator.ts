@@ -264,6 +264,9 @@ export class Orchestrator {
 
   readonly #trackers = new Map<string, AgentStatusTracker>();
   readonly #busy = new Set<string>();
+  readonly #mailDuringStartup = new Set<string>();
+  readonly #retries = new Map<string, Promise<void>>();
+  #pendingAdmissions = 0;
   readonly #inFlight = new Set<Promise<void>>();
   readonly #eventListeners = new Set<(event: AgentEvent) => void>();
   readonly #statusListeners = new Set<(agentId: string, status: AgentStatus) => void>();
@@ -531,6 +534,9 @@ export class Orchestrator {
         if (runtime === undefined) return;
         try {
           await runtime.start();
+          // A fresh arrival may proceed when this member becomes ready. Persisted backlog
+          // alone never starts work merely because the app was opened.
+          if (this.#mailDuringStartup.delete(agent.id)) await this.#wake(agent.id);
         } catch (error) {
           this.#trackers
             .get(agent.id)
@@ -611,7 +617,7 @@ export class Orchestrator {
        * draining it, which is the path a mid-turn peer message already takes. So the row is
        * committed and drawn, and simply not marked delivered.
        */
-      const busy = this.#busy.has(agent.id);
+      const busy = this.#busy.has(agent.id) || !this.#canDeliver(agent.id);
       const message = this.#store.commit({
         id: this.#createId(now),
         teamId: this.team.id,
@@ -625,15 +631,7 @@ export class Orchestrator {
           ? {}
           : { attachments: attachments.map(({ data: _data, at: _at, ...record }) => record) }),
       });
-      if (!busy) this.#store.markDelivered([message.id], now);
       this.#announceMessage(message);
-      if (attachments.length > 0) {
-        const sent = this.#attachmentsSent.get(agent.id) ?? { count: 0, bytes: 0 };
-        this.#attachmentsSent.set(agent.id, {
-          count: sent.count + attachments.length,
-          bytes: sent.bytes + attachments.reduce((total, one) => total + one.bytes, 0),
-        });
-      }
       return { agent, message, busy };
     });
     // Committed for everybody before anybody starts. A turn can message a teammate mid-flight,
@@ -671,6 +669,8 @@ export class Orchestrator {
             // exists to prevent.
             addressed: agents.map((agent) => agent.id),
           },
+          true,
+          [entry.message],
         ),
       ),
     );
@@ -1076,7 +1076,7 @@ export class Orchestrator {
       return { delivered: true, recipient: recipient.name, status: 'started' };
     }
 
-    if (this.#busy.has(recipient.id) || this.#budgetIsSpent()) {
+    if (this.#busy.has(recipient.id) || !this.#canDeliver(recipient.id) || this.#budgetIsSpent()) {
       // Queued: mid-turn arrivals are the common case, and a session runs one turn at a time.
       if (this.#budgetIsSpent()) this.#announceBudget();
       return { delivered: true, recipient: recipient.name, status: 'queued' };
@@ -1091,6 +1091,34 @@ export class Orchestrator {
   /** Undelivered mail for an agent. On relaunch this is what "2 messages waiting" counts. */
   mailbox(agentId: string): Message[] {
     return this.#store.undelivered(agentId);
+  }
+
+  /** A deliberate retry after sign-in or another remedy, scoped to this member only. */
+  retryAgent(agentId: string): Promise<void> {
+    this.#requireAgent(agentId);
+    const pending = this.#retries.get(agentId);
+    if (pending !== undefined) return pending;
+    if (this.#busy.has(agentId)) return Promise.resolve();
+    const retry = (async () => {
+      const runtime = this.#runtimes.get(agentId);
+      if (runtime === undefined) return;
+      try {
+        if (runtime.lifecycle !== 'ready') {
+          if (runtime.retryStart === undefined) throw new Error('Reopen this team to retry this agent.');
+          await runtime.retryStart();
+        }
+        this.#mailDuringStartup.delete(agentId);
+        await this.#wake(agentId);
+      } catch (error) {
+        this.#trackers.get(agentId)?.markFailed(error instanceof Error ? error.message : String(error));
+        throw error;
+      }
+    })();
+    this.#retries.set(agentId, retry);
+    this.#inFlight.add(retry);
+    const release = () => { this.#retries.delete(agentId); this.#inFlight.delete(retry); };
+    void retry.then(release, release);
+    return retry;
   }
 
   /** The user answered "continue?" — release the budget and drain every mailbox. */
@@ -1108,6 +1136,12 @@ export class Orchestrator {
 
   // ------------------------------------------------------------------ internals
 
+  #canDeliver(agentId: string): boolean {
+    const lifecycle = this.#runtimes.get(agentId)?.lifecycle;
+    if (lifecycle === 'created' || lifecycle === 'starting') this.#mailDuringStartup.add(agentId);
+    return lifecycle === 'ready';
+  }
+
   /**
    * Auto-wake: a message to an idle agent starts its turn immediately, whether or not the user
    * is looking at that tab. Be clear-eyed — this is agents spending the user's tokens
@@ -1115,6 +1149,7 @@ export class Orchestrator {
    */
   async #wake(agentId: string): Promise<void> {
     if (this.#busy.has(agentId)) return;
+    if (!this.#canDeliver(agentId)) return;
     const agent = this.#agents.find((candidate) => candidate.id === agentId);
     if (agent === undefined) return;
 
@@ -1132,12 +1167,13 @@ export class Orchestrator {
     // handful a numbered list stops being a prompt and becomes a context dump with numbers on
     // it. The overflow stays in the mailbox and `#runTurn` wakes this agent again when the
     // turn ends, which is the path a mid-turn arrival already takes.
-    const mail = waiting.slice(0, WAKE_BATCH_LIMIT);
-    this.#store.markDelivered(
-      mail.map((message) => message.id),
-      this.#clock.now(),
-    );
-    const text = composeWakePrompt(
+    // User messages retain their own attachment association and authority. Batch consecutive
+    // peer messages only, without moving one past a message from the user.
+    const first = waiting[0]!;
+    const nextUser = waiting.findIndex((message) => message.fromAgentId === null);
+    const mail = waiting.slice(0, first.fromAgentId === null ? 1
+      : Math.min(WAKE_BATCH_LIMIT, nextUser < 0 ? waiting.length : nextUser));
+    const text = first.fromAgentId === null ? this.#withBrief(agentId, first.body) : composeWakePrompt(
       mail,
       (message) =>
         message.fromAgentId === null
@@ -1147,7 +1183,15 @@ export class Orchestrator {
       this.#leadBrief(agentId),
     );
     this.#lastWake.set(agentId, { chars: text.length, messages: mail.length });
-    await this.#runTurn(agent, { text, from: 'peer' }, mail[mail.length - 1]?.id);
+    const attachments = (first.attachments ?? []).map((record) => this.#store.attachment(record.id));
+    if (attachments.some((content) => content === undefined)) {
+      this.#trackers.get(agentId)?.markFailed('A queued attachment is no longer available.');
+      return;
+    }
+    await this.#runTurn(agent, {
+      text, from: first.fromAgentId === null ? 'user' : 'peer',
+      ...(attachments.length === 0 ? {} : { attachments: attachments.filter((content) => content !== undefined) }),
+    }, mail[mail.length - 1]?.id, undefined, true, mail);
   }
 
   async #runTurn(
@@ -1164,6 +1208,7 @@ export class Orchestrator {
      * asking *continue?* about work the user never requested.
      */
     counted = true,
+    delivery: readonly Message[] = [],
   ): Promise<void> {
     const runtime = this.#runtimes.get(agent.id);
     const tracker = this.#trackers.get(agent.id);
@@ -1176,9 +1221,9 @@ export class Orchestrator {
     // about the agent got a wrong answer.
     const held = this.#busy.has(agent.id);
     this.#busy.add(agent.id);
-    if (counted) this.#turnsThisPrompt += 1;
-    tracker.turnStarted();
-    this.#recorder?.turnStarted(agent.id, this.#clock.now(), triggerMessageId);
+    // Reserve a budget slot while an asleep Machine is waking. Concurrent peer wakes cannot
+    // all observe the same final slot; a refused admission releases it without spending it.
+    if (counted) this.#pendingAdmissions += 1;
     // Populated for every turn, not only a watched one: the routing-turn refund below is
     // defined by what a turn *did*, never by who did it or what started it.
     this.#wroteThisTurn.set(agent.id, new Set());
@@ -1189,8 +1234,26 @@ export class Orchestrator {
       // What the agent actually said, and whether the turn got to the end of itself.
       let said = '';
       let endedOrdinarily = false;
+      let admitted = false;
+      const admit = () => {
+        if (admitted) throw new Error('This turn was already admitted.');
+        this.#store.markDelivered(delivery.map((message) => message.id), this.#clock.now());
+        admitted = true;
+        if (counted) { this.#pendingAdmissions -= 1; this.#turnsThisPrompt += 1; }
+        tracker.turnStarted();
+        this.#recorder?.turnStarted(agent.id, this.#clock.now(), triggerMessageId);
+        const attachments = delivery.flatMap((message) => message.attachments ?? []);
+        if (attachments.length > 0) {
+          const sent = this.#attachmentsSent.get(agent.id) ?? { count: 0, bytes: 0 };
+          this.#attachmentsSent.set(agent.id, {
+            count: sent.count + attachments.length,
+            bytes: sent.bytes + attachments.reduce((total, one) => total + one.bytes, 0),
+          });
+        }
+      };
       try {
-        for await (const event of runtime.sendPrompt(this.#withProfileOverview(agent, prompt))) {
+        for await (const event of runtime.sendPrompt(this.#withProfileOverview(agent, prompt), admit)) {
+          if (!admitted) throw new Error('The runtime emitted an event before admitting its turn.');
           // Publish first, fold second: a consumer sees the event, then the status it caused.
           this.#publish(event);
           tracker.apply(event);
@@ -1206,8 +1269,18 @@ export class Orchestrator {
             this.#usage.set(agent.id, { used: event.used, size: event.size });
           }
         }
+      } catch (error) {
+        if (admitted || delivery.length === 0) throw error;
+        tracker.markFailed(error instanceof Error ? error.message : String(error));
       } finally {
+        if (!admitted && counted) this.#pendingAdmissions -= 1;
         if (!held) this.#busy.delete(agent.id);
+      }
+      if (!admitted) {
+        this.#wroteThisTurn.delete(agent.id);
+        this.#proposedThisTurn.delete(agent.id);
+        this.#recordedThisTurn.delete(agent.id);
+        return;
       }
       if (watch !== undefined && endedOrdinarily) {
         this.#observeSilentHandoff(agent, watch, said);
@@ -1559,7 +1632,7 @@ export class Orchestrator {
   }
 
   #budgetIsSpent(): boolean {
-    return this.#turnsThisPrompt >= this.#budgetCeiling;
+    return this.#turnsThisPrompt + this.#pendingAdmissions >= this.#budgetCeiling;
   }
 
   #announceBudget(): void {

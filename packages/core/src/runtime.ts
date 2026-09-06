@@ -311,8 +311,18 @@ export interface AgentRuntime {
    *
    * The iterable ends after `turn_ended`, or after a fatal `error`. Errors arrive as events
    * rather than rejections so a partial transcript survives.
+   *
+   * Call onAdmitted exactly once after readiness/serialization checks and before submitting
+   * any work to the provider. If it throws, submit nothing. The callback records local
+   * delivery; it cannot guarantee a provider accepted a request across a lost connection.
    */
-  sendPrompt(prompt: Prompt): AsyncIterable<AgentEvent>;
+  sendPrompt(prompt: Prompt, onAdmitted?: () => void): AsyncIterable<AgentEvent>;
+
+  /**
+   * Retry an unavailable execution after a remedy, retaining its last session when possible.
+   * Unlike restart(), this never intentionally discards conversation history.
+   */
+  retryStart?(): Promise<void>;
 
   /** Cancel the turn in flight. Resolves once the cancellation has been requested. */
   cancel(): Promise<void>;

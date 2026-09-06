@@ -145,14 +145,15 @@ describe('profile overview delivery', () => {
     store.restateAgent('alice-api', { role: 'maintainer' });
     store.tombstoneAgent(bob.id, 1);
     await h.finish(first);
-    expect(h.prompts).toHaveLength(2);
+    expect(h.prompts).toHaveLength(3);
     expect(h.prompts[0]?.text).toContain('architect');
     expect(h.prompts[1]?.text).toContain('maintainer');
     expect(h.prompts[1]?.text).toContain('queued user');
-    expect(h.prompts[1]?.text).toContain('queued peer');
+    expect(h.prompts[2]?.text).toContain('queued peer');
+    expect(h.prompts[2]?.text).toContain('maintainer');
     expect(h.prompts[1]?.text).toContain('"teammates":[]');
-    expect(h.orchestrator.injectionOf(alice.id).lastWakeChars).toBe(h.prompts[1]?.text.length);
-    expect(h.orchestrator.injectionOf(alice.id).lastWakeMessages).toBe(2);
+    expect(h.orchestrator.injectionOf(alice.id).lastWakeChars).toBe(h.prompts[2]?.text.length);
+    expect(h.orchestrator.injectionOf(alice.id).lastWakeMessages).toBe(1);
     await h.finish(h.orchestrator.promptFromUser([alice.id], 'next'));
     expect(h.orchestrator.injectionOf(alice.id).lastWakeChars)
       .toBe(composeProfileOverview(store.profileOverviewOf('alice')).length + 2);

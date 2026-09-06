@@ -71,7 +71,20 @@ export class SleepingRuntime implements AgentRuntime {
     this.#touch();
   }
 
-  async *sendPrompt(prompt: Prompt): AsyncIterable<AgentEvent> {
+  async retryStart(): Promise<void> {
+    if (this.#closed) throw new Error('Agent execution is closed.');
+    if (this.#busy !== 0 || this.#lifecycle === 'starting') {
+      throw new Error('Agent execution is already busy.');
+    }
+    if (this.#lifecycle === 'ready') return;
+    this.#setLifecycle('starting');
+    await this.#wake();
+    if (this.#closed) return;
+    this.#setLifecycle('ready');
+    this.#touch();
+  }
+
+  async *sendPrompt(prompt: Prompt, onAdmitted?: () => void): AsyncIterable<AgentEvent> {
     if (this.#closed) throw new Error('Agent execution is closed.');
     this.#busy += 1;
     this.#activitySequence += 1;
@@ -79,7 +92,7 @@ export class SleepingRuntime implements AgentRuntime {
     try {
       await this.#wake();
       await this.#beforeWork();
-      yield* this.#runtime.sendPrompt(prompt);
+      yield* this.#runtime.sendPrompt(prompt, onAdmitted);
     } finally {
       this.#busy -= 1;
       this.#touch();
@@ -226,6 +239,9 @@ export class SleepingRuntime implements AgentRuntime {
         this.#setPower('awake');
         this.#options.onSessionOpened?.(this.#runtime.sessionId);
       } catch (error) {
+        // Even a failure before adapter.start() closes this adapter below. A retry needs a
+        // fresh process wrapper, including when Machine startup itself was what failed.
+        this.#startedOnce = true;
         this.#unsubscribeRuntime();
         await this.#runtime.stop().catch(() => {});
         await this.#options.machine.stop().catch(() => {});

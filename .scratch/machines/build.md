@@ -896,3 +896,12 @@ The PR must be a draft beginning **Este PR todavía no está listo: aún no he
 terminado de revisar todo.** Git author/committer already use Guillermo's verified
 email, matching the signed-in `guillermolg00` GitHub account. Use that identity
 for this work and preserve pre-existing authorship of other contributors.
+
+## 2026-09-06 — durable Machine turn admission
+
+Validated checkpoint for [A Machine on screen, and where a profile is addressed from](issues/12-a-machine-on-screen.md#implementation-checkpoint-durable-delivery-2026-09-06).
+All adapters and SleepingRuntime now acknowledge local admission before provider work.
+The orchestrator retains refused messages, reserves budget during wake, preserves queued
+user attachment association and retries one execution after a remedy. Persisted backlog
+still waits for a user action. Core 1,065/47; core typecheck/build and desktop typecheck pass.
+Next: persisted placement, creation limits, real setup/login IPC and minimal operational UI.

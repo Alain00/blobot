@@ -731,3 +731,22 @@ member placement persistence, engine installation/IPC and full-state resource ch
 to connect. The accepted image preservation gate is still blocking that activation; return to
 [The image: one per runtime](13-the-image-one-per-runtime.md) to close it and then finish this
 screen. No product answer is pending and no sandbox offer is enabled by the prototype.
+
+## Implementation checkpoint: durable delivery, 2026-09-06
+
+Mailbox rows are now acknowledged by a runtime admission callback, after wake and
+Machine validation and before provider submission. Refused startup or wake retains
+the message and does not spend a turn. A budget slot is reserved during a wake so
+concurrent peer arrivals cannot all spend its last slot. An explicit per-Agent retry
+reconstructs that execution with its latest session; unrelated members keep running.
+
+Queued user messages retain their own authority and attachment association instead
+of being merged into peer batches. Consecutive peer messages still batch. Attachment
+counters advance on admission. New arrivals during current startup may proceed when
+ready; merely starting the app never drains persisted backlog. This is local delivery
+bookkeeping, not a promise of exactly-once remote provider execution.
+
+Eight new integration regressions cover startup/sign-in refusal, retry, wake failure,
+budget reservation, startup backlog, queued attachments, failed storage acknowledgement
+and missing attachment content. Core: 1,065 passed / 47 skipped; typecheck/build pass.
+Desktop typecheck passes. Operational placement/setup/login UI remains claimed.

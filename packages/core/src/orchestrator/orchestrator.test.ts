@@ -336,7 +336,9 @@ describe('the mailbox', () => {
     ]);
     const orchestrator = new Orchestrator({ team, agents: [alice, bob], runtimes, store, clock });
 
+    const starting = orchestrator.start();
     await clock.runAll();
+    await starting;
     // Nothing ran. The UI shows "1 message waiting" and the first user action releases it.
     expect(orchestrator.mailbox(bob.id)).toHaveLength(1);
     expect(orchestrator.statusOf(bob.id)).toBe('idle');

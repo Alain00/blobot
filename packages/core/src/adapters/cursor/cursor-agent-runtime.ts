@@ -397,7 +397,7 @@ export class CursorAgentRuntime implements AgentRuntime {
     }
   }
 
-  sendPrompt(prompt: Prompt): AsyncIterable<AgentEvent> {
+  sendPrompt(prompt: Prompt, onAdmitted?: () => void): AsyncIterable<AgentEvent> {
     if (this.#lifecycle !== 'ready') {
       throw new Error(`${this.agentId}: cannot prompt a runtime that is ${this.#lifecycle}`);
     }
@@ -406,6 +406,7 @@ export class CursorAgentRuntime implements AgentRuntime {
         `${this.agentId}: a turn is already in flight — the orchestrator's mailbox exists so this cannot happen`,
       );
     }
+    onAdmitted?.();
     const queue = new AsyncQueue<AgentEvent>();
     this.#turnIndex += 1;
     const turnId = `turn_${this.#turnIndex}`;
