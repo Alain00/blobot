@@ -322,6 +322,8 @@ none is discarded, and the destination is unchanged:
 
 ## Decisions so far
 
+- [A per-agent composition root: config, MCP servers, skills](issues/24-a-per-agent-composition-root.md): existing Agent/adapter composition owns launch configuration; local inheritance stays native and box user scope belongs to its private home, without a generic relocation or inheritance editor.
+
 - [Does a sandbox answer the fourth trust level](issues/10-does-a-machine-answer-the-fourth-level.md): Machine choice preserves the selected harness policy; the historical box-only fifth level is withdrawn under the accepted open-network/shared-Git boundary.
 
 - [What a sandbox lets blobot say](issues/09-what-a-machine-lets-blobot-say.md): kind-specific words reflect host worktrees and open network reach; the shipped permission disclosure uses the selected runtime option's scope instead of a universal Claude file. Approval choices are unchanged, with tests and builds passing.
@@ -391,6 +393,8 @@ In scope, not yet sharp enough to ticket. Graduates as the frontier advances.
   across the boundary* (one zero-token measurement, a 6 MB line over the exec transport; `16`).
 
 ## Out of scope
+
+- A selectable per-Agent MCP/skills/rules inheritance editor: [composition resolution](issues/24-a-per-agent-composition-root.md) preserves the accepted local/box roots and adapter seams; a portable exclusion control needs its own capability effort.
 
 Ruled beyond this destination. These do not graduate; they return only as a fresh effort.
 

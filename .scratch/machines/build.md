@@ -1,5 +1,15 @@
 # Machines implementation
 
+## 2026-09-06 — per-Agent composition resolved
+
+[The composition root question](issues/24-a-per-agent-composition-root.md) is resolved
+against the accepted box home and [pinned-source inventory](research/70-per-agent-composition.md).
+No host config/login import or generic local-home relocation is introduced. Existing
+Agent fields, adapter-owned config/MCP injection and the scoped skills mount implement
+the selected composition. ADR-0003 records the reasoning and bounds a future selectable
+inheritance editor separately. Core and desktop types pass; no production behavior
+changed for this decision. Operational UI and release acceptance continue separately.
+
 ## 2026-09-06 — Machine choice and approval policy
 
 [Does a sandbox answer the fourth trust level](issues/10-does-a-machine-answer-the-fourth-level.md)

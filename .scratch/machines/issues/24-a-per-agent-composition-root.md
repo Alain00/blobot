@@ -1,7 +1,38 @@
 Type: grilling
-Status: open
+Status: resolved
 
 # A per-agent composition root: config, MCP servers, skills
+
+## Answer — 2026-09-06
+
+Use the existing per-Agent launch composition, not another domain entity named
+Machine. `runtimeFor` combines identity, workspace, instructions, runtime options,
+posture and the Agent's named mailbox MCP servers. Each adapter owns its native
+configuration. Profile fields remain profile fields; sessions, mailbox identity
+and guest state remain per Agent. No generic configuration directory is moved
+over the native CLI's authentication store.
+
+The accepted box home is the user-scope root for that Agent, with its own CLI
+login. Project/local scope is the mounted worktree. Only the existing scoped
+operator skills directory is mounted read-only; host global settings, hooks,
+credentials and MCP configuration are not imported. Shared repository Git config
+and hooks remain the explicit accepted exception. This is exactly the composition
+already implemented by the kit, adapter configuration and box palette.
+
+On local, native user/project/local inheritance stays intact. Cursor's existing
+config namespace remains adapter-owned. The historical assertion that a composition
+root cannot be a private home applies to relocating a local login, not to the
+already accepted box with its own login. [Pinned-source research](../research/70-per-agent-composition.md)
+finds that Claude, Codex and fx couple authentication to home/config relocation;
+OpenCode separates some paths but still merges inherited sources. There is no
+portable exclusion switch worth presenting as a universal control.
+
+The user chooses placement/limits at Team membership creation, and uses the existing
+profile/persona/options/posture controls for Agent behavior. A selectable per-Agent
+MCP/skills/rules inheritance editor is a separate capability effort; it is not needed
+to implement the already accepted local/box composition. This bounded scope decision
+uses Guillermo's completion delegation and is recorded in ADR-0003. Palette filtering
+continues to mean what is offered, not a boundary on files or typed commands.
 
 ## Question
 

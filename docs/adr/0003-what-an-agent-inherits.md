@@ -147,3 +147,19 @@ credential file or signing socket is imported separately. Commits in an AgentWor
 use the Agent's author and committer identity, with signing disabled in the launch
 configuration. This is a default for ordinary commits, not an enforcement boundary against
 an explicit Git command that overrides it. The user's Git configuration is never rewritten.
+
+## Third amendment, 2026-09-06: composition stays with the Agent and adapter
+
+[A per-agent composition root](../../.scratch/machines/issues/24-a-per-agent-composition-root.md)
+resolves the question imported from the earlier server fork. The Agent's launch
+composition is identity, workspace, instructions, runtime options, posture and
+named MCP servers. It does not introduce a second Machine-like object or relocate
+local authentication to create a synthetic config root. Local inheritance remains
+unchanged; the accepted box home owns that Agent's native user scope and login.
+
+Each adapter applies its own supported configuration mechanism. The pinned CLIs
+do not expose a uniform way to separate credentials from all settings and inherited
+MCP/skills. A selectable inheritance editor is a separate capability effort,
+deferred under the author's completion delegation; no generic loader or additional
+profile control is added now. This neither changes the accepted skills mount nor
+makes the palette an enforcement boundary.
