@@ -155,6 +155,14 @@ describe('guest archive restore selection', () => {
     expect(names(selectSbxArchiveMembers(source, target))).toEqual(['./', './file', './link', './chain']);
   });
 
+  it('replays attribute-only changes with hardlinks and ancestors even when every PAX byte matches', () => {
+    const source = index(Buffer.concat([root('Yfile\0Ylink\0Yother\0\0'), file('./file', 'same'),
+      header('./link', 0, '1', './file'), file('./other', 'untouched'), end()]));
+    expect(selectSbxArchiveMembers(source, source)).toBeNull();
+    expect(names(selectSbxArchiveMembers(source, source, new Set(['./file'])))).toEqual(['./', './file', './link']);
+    expect(() => selectSbxArchiveMembers(source, source, new Set(['./missing']))).toThrow('attribute path is missing');
+  });
+
   it('preserves literal unusual names in the NUL-delimited selector', () => {
     const odd = ['-option', 'line\nbreak', ' leading\t ', 'back\\slash', 'literal[*]?', 'café'];
     const archive = (text: string) => Buffer.concat([root(odd.map(name => 'Y' + name + '\0').join('') + '\0'),

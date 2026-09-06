@@ -680,3 +680,20 @@ attribute hooks. Bounded bundle/description codecs carry preflight metadata befo
 archive bytes. Full core: 1,025 passed / 47 skipped; core types/build pass.
 The actual attribute backend, composed three-tree migration and verified cutover
 remain unfinished. This is a checkpoint; the ticket and existing guards stay open.
+
+### Attribute backend and composed transfer checkpoint — 2026-09-06
+
+[The attribute backend](../research/59-production-attribute-restoration.md) passes
+actual synthetic restoration of ten directory policies, five file policies,
+ACLs, xattrs, protected deletion and hardlinks. Unknown attributes remain explicit;
+selected unknown inodes refuse before mutation. The full guest bootstrap and
+filesystem backend now compose real archive and attribute verification with the
+three-tree protocol. Core: 1,057 passed / 47 skipped, types/build pass.
+
+[The first actual two-Machine composition](../research/60-composed-state-transfer.md)
+passes all source preflight, then refuses the target root selection's three
+unqueryable symlinks. It is not a successful full migration. Both owned fixtures
+clean up. [The API research](../research/58-xattr-acl-reconciliation-and-fileattr-limits.md)
+documents inherited special-inode state, so no unknown-as-zero exception is adopted.
+Continue the native-route investigation and remaining runtime/activation work;
+keep this ticket claimed and the existing replacement guard.

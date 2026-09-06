@@ -62,6 +62,16 @@ amended, and it is not to be worked around quietly.
 
 ## Notes
 
+**Autonomous completion and PR, 2026-09-06 (Guillermo).** The author is going to
+sleep and asks for the complete implementation plus a detailed final review.
+Resolve subsequent decisions autonomously using documented references, established
+practice, scalability, usability, maintainability and efficiency. This supersedes
+the earlier requirement to pause for non-obvious decisions; do not silently claim
+an unverified guarantee. Continue in `/Users/guillermo/Work/blobot/.scratch/machines`.
+Keep validated commits per ticket. When the complete work is ready, push the
+implementation branch and open a PR against `main` describing its important
+implementation details and user flows. This authorizes that PR publication.
+
 **Design direction, 2026-09-06 (Guillermo).** Be meticulous about design: simple,
 organized, understandable and minimal, respecting the site's existing design.
 Use the current components and patterns; reveal operational details only where

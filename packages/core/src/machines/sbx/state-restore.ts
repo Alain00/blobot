@@ -26,6 +26,7 @@ export async function receiveSbxStateArchive(
     readonly privateDirectory: string;
     readonly source: ReadonlyMap<string, SbxArchiveMember>;
     readonly target: ReadonlyMap<string, SbxArchiveMember>;
+    readonly changedAttributes?: ReadonlySet<string>;
     readonly assertHeld: () => void;
     /** Includes removals, selected paths and ancestors; all source attributes preflight first. */
     readonly prepareAttributes: (selection: Buffer | null) => Promise<void>;
@@ -40,7 +41,7 @@ export async function receiveSbxStateArchive(
   const directory = f.lstatSync(options.privateDirectory);
   if (!directory.isDirectory() || directory.uid !== 0 || (directory.mode & 0o777) !== 0o700) fail();
   options.assertHeld();
-  const selection = archives.select(options.source, options.target);
+  const selection = archives.select(options.source, options.target, options.changedAttributes);
   await options.prepareAttributes(selection);
   options.assertHeld();
   const inventory = archives.index(archives.verify, builtins.crypto.createHash);

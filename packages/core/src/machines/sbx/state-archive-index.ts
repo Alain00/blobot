@@ -50,8 +50,12 @@ export function createSbxArchiveIndex(
  */
 export function selectSbxArchiveMembers(
   source: ReadonlyMap<string, SbxArchiveMember>, target: ReadonlyMap<string, SbxArchiveMember>,
+  changedAttributes: ReadonlySet<string> = new Set(),
 ): Buffer | null {
-  const selected = new Set<string>();
+  // Equal PAX bytes can hide different Linux inode flags or overlay representation. Replay
+  // those members too, including their hardlinks and ancestors, before restoring attributes.
+  const selected = new Set(changedAttributes);
+  for (const key of selected) if (!source.has(key)) throw new Error('Machine state attribute path is missing.');
   const dependents = new Map<string, string[]>();
   for (const [key, entry] of source) {
     if (entry.sha256 !== target.get(key)?.sha256) selected.add(key);

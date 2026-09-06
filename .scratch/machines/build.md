@@ -864,3 +864,20 @@ shows untouched base entries can remain intact, while seven equal-PAX entries
 still need attribute reconciliation. Continue that backend, composed three-tree
 transfer and candidate cutover; no resource-replacement or activation guard moved.
 The image ticket remains claimed. No product answer is pending.
+
+## 2026-09-06 — attributes and composed transfer checkpoint
+
+The streaming receiver checkpoint is committed as `66ebbc8`. [Attribute restoration](research/59-production-attribute-restoration.md)
+now passes in an actual owned guest; its full PAX and metadata manifest match.
+The composed guest bootstrap/backend are implemented and unit-tested. Full core:
+1,057 passed / 47 skipped; core types/build pass.
+
+[Two actual Machines](research/60-composed-state-transfer.md) expose a remaining
+coverage refusal: three selected root symlinks have unqueryable attributes. No
+root restoration or full migration is claimed. Existing guards remain. Investigate
+native same-storage resource changes before adding more filesystem workarounds.
+
+Guillermo now delegates subsequent decisions while asleep, requests full review,
+and authorizes pushing/opening the finished branch as a PR against `main` with
+the important implementation and flows. This supersedes question pauses. Keep
+the current simple UI direction and exact evidence limits. No pending question.
