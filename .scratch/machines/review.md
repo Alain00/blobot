@@ -59,3 +59,12 @@ The narrow contract correction has a runtime-to-transport regression and a real
 fresh/reopen repeat in [research72](research/72-desktop-runtime-launch-acceptance.md).
 The repeat reaches the provider's authentication gate; no Codex login/MCP success
 is inferred. Total confirmed findings corrected: six.
+
+
+## Additional organization and robustness pass
+
+The user requested one more complete pass after publication. See
+[the follow-up review](review-cleanup.md) for independent Standards/Spec findings,
+three corrected functional races/stale-state cases, bounded downloads and cleanup.
+Current totals are 1,102 core and 638 desktop tests passing, with 47/1 skipped;
+both typechecks/builds pass. The release acceptance gate remains unchanged.

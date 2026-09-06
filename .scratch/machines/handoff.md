@@ -43,11 +43,13 @@ its original vendor templates retained. No agent is still doing background work.
 
 ## Validation
 
-Core 1,098 passed / 47 skipped; desktop 632 passed / 1 skipped. Both typechecks and
+Core 1,102 passed / 47 skipped; desktop 638 passed / 1 skipped. Both typechecks and
 builds pass. The Electron fixture asserts mixed placement submission and checks
 login/composer spacing and narrow creation; screenshots are linked from research71.
 Native CI build/smoke covers all five published runtimes on arm64 and amd64; it
-is not Linux/KVM acceptance. Six concrete review/live findings were fixed. Tracked
+is not Linux/KVM acceptance. Six initial review/live findings were fixed. The [additional review](review-cleanup.md)
+corrected setup cancellation, Team close/edit admission and stale sleep readiness,
+added a download byte ceiling and grouped exports. Ten regressions were added. Tracked
 diff whitespace and current guide/review links pass.
 
 ## PR contract

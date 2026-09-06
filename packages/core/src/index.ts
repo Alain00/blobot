@@ -32,6 +32,9 @@ export { machineFor } from './machines/machine-for.js';
 export { MachineUnavailableError } from './machines/machine.js';
 export { SbxImageStore, verifyRuntimeImageArchive } from './machines/sbx/image-store.js';
 export { SbxEngine, sbxCommandRunner } from './machines/sbx/engine.js';
+export { SbxInstaller, SBX_INSTALL_VERSION, sbxHostArtifact, sbxKvmAvailable } from './machines/sbx/installation.js';
+export type { SbxInstallation } from './machines/sbx/installation.js';
+export { sbxClientEnvironment } from './machines/sbx/client-environment.js';
 export type { SbxPtyRunner } from './machines/sbx/engine.js';
 export { SbxRegistry } from './machines/sbx/registry.js';
 export { OwnedSbxMachine } from './machines/sbx/owned-machine.js';
@@ -182,7 +185,13 @@ export type {
 
 // The Claude Code adapter. Exported from the full entry point only: it spawns a process, so
 // it has no business in `@blobot/core/domain`, which the renderer imports.
+export { MachineLogin } from './adapters/login.js';
+export type { RuntimeLogin, RuntimeLoginMethod, RuntimeLoginSpec, LoginChallenge } from './adapters/login.js';
+export { openLoginCallbackRelay } from './adapters/login-callback.js';
+
 export { ClaudeAgentRuntime } from './adapters/claude/claude-agent-runtime.js';
+export { CLAUDE_MACHINE_IMAGE } from './adapters/claude/image.js';
+export { CLAUDE_LOGIN } from './adapters/claude/login.js';
 export { CLAUDE_LOCAL_PROTECTION } from './adapters/claude/sandbox.js';
 export { CURSOR_LOCAL_PROTECTION } from './adapters/cursor/permissions.js';
 export { CODEX_LOCAL_PROTECTION } from './adapters/codex/permissions.js';
@@ -209,6 +218,8 @@ export {
 
 // The OpenCode adapter. Same reason it is not in `/domain`: it spawns `opencode acp`.
 export { OpencodeAgentRuntime } from './adapters/opencode/opencode-agent-runtime.js';
+export { OPENCODE_MACHINE_IMAGE } from './adapters/opencode/image.js';
+export { OPENCODE_LOGIN } from './adapters/opencode/login.js';
 export type { OpencodeAgentRuntimeOptions } from './adapters/opencode/opencode-agent-runtime.js';
 export { agentKeyFor, opencodeConfigContent, permissionPosture } from './adapters/opencode/config.js';
 export {
@@ -293,6 +304,8 @@ export type {
 // Ticket 11: detecting what the user already has. Spawns processes, so not in `/domain`.
 // The Codex adapter. Same reason again: it spawns a pinned npm bridge over stdio.
 export { CodexAgentRuntime } from './adapters/codex/codex-agent-runtime.js';
+export { CODEX_MACHINE_IMAGE } from './adapters/codex/image.js';
+export { CODEX_LOGIN } from './adapters/codex/login.js';
 export type { CodexAgentRuntimeOptions } from './adapters/codex/codex-agent-runtime.js';
 export {
   CODEX_EXPRESSES_TRUST,
@@ -307,6 +320,8 @@ export {
 
 // The fx adapter. Same reason again, minus the bridge: `fx acp` is the user's own binary.
 export { FxAgentRuntime } from './adapters/fx/fx-agent-runtime.js';
+export { FX_MACHINE_IMAGE } from './adapters/fx/image.js';
+export { FX_LOGIN } from './adapters/fx/login.js';
 export type { FxAgentRuntimeOptions } from './adapters/fx/fx-agent-runtime.js';
 export {
   FX_EXPRESSES_TRUST,
@@ -320,6 +335,8 @@ export { resolveFxExecutable, spawnFx, VERIFIED_FX_VERSION } from './adapters/fx
 
 // The Cursor adapter. First-party ACP again: `cursor-agent acp` is the user's own binary.
 export { CursorAgentRuntime } from './adapters/cursor/cursor-agent-runtime.js';
+export { CURSOR_MACHINE_IMAGE } from './adapters/cursor/image.js';
+export { CURSOR_LOGIN } from './adapters/cursor/login.js';
 export type { CursorAgentRuntimeOptions } from './adapters/cursor/cursor-agent-runtime.js';
 export {
   CURSOR_APPROVAL_MODE,
@@ -439,20 +456,3 @@ export { MISTRAL_MODEL, MISTRAL_TRANSCRIPTIONS_URL, MistralTranscriber } from '.
 export type { MistralTranscriberOptions } from './speech/mistral.js';
 export { nodeSocket, resample16to24 } from './speech/socket.js';
 export type { SocketFactory, SocketLike } from './speech/socket.js';
-
-export { CLAUDE_MACHINE_IMAGE } from './adapters/claude/image.js';
-export { CODEX_MACHINE_IMAGE } from './adapters/codex/image.js';
-export { OPENCODE_MACHINE_IMAGE } from './adapters/opencode/image.js';
-export { FX_MACHINE_IMAGE } from './adapters/fx/image.js';
-export { CURSOR_MACHINE_IMAGE } from './adapters/cursor/image.js';
-export { SbxInstaller, SBX_INSTALL_VERSION, sbxHostArtifact, sbxKvmAvailable } from './machines/sbx/installation.js';
-export type { SbxInstallation } from './machines/sbx/installation.js';
-export { sbxClientEnvironment } from './machines/sbx/client-environment.js';
-export { MachineLogin } from './adapters/login.js';
-export type { RuntimeLogin, RuntimeLoginMethod, RuntimeLoginSpec, LoginChallenge } from './adapters/login.js';
-export { CLAUDE_LOGIN } from './adapters/claude/login.js';
-export { CODEX_LOGIN } from './adapters/codex/login.js';
-export { CURSOR_LOGIN } from './adapters/cursor/login.js';
-export { OPENCODE_LOGIN } from './adapters/opencode/login.js';
-export { FX_LOGIN } from './adapters/fx/login.js';
-export { openLoginCallbackRelay } from './adapters/login-callback.js';

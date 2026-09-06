@@ -30,9 +30,10 @@ export interface OwnedSbxMachineOptions {
 }
 
 /**
- * Staged RC5 lifecycle. NOT selected by machineFor: complete-state preservation, runtime and
- * product onboarding admission must land first. Host mounts are the AgentWorkspace and its approved
- * shared Git directories only. No daemon/global-settings mutations or credential imports.
+ * Owned RC5 lifecycle, selected by DesktopMachines behind the explicit development preview gate.
+ * Host mounts are the AgentWorkspace, its approved shared Git directories and read-only skills.
+ * No daemon/global-settings mutations or credential imports. Existing resource limits remain fixed
+ * until complete-state preservation is supported by the engine.
  */
 export class OwnedSbxMachine implements Machine {
   readonly kind = 'box';

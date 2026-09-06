@@ -1006,3 +1006,18 @@ GitHub reports no merge conflict. The branch is pushed; all own commits use
 Guillermo's verified name/email with no coauthor trailers. The
 [handoff](handoff.md) records current validation and the remaining release gate.
 No merge was performed. The unrelated pnpm-lock.yaml edit remains untouched.
+
+
+## 2026-09-06 — final organization, security and coverage pass
+
+The author's additional review request is implemented. The
+[follow-up review](review-cleanup.md) records separate Standards/Spec results and
+parent integration findings: cancelled setup cannot continue shared changes,
+Team re-entry/roster edits retain exclusive lifecycle ownership, sleeping Agents
+show cached readiness correctly, and oversized downloads stop before exceeding
+the pin. Adapter/engine exports and stale comments were cleaned up.
+
+Ten new regressions pass. Full core 1,102/47, desktop 638/1; both typechecks and
+builds pass. Electron interactions were rechecked. All changes keep Guillermo's
+authorship and update the existing draft PR; the first review note and the release
+gate remain. The unrelated pnpm-lock.yaml edit is unchanged.
