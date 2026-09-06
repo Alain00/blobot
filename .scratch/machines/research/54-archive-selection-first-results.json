@@ -1,0 +1,512 @@
+{
+  "date": "2026-09-05T23:50:55.911Z",
+  "uuid": "94891f45-391d-41a3-ad40-e565d660f072",
+  "name": "blobot-selection54-94891f45-391d-41a3-ad40-e565d660f072",
+  "candidate": "blobot-machine-probe:explicit-docker-20260905",
+  "manifest": "sha256:1cd3184fceaf6d60c0f364c81bdb26f3359bab91efc666cd172fb75c68ed974c",
+  "scope": "synthetic disposable guest only",
+  "commands": [
+    {
+      "label": "daemon-status",
+      "code": 0,
+      "ms": 171.77545800000001
+    },
+    {
+      "label": "version",
+      "code": 0,
+      "ms": 253.32004200000003
+    },
+    {
+      "label": "read-ssh-forwarding",
+      "code": 0,
+      "ms": 136.90937499999995
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 151.99712499999998
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 121.26766699999996
+    },
+    {
+      "label": "load-local-archive",
+      "code": 0,
+      "ms": 1879.978334
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 155.86916699999983
+    },
+    {
+      "label": "create-owned-box",
+      "code": 0,
+      "ms": 2704.206916
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 144.24175000000014
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 132.04141700000037
+    },
+    {
+      "label": "remove-owned-box",
+      "code": 0,
+      "ms": 312.84708300000057
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 155.03579200000058
+    },
+    {
+      "label": "remove-owned-local-alias",
+      "code": 0,
+      "ms": 182.70429200000035
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 127.37845900000138
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 154.17970800000148
+    }
+  ],
+  "diskChecks": [
+    {
+      "label": "before-load",
+      "availableBytes": "20862550016"
+    },
+    {
+      "label": "before-create",
+      "availableBytes": "20862730240"
+    },
+    {
+      "label": "before-probe",
+      "availableBytes": "20841426944"
+    },
+    {
+      "label": "after-cleanup",
+      "availableBytes": "20858056704"
+    }
+  ],
+  "cleanup": {
+    "errors": [],
+    "remainingOwnedBoxes": [],
+    "remainingOwnedImages": [],
+    "tempRemoved": true
+  },
+  "scripts": {
+    "workerSha256": "f0a7472c9e641edb2aaf21d1fbcb55064061879863617bb20240b149801bd2f7",
+    "probeBundleSha256": "f46bedf4c22e77581fed6487c244aa7c9dcd504849a2894e9dd7930e6aaad3e3"
+  },
+  "compiledFunctionHashes": {
+    "createStateArchiveVerifier": "cb1d5f4808c3b87f29deb4b243662c1eb18c6f067947d4d47d903fc86d664913",
+    "createSbxArchiveIndex": "85ec340419df0b465592586f9ae3eea93f95d73a7360e02cf7d84bbbf2d9a144",
+    "selectSbxArchiveMembers": "0742a1f1f4ca09a4597ecd55bdf1f7e39c810fa1f258e1db1da7a99c2641a7ec"
+  },
+  "compiledModuleHashes": {
+    "state-archive": "a6b2326b696952f7e2194f5629b1640024d71f87ec71a8424a8a3c8210123997",
+    "state-archive-index": "f2d282a6e9332a7753df6c5b5e1ab2c63fdba71986bc2e58652fe26d80d68188"
+  },
+  "version": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "image": {
+    "id": "1cd3184fceaf",
+    "repository": "docker.io/library/blobot-machine-probe",
+    "tag": "explicit-docker-20260905",
+    "flavor": "shell-docker",
+    "created_at": "2026-09-05T23:50:58Z",
+    "size": 588690428
+  },
+  "kit": {
+    "schemaVersion": "2",
+    "kind": "sandbox",
+    "name": "blobot-synthetic-selection54",
+    "sandbox": {
+      "image": "blobot-machine-probe:explicit-docker-20260905",
+      "entrypoint": [
+        "/usr/bin/node"
+      ],
+      "command": {
+        "default": [
+          "--version"
+        ]
+      }
+    },
+    "security": {
+      "privileged": true
+    },
+    "credentials": [],
+    "permissions": {
+      "network": {
+        "allow": [],
+        "deny": []
+      }
+    },
+    "volumes": [
+      {
+        "path": "/home/agent",
+        "size": "8589934592",
+        "mode": "0700"
+      },
+      {
+        "path": "/var/lib/docker",
+        "size": "21474836480",
+        "mode": "0700"
+      }
+    ]
+  },
+  "box": {
+    "name": "blobot-selection54-94891f45-391d-41a3-ad40-e565d660f072",
+    "id": "a4a72793-81dc-4f33-85b0-2f754cfd5efd",
+    "agent": "blobot-synthetic-selection54",
+    "status": "running",
+    "workspaces": [
+      "/private/tmp/blobot-selection54-1mEwx8/synthetic-worktree"
+    ]
+  },
+  "workerExit": {
+    "code": 0,
+    "stderr": ""
+  },
+  "minimumObservedSpace": "20840677376",
+  "guest": {
+    "kernel": "7.0.12",
+    "arch": "arm64",
+    "bootId": "e269f182-ced8-4e52-9e9c-7b569c1652f8",
+    "workerPid": 285,
+    "dockerBefore": [
+      {
+        "pid": 106,
+        "comm": "dockerd",
+        "start": "84"
+      },
+      {
+        "pid": 113,
+        "comm": "containerd",
+        "start": "109"
+      }
+    ],
+    "dockerAfter": [],
+    "freeze": {
+      "relative": "/docker/b9d905baa0de75ff99dbc6955af4944fc19c96c0d89a63793042a5562d9ff157",
+      "scope": "/sys/fs/cgroup/docker/b9d905baa0de75ff99dbc6955af4944fc19c96c0d89a63793042a5562d9ff157",
+      "maintenance": "/sys/fs/cgroup/docker/blobot-maintenance54-94891f45-391d-41a3-ad40-e565d660f072",
+      "events": "populated 1\nfrozen 1\n"
+    },
+    "probe": {
+      "rootFilesystem": "overlay",
+      "privateViewMountCount": 1,
+      "result": {
+        "cases": {
+          "identical": {
+            "sourceArchive": {
+              "bytes": 10240,
+              "sha256": "c3ab2e01672f7deefdd3bd9cf4c83bed72a633a34c6c52af0dfc1533b1ecac6b",
+              "members": 5
+            },
+            "beforeArchive": {
+              "bytes": 10240,
+              "sha256": "c3ab2e01672f7deefdd3bd9cf4c83bed72a633a34c6c52af0dfc1533b1ecac6b",
+              "members": 5
+            },
+            "sourceRepeatedIdentical": true,
+            "selection": {
+              "isNull": true,
+              "bytes": 0,
+              "members": 0,
+              "directChangedMembers": 0
+            },
+            "initialDirectoryMembersEqual": true,
+            "restore": {
+              "invoked": false,
+              "exitCode": null,
+              "stderrBytes": 0
+            },
+            "afterArchive": {
+              "bytes": 10240,
+              "sha256": "c3ab2e01672f7deefdd3bd9cf4c83bed72a633a34c6c52af0dfc1533b1ecac6b",
+              "members": 5
+            },
+            "fullPaxEqual": true,
+            "mismatchedMemberCount": 0,
+            "sentinelUnchanged": true,
+            "noopMetadataExact": true,
+            "sourceUnchanged": true,
+            "passed": true
+          },
+          "content-parent-equal": {
+            "sourceArchive": {
+              "bytes": 20480,
+              "sha256": "ebe0e0f56f63e05ede60f10401cc5a0d7fbae88351e02104a3e0ee2ebf09e14c",
+              "members": 6
+            },
+            "beforeArchive": {
+              "bytes": 20480,
+              "sha256": "c6a5e3a26bba0a9a52244b310622928dd5de7ada747158df1854132b9bb81eb7",
+              "members": 6
+            },
+            "sourceRepeatedIdentical": true,
+            "selection": {
+              "isNull": false,
+              "bytes": 26,
+              "members": 4,
+              "directChangedMembers": 1
+            },
+            "initialDirectoryMembersEqual": true,
+            "unchangedAncestorsSelected": true,
+            "restore": {
+              "invoked": true,
+              "exitCode": 2,
+              "signal": null,
+              "stderrBytes": 104,
+              "stdoutBytes": 0,
+              "pipeErrors": 2
+            },
+            "afterArchive": {
+              "bytes": 20480,
+              "sha256": "c6a5e3a26bba0a9a52244b310622928dd5de7ada747158df1854132b9bb81eb7",
+              "members": 6
+            },
+            "fullPaxEqual": false,
+            "mismatchedMemberCount": 1,
+            "sentinelUnchanged": true,
+            "noopMetadataExact": null,
+            "sourceUnchanged": true,
+            "passed": false
+          },
+          "mutations": {
+            "sourceArchive": {
+              "bytes": 61440,
+              "sha256": "efc2218c7184bf9bee3c88e36d1c834ae1dea988223c09f9466fa32b10ab20b9",
+              "members": 29
+            },
+            "beforeArchive": {
+              "bytes": 61440,
+              "sha256": "9de3181dc3588ae1649d486a17f91433a36a596fb46b33c1e252385f315af175",
+              "members": 31
+            },
+            "sourceRepeatedIdentical": true,
+            "selection": {
+              "isNull": false,
+              "bytes": 586,
+              "members": 27,
+              "directChangedMembers": 27
+            },
+            "initialDirectoryMembersEqual": false,
+            "restore": {
+              "invoked": true,
+              "exitCode": 2,
+              "signal": null,
+              "stderrBytes": 104,
+              "stdoutBytes": 0,
+              "pipeErrors": 2
+            },
+            "afterArchive": {
+              "bytes": 61440,
+              "sha256": "9de3181dc3588ae1649d486a17f91433a36a596fb46b33c1e252385f315af175",
+              "members": 31
+            },
+            "fullPaxEqual": false,
+            "mismatchedMemberCount": 34,
+            "sentinelUnchanged": true,
+            "noopMetadataExact": null,
+            "sourceUnchanged": true,
+            "passed": false
+          },
+          "hardlink-reference": {
+            "sourceArchive": {
+              "bytes": 20480,
+              "sha256": "b48d528ef75d6730fad77888e488f957623114a4925784a7ae79d60b263421cb",
+              "members": 7
+            },
+            "beforeArchive": {
+              "bytes": 20480,
+              "sha256": "eec795ad965e65bf1ff1a3908ee8341a53e16f7fd3898bc3e1385f010fd21032",
+              "members": 7
+            },
+            "sourceRepeatedIdentical": true,
+            "selection": {
+              "isNull": false,
+              "bytes": 42,
+              "members": 5,
+              "directChangedMembers": 1
+            },
+            "initialDirectoryMembersEqual": true,
+            "referencePayloadChanged": true,
+            "unchangedHardlinkMembers": 2,
+            "unchangedHardlinkDependentsSelected": true,
+            "restore": {
+              "invoked": true,
+              "exitCode": 2,
+              "signal": null,
+              "stderrBytes": 104,
+              "stdoutBytes": 0,
+              "pipeErrors": 2
+            },
+            "afterArchive": {
+              "bytes": 20480,
+              "sha256": "eec795ad965e65bf1ff1a3908ee8341a53e16f7fd3898bc3e1385f010fd21032",
+              "members": 7
+            },
+            "fullPaxEqual": false,
+            "mismatchedMemberCount": 1,
+            "sentinelUnchanged": true,
+            "noopMetadataExact": null,
+            "sourceUnchanged": true,
+            "hardlinkGraphCorrect": true,
+            "referenceInodeReplaced": false,
+            "passed": false
+          },
+          "hardlink-merge": {
+            "sourceArchive": {
+              "bytes": 20480,
+              "sha256": "10074b711b27f585a0721ddefd1d823a9d1b54548a7a484d9bed7fa4e90ae2d0",
+              "members": 7
+            },
+            "beforeArchive": {
+              "bytes": 20480,
+              "sha256": "fd43564b9b1c715f21d88bd1e7912fa8b76cd35f61d0c808dead0756f08e9e66",
+              "members": 7
+            },
+            "sourceRepeatedIdentical": true,
+            "selection": {
+              "isNull": false,
+              "bytes": 32,
+              "members": 4,
+              "directChangedMembers": 2
+            },
+            "initialDirectoryMembersEqual": true,
+            "restore": {
+              "invoked": true,
+              "exitCode": 2,
+              "signal": null,
+              "stderrBytes": 104,
+              "stdoutBytes": 0,
+              "pipeErrors": 1
+            },
+            "afterArchive": {
+              "bytes": 20480,
+              "sha256": "fd43564b9b1c715f21d88bd1e7912fa8b76cd35f61d0c808dead0756f08e9e66",
+              "members": 7
+            },
+            "fullPaxEqual": false,
+            "mismatchedMemberCount": 2,
+            "sentinelUnchanged": true,
+            "noopMetadataExact": null,
+            "sourceUnchanged": true,
+            "hardlinkGraphCorrect": false,
+            "referenceInodeReplaced": false,
+            "passed": false
+          },
+          "hardlink-split": {
+            "sourceArchive": {
+              "bytes": 20480,
+              "sha256": "fd43564b9b1c715f21d88bd1e7912fa8b76cd35f61d0c808dead0756f08e9e66",
+              "members": 7
+            },
+            "beforeArchive": {
+              "bytes": 20480,
+              "sha256": "10074b711b27f585a0721ddefd1d823a9d1b54548a7a484d9bed7fa4e90ae2d0",
+              "members": 7
+            },
+            "sourceRepeatedIdentical": true,
+            "selection": {
+              "isNull": false,
+              "bytes": 32,
+              "members": 4,
+              "directChangedMembers": 2
+            },
+            "initialDirectoryMembersEqual": true,
+            "restore": {
+              "invoked": true,
+              "exitCode": 2,
+              "signal": null,
+              "stderrBytes": 104,
+              "stdoutBytes": 0,
+              "pipeErrors": 1
+            },
+            "afterArchive": {
+              "bytes": 20480,
+              "sha256": "10074b711b27f585a0721ddefd1d823a9d1b54548a7a484d9bed7fa4e90ae2d0",
+              "members": 7
+            },
+            "fullPaxEqual": false,
+            "mismatchedMemberCount": 2,
+            "sentinelUnchanged": true,
+            "noopMetadataExact": null,
+            "sourceUnchanged": true,
+            "hardlinkGraphCorrect": false,
+            "referenceInodeReplaced": false,
+            "passed": false
+          }
+        },
+        "scope": "synthetic aggregate results only",
+        "createOptions": [
+          "--incremental",
+          "--sort=name",
+          "--format=pax",
+          "--pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime",
+          "--numeric-owner",
+          "--acls",
+          "--xattrs",
+          "--xattrs-include=*",
+          "--sparse",
+          "--sparse-version=0.0",
+          "--atime-preserve=system"
+        ],
+        "extractOptions": [
+          "--incremental",
+          "--numeric-owner",
+          "--acls",
+          "--xattrs",
+          "--xattrs-include=*",
+          "--delay-directory-restore",
+          "--no-recursion",
+          "--null",
+          "--verbatim-files-from",
+          "--no-wildcards",
+          "--anchored",
+          "--no-unquote"
+        ],
+        "tarVersion": "tar (GNU tar) 1.35",
+        "completed": true,
+        "allCasesPassed": false,
+        "cleanup": {
+          "syntheticTreeRemoved": true
+        }
+      }
+    },
+    "originalMountNamespaceUnchanged": true,
+    "completed": true,
+    "thaw": {
+      "events": "populated 1\nfrozen 0\n",
+      "membership": "0::/docker/b9d905baa0de75ff99dbc6955af4944fc19c96c0d89a63793042a5562d9ff157",
+      "maintenanceRemoved": true
+    }
+  },
+  "passed": false,
+  "error": "AssertionError [ERR_ASSERTION]: Real GNU tar comparison found a counterexample\n    at file:///Users/guillermo/Work/blobot/.scratch/machines/research/54-archive-selection-fixture.mjs:81:3\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)"
+}

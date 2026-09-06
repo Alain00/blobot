@@ -649,3 +649,19 @@ that the measured image-backed immutable observation does not prevent ordinary
 mutation, while explicitly set upper immutable does. Rewriting also changes
 ancestor-directory representation. Selective restoration is being investigated;
 no unknown-attribute exception or production gate removal is adopted here.
+
+### Held guest and selective archive checkpoint — 2026-09-06
+
+[The production maintenance helper and tree reader](../research/55-production-maintenance-and-tree-reader.md)
+now pass in a real owned RC5 guest, for source and target roles across stop/reopen.
+Each role reads and validates all rootfs/home/Docker members twice with identical
+archives. Source views are read-only, target views address their private trees,
+the host worktree is excluded and disposal leaves writers frozen for VM stop.
+
+[Selective extraction](../research/52-selective-incremental-extraction.md) and
+[the compiled index/selector](../research/54-compiled-selection-against-gnu-tar.md)
+cover changed members, authoritative deletion, ancestor times and hardlink
+relationships. Six synthetic full restorations yield identical PAX archives.
+Empty selections skip tar. Full core is 1,002 passed / 47 skipped; types/build
+pass. Remaining: attributes outside PAX, same-image base comparison, the actual
+three-tree receiver and candidate cutover verification. Keep this ticket claimed.

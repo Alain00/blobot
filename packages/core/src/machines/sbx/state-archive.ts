@@ -1,3 +1,10 @@
+export interface StateArchiveObserver {
+  /** Guest-private data. Called only for a structurally accepted member header. */
+  member(path: Buffer, type: number, link: Buffer, headers: Buffer): void;
+  data(chunk: Buffer): void;
+  end(): void;
+}
+
 /**
  * A bounded structural check for the exact full PAX dialect emitted by the maintenance
  * worker. Run this inside the guest: names and extended attributes are private state.
@@ -5,7 +12,7 @@
  * or a proof that unencoded filesystem attributes were preserved. It emits no member data.
  * Keep the factory self-contained so a guest worker can carry its compiled function source.
  */
-export function createStateArchiveVerifier(): { write(chunk: Buffer): void; finish(): void } {
+export function createStateArchiveVerifier(observer?: StateArchiveObserver): { write(chunk: Buffer): void; finish(): void } {
   const invalid = (): never => { throw new Error('Machine state archive is invalid.'); };
   const maximumMetadata = 1024 * 1024;
   let pending: Buffer = Buffer.alloc(0);
@@ -13,6 +20,9 @@ export function createStateArchiveVerifier(): { write(chunk: Buffer): void; fini
   let padding = 0;
   let metadata: Buffer | undefined;
   let metadataOffset = 0;
+  let extendedHeader: Buffer | undefined;
+  let encodedExtended: Buffer | undefined;
+  let memberActive = false;
   let fields: Map<string, Buffer> | undefined;
   let zeroBlocks = 0;
   let rootSeen = false;
@@ -95,6 +105,7 @@ export function createStateArchiveVerifier(): { write(chunk: Buffer): void; fini
       if (fields !== undefined || size > maximumMetadata || size === 0) invalid();
       metadata = Buffer.alloc(size);
       metadataOffset = 0;
+      if (observer !== undefined) extendedHeader = Buffer.from(bytes);
     } else {
       if (type !== 0 && (type === undefined || type < 48 || type > 54)) invalid();
       const prefix = name(bytes.subarray(345, 500));
@@ -126,6 +137,13 @@ export function createStateArchiveVerifier(): { write(chunk: Buffer): void; fini
         const declared = fields.get('size')!.toString('ascii');
         if (!/^[0-9]+$/.test(declared) || Number(declared) !== size) invalid();
       }
+      if (observer !== undefined) {
+        observer.member(Buffer.from(memberPath, 'latin1'), type === 0 ? 48 : type!, Buffer.from(link),
+          encodedExtended === undefined ? Buffer.from(bytes) : Buffer.concat([encodedExtended, bytes]));
+        encodedExtended = undefined;
+        memberActive = size !== 0;
+        if (!memberActive) observer.end();
+      }
       fields = undefined;
     }
     remaining = size;
@@ -141,9 +159,17 @@ export function createStateArchiveVerifier(): { write(chunk: Buffer): void; fini
           if (remaining > 0) {
             const count = Math.min(remaining, pending.length);
             if (metadata !== undefined) { pending.copy(metadata, metadataOffset, 0, count); metadataOffset += count; }
+            else if (memberActive) observer!.data(pending.subarray(0, count));
             remaining -= count;
             pending = pending.subarray(count);
-            if (remaining === 0 && metadata !== undefined) { fields = pax(metadata); metadata = undefined; }
+            if (remaining === 0 && metadata !== undefined) {
+              fields = pax(metadata);
+              if (extendedHeader !== undefined) {
+                encodedExtended = Buffer.concat([extendedHeader, metadata, Buffer.alloc((512 - metadata.length % 512) % 512)]);
+                extendedHeader = undefined;
+              }
+              metadata = undefined;
+            } else if (remaining === 0 && memberActive) { memberActive = false; observer!.end(); }
           } else if (padding > 0) {
             const count = Math.min(padding, pending.length);
             if (pending.subarray(0, count).some(byte => byte !== 0)) invalid();

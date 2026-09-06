@@ -838,3 +838,18 @@ ancestor changes. Continue the claimed image ticket's restoration work before
 enabling CPU/RAM replacement. Selective GNU tar extraction is under investigation.
 The user reiterated that network filtering is a later effort and asked for a
 simple, organized, understandable and minimal UI consistent with the current site.
+
+## 2026-09-06 — held guest and selective archive checkpoint
+
+The guest protocol was committed as `4f15a22`. The [maintenance helper/tree reader](research/55-production-maintenance-and-tree-reader.md)
+now run in a real held guest, with read-only source views, verified target views,
+host-worktree exclusion and repeated complete archives of all three private trees.
+The [archive index/selector](research/54-compiled-selection-against-gnu-tar.md) also
+passes six actual GNU tar synthetic restorations, including ancestors and hardlinks.
+Full core: 1,002 passed / 47 skipped; core typecheck/build and desktop typecheck pass.
+
+This remains an image-ticket checkpoint. Inode attributes outside PAX, same-image
+base equivalence, the streaming receiver and durable verified cutover are unfinished.
+Source/target role measurements in one box are not a full migration. Existing
+activation/reconfiguration guards remain. Continue the full goal without reopening
+the accepted network or worktree decisions.

@@ -1,0 +1,2190 @@
+{
+  "date": "2026-09-05T23:43:46.893Z",
+  "uuid": "6f9f1fe9-b193-4c65-842f-70475e7a697e",
+  "name": "blobot-selective52-6f9f1fe9-b193-4c65-842f-70475e7a697e",
+  "candidate": "blobot-machine-probe:explicit-docker-20260905",
+  "manifest": "sha256:1cd3184fceaf6d60c0f364c81bdb26f3359bab91efc666cd172fb75c68ed974c",
+  "scope": "synthetic disposable guest only",
+  "commands": [
+    {
+      "label": "daemon-status",
+      "code": 0,
+      "ms": 263.651208
+    },
+    {
+      "label": "version",
+      "code": 0,
+      "ms": 132.53929200000005
+    },
+    {
+      "label": "read-ssh-forwarding",
+      "code": 0,
+      "ms": 123.81245799999999
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 161.40975000000003
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 138.43679199999997
+    },
+    {
+      "label": "load-local-archive",
+      "code": 0,
+      "ms": 1903.603125
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 141.11475000000019
+    },
+    {
+      "label": "create-owned-box",
+      "code": 0,
+      "ms": 2611.1659160000004
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 143.92312499999935
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 122.80762500000037
+    },
+    {
+      "label": "remove-owned-box",
+      "code": 0,
+      "ms": 271.09679100000085
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 149.7714589999996
+    },
+    {
+      "label": "remove-owned-local-alias",
+      "code": 0,
+      "ms": 176.43854199999987
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 121.07416599999851
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 176.77179100000103
+    }
+  ],
+  "diskChecks": [
+    {
+      "label": "before-load",
+      "availableBytes": "20869160960"
+    },
+    {
+      "label": "before-create",
+      "availableBytes": "20869357568"
+    },
+    {
+      "label": "before-probe",
+      "availableBytes": "20851658752"
+    },
+    {
+      "label": "after-probe",
+      "availableBytes": "20850769920"
+    },
+    {
+      "label": "after-cleanup",
+      "availableBytes": "20868022272"
+    }
+  ],
+  "cleanup": {
+    "errors": [],
+    "remainingOwnedBoxes": [],
+    "remainingOwnedImages": [],
+    "tempRemoved": true
+  },
+  "scripts": {
+    "workerSha256": "f216c3d580c81d764edae768bd1d36a48fd951217c52d1959df5c8f25c7fe183",
+    "pythonSha256": "802039294dc98be17abf5aa0b8cf732319a1aa96c677e0dccc25f90045b8a0d2"
+  },
+  "version": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "image": {
+    "id": "1cd3184fceaf",
+    "repository": "docker.io/library/blobot-machine-probe",
+    "tag": "explicit-docker-20260905",
+    "flavor": "shell-docker",
+    "created_at": "2026-09-05T23:43:49Z",
+    "size": 588690428
+  },
+  "kit": {
+    "schemaVersion": "2",
+    "kind": "sandbox",
+    "name": "blobot-synthetic-selective52",
+    "sandbox": {
+      "image": "blobot-machine-probe:explicit-docker-20260905",
+      "entrypoint": [
+        "/usr/bin/node"
+      ],
+      "command": {
+        "default": [
+          "--version"
+        ]
+      }
+    },
+    "security": {
+      "privileged": true
+    },
+    "credentials": [],
+    "permissions": {
+      "network": {
+        "allow": [],
+        "deny": []
+      }
+    },
+    "volumes": [
+      {
+        "path": "/home/agent",
+        "size": "8589934592",
+        "mode": "0700"
+      },
+      {
+        "path": "/var/lib/docker",
+        "size": "21474836480",
+        "mode": "0700"
+      }
+    ]
+  },
+  "box": {
+    "name": "blobot-selective52-6f9f1fe9-b193-4c65-842f-70475e7a697e",
+    "id": "867078bd-b459-4e05-945f-4869fa9a3831",
+    "agent": "blobot-synthetic-selective52",
+    "status": "running",
+    "workspaces": [
+      "/private/tmp/blobot-selective52-WgiZmc/synthetic-worktree"
+    ]
+  },
+  "workerExit": {
+    "code": 0,
+    "stderr": ""
+  },
+  "minimumObservedSpace": "20850806784",
+  "guest": {
+    "kernel": "7.0.12",
+    "arch": "arm64",
+    "bootId": "d76b570b-c05d-4bc4-a485-fd14e0e569cf",
+    "workerPid": 284,
+    "dockerBefore": [
+      {
+        "pid": 106,
+        "comm": "dockerd",
+        "start": "83"
+      },
+      {
+        "pid": 113,
+        "comm": "containerd",
+        "start": "107"
+      }
+    ],
+    "dockerAfter": [],
+    "freeze": {
+      "relative": "/docker/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638",
+      "scope": "/sys/fs/cgroup/docker/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638",
+      "maintenance": "/sys/fs/cgroup/docker/blobot-maintenance52-6f9f1fe9-b193-4c65-842f-70475e7a697e",
+      "events": "populated 1\nfrozen 1\n"
+    },
+    "probe": {
+      "namespace": "mnt:[4026532464]",
+      "rootMount": "72 71 0:29 / / rw,relatime - overlay overlay rw,lowerdir=/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/1:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/2:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/3:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/4:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/5:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/6:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/7:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/8:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/9:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/10:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/11:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/12:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/13:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/14:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/15,upperdir=/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/0/upper,workdir=/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/0/work,uuid=on,nouserxattr",
+      "runMount": "80 72 0:52 / /run rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "viewMounts": [
+        "87 80 0:29 / /run/blobot-control52-6f9f1fe9-b193-4c65-842f-70475e7a697e/root rw,relatime - overlay overlay rw,lowerdir=/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/1:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/2:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/3:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/4:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/5:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/6:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/7:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/8:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/9:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/10:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/11:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/12:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/13:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/14:/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/15,upperdir=/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/0/upper,workdir=/run/bundles/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638/mounts/0/work,uuid=on,nouserxattr"
+      ],
+      "result": {
+        "uuid": "6f9f1fe9-b193-4c65-842f-70475e7a697e",
+        "cases": {
+          "files-only": {
+            "exitCode": 0,
+            "stderr": "",
+            "selection": [
+              "./branch/changed",
+              "./branch/-dash",
+              "./branch/ leading\ttrailing ",
+              "./branch/line\nbreak",
+              "./branch/back\\slash",
+              "./branch/literal[*]?",
+              "./branch/café"
+            ],
+            "extraOptions": [],
+            "checks": {
+              "basicSelectedRestored": true,
+              "unselectedProtectedFilesExact": true,
+              "unselectedBranchFileExact": true,
+              "omittedChangedFileNotExtracted": true,
+              "pristineDirectoryExact": true,
+              "keepDirectoryExact": true,
+              "rootOnlyAbsent": false,
+              "branchOnlyAbsent": false,
+              "unselectedDirectoryExtraAbsent": false,
+              "outsideSentinelExact": true,
+              "allTypeSwapsRestored": false,
+              "selectedChangedDirectoryMetadataRestored": false,
+              "emptySelectionLeavesEverythingExact": false
+            },
+            "before": {
+              ".": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 8,
+                "ino": "1048649",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834563705293",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./branch": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048650",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834563705293",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./keep-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048651",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834563705293",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./pristine": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048652",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834563705293",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./change-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048653",
+                "dev": "29",
+                "mtimeNs": "1700000000123456888",
+                "ctimeNs": "1788651834563705293",
+                "xattrs": {
+                  "user.changed": {
+                    "bytes": 6,
+                    "sha256": "34a04005bcaf206eec990bd9637d9fdb6725e0a0c0d4aebf003f17f4c956eb5c"
+                  }
+                },
+                "flags": 524288
+              },
+              "./keep-dir/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048655",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834563705293",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./pristine/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048656",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834563705293",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./branch/unchanged": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 20,
+                "nlink": 1,
+                "ino": "1048657",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834563705293",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352,
+                "sha256": "ef56271a2c2fb5e7dda8800cacdcb82b37a2494b14e09305fe38bc7580087be7"
+              }
+            },
+            "after": {
+              ".": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 8,
+                "ino": "1048649",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834563705293",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./branch": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048650",
+                "dev": "29",
+                "mtimeNs": "1788651834564464085",
+                "ctimeNs": "1788651834564464085",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./keep-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048651",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834563705293",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./pristine": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048652",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834563705293",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./change-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048653",
+                "dev": "29",
+                "mtimeNs": "1700000000123456888",
+                "ctimeNs": "1788651834563705293",
+                "xattrs": {
+                  "user.changed": {
+                    "bytes": 6,
+                    "sha256": "34a04005bcaf206eec990bd9637d9fdb6725e0a0c0d4aebf003f17f4c956eb5c"
+                  }
+                },
+                "flags": 524288
+              },
+              "./keep-dir/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048655",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834563705293",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./pristine/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048656",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834563705293",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./branch/unchanged": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 20,
+                "nlink": 1,
+                "ino": "1048657",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834563705293",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352,
+                "sha256": "ef56271a2c2fb5e7dda8800cacdcb82b37a2494b14e09305fe38bc7580087be7"
+              }
+            },
+            "changedPaths": [
+              "./branch",
+              "./branch/ leading\ttrailing ",
+              "./branch/-dash",
+              "./branch/back\\slash",
+              "./branch/café",
+              "./branch/changed",
+              "./branch/line\nbreak",
+              "./branch/literal[*]?"
+            ]
+          },
+          "needed-directories": {
+            "exitCode": 0,
+            "stderr": "",
+            "selection": [
+              ".",
+              "./branch",
+              "./change-dir",
+              "./swaps",
+              "./swaps/dir-from-file",
+              "./swaps/dir-from-link",
+              "./branch/changed",
+              "./branch/-dash",
+              "./branch/ leading\ttrailing ",
+              "./branch/line\nbreak",
+              "./branch/back\\slash",
+              "./branch/literal[*]?",
+              "./branch/café",
+              "./change-dir/child",
+              "./swaps/file-from-dir",
+              "./swaps/file-from-link",
+              "./swaps/link-from-dir",
+              "./swaps/link-from-file",
+              "./swaps/dir-from-file/child",
+              "./swaps/dir-from-link/child"
+            ],
+            "extraOptions": [],
+            "checks": {
+              "basicSelectedRestored": true,
+              "unselectedProtectedFilesExact": true,
+              "unselectedBranchFileExact": true,
+              "omittedChangedFileNotExtracted": true,
+              "pristineDirectoryExact": true,
+              "keepDirectoryExact": true,
+              "rootOnlyAbsent": true,
+              "branchOnlyAbsent": true,
+              "unselectedDirectoryExtraAbsent": false,
+              "outsideSentinelExact": true,
+              "allTypeSwapsRestored": true,
+              "selectedChangedDirectoryMetadataRestored": true,
+              "emptySelectionLeavesEverythingExact": false
+            },
+            "before": {
+              ".": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 8,
+                "ino": "1048683",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834565677751",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./branch": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048684",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834565677751",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./keep-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048685",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834565677751",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./pristine": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048686",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834565677751",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./change-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048687",
+                "dev": "29",
+                "mtimeNs": "1700000000123456888",
+                "ctimeNs": "1788651834565677751",
+                "xattrs": {
+                  "user.changed": {
+                    "bytes": 6,
+                    "sha256": "34a04005bcaf206eec990bd9637d9fdb6725e0a0c0d4aebf003f17f4c956eb5c"
+                  }
+                },
+                "flags": 524288
+              },
+              "./keep-dir/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048689",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834565677751",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./pristine/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048690",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834565677751",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./branch/unchanged": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 20,
+                "nlink": 1,
+                "ino": "1048691",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834565677751",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352,
+                "sha256": "ef56271a2c2fb5e7dda8800cacdcb82b37a2494b14e09305fe38bc7580087be7"
+              }
+            },
+            "after": {
+              ".": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 7,
+                "ino": "1048683",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834566459501",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./branch": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048684",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834566459501",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./keep-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048685",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834565677751",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./pristine": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048686",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834565677751",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./change-dir": {
+                "type": "directory",
+                "mode": 16872,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048687",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834566459501",
+                "xattrs": {
+                  "user.changed": {
+                    "bytes": 6,
+                    "sha256": "41cf6794ba4200b839c53531555f0f3998df4cbb01a4d5cb0b94e3ca5e23947d"
+                  }
+                },
+                "flags": 524288
+              },
+              "./keep-dir/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048689",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834565677751",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./pristine/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048690",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834565677751",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./branch/unchanged": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 20,
+                "nlink": 1,
+                "ino": "1048691",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834565677751",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352,
+                "sha256": "ef56271a2c2fb5e7dda8800cacdcb82b37a2494b14e09305fe38bc7580087be7"
+              }
+            },
+            "changedPaths": [
+              ".",
+              "./branch",
+              "./branch/ leading\ttrailing ",
+              "./branch/-dash",
+              "./branch/back\\slash",
+              "./branch/café",
+              "./branch/changed",
+              "./branch/line\nbreak",
+              "./branch/literal[*]?",
+              "./branch/target-only",
+              "./change-dir",
+              "./change-dir/child",
+              "./swaps",
+              "./swaps/dir-from-file",
+              "./swaps/dir-from-file/child",
+              "./swaps/dir-from-link",
+              "./swaps/dir-from-link/child",
+              "./swaps/file-from-dir",
+              "./swaps/file-from-dir/old-child",
+              "./swaps/file-from-link",
+              "./swaps/link-from-dir",
+              "./swaps/link-from-dir/old-child",
+              "./swaps/link-from-file",
+              "./target-only-directory",
+              "./target-only-directory/nested",
+              "./target-only-root"
+            ]
+          },
+          "all-directories": {
+            "exitCode": 0,
+            "stderr": "",
+            "selection": [
+              ".",
+              "./branch",
+              "./change-dir",
+              "./keep-dir",
+              "./pristine",
+              "./swaps",
+              "./swaps/dir-from-file",
+              "./swaps/dir-from-link",
+              "./branch/changed",
+              "./branch/-dash",
+              "./branch/ leading\ttrailing ",
+              "./branch/line\nbreak",
+              "./branch/back\\slash",
+              "./branch/literal[*]?",
+              "./branch/café",
+              "./change-dir/child",
+              "./swaps/file-from-dir",
+              "./swaps/file-from-link",
+              "./swaps/link-from-dir",
+              "./swaps/link-from-file",
+              "./swaps/dir-from-file/child",
+              "./swaps/dir-from-link/child"
+            ],
+            "extraOptions": [],
+            "checks": {
+              "basicSelectedRestored": true,
+              "unselectedProtectedFilesExact": true,
+              "unselectedBranchFileExact": true,
+              "omittedChangedFileNotExtracted": true,
+              "pristineDirectoryExact": false,
+              "keepDirectoryExact": false,
+              "rootOnlyAbsent": true,
+              "branchOnlyAbsent": true,
+              "unselectedDirectoryExtraAbsent": true,
+              "outsideSentinelExact": true,
+              "allTypeSwapsRestored": true,
+              "selectedChangedDirectoryMetadataRestored": true,
+              "emptySelectionLeavesEverythingExact": false
+            },
+            "before": {
+              ".": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 8,
+                "ino": "1048712",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834567809460",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./branch": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048714",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834567809460",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./keep-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048715",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834567809460",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./pristine": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048716",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834567809460",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./change-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048717",
+                "dev": "29",
+                "mtimeNs": "1700000000123456888",
+                "ctimeNs": "1788651834567809460",
+                "xattrs": {
+                  "user.changed": {
+                    "bytes": 6,
+                    "sha256": "34a04005bcaf206eec990bd9637d9fdb6725e0a0c0d4aebf003f17f4c956eb5c"
+                  }
+                },
+                "flags": 524288
+              },
+              "./keep-dir/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048719",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834567809460",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./pristine/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048720",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834567809460",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./branch/unchanged": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 20,
+                "nlink": 1,
+                "ino": "1048721",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834567809460",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352,
+                "sha256": "ef56271a2c2fb5e7dda8800cacdcb82b37a2494b14e09305fe38bc7580087be7"
+              }
+            },
+            "after": {
+              ".": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 7,
+                "ino": "1048712",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834568571751",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./branch": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048714",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834568571751",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./keep-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048715",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834568571751",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./pristine": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048716",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834568571751",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./change-dir": {
+                "type": "directory",
+                "mode": 16872,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048717",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834568571751",
+                "xattrs": {
+                  "user.changed": {
+                    "bytes": 6,
+                    "sha256": "41cf6794ba4200b839c53531555f0f3998df4cbb01a4d5cb0b94e3ca5e23947d"
+                  }
+                },
+                "flags": 524288
+              },
+              "./keep-dir/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048719",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834567809460",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./pristine/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048720",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834567809460",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./branch/unchanged": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 20,
+                "nlink": 1,
+                "ino": "1048721",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834567809460",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352,
+                "sha256": "ef56271a2c2fb5e7dda8800cacdcb82b37a2494b14e09305fe38bc7580087be7"
+              }
+            },
+            "changedPaths": [
+              ".",
+              "./branch",
+              "./branch/ leading\ttrailing ",
+              "./branch/-dash",
+              "./branch/back\\slash",
+              "./branch/café",
+              "./branch/changed",
+              "./branch/line\nbreak",
+              "./branch/literal[*]?",
+              "./branch/target-only",
+              "./change-dir",
+              "./change-dir/child",
+              "./keep-dir",
+              "./keep-dir/target-only-unselected",
+              "./pristine",
+              "./swaps",
+              "./swaps/dir-from-file",
+              "./swaps/dir-from-file/child",
+              "./swaps/dir-from-link",
+              "./swaps/dir-from-link/child",
+              "./swaps/file-from-dir",
+              "./swaps/file-from-dir/old-child",
+              "./swaps/file-from-link",
+              "./swaps/link-from-dir",
+              "./swaps/link-from-dir/old-child",
+              "./swaps/link-from-file",
+              "./target-only-directory",
+              "./target-only-directory/nested",
+              "./target-only-root"
+            ]
+          },
+          "all-directories-no-overwrite-dir": {
+            "exitCode": 0,
+            "stderr": "",
+            "selection": [
+              ".",
+              "./branch",
+              "./change-dir",
+              "./keep-dir",
+              "./pristine",
+              "./swaps",
+              "./swaps/dir-from-file",
+              "./swaps/dir-from-link",
+              "./branch/changed",
+              "./branch/-dash",
+              "./branch/ leading\ttrailing ",
+              "./branch/line\nbreak",
+              "./branch/back\\slash",
+              "./branch/literal[*]?",
+              "./branch/café",
+              "./change-dir/child",
+              "./swaps/file-from-dir",
+              "./swaps/file-from-link",
+              "./swaps/link-from-dir",
+              "./swaps/link-from-file",
+              "./swaps/dir-from-file/child",
+              "./swaps/dir-from-link/child"
+            ],
+            "extraOptions": [
+              "--no-overwrite-dir"
+            ],
+            "checks": {
+              "basicSelectedRestored": true,
+              "unselectedProtectedFilesExact": true,
+              "unselectedBranchFileExact": true,
+              "omittedChangedFileNotExtracted": true,
+              "pristineDirectoryExact": true,
+              "keepDirectoryExact": false,
+              "rootOnlyAbsent": true,
+              "branchOnlyAbsent": true,
+              "unselectedDirectoryExtraAbsent": true,
+              "outsideSentinelExact": true,
+              "allTypeSwapsRestored": true,
+              "selectedChangedDirectoryMetadataRestored": false,
+              "emptySelectionLeavesEverythingExact": false
+            },
+            "before": {
+              ".": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 8,
+                "ino": "1048742",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834569779918",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./branch": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048743",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834569779918",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./keep-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048744",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834569779918",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./pristine": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048745",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834569779918",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./change-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048746",
+                "dev": "29",
+                "mtimeNs": "1700000000123456888",
+                "ctimeNs": "1788651834569779918",
+                "xattrs": {
+                  "user.changed": {
+                    "bytes": 6,
+                    "sha256": "34a04005bcaf206eec990bd9637d9fdb6725e0a0c0d4aebf003f17f4c956eb5c"
+                  }
+                },
+                "flags": 524288
+              },
+              "./keep-dir/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048748",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834569779918",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./pristine/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048749",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834569779918",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./branch/unchanged": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 20,
+                "nlink": 1,
+                "ino": "1048750",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834569779918",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352,
+                "sha256": "ef56271a2c2fb5e7dda8800cacdcb82b37a2494b14e09305fe38bc7580087be7"
+              }
+            },
+            "after": {
+              ".": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 7,
+                "ino": "1048742",
+                "dev": "29",
+                "mtimeNs": "1788651834570402668",
+                "ctimeNs": "1788651834570402668",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./branch": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048743",
+                "dev": "29",
+                "mtimeNs": "1788651834570503960",
+                "ctimeNs": "1788651834570503960",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./keep-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048744",
+                "dev": "29",
+                "mtimeNs": "1788651834570402668",
+                "ctimeNs": "1788651834570402668",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./pristine": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048745",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834569779918",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./change-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048746",
+                "dev": "29",
+                "mtimeNs": "1788651834570503960",
+                "ctimeNs": "1788651834570503960",
+                "xattrs": {
+                  "user.changed": {
+                    "bytes": 6,
+                    "sha256": "34a04005bcaf206eec990bd9637d9fdb6725e0a0c0d4aebf003f17f4c956eb5c"
+                  }
+                },
+                "flags": 524288
+              },
+              "./keep-dir/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048748",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834569779918",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./pristine/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048749",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834569779918",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./branch/unchanged": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 20,
+                "nlink": 1,
+                "ino": "1048750",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834569779918",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352,
+                "sha256": "ef56271a2c2fb5e7dda8800cacdcb82b37a2494b14e09305fe38bc7580087be7"
+              }
+            },
+            "changedPaths": [
+              ".",
+              "./branch",
+              "./branch/ leading\ttrailing ",
+              "./branch/-dash",
+              "./branch/back\\slash",
+              "./branch/café",
+              "./branch/changed",
+              "./branch/line\nbreak",
+              "./branch/literal[*]?",
+              "./branch/target-only",
+              "./change-dir",
+              "./change-dir/child",
+              "./keep-dir",
+              "./keep-dir/target-only-unselected",
+              "./swaps",
+              "./swaps/dir-from-file",
+              "./swaps/dir-from-file/child",
+              "./swaps/dir-from-link",
+              "./swaps/dir-from-link/child",
+              "./swaps/file-from-dir",
+              "./swaps/file-from-dir/old-child",
+              "./swaps/file-from-link",
+              "./swaps/link-from-dir",
+              "./swaps/link-from-dir/old-child",
+              "./swaps/link-from-file",
+              "./target-only-directory",
+              "./target-only-directory/nested",
+              "./target-only-root"
+            ]
+          },
+          "empty-selection": {
+            "exitCode": 2,
+            "stderr": "tar: ./keep-dir/keep: Cannot open: File exists\ntar: ./pristine/keep: Cannot open: File exists\ntar: Exiting with failure status due to previous errors\n",
+            "selection": [],
+            "extraOptions": [],
+            "checks": {
+              "basicSelectedRestored": true,
+              "unselectedProtectedFilesExact": true,
+              "unselectedBranchFileExact": false,
+              "omittedChangedFileNotExtracted": false,
+              "pristineDirectoryExact": false,
+              "keepDirectoryExact": false,
+              "rootOnlyAbsent": true,
+              "branchOnlyAbsent": true,
+              "unselectedDirectoryExtraAbsent": true,
+              "outsideSentinelExact": true,
+              "allTypeSwapsRestored": true,
+              "selectedChangedDirectoryMetadataRestored": true,
+              "emptySelectionLeavesEverythingExact": false
+            },
+            "before": {
+              ".": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 8,
+                "ino": "1048771",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834571692376",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./branch": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048772",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834571692376",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./keep-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048773",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834571692376",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./pristine": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048774",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834571692376",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./change-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048775",
+                "dev": "29",
+                "mtimeNs": "1700000000123456888",
+                "ctimeNs": "1788651834571692376",
+                "xattrs": {
+                  "user.changed": {
+                    "bytes": 6,
+                    "sha256": "34a04005bcaf206eec990bd9637d9fdb6725e0a0c0d4aebf003f17f4c956eb5c"
+                  }
+                },
+                "flags": 524288
+              },
+              "./keep-dir/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048777",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834571692376",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./pristine/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048778",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834571692376",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./branch/unchanged": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 20,
+                "nlink": 1,
+                "ino": "1048779",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834571692376",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352,
+                "sha256": "ef56271a2c2fb5e7dda8800cacdcb82b37a2494b14e09305fe38bc7580087be7"
+              }
+            },
+            "after": {
+              ".": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 7,
+                "ino": "1048771",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834572594085",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./branch": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048772",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834572594085",
+                "xattrs": {},
+                "flags": 524288
+              },
+              "./keep-dir": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048773",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834572594085",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./pristine": {
+                "type": "directory",
+                "mode": 16877,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048774",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834572594085",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524352
+              },
+              "./change-dir": {
+                "type": "directory",
+                "mode": 16872,
+                "uid": 0,
+                "gid": 0,
+                "size": 4096,
+                "nlink": 2,
+                "ino": "1048775",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834572594085",
+                "xattrs": {
+                  "user.changed": {
+                    "bytes": 6,
+                    "sha256": "41cf6794ba4200b839c53531555f0f3998df4cbb01a4d5cb0b94e3ca5e23947d"
+                  }
+                },
+                "flags": 524288
+              },
+              "./keep-dir/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048777",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834571692376",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./pristine/keep": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 26,
+                "nlink": 1,
+                "ino": "1048778",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834571692376",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "619881c21609fb2df426abde70cea6bc7562939a321f6a6d78fffe88df339818"
+                  }
+                },
+                "flags": 524304,
+                "sha256": "a291e7883d0c838a6adf76d9893ee9709f66f519af6ea410dc929569eb1e7e33"
+              },
+              "./branch/unchanged": {
+                "type": "file",
+                "mode": 33188,
+                "uid": 0,
+                "gid": 0,
+                "size": 20,
+                "nlink": 1,
+                "ino": "1048779",
+                "dev": "29",
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788651834572594085",
+                "xattrs": {
+                  "user.binary": {
+                    "bytes": 11,
+                    "sha256": "6e24aea050a8d5f6092b1f23c7b5ac8aa2359d7542597f7bba49f4ba053bcacc"
+                  }
+                },
+                "flags": 524288,
+                "sha256": "ef56271a2c2fb5e7dda8800cacdcb82b37a2494b14e09305fe38bc7580087be7"
+              }
+            },
+            "changedPaths": [
+              ".",
+              "./branch",
+              "./branch/ leading\ttrailing ",
+              "./branch/-dash",
+              "./branch/back\\slash",
+              "./branch/café",
+              "./branch/changed",
+              "./branch/line\nbreak",
+              "./branch/literal[*]?",
+              "./branch/target-only",
+              "./branch/unchanged",
+              "./change-dir",
+              "./change-dir/child",
+              "./keep-dir",
+              "./keep-dir/omitted-change",
+              "./keep-dir/target-only-unselected",
+              "./pristine",
+              "./swaps",
+              "./swaps/dir-from-file",
+              "./swaps/dir-from-file/child",
+              "./swaps/dir-from-link",
+              "./swaps/dir-from-link/child",
+              "./swaps/file-from-dir",
+              "./swaps/file-from-dir/old-child",
+              "./swaps/file-from-link",
+              "./swaps/link-from-dir",
+              "./swaps/link-from-dir/old-child",
+              "./swaps/link-from-file",
+              "./target-only-directory",
+              "./target-only-directory/nested",
+              "./target-only-root"
+            ]
+          }
+        },
+        "createOptions": [
+          "--incremental",
+          "--sort=name",
+          "--format=pax",
+          "--pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime",
+          "--numeric-owner",
+          "--acls",
+          "--xattrs",
+          "--xattrs-include=*",
+          "--sparse",
+          "--sparse-version=0.0",
+          "--atime-preserve=system"
+        ],
+        "extractOptions": [
+          "--incremental",
+          "--numeric-owner",
+          "--acls",
+          "--xattrs",
+          "--xattrs-include=*",
+          "--delay-directory-restore",
+          "--no-recursion",
+          "--null",
+          "--verbatim-files-from",
+          "--no-wildcards",
+          "--anchored",
+          "--no-unquote"
+        ],
+        "largeIntegersEncodedAsStrings": true,
+        "tarVersion": "tar (GNU tar) 1.35",
+        "archive": {
+          "bytes": 51200,
+          "sha256": "9ae43335e0cdbba636aa445506abc102ecbb6c2ba5fe5267a15bf4d551c67112",
+          "repeatIdentical": true,
+          "members": [
+            {
+              "name": ".",
+              "type": "5",
+              "dumpdir": "Dbranch\u0000Dchange-dir\u0000Dkeep-dir\u0000Dpristine\u0000Dswaps\u0000\u0000"
+            },
+            {
+              "name": "./branch",
+              "type": "5",
+              "dumpdir": "Y leading\ttrailing \u0000Y-dash\u0000Yback\\slash\u0000Ycafé\u0000Ychanged\u0000Yline\nbreak\u0000Yliteral[*]?\u0000Yunchanged\u0000\u0000"
+            },
+            {
+              "name": "./change-dir",
+              "type": "5",
+              "dumpdir": "Ychild\u0000\u0000"
+            },
+            {
+              "name": "./keep-dir",
+              "type": "5",
+              "dumpdir": "Ykeep\u0000Yomitted-change\u0000\u0000"
+            },
+            {
+              "name": "./pristine",
+              "type": "5",
+              "dumpdir": "Ykeep\u0000\u0000"
+            },
+            {
+              "name": "./swaps",
+              "type": "5",
+              "dumpdir": "Ddir-from-file\u0000Ddir-from-link\u0000Yfile-from-dir\u0000Yfile-from-link\u0000Ylink-from-dir\u0000Ylink-from-file\u0000\u0000"
+            },
+            {
+              "name": "./swaps/dir-from-file",
+              "type": "5",
+              "dumpdir": "Ychild\u0000\u0000"
+            },
+            {
+              "name": "./swaps/dir-from-link",
+              "type": "5",
+              "dumpdir": "Ychild\u0000\u0000"
+            },
+            {
+              "name": "./branch/ leading\ttrailing ",
+              "type": "0",
+              "dumpdir": null
+            },
+            {
+              "name": "./branch/-dash",
+              "type": "0",
+              "dumpdir": null
+            },
+            {
+              "name": "./branch/back\\slash",
+              "type": "0",
+              "dumpdir": null
+            },
+            {
+              "name": "./branch/café",
+              "type": "0",
+              "dumpdir": null
+            },
+            {
+              "name": "./branch/changed",
+              "type": "0",
+              "dumpdir": null
+            },
+            {
+              "name": "./branch/line\nbreak",
+              "type": "0",
+              "dumpdir": null
+            },
+            {
+              "name": "./branch/literal[*]?",
+              "type": "0",
+              "dumpdir": null
+            },
+            {
+              "name": "./branch/unchanged",
+              "type": "0",
+              "dumpdir": null
+            },
+            {
+              "name": "./change-dir/child",
+              "type": "0",
+              "dumpdir": null
+            },
+            {
+              "name": "./keep-dir/keep",
+              "type": "0",
+              "dumpdir": null
+            },
+            {
+              "name": "./keep-dir/omitted-change",
+              "type": "0",
+              "dumpdir": null
+            },
+            {
+              "name": "./pristine/keep",
+              "type": "0",
+              "dumpdir": null
+            },
+            {
+              "name": "./swaps/file-from-dir",
+              "type": "0",
+              "dumpdir": null
+            },
+            {
+              "name": "./swaps/file-from-link",
+              "type": "0",
+              "dumpdir": null
+            },
+            {
+              "name": "./swaps/link-from-dir",
+              "type": "2",
+              "dumpdir": null
+            },
+            {
+              "name": "./swaps/link-from-file",
+              "type": "2",
+              "dumpdir": null
+            },
+            {
+              "name": "./swaps/dir-from-file/child",
+              "type": "0",
+              "dumpdir": null
+            },
+            {
+              "name": "./swaps/dir-from-link/child",
+              "type": "0",
+              "dumpdir": null
+            }
+          ]
+        },
+        "completed": true,
+        "cleanup": {
+          "syntheticTreeRemoved": true
+        }
+      }
+    },
+    "originalMountNamespaceUnchanged": true,
+    "completed": true,
+    "thaw": {
+      "events": "populated 1\nfrozen 0\n",
+      "membership": "0::/docker/dd385154a9eb2cfcc40e7dfb3d200e535ca8a19390f41caa8bdb272c04d0e638",
+      "maintenanceRemoved": true
+    }
+  },
+  "passed": true
+}

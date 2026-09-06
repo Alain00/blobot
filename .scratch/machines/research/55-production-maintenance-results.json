@@ -1,0 +1,287 @@
+{
+  "date": "2026-09-05T23:52:50.631Z",
+  "uuid": "4b1bec55-7c88-4467-82b5-a0b9cc669d08",
+  "name": "blobot-maintenance55-4b1bec55-7c88-4467-82b5-a0b9cc669d08",
+  "candidate": "blobot-machine-probe:explicit-docker-20260905",
+  "manifest": "sha256:1cd3184fceaf6d60c0f364c81bdb26f3359bab91efc666cd172fb75c68ed974c",
+  "scope": "synthetic disposable guest only",
+  "commands": [
+    {
+      "label": "daemon-status",
+      "code": 0,
+      "ms": 132.121
+    },
+    {
+      "label": "version",
+      "code": 0,
+      "ms": 110.56233399999999
+    },
+    {
+      "label": "read-ssh-forwarding",
+      "code": 0,
+      "ms": 267.933542
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 135.05975
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 141.0419589999999
+    },
+    {
+      "label": "load-local-archive",
+      "code": 0,
+      "ms": 1883.375208
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 243.65483399999994
+    },
+    {
+      "label": "create-owned-box",
+      "code": 0,
+      "ms": 2643.0442080000003
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 128.31012499999997
+    },
+    {
+      "label": "stop-after-source",
+      "code": 0,
+      "ms": 5292.905500000001
+    },
+    {
+      "label": "stop-after-target",
+      "code": 0,
+      "ms": 5453.537040999996
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 272.1302080000023
+    },
+    {
+      "label": "remove-owned-box",
+      "code": 0,
+      "ms": 219.8286669999943
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 151.81762499999604
+    },
+    {
+      "label": "remove-owned-local-alias",
+      "code": 0,
+      "ms": 165.8819999999978
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 131.89379099999496
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 138.6597499999989
+    }
+  ],
+  "diskChecks": [
+    {
+      "label": "before-load",
+      "availableBytes": "20860932096"
+    },
+    {
+      "label": "before-create",
+      "availableBytes": "20860854272"
+    },
+    {
+      "label": "before-probe",
+      "availableBytes": "20857462784"
+    },
+    {
+      "label": "after-source",
+      "availableBytes": "20852547584"
+    },
+    {
+      "label": "after-target",
+      "availableBytes": "20851458048"
+    },
+    {
+      "label": "after-probe",
+      "availableBytes": "20851458048"
+    },
+    {
+      "label": "after-cleanup",
+      "availableBytes": "20869632000"
+    }
+  ],
+  "cleanup": {
+    "errors": [],
+    "remainingOwnedBoxes": [],
+    "remainingOwnedImages": [],
+    "tempRemoved": true
+  },
+  "scripts": {
+    "workerSha256": "e33ebdc676e148971ec571188e9a07e4d28527e0eafacdbe02d2cd20d998d200",
+    "prepareSha256": "a08ffc6ad386bc04aa1fd7920a4115c5cd92f0c122f4dcefe5b217852436c68a"
+  },
+  "version": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "image": {
+    "id": "1cd3184fceaf",
+    "repository": "docker.io/library/blobot-machine-probe",
+    "tag": "explicit-docker-20260905",
+    "flavor": "shell-docker",
+    "created_at": "2026-09-05T23:52:53Z",
+    "size": 588690428
+  },
+  "kit": {
+    "schemaVersion": "2",
+    "kind": "sandbox",
+    "name": "blobot-synthetic-maintenance55",
+    "sandbox": {
+      "image": "blobot-machine-probe:explicit-docker-20260905",
+      "entrypoint": [
+        "/usr/bin/node"
+      ],
+      "command": {
+        "default": [
+          "--version"
+        ]
+      }
+    },
+    "security": {
+      "privileged": true
+    },
+    "credentials": [],
+    "permissions": {
+      "network": {
+        "allow": [],
+        "deny": []
+      }
+    },
+    "volumes": [
+      {
+        "path": "/home/agent",
+        "size": "8589934592",
+        "mode": "0700"
+      },
+      {
+        "path": "/var/lib/docker",
+        "size": "21474836480",
+        "mode": "0700"
+      }
+    ]
+  },
+  "box": {
+    "name": "blobot-maintenance55-4b1bec55-7c88-4467-82b5-a0b9cc669d08",
+    "id": "1eddcd49-c3a6-49b3-93b5-ce1f265f428b",
+    "agent": "blobot-synthetic-maintenance55",
+    "status": "running",
+    "workspaces": [
+      "/private/tmp/blobot-maintenance55-ZU5vyH/synthetic-worktree"
+    ]
+  },
+  "guests": [
+    {
+      "role": "source",
+      "code": 0,
+      "stderr": "",
+      "guest": {
+        "role": "source",
+        "checks": {
+          "preparedAndHeld": true,
+          "rootfsSeesOwnData": true,
+          "rootfsReadOnly": true,
+          "homeSeesOwnData": true,
+          "homeReadOnly": true,
+          "dockerSeesOwnData": true,
+          "dockerReadOnly": true,
+          "hostWorktreeExcluded": true,
+          "viewsRemovedStillFrozen": true
+        },
+        "completed": true,
+        "archives": {
+          "rootfs": {
+            "bytes": 1597634560,
+            "sha256": "6247b245951c90156f2ebecb671992b1e379f19ed546a98a5e2882ebd5d98903",
+            "members": 62730,
+            "repeatedExactly": true
+          },
+          "home": {
+            "bytes": 10240,
+            "sha256": "92fb9a0ca7a208906f31fc37c4789e89ae51c9ca9b61ad06845844caf92a5875",
+            "members": 4,
+            "repeatedExactly": true
+          },
+          "docker": {
+            "bytes": 716800,
+            "sha256": "186635b7517a3c37998af20e0659121ed44578e394702f23c0da02e06561ea68",
+            "members": 45,
+            "repeatedExactly": true
+          }
+        }
+      }
+    },
+    {
+      "role": "target",
+      "code": 0,
+      "stderr": "Sandbox blobot-maintenance55-4b1bec55-7c88-4467-82b5-a0b9cc669d08 started successfully\n",
+      "guest": {
+        "role": "target",
+        "checks": {
+          "preparedAndHeld": true,
+          "rootfsSeesOwnData": true,
+          "rootfsUsesPrivateTree": true,
+          "homeSeesOwnData": true,
+          "homeUsesPrivateTree": true,
+          "dockerSeesOwnData": true,
+          "dockerUsesPrivateTree": true,
+          "hostWorktreeExcluded": true,
+          "viewsRemovedStillFrozen": true
+        },
+        "completed": true,
+        "archives": {
+          "rootfs": {
+            "bytes": 1597634560,
+            "sha256": "8e53731bcd2d45489055f28028325a217d189fbca006e95826cedae51f78b074",
+            "members": 62731,
+            "repeatedExactly": true
+          },
+          "home": {
+            "bytes": 10240,
+            "sha256": "ad270e52def3e25d3bfec8b4843cf6f5312cccdb5479db1d9815784be7397ae1",
+            "members": 5,
+            "repeatedExactly": true
+          },
+          "docker": {
+            "bytes": 716800,
+            "sha256": "630de9598d7090fd05e371c4755c4d5b0bd2dbc312aece8afd4e1fed05a57bbc",
+            "members": 46,
+            "repeatedExactly": true
+          }
+        }
+      }
+    }
+  ],
+  "minimumObservedSpace": "20851101696",
+  "passed": true
+}
