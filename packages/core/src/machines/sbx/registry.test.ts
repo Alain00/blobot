@@ -12,6 +12,17 @@ const record: SbxRecord = { version: 1, agentId: 'alice', kit: { image: 'fixture
 const original: OwnedSbx = { name: 'blobot-original', id: 'original-id', limits: { maxCpus: 2, maxMemoryBytes: 2 * 1024 ** 3 }, baseline: { memoryKiB: 2_000_000, mounts: 'synthetic' } };
 const candidate: OwnedSbx = { ...original, name: 'blobot-candidate', id: 'candidate-id' };
 describe('owned sandbox registry', () => {
+  it('lists retained ownership outside the live roster and keeps unreadable records visible', async () => {
+    const db = await registry();
+    await db.save({ ...record, agentId: 'deleted_agent', retained: [original] });
+    await writeFile(join(db.directory, 'blobot-alice.json'), '{broken');
+    const inventory = await db.inventory();
+    expect(inventory).toEqual([
+      { agentId: 'alice', detail: expect.stringContaining('cannot be verified') },
+      { agentId: 'deleted_agent', record: { ...record, agentId: 'deleted_agent', retained: [original] } },
+    ]);
+    expect((await db.read('deleted_agent'))?.retained).toEqual([original]);
+  });
   it('round-trips ownership and a pending creation without making it active', async () => {
     const db = await registry();
     expect(await db.read('alice')).toBeUndefined();

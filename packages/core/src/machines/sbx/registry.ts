@@ -1,10 +1,10 @@
-import { lstat, mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
+import { lstat, mkdir, open, readFile, readdir, rename, unlink } from 'node:fs/promises';
 import Database from 'better-sqlite3';
 import { join } from 'node:path';
 import type { SbxReference } from './data-transfer.js';
 import type { SbxBoundaryBaseline, SbxMailboxRule, SbxNetworkRule } from './observations.js';
 import { machineLimits, sameMachineLimits, type MachineLimits } from '../resources.js';
-import { sbxNameFor, type SbxKitOptions } from './kit.js';
+import { renderSbxKit, sbxNameFor, type SbxKitOptions } from './kit.js';
 import type { SbxStateReceipt } from './state-transfer.js';
 
 function admitted(value: unknown): value is OwnedSbx {
@@ -51,6 +51,22 @@ export interface SbxRecord {
 export class SbxRegistry {
   readonly #locks = new Set<string>();
   constructor(readonly directory: string) {}
+  /** Includes retained/deleted Agents and unreadable records; an unreadable record proves no ownership. */
+  async inventory(): Promise<readonly { readonly agentId: string; readonly record?: SbxRecord; readonly detail?: string }[]> {
+    const names = await readdir(this.directory).catch((error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') return [];
+      throw new Error('The Machine ownership inventory cannot be read.');
+    });
+    return Promise.all(names.filter(name => /^blobot-[a-z0-9][a-z0-9.-]*\.json$/.test(name)).sort().map(async name => {
+      const agentId = name.slice('blobot-'.length, -'.json'.length).replaceAll('.', '_');
+      try {
+        const record = await this.read(agentId);
+        return record === undefined ? { agentId, detail: 'The Machine ownership record is unavailable.' } : { agentId, record };
+      } catch {
+        return { agentId, detail: 'The Machine ownership record cannot be verified. Existing data was kept.' };
+      }
+    }));
+  }
   /** Called under the lifecycle lock only after every owned engine object was removed. */
   async remove(agentId: string): Promise<void> {
     await unlink(join(this.directory, `${sbxNameFor(agentId)}.json`));
@@ -119,6 +135,21 @@ export class SbxRegistry {
     if (pending !== undefined && (typeof pending !== 'object' || pending === null)) {
       throw new Error('The Machine replacement record is invalid.');
     }
+    try {
+      renderSbxKit(value.kit as SbxKitOptions);
+      if (('active' in value && !admitted(value.active)) || !value.retained.every(admitted)) throw new Error();
+      if (pending !== undefined) {
+        if (!('name' in pending) || typeof pending.name !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9.-]+$/.test(pending.name) ||
+            ('id' in pending && (typeof pending.id !== 'string' || !/^[a-zA-Z0-9-]+$/.test(pending.id))) ||
+            !('limits' in pending)) throw new Error();
+        machineLimits(pending.limits as MachineLimits);
+      }
+      const references = [...('active' in value ? [value.active as OwnedSbx] : []), ...value.retained];
+      const names = references.map(reference => reference.name), ids = references.map(reference => reference.id);
+      if (pending !== undefined && 'name' in pending) names.push(String(pending.name));
+      if (pending !== undefined && 'id' in pending) ids.push(String(pending.id));
+      if (new Set(names).size !== names.length || new Set(ids).size !== ids.length) throw new Error();
+    } catch { throw new Error(pending === undefined ? 'The Machine ownership record is invalid.' : 'The Machine replacement record is invalid.'); }
     if (pending !== undefined && 'phase' in pending) {
       if ((pending.phase !== 'copying' && pending.phase !== 'verifying') || !('candidate' in pending) ||
           !admitted(pending.candidate) || !('limits' in pending) ||

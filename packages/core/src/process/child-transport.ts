@@ -2,22 +2,20 @@ import { type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { accessSync, constants } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
-import type { LineTransport } from './jsonrpc.js';
+import type { MachineTransport } from '../machines/machine.js';
 
 /**
- * A spawned process as a `LineTransport`, and the two questions every adapter asks about a
+ * A spawned process as a `MachineTransport`, and the two questions every adapter asks about a
  * binary before it spawns one.
  *
- * Shared because it is about processes and pipes, not about a provider: both runtimes are a
- * child process speaking newline-delimited JSON-RPC on stdio, and both shut down on stdin
- * EOF. What differs — which binary, which arguments, which environment — stays in the
+ * Shared because it is about processes and pipes, not about a provider: runtimes and guest helpers speak lines on stdio and shut down on stdin EOF. What differs — which binary, which arguments, which environment — stays in the
  * adapter that owns it.
  */
 export function childTransport(
   child: ChildProcessWithoutNullStreams,
   onStderr: ((line: string) => void) | undefined,
   options: { readonly killAfterMs?: number } = {},
-): LineTransport {
+): MachineTransport {
   const killAfterMs = options.killAfterMs ?? 2_000;
   const closeListeners = new Set<(reason: string | undefined) => void>();
   let closedBy: string | undefined;

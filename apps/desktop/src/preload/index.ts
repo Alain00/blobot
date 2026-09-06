@@ -1,3 +1,4 @@
+import { invokeAction } from './invoke.js';
 import { contextBridge, ipcRenderer, webUtils, type IpcRendererEvent } from 'electron';
 import type { AgentEvent, AgentStatus, Message, TranscriberEvent } from '@blobot/core/domain';
 import type {
@@ -55,21 +56,23 @@ import type {
  * renderer that will eventually filter on `runtime_id`.
  */
 const api: BlobotApi = {
-  engineSetup: () => ipcRenderer.invoke('blobot:engineSetup') as Promise<EngineSetupView>,
-  startEngineSetup: (kind) => ipcRenderer.invoke('blobot:startEngineSetup', kind) as Promise<string>,
-  cancelEngineSetup: (id) => ipcRenderer.invoke('blobot:cancelEngineSetup', id) as Promise<void>,
-  agentMachine: (teamId, agentId) => ipcRenderer.invoke('blobot:agentMachine', teamId, agentId) as Promise<UiAgentMachine>,
-  startMachineLogin: (teamId, agentId, method) => ipcRenderer.invoke('blobot:startMachineLogin', teamId, agentId, method) as Promise<string>,
-  openMachineLogin: (teamId, agentId, id) => ipcRenderer.invoke('blobot:openMachineLogin', teamId, agentId, id) as Promise<void>,
-  answerMachineLogin: (teamId, agentId, id, value) => ipcRenderer.invoke('blobot:answerMachineLogin', teamId, agentId, id, value) as Promise<void>,
-  cancelMachineLogin: (teamId, agentId, id) => ipcRenderer.invoke('blobot:cancelMachineLogin', teamId, agentId, id) as Promise<void>,
-  retryMachine: (teamId, agentId) => ipcRenderer.invoke('blobot:retryMachine', teamId, agentId) as Promise<void>,
+  engineSetup: () => invokeAction(() => ipcRenderer.invoke('blobot:engineSetup')) as Promise<EngineSetupView>,
+  startEngineSetup: (kind) => invokeAction(() => ipcRenderer.invoke('blobot:startEngineSetup', kind)) as Promise<string>,
+  cancelEngineSetup: (id) => invokeAction(() => ipcRenderer.invoke('blobot:cancelEngineSetup', id)) as Promise<void>,
+  removeRetainedMachine: (agentId) => invokeAction(() => ipcRenderer.invoke('blobot:removeRetainedMachine', agentId)) as Promise<void>,
+  agentMachine: (teamId, agentId) => invokeAction(() => ipcRenderer.invoke('blobot:agentMachine', teamId, agentId)) as Promise<UiAgentMachine>,
+  startMachineLogin: (teamId, agentId, method) => invokeAction(() => ipcRenderer.invoke('blobot:startMachineLogin', teamId, agentId, method)) as Promise<string>,
+  openMachineLogin: (teamId, agentId, id) => invokeAction(() => ipcRenderer.invoke('blobot:openMachineLogin', teamId, agentId, id)) as Promise<void>,
+  answerMachineLogin: (teamId, agentId, id, value) => invokeAction(() => ipcRenderer.invoke('blobot:answerMachineLogin', teamId, agentId, id, value)) as Promise<void>,
+  cancelMachineLogin: (teamId, agentId, id) => invokeAction(() => ipcRenderer.invoke('blobot:cancelMachineLogin', teamId, agentId, id)) as Promise<void>,
+  retryMachine: (teamId, agentId) => invokeAction(() => ipcRenderer.invoke('blobot:retryMachine', teamId, agentId)) as Promise<void>,
+  cancelMachineStart: (teamId, agentId) => invokeAction(() => ipcRenderer.invoke('blobot:cancelMachineStart', teamId, agentId)) as Promise<void>,
   onMachines: (listener) => {
     ipcRenderer.on('blobot:machines', listener);
     return () => { ipcRenderer.removeListener('blobot:machines', listener); };
   },
-  machineIdleAfterMs: () => ipcRenderer.invoke('blobot:machineIdleAfterMs') as Promise<number>,
-  setMachineIdleAfterMs: (value) => ipcRenderer.invoke('blobot:setMachineIdleAfterMs', value) as Promise<number>,
+  machineIdleAfterMs: () => invokeAction(() => ipcRenderer.invoke('blobot:machineIdleAfterMs')) as Promise<number>,
+  setMachineIdleAfterMs: (value) => invokeAction(() => ipcRenderer.invoke('blobot:setMachineIdleAfterMs', value)) as Promise<number>,
   snapshot: () => ipcRenderer.invoke('blobot:snapshot') as Promise<UiSnapshot>,
   earlier: (teamId: string, before: number) =>
     ipcRenderer.invoke('blobot:earlier', teamId, before) as Promise<UiEarlier | undefined>,

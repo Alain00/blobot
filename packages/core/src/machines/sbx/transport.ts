@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { posix } from 'node:path';
-import { childTransport } from '../../adapters/acp/child-transport.js';
+import { childTransport } from '../../process/child-transport.js';
 import type { MachineConfigPatch, MachineSpawnRequest, MachineTransport } from '../machine.js';
 import { SBX_BOOTSTRAP_SOURCE } from './bootstrap.js';
 import { sbxClientEnvironment } from './client-environment.js';

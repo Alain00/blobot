@@ -11,6 +11,7 @@ describe('native policy independent of approvals', () => {
       failIfUnavailable: true,
       autoAllowBashIfSandboxed: false,
       allowUnsandboxedCommands: false,
+      network: { allowLocalBinding: true },
     });
   });
 
@@ -28,6 +29,7 @@ describe('native policy independent of approvals', () => {
         });
         const runtime = new ClaudeAgentRuntime({
           agentId: 'alice', cwd: '/tmp', trust, spawn: () => bridge,
+          gitDirectories: ['/source/one/.git', '/source/two/.git'],
           mcpServers: [{ type: 'http', name: 'blobot', url: 'http://127.0.0.1:1/' }],
           ...(route === 'new' ? {} : { resumeSessionId: 'yesterday' }),
         });
@@ -44,7 +46,7 @@ describe('native policy independent of approvals', () => {
                 sandbox: unknown; settingSources: string[]; allowedTools: string[];
               } } };
             })._meta.claudeCode.options;
-            expect(options.sandbox).toEqual(claudeSandboxFor('local'));
+            expect(options.sandbox).toEqual(claudeSandboxFor('local', ['/source/one/.git', '/source/two/.git']));
             expect(options.settingSources).toEqual(['user', 'project', 'local']);
             expect(options.allowedTools).toEqual([...vouchedTools(trust), 'mcp__blobot']);
           }

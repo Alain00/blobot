@@ -1,14 +1,25 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  LocalMachine, OwnedSbxMachine, SbxEngine, SbxImageStore, SbxRegistry, SBX_INITIAL_STORAGE, SBX_INSTALL_VERSION,
+  LocalMachine, OwnedSbxMachine, SbxEngine, SbxImageStore, SbxRegistry, SBX_INITIAL_STORAGE, SBX_INSTALL_VERSION, DEFAULT_MACHINE_LIMITS,
   boxWorkspaceMounts, machinePlacement, runtimeImageBuild, sbxCommandRunner,
+  sbxKitMismatch,
   type AgentRecord, type Machine, type MachineDetection, type MachineLocation, type MachineReadiness,
   type MachineSpawnRequest, type MachineStartRequest, type MachineTransport, type SbxPtyRunner,
   type SleepingRuntime, type Team,
   type RuntimeImageBuild,
 } from '@blobot/core';
 import { imageFor } from './runtime-for.js';
+import type { SetupProgress } from '../shared/machines.js';
+
+interface ImageRequest {
+  build: RuntimeImageBuild;
+  abort: AbortController;
+  task: Promise<void>;
+  waiters: number;
+  progress: Set<(received: number, total?: number) => void>;
+  last?: { received: number; total?: number };
+}
 
 /** The shared engine/image service owns no credentials and no global defaults. */
 export class DesktopMachines {
@@ -16,7 +27,8 @@ export class DesktopMachines {
   readonly #imageStores = new Map<string, SbxImageStore>();
   readonly #abort = new AbortController();
   readonly #downloads = new Set<Promise<void>>();
-  constructor(readonly directory: string, readonly previewEnabled = process.env['BLOBOT_MACHINES_PREVIEW'] === '1') {
+  readonly #imageRequests = new Map<string, ImageRequest>();
+  constructor(readonly directory: string, readonly previewEnabled = process.env['BLOBOT_MACHINES_PREVIEW'] === '1', readonly changed: () => void = () => {}) {
     this.registry = new SbxRegistry(join(directory, 'agents'));
   }
 
@@ -35,18 +47,40 @@ export class DesktopMachines {
     return images;
   }
 
-  async installImage(build: RuntimeImageBuild, signal?: AbortSignal): Promise<void> {
+  async installImage(build: RuntimeImageBuild, signal?: AbortSignal, onProgress?: (received: number, total?: number) => void): Promise<void> {
     signal?.throwIfAborted();
-    const task = this.images().install(build, { signal: this.#abort.signal });
-    this.#downloads.add(task);
-    const settled = task.finally(() => this.#downloads.delete(task));
-    if (signal === undefined) return settled;
-    // Cancelling one Agent releases only its wait. Other Agents may need this same image.
+    this.#abort.signal.throwIfAborted();
+    let request = this.#imageRequests.get(build.reference);
+    if (request?.abort.signal.aborted) {
+      await request.task.catch(() => {});
+      return this.installImage(build, signal, onProgress);
+    }
+    if (request !== undefined && (request.build.sha256 !== build.sha256 || request.build.imageId !== build.imageId ||
+        request.build.bytes !== build.bytes || request.build.arch !== build.arch)) throw new Error('Sandbox software pins disagree.');
+    if (request === undefined) {
+      const entry: ImageRequest = { build, abort: new AbortController(), task: Promise.resolve(), waiters: 0, progress: new Set() };
+      entry.task = this.images().install(build, { signal: AbortSignal.any([this.#abort.signal, entry.abort.signal]),
+        onProgress: (received, total) => {
+          entry.last = { received, ...(total === undefined ? {} : { total }) };
+          for (const listener of entry.progress) listener(received, total);
+        },
+      }).finally(() => { this.#imageRequests.delete(build.reference); this.#downloads.delete(entry.task); });
+      this.#downloads.add(entry.task);
+      this.#imageRequests.set(build.reference, entry);
+      request = entry;
+    }
+    const entry = request;
+    entry.waiters += 1;
+    if (onProgress !== undefined) { entry.progress.add(onProgress); if (entry.last) onProgress(entry.last.received, entry.last.total); }
+    // Only the final departing Agent cancels the shared transfer; peers keep their progress.
     return new Promise<void>((resolve, reject) => {
-      const abort = () => reject(signal.reason);
-      signal.addEventListener('abort', abort, { once: true });
-      settled.then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
-      if (signal.aborted) abort();
+      const abort = () => reject(signal?.reason);
+      signal?.addEventListener('abort', abort, { once: true });
+      entry.task.then(resolve, reject).finally(() => signal?.removeEventListener('abort', abort));
+      if (signal?.aborted) abort();
+    }).finally(() => {
+      if (onProgress) entry.progress.delete(onProgress);
+      if (--entry.waiters === 0) entry.abort.abort();
     });
   }
   async close(): Promise<void> {
@@ -62,7 +96,10 @@ export class DesktopMachines {
   }
 
   forTeam(records: readonly AgentRecord[], team: Team): ReadonlyMap<string, Machine> {
-    return new Map(records.map((record) => [record.id, this.forAgent(record, team)]));
+    // Cleanup must remain available for corrupt placement rows. The wrapper's start still
+    // validates the choice; stop/destroy consult only the separately verified ownership journal.
+    return new Map(records.map((record) => [record.id, record.machine?.kind === 'invalid'
+      ? new DesktopBoxMachine(this, record, team) : this.forAgent(record, team)]));
   }
 }
 
@@ -72,7 +109,15 @@ export class DesktopBoxMachine implements Machine {
   readonly mailboxHostname = 'host.docker.internal';
   #owned: OwnedSbxMachine | undefined;
   #detection: MachineDetection | undefined;
+  #preparation: SetupProgress | undefined;
+  #storage: { readonly homeBytes: number; readonly softwareBytes: number } | undefined;
   constructor(readonly services: DesktopMachines, readonly record: AgentRecord, readonly team: Team) {}
+
+  get runtimeAccess() {
+    return { lastDetection: this.#detection, check: () => this.checkRuntime(), beforeStart: () => this.beforeRuntimeStart() };
+  }
+  get preparation(): SetupProgress | undefined { return this.#preparation; }
+  get storage() { return this.#storage; }
 
   location(): MachineLocation {
     return this.#owned?.location() ?? { kind: 'box', agentId: this.record.id, workspacePath: this.record.workspacePath,
@@ -85,9 +130,12 @@ export class DesktopBoxMachine implements Machine {
     return (await this.#prepare(false))!.reconcile();
   }
   async start(request: MachineStartRequest): Promise<MachineLocation> {
+    if (machinePlacement(this.record.machine).kind !== 'box') throw new Error('This agent has no sandbox.');
     if (!this.services.previewEnabled) throw new Error('Sandboxes are awaiting release validation. This build has sandbox preview disabled.');
     request.signal?.throwIfAborted();
-    const ready = await this.services.engine().start();
+    const status = await this.services.engine(request.signal).readiness();
+    if (status.state === 'not_installed') throw new Error('Sandboxes need to be set up. Open Settings → Machines.');
+    const ready = await this.services.engine(request.signal).start();
     request.signal?.throwIfAborted();
     if (ready.state !== 'ready') throw new Error(ready.detail);
     const owned = (await this.#prepare(true, request.signal))!;
@@ -132,33 +180,55 @@ export class DesktopBoxMachine implements Machine {
   async #prepare(forWork: boolean, signal?: AbortSignal): Promise<OwnedSbxMachine | undefined> {
     signal?.throwIfAborted();
     if (this.#owned !== undefined) return this.#owned;
+    const stored = await this.services.registry.read(this.record.id);
+    if (!forWork) {
+      if (stored === undefined) return undefined;
+      return new OwnedSbxMachine({ agentId: this.record.id, registry: this.services.registry, kit: stored.kit,
+        limits: stored.active?.limits ?? stored.pending?.limits ?? stored.retained[0]?.limits ?? DEFAULT_MACHINE_LIMITS,
+        sbxExecutable: this.services.executable, transport: { moduleRoot: '/', allowedEnvironment: [] } });
+    }
     const placement = machinePlacement(this.record.machine);
     if (placement.kind !== 'box') throw new Error('This agent has no sandbox.');
-    const stored = await this.services.registry.read(this.record.id);
-    if (!forWork && stored === undefined) return undefined;
     const image = imageFor(this.record.runtimeId);
     if (image === undefined) throw new Error('No sandbox software is available for this runtime.');
     const build = runtimeImageBuild(image, process.arch);
     if (build === undefined || (process.platform !== 'darwin' && process.platform !== 'linux')) {
       throw new Error('Sandbox software is not available for this computer.');
     }
-    // Retain the recorded configuration for cleanup, even if the original folder has moved.
-    // A work start derives/validates the current worktree instead of retargeting a saved mount.
-    const kit = !forWork && stored !== undefined ? stored.kit : {
+    // Work validates the current worktree without retargeting a saved skills mount.
+    const kit = {
       image: build.reference, guestNode: image.guestNode, dataBytes: SBX_INITIAL_STORAGE.homeBytes,
       dockerBytes: SBX_INITIAL_STORAGE.dockerBytes, sharedSkillLocations: image.sharedSkillLocations,
-      workspace: await boxWorkspaceMounts(this.team.workspaceKind, {
+      workspace: { ...await boxWorkspaceMounts(this.team.workspaceKind, {
         workspacePath: this.team.workspacePath, teamName: this.team.name,
         agentId: this.record.id, agentName: this.record.name,
         ...(this.team.workspaceRepos === undefined ? {} : { repos: this.team.workspaceRepos }),
-      }, { agentId: this.record.id, path: this.record.workspacePath }),
+      }, { agentId: this.record.id, path: this.record.workspacePath }, stored === undefined ? 'operator' : 'none'),
+      ...(stored?.kit.workspace?.sharedSkillsPath === undefined ? {} : { sharedSkillsPath: stored.kit.workspace.sharedSkillsPath }) },
     };
+    this.#storage = { homeBytes: kit.dataBytes, softwareBytes: kit.dockerBytes ?? SBX_INITIAL_STORAGE.dockerBytes };
     if (forWork) {
+      if (stored !== undefined) {
+        const mismatch = sbxKitMismatch(stored.kit, kit);
+        if (mismatch !== undefined) throw new Error(mismatch);
+      }
       if (stored?.active !== undefined && (stored.active.limits.maxCpus !== placement.limits.maxCpus ||
           stored.active.limits.maxMemoryBytes !== placement.limits.maxMemoryBytes)) {
         throw new Error('The saved resource limits do not match this sandbox. Its data was kept.');
       }
-      await this.services.installImage(build, signal);
+      let lastProgressAt = 0;
+      try {
+        this.#preparation = { id: this.record.id, phase: 'starting', detail: 'Preparing this agent’s sandbox software…' };
+        this.services.changed();
+        await this.services.installImage(build, signal, (received, total) => {
+          const now = Date.now();
+          if (now - lastProgressAt < 1000 && received !== total) return;
+          lastProgressAt = now;
+          this.#preparation = { id: this.record.id, phase: 'downloading', detail: 'Downloading sandbox software…', received,
+            ...(total === undefined ? {} : { total }) };
+          this.services.changed();
+        });
+      } finally { this.#preparation = undefined; this.services.changed(); }
       // The shared download may be used by peers; cancellation never aborts their install.
       signal?.throwIfAborted();
     }

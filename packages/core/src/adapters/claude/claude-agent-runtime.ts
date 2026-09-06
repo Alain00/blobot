@@ -164,6 +164,8 @@ export interface ClaudeAgentRuntimeOptions {
   readonly agentId: string;
   /** The agent's own worktree. One process, one workspace. */
   readonly cwd: string;
+  /** Host-derived Git metadata for this Agent’s linked worktrees. */
+  readonly gitDirectories?: readonly string[];
   /** Composed by core (`composePersona`); injected here by the mechanism Claude offers. */
   readonly persona?: string;
   /**
@@ -395,7 +397,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
             disallowedTools: [...SHADOWING_TOOLS, ...refusedTools(this.trust)],
             settingSources: SETTING_SCOPES,
             allowedTools: preApprovedTools(this.#options.mcpServers ?? [], this.trust),
-            sandbox: claudeSandboxFor(this.#options.machine?.kind ?? 'local'),
+            sandbox: claudeSandboxFor(this.#options.machine?.kind ?? 'local', this.#options.gitDirectories),
           },
         },
       },

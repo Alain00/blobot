@@ -450,6 +450,7 @@ export { WorkspaceError };
 export interface AgentRemoval {
   readonly agentName: string;
   readonly work: 'discarded' | 'kept' | 'unknown';
+  readonly state?: 'discarded' | 'unknown';
   /** Present whenever there is something the user has to know or do. */
   readonly detail?: string;
 }
@@ -956,7 +957,7 @@ export async function deleteTeam(
   const records = deps.store.agentsOfTeam(team.id);
   const clean = options.clean === true;
   const usage = clean ? await measureTeam(teamId, deps) : undefined;
-  if (usage?.bytes === null) throw new Error('The size is unavailable. Delete the team without full clean, or try measuring again.');
+  if (usage?.workBytes === null) throw new Error('The working-folder size is unavailable. Delete the team without full clean, or try measuring again.');
 
   const removals: AgentRemoval[] = [];
   let freedBytes = 0;
@@ -965,7 +966,11 @@ export async function deleteTeam(
     // a number reported after the fact would have to be the estimate rather than the result.
     const removal = await removeWorkspaceOf(record, team, workspaces, clean, deps.machines?.get(record.id));
     removals.push(removal);
-    if (clean && removal.work === 'discarded') freedBytes += usage?.agents.find((agent) => agent.agentName === record.name)?.bytes ?? 0;
+    if (clean) {
+      const measured = usage?.agents.find((agent) => agent.agentName === record.name);
+      if (removal.work === 'discarded') freedBytes += measured?.workBytes ?? 0;
+      if (removal.state === 'discarded') freedBytes += measured?.stateBytes ?? 0;
+    }
     // The one case where a Routine's record is not kept. Everywhere else a Routine that cannot
     // run is disarmed and left saying who it belonged to; here it would be a pointer to nothing.
     for (const routine of deps.store.routinesOfAgent(record.id)) {
@@ -1025,6 +1030,9 @@ export async function editTeamRoster(
     throw new TeamCreationError('duplicate_agent', 'Two of those agents would share one branch name.');
   }
 
+  // Validate every saved/overridden choice before any workspace or membership is created.
+  for (const profile of joining) placements.set(profile.id, placements.get(profile.id) ?? machinePlacement(team.defaultMachine));
+
   // Provisioning first: an agent whose workspace cannot be made must not leave the team
   // half-edited, with somebody already removed for them.
   const workspaces = deps.workspaces ?? workspaceProviderFor(team.workspaceKind);
@@ -1039,7 +1047,7 @@ export async function editTeamRoster(
     });
     deps.store.createAgent({
       id,
-      machine: placements.get(profile.id) ?? machinePlacement(team.defaultMachine),
+      machine: placements.get(profile.id)!,
       teamId: team.id,
       profileId: profile.id,
       name: profile.name,
@@ -1120,24 +1128,28 @@ async function removeWorkspaceOf(
     agentName: record.name,
     ...(team.workspaceRepos === undefined ? {} : { repos: team.workspaceRepos }),
   };
-  try {
-    await machine?.stop();
-    const outcome = clean
-      ? await workspaces.purge(request)
-      : await workspaces.remove(request);
-    await machine?.destroy();
-    return {
-      agentName: record.name,
-      work: outcome.work,
-      ...(outcome.work === 'kept' ? { detail: outcome.detail } : {}),
-    };
-  } catch (error) {
-    // The folder is gone, or git will not answer for it. Saying so is the whole job: whatever
-    // is left is somewhere the user can find it, and blobot is about to stop pointing at it.
-    return {
-      agentName: record.name,
-      work: 'unknown',
-      detail: error instanceof Error ? error.message : String(error),
-    };
+  const details: string[] = [];
+  let stopped = machine === undefined;
+  try { await machine?.stop(); stopped = true; }
+  catch { details.push('The sandbox could not be stopped.'); }
+  let work: AgentRemoval['work'] = 'unknown';
+  // Never touch a working folder while its runtime might still be using it.
+  if (stopped) {
+    try {
+      const outcome = clean ? await workspaces.purge(request) : await workspaces.remove(request);
+      work = outcome.work;
+      if (outcome.work === 'kept') details.push(outcome.detail);
+    } catch (error) { details.push(error instanceof Error ? error.message : String(error)); }
+  } else details.push('Its working folder was kept because execution may still be running.');
+  let state: AgentRemoval['state'];
+  if (machine !== undefined) {
+    // Private state is independent of a missing or unremovable working folder.
+    try { await machine.destroy(); state = 'discarded'; }
+    catch (error) {
+      state = 'unknown';
+      details.push(`Private sandbox state could not be removed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
+  return { agentName: record.name, work, ...(state === undefined ? {} : { state }),
+    ...(details.length === 0 ? {} : { detail: details.join(' ') }) };
 }

@@ -1,4 +1,8 @@
 import { createServer } from 'node:net';
+import { Server } from 'node:http';
+import { afterEach } from 'vitest';
+
+afterEach(() => vi.restoreAllMocks());
 import { expect, it, vi } from 'vitest';
 import { LocalMachine } from '../machines/local-machine.js';
 import type { MachineSpawnRequest } from '../machines/machine.js';
@@ -48,4 +52,37 @@ it('relays one admitted callback to one Machine using stdin, then closes both lo
     expect(spawn).toHaveBeenCalledTimes(1);
   } finally { await close(); }
   await expect(fetch(`http://localhost:${port}/auth/callback`)).rejects.toThrow();
+});
+
+it.each(['EAFNOSUPPORT', 'EPROTONOSUPPORT', 'EADDRNOTAVAIL'])('keeps IPv4 callbacks when IPv6 is unavailable (%s)', async (code) => {
+  const reserve = createServer();
+  await new Promise<void>((resolve) => reserve.listen(0, '127.0.0.1', resolve));
+  const address = reserve.address();
+  if (address === null || typeof address === 'string') throw new Error('No test port');
+  await new Promise<void>((resolve) => reserve.close(() => resolve()));
+  const listen = Server.prototype.listen;
+  vi.spyOn(Server.prototype, 'listen').mockImplementation(function (this: Server, ...args) {
+    if (args.includes('::1')) {
+      queueMicrotask(() => this.emit('error', Object.assign(new Error('IPv6 unavailable'), { code })));
+      return this;
+    }
+    return listen.apply(this, args);
+  });
+  const machine = new LocalMachine({ agentId: 'callback-fixture', workspacePath: '/tmp' });
+  const close = await openLoginCallbackRelay(machine, '/guest/node', { port: address.port, path: '/auth/callback', state: 'a'.repeat(43) });
+  try { expect((await fetch(`http://127.0.0.1:${address.port}/auth/callback`)).status).toBe(400); }
+  finally { await close(); }
+});
+
+it('refuses an occupied IPv6 callback port and closes its IPv4 listener', async () => {
+  const reserve = createServer();
+  await new Promise<void>((resolve) => reserve.listen(0, '::1', resolve));
+  const address = reserve.address();
+  if (address === null || typeof address === 'string') throw new Error('No test port');
+  try {
+    const machine = new LocalMachine({ agentId: 'callback-fixture', workspacePath: '/tmp' });
+    await expect(openLoginCallbackRelay(machine, '/guest/node', { port: address.port, path: '/auth/callback', state: 'a'.repeat(43) }))
+      .rejects.toThrow('port is in use');
+    await expect(fetch(`http://127.0.0.1:${address.port}/auth/callback`)).rejects.toThrow();
+  } finally { await new Promise<void>((resolve) => reserve.close(() => resolve())); }
 });

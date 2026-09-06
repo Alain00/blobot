@@ -29,13 +29,13 @@ export interface RunningTeam {
 /**
  * Whether anyone on the team is mid-turn.
  *
- * Derived from the status fold rather than tracked separately, so it cannot disagree with the
- * blobatar the user is looking at. `failed` counts as quiet: a dead agent is not doing work
+ * Includes work reserved before provider admission, which is not yet a visible turn. `failed` counts as quiet: a dead agent is not doing work
  * that evicting the team would throw away.
  */
-export function isWorking(live: RunningTeam): boolean {
+export function isWorking(live: Pick<RunningTeam, 'agents' | 'executions' | 'orchestrator'>): boolean {
   return live.agents.some((agent) => {
-    if (live.executions?.get(agent.id)?.lifecycle === 'starting') return true;
+    const execution = live.executions?.get(agent.id);
+    if (execution?.lifecycle === 'starting' || execution?.power === 'waking' || live.orchestrator.isBusy(agent.id)) return true;
     const status = live.orchestrator.statusOf(agent.id);
     return status !== 'idle' && status !== 'failed';
   });

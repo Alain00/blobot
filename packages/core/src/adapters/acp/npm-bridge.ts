@@ -2,7 +2,7 @@ import { LocalMachine } from '../../machines/local-machine.js';
 import type { Machine } from '../../machines/machine.js';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
-import { isExecutable, searchPath } from './child-transport.js';
+import { isExecutable, searchPath } from '../../process/child-transport.js';
 import type { LineTransport } from './jsonrpc.js';
 
 /**

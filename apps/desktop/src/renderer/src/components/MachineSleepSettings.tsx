@@ -5,10 +5,11 @@ export function MachineSleepSettings(): React.JSX.Element {
   const [saved, setSaved] = useState<number>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
+  const [repairing, setRepairing] = useState(false);
   useEffect(() => {
     let mounted = true;
-    void window.blobot.machineIdleAfterMs().then((value) => {
-      if (mounted) { setSaved(value); setHours(String(value / 3_600_000)); }
+    void Promise.all([window.blobot.machineIdleAfterMs(), window.blobot.engineSetup()]).then(([value, setup]) => {
+      if (mounted) { setSaved(value); setHours(setup?.sleepError ? '' : String(value / 3_600_000)); setError(setup?.sleepError); setRepairing(setup?.sleepError !== undefined); }
     }).catch(() => { if (mounted) setError('Sleep settings could not be loaded.'); });
     return () => { mounted = false; };
   }, []);
@@ -18,7 +19,7 @@ export function MachineSleepSettings(): React.JSX.Element {
     event.preventDefault();
     if (!valid || busy) return;
     setBusy(true); setError(undefined);
-    void window.blobot.setMachineIdleAfterMs(duration).then(setSaved)
+    void window.blobot.setMachineIdleAfterMs(duration).then((value) => { setSaved(value); setRepairing(false); })
       .catch(() => setError('Sleep settings could not be saved.'))
       .finally(() => setBusy(false));
   }}>
@@ -29,7 +30,7 @@ export function MachineSleepSettings(): React.JSX.Element {
         onChange={(event) => setHours(event.target.value)} />
     </label>
     <p className="muted">Use 0 to keep agents awake. On this computer, sleep stops the agent process, not your computer.</p>
-    <button type="submit" className="btn" disabled={!valid || busy || saved === undefined || saved === duration}>
+    <button type="submit" className="btn" disabled={!valid || busy || saved === undefined || (!repairing && saved === duration)}>
       {busy ? 'saving…' : 'save'}
     </button>
     {error !== undefined && <p role="alert">{error}</p>}

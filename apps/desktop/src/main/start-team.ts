@@ -1,6 +1,7 @@
 import {
   workspaceProviderFor,
   machineFor,
+  machinePlacement,
   SleepingRuntime,
   Orchestrator,
   PeerMessageServer,
@@ -22,6 +23,7 @@ import { FileHandoffArchive } from './handoff-archive.js';
 import { runtimeLabel } from './runtime-labels.js';
 import { runtimeFor } from './runtime-for.js';
 import { resolveCeiling } from './context-ceilings.js';
+import { workspaceGitDirectories } from './workspace-git-directories.js';
 
 export interface StartTeamOptions {
   readonly team: Team;
@@ -39,8 +41,10 @@ export interface StartTeamOptions {
   readonly idleAfterMs?: number;
   readonly canSleep?: () => boolean;
   readonly onMachinePowerChange?: () => void;
+  /** Makes cancellable startup services available before any slow Machine begins waking. */
+  readonly onStarting?: (live: RunningTeam) => void;
   readonly createMachine?: (record: AgentRecord) => Machine;
-  readonly beforeRuntimeStart?: (machine: Machine) => Promise<void>;
+  readonly beforeRuntimeStart?: (machine: Machine, record: AgentRecord) => Promise<void>;
 }
 
 /**
@@ -71,6 +75,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     log(`[workspace] ${team.workspacePath} has uncommitted changes; the agents will not see them`);
   }
 
+  const gitDirectories = await workspaceGitDirectories(team, inspection);
   const agents: Agent[] = [];
   const branches: Record<string, string> = {};
   for (const record of records) {
@@ -147,6 +152,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
   // Read once for the whole roster: what the user set outranks what the adapter ships.
   const overrides = store.contextCeilings();
   const runtimes = new Map<string, AgentRuntime>();
+  const initialFailures = new Map<string, string>();
   const executions = new Map<string, SleepingRuntime>();
   const machines = new Map<string, Machine>();
   for (const record of records) {
@@ -155,8 +161,18 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     runtimeLabels[record.id] = runtimeLabel(record.runtimeId);
     const measured = resolveCeiling(overrides, record.runtimeId, record.runtimeOptions?.['model']);
     if (measured !== undefined) contextCeilings[record.id] = measured;
-    const machine = options.createMachine?.({ ...record, workspacePath: agent.workspacePath })
-      ?? machineFor(record.machine?.kind ?? 'local', { agentId: agent.id, workspacePath: agent.workspacePath });
+    let machine: Machine;
+    try {
+      const create = options.createMachine;
+      machine = machineFor(machinePlacement(record.machine).kind,
+        { agentId: agent.id, workspacePath: agent.workspacePath },
+        create === undefined ? undefined : () => create({ ...record, workspacePath: agent.workspacePath }));
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'This Agent’s execution could not be constructed.';
+      initialFailures.set(agent.id, detail);
+      log(`[${agent.id}] ${detail}`);
+      continue;
+    }
     machines.set(agent.id, machine);
     const endpoint = mcp.endpointFor(agent.id, machine.mailboxHostname);
     // The whole difference between a relaunch and a resume. Undefined on a first launch, and
@@ -168,7 +184,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       machine,
       clock,
       startRequest: { mailboxPort: mcp.port },
-      beforeRuntimeStart: async () => options.beforeRuntimeStart?.(machine),
+      beforeRuntimeStart: async () => options.beforeRuntimeStart?.(machine, record),
       ...(options.idleAfterMs === undefined ? {} : { idleAfterMs: options.idleAfterMs }),
       ...(resumeSessionId === undefined ? {} : { resumeSessionId }),
       canSleep: () => (options.canSleep?.() ?? true) &&
@@ -181,34 +197,35 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
         });
       },
       create: (latestSessionId) => runtimeFor({
-      machine,
-      runtimeId: record.runtimeId,
-      agentId: agent.id,
-      agentName: agent.name,
-      cwd: agent.workspacePath,
-      persona: personas.get(agent.id) ?? '',
-      ...(latestSessionId === undefined ? {} : { resumeSessionId: latestSessionId }),
-      // Ticket 07: the user's own binary, never a bundled copy.
-      ...(machine.kind === 'box' || record.executablePath === undefined ? {} : { executablePath: record.executablePath }),
-      // What this agent was set to when it was hired or last edited. A team takes it at its
-      // next start, which is this line.
-      ...(record.runtimeOptions === undefined ? {} : { options: record.runtimeOptions }),
-      // Taken at start for the same reason as the options above, and more strictly: a posture
-      // is a `session/new` parameter on one runtime and a child's environment on the other, so
-      // it cannot change under a live process even in principle.
-      ...(record.trust === undefined ? {} : { trust: record.trust }),
-      mcpServers: [
-        {
-          type: 'http',
-          name: 'blobot',
-          url: endpoint.url,
-          headers: [{ name: 'Authorization', value: `Bearer ${endpoint.token}` }],
-        },
-      ],
-      onStderr: (line) => log(`[runtime:${agent.id}] ${line}`),
-      // The store measures the bytes and decides whether there is anything to draw, so no two
-      // runtimes can disagree about what blobot will keep. `.scratch/agent-media/06`.
-      pictures: { keep: (picture) => store.keepPicture(picture) },
+        machine,
+        runtimeId: record.runtimeId,
+        agentId: agent.id,
+        agentName: agent.name,
+        cwd: agent.workspacePath,
+        gitDirectories,
+        persona: personas.get(agent.id) ?? '',
+        ...(latestSessionId === undefined ? {} : { resumeSessionId: latestSessionId }),
+        // Ticket 07: the user's own binary, never a bundled copy.
+        ...(machine.kind === 'box' || record.executablePath === undefined ? {} : { executablePath: record.executablePath }),
+        // What this agent was set to when it was hired or last edited. A team takes it at its
+        // next start, which is this line.
+        ...(record.runtimeOptions === undefined ? {} : { options: record.runtimeOptions }),
+        // Taken at start for the same reason as the options above, and more strictly: a posture
+        // is a `session/new` parameter on one runtime and a child's environment on the other, so
+        // it cannot change under a live process even in principle.
+        ...(record.trust === undefined ? {} : { trust: record.trust }),
+        mcpServers: [
+          {
+            type: 'http',
+            name: 'blobot',
+            url: endpoint.url,
+            headers: [{ name: 'Authorization', value: `Bearer ${endpoint.token}` }],
+          },
+        ],
+        onStderr: (line) => log(`[runtime:${agent.id}] ${line}`),
+        // The store measures the bytes and decides whether there is anything to draw, so no two
+        // runtimes can disagree about what blobot will keep. `.scratch/agent-media/06`.
+        pictures: { keep: (picture) => store.keepPicture(picture) },
       }),
     });
     executions.set(agent.id, runtime);
@@ -235,7 +252,6 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     handbooks: store,
     profileOverviews: store,
   });
-  await orchestrator.start();
 
   /**
    * A session blobot replaced needs a row, or the next launch resumes the one it closed.
@@ -274,7 +290,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     }),
   );
 
-  return {
+  const live: RunningTeam = {
     team,
     agents,
     orchestrator,
@@ -301,4 +317,13 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       await mcp.stop();
     },
   };
+  try {
+    options.onStarting?.(live);
+    await orchestrator.start();
+    for (const [agentId, reason] of initialFailures) orchestrator.failAgent(agentId, reason);
+    return live;
+  } catch (error) {
+    await live.close();
+    throw error;
+  }
 }

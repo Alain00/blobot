@@ -3,8 +3,8 @@ import { LocalMachine } from '../../machines/local-machine.js';
 import type { Machine } from '../../machines/machine.js';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { childEnvironment } from '../acp/child-env.js';
-import { isExecutable, searchPath } from '../acp/child-transport.js';
+import { childEnvironment } from '../../process/child-env.js';
+import { isExecutable, searchPath } from '../../process/child-transport.js';
 import type { LineTransport } from '../acp/jsonrpc.js';
 import { cursorCliConfig } from './permissions.js';
 

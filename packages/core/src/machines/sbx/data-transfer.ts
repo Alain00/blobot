@@ -1,6 +1,7 @@
-import { execFile, spawn, type ChildProcess } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import { pipeline } from 'node:stream/promises';
 import { sbxClientEnvironment } from './client-environment.js';
+import { sbxCommandRunner } from './engine.js';
 
 /** Both fields are required: reusing an engine name must never adopt another Agent's data. */
 export interface SbxReference {
@@ -62,13 +63,13 @@ export async function copySbxData(options: SbxDataTransferOptions): Promise<{ re
   const timer = setTimeout(cancel, timeoutMs);
   const executable = options.sbxExecutable ?? 'sbx';
   const env = sbxClientEnvironment();
-  const run = (args: readonly string[]) => new Promise<string>((resolve, reject) => {
-    execFile(executable, [...args], { env, signal: controller.signal, maxBuffer: 1024 * 1024 }, (error, stdout) => {
-      // Raw errors include guest stderr and arguments; neither belongs in a user log.
-      if (error !== null) reject(new Error('Sandbox data verification could not complete.'));
-      else resolve(stdout);
-    });
-  });
+  const command = sbxCommandRunner(executable, timeoutMs);
+  const run = async (args: readonly string[]) => {
+    const result = await command(args, controller.signal);
+    controller.signal.throwIfAborted();
+    if (result.missing || result.code !== 0) throw new Error('Sandbox data verification could not complete.');
+    return result.stdout;
+  };
   const verifyReferences = async () => {
     const parsed: unknown = JSON.parse(await run(['ls', '--json']));
     if (typeof parsed !== 'object' || parsed === null || !('sandboxes' in parsed) || !Array.isArray(parsed.sandboxes)) {

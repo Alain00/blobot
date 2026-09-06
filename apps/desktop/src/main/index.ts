@@ -77,7 +77,8 @@ import { resizeStep, startStep, stopStep, writeStep } from './runtime-step.js';
 import { isWorking, type RunningTeam } from './running-team.js';
 import { TeamPool } from './team-pool.js';
 import { MachinePreferences } from './machine-preferences.js';
-import { DesktopBoxMachine, DesktopMachines } from './machines.js';
+import { DesktopMachines } from './machines.js';
+import { MachineInventory } from './machine-inventory.js';
 import { EngineSetup } from './engine-setup.js';
 import { MachineLogins, type MachineLoginAccess } from './machine-login.js';
 import { DictationHost, TRYOUT_TEAM } from './dictation.js';
@@ -325,15 +326,26 @@ let machinePreferences: MachinePreferences | undefined;
 let machines: DesktopMachines | undefined;
 let engineSetup: EngineSetup | undefined;
 let machineLogins: MachineLogins | undefined;
+let machineInventory: MachineInventory | undefined;
+const startingTeams = new Map<string, RunningTeam>();
+
+function agentAccess(teamId: string, agentId: string) {
+  const live = pool.find(teamId) ?? startingTeams.get(teamId), record = store?.agentById(agentId);
+  const machine = live?.machines?.get(agentId), execution = live?.executions?.get(agentId);
+  if (live === undefined || record?.teamId !== teamId) {
+    throw new Error('Open this agent’s team to manage its execution.');
+  }
+  return { record, machine, execution, failure: live.orchestrator.failureOf(agentId), retry: async () => {
+    if (machine?.kind === 'local') await refreshKnownRuntimes();
+    await live.orchestrator.retryAgent(agentId);
+  },
+    pendingMessages: () => live.orchestrator.mailbox(agentId).length };
+}
 
 function boxAccess(teamId: string, agentId: string): MachineLoginAccess {
-  const live = pool.find(teamId), record = store?.agentById(agentId);
-  const machine = live?.machines?.get(agentId), execution = live?.executions?.get(agentId);
-  if (live === undefined || record?.teamId !== teamId || !(machine instanceof DesktopBoxMachine) || execution === undefined) {
-    throw new Error('Open this agent’s team to manage its sandbox.');
-  }
-  return { record, machine, execution, retry: () => live.orchestrator.retryAgent(agentId),
-    pendingMessages: () => live.orchestrator.mailbox(agentId).length };
+  const access = agentAccess(teamId, agentId);
+  if (access.machine?.runtimeAccess === undefined || access.execution === undefined) throw new Error('This agent does not have a sandbox runtime to sign in.');
+  return { ...access, execution: access.execution, machine: access.machine as MachineLoginAccess['machine'] };
 }
 
 function machinesOf(teamId: string) {
@@ -346,29 +358,40 @@ const pool = new TeamPool<RunningTeam>({
   limit: LIVE_TEAM_LIMIT,
   start: async (team) => {
     if (store === undefined || opened === undefined) throw new Error('No database is open.');
-    const live = await startTeam({
-      team,
-      store,
-      db: opened.db,
-      clock,
-      ...(machines === undefined ? {} : { createMachine: (record: import('@blobot/core').AgentRecord) => machines!.forAgent(record, team) }),
-      beforeRuntimeStart: async (machine) => {
-        if (machine instanceof DesktopBoxMachine) await machine.beforeRuntimeStart();
-      },
-      ...(machinePreferences === undefined ? {} : { idleAfterMs: machinePreferences.idleAfterMs }),
-      canSleep: () => !pool.isHeld(team.id),
-      onMachinePowerChange: () => send('blobot:team'),
-      // Each agent reports itself up, and the rail redraws that one row. A cold start is a
-      // workspace reconcile and a process per agent, and reporting only at the end would make
-      // a four-agent team look frozen for as long as its slowest member takes.
-      onAgentReady: (agentId) => {
-        if (opening?.team.id !== team.id) return;
-        opening.ready.add(agentId);
-        send('blobot:team');
-      },
-    });
-    attach(live);
-    return live;
+    try {
+      const live = await startTeam({
+        team,
+        store,
+        db: opened.db,
+        clock,
+        onStarting: (starting) => {
+          startingTeams.set(team.id, starting);
+          if (closing !== undefined) for (const execution of starting.executions?.values() ?? []) void execution.stop().catch(() => {});
+          send('blobot:team');
+        },
+        ...(machines === undefined ? {} : { createMachine: (record: import('@blobot/core').AgentRecord) => machines!.forAgent(record, team) }),
+        beforeRuntimeStart: async (machine, record) => {
+          if (machine.runtimeAccess !== undefined) await machine.runtimeAccess.beforeStart();
+          else if (machine.kind === 'local') {
+            const detection = await knownRuntime(record.runtimeId);
+            if (detection?.readiness === 'not_installed') throw new Error(`${record.name} needs ${detection.label} installed on this computer. Open Settings → Runtimes, then try again.`);
+          }
+        },
+        ...(machinePreferences === undefined ? {} : { idleAfterMs: machinePreferences.idleAfterMs }),
+        canSleep: () => !pool.isHeld(team.id),
+        onMachinePowerChange: () => send('blobot:team'),
+        // Each agent reports itself up, and the rail redraws that one row. A cold start is a
+        // workspace reconcile and a process per agent, and reporting only at the end would make
+        // a four-agent team look frozen for as long as its slowest member takes.
+        onAgentReady: (agentId) => {
+          if (opening?.team.id !== team.id) return;
+          opening.ready.add(agentId);
+          send('blobot:team');
+        },
+      });
+      attach(live);
+      return live;
+    } finally { startingTeams.delete(team.id); }
   },
   isWorking,
   onEvict: (live, reason) => {
@@ -502,6 +525,7 @@ function agentProfiles(): UiAgentProfile[] {
 function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<string> }): UiSnapshot {
   const { team, ready } = pending;
   const records = store?.agentsOfTeam(team.id) ?? [];
+  const starting = startingTeams.get(team.id);
   return {
     team: {
       id: team.id,
@@ -516,6 +540,8 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
       id: record.id,
       name: record.name,
       role: record.role,
+      ...(record.machine === undefined ? {} : { machine: record.machine }),
+      machinePower: starting?.powerOf?.(record.id) ?? 'unknown',
       runtimeLabel: runtimeLabel(record.runtimeId),
       // The Workspace it will be cut from. Its own AgentWorkspace does not exist yet on a first
       // launch, and naming a path that has not been provisioned would be a claim, not a fact.
@@ -532,7 +558,7 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
     statuses: {
       ...liveStatuses(),
       ...Object.fromEntries(
-        records.map((record) => [record.id, ready.has(record.id) ? 'idle' : 'starting']),
+        records.map((record) => [record.id, starting?.orchestrator.statusOf(record.id) ?? (ready.has(record.id) ? 'idle' : 'starting')]),
       ),
     },
     // Nothing has a session yet, so there is no menu to offer and no block to answer.
@@ -1130,12 +1156,16 @@ async function createWindow(): Promise<void> {
 
 void app.whenReady().then(async () => {
   machinePreferences = new MachinePreferences(join(app.getPath('userData'), 'machine-preferences.json'));
-  machines = new DesktopMachines(join(app.getPath('userData'), 'machines'));
-  engineSetup = new EngineSetup(machines, { changed: () => send('blobot:machines'), openPackage: (path) => shell.openPath(path),
-    configuredMachines: () => (store?.listTeams() ?? []).flatMap((team) =>
+  machines = new DesktopMachines(join(app.getPath('userData'), 'machines'), undefined, () => send('blobot:machines'));
+  const configuredMachines = () => (store?.listTeams() ?? []).flatMap((team) =>
       (store?.agentsOfTeam(team.id) ?? []).flatMap((agent) => agent.machine?.kind === 'box' ? [{
         teamId: team.id, agentId: agent.id, teamName: team.name, agentName: agent.name, limits: agent.machine.limits,
-      }] : [])),
+      }] : []));
+  machineInventory = new MachineInventory(machines, configuredMachines, (agentId) =>
+    [...startingTeams.values(), ...pool.live].some((live) => live.agents.some((agent) => agent.id === agentId)) ||
+    (store?.listTeams() ?? []).some((team) => store?.agentsOfTeam(team.id).some((agent) => agent.id === agentId) === true));
+  engineSetup = new EngineSetup(machines, { changed: () => send('blobot:machines'), openPackage: (path) => shell.openPath(path),
+    sleepError: () => machinePreferences?.readError, configuredMachines, inventory: () => machineInventory!.view(),
   });
   machineLogins = new MachineLogins(boxAccess, () => send('blobot:machines'), (url) => shell.openExternal(url));
   await machinePreferences.load().catch(() => {
@@ -1188,7 +1218,7 @@ void app.whenReady().then(async () => {
         },
         // Held rather than selected: a firing runs a team, it does not switch to it. The pool's
         // own rule protects the team the user is working in, because it never evicts one
-        // mid-turn, and `startTeam` refuses by name when a runtime is not installed.
+        // mid-turn. A missing local runtime fails that Agent by name while peers start.
         open: async (team) => (await pool.hold(team)).orchestrator,
         finished: (team) => pool.letGo(team.id),
         onLog: (line) => process.stderr.write(`${line}\n`),
@@ -2020,12 +2050,28 @@ void app.whenReady().then(async () => {
   ipcMain.handle('blobot:engineSetup', () => engineSetup?.view());
   ipcMain.handle('blobot:startEngineSetup', (_event, kind: 'install' | 'sign_in' | 'check') => engineSetup?.start(kind));
   ipcMain.handle('blobot:cancelEngineSetup', (_event, id: string) => engineSetup?.cancel(id));
-  ipcMain.handle('blobot:agentMachine', (_event, teamId: string, agentId: string) => machineLogins?.view(teamId, agentId));
+  ipcMain.handle('blobot:removeRetainedMachine', async (_event, agentId: string) => {
+    if (machineInventory === undefined) throw new Error('Sandbox storage is unavailable.');
+    await machineInventory.remove(agentId);
+    send('blobot:machines');
+  });
+  ipcMain.handle('blobot:agentMachine', (_event, teamId: string, agentId: string) => {
+    const access = agentAccess(teamId, agentId);
+    const view = access.machine?.runtimeAccess === undefined ? {
+      placement: access.record.machine ?? { kind: 'local' as const }, power: access.execution?.power ?? 'unknown',
+      pendingMessages: access.pendingMessages(), methods: [],
+    } : machineLogins!.view(teamId, agentId);
+    const preparation = access.machine !== undefined && 'preparation' in access.machine ? access.machine.preparation : undefined;
+    const storage = access.machine !== undefined && 'storage' in access.machine ? access.machine.storage : undefined;
+    return { ...view, ...(access.failure === undefined ? {} : { failure: access.failure }),
+      ...(preparation === undefined ? {} : { preparation }), ...(storage === undefined ? {} : { storage }) };
+  });
   ipcMain.handle('blobot:startMachineLogin', (_event, teamId: string, agentId: string, method: string) => machineLogins?.start(teamId, agentId, method));
   ipcMain.handle('blobot:openMachineLogin', (_event, teamId: string, agentId: string, id: string) => machineLogins?.open(teamId, agentId, id));
   ipcMain.handle('blobot:answerMachineLogin', (_event, teamId: string, agentId: string, id: string, value: string) => machineLogins?.respond(teamId, agentId, id, value));
   ipcMain.handle('blobot:cancelMachineLogin', (_event, teamId: string, agentId: string, id: string) => machineLogins?.cancel(teamId, agentId, id));
-  ipcMain.handle('blobot:retryMachine', (_event, teamId: string, agentId: string) => boxAccess(teamId, agentId).retry());
+  ipcMain.handle('blobot:retryMachine', (_event, teamId: string, agentId: string) => agentAccess(teamId, agentId).retry());
+  ipcMain.handle('blobot:cancelMachineStart', (_event, teamId: string, agentId: string) => agentAccess(teamId, agentId).execution?.cancelStart());
   ipcMain.handle('blobot:setMachineIdleAfterMs', async (_event, value: number) => {
     if (machinePreferences === undefined) throw new Error('Machine preferences are not available.');
     const saved = await machinePreferences.setIdleAfterMs(value);
@@ -2179,6 +2225,7 @@ function closeApplication(): Promise<void> {
     // Stop readers/writers and guest sign-in before closing their durable state.
     const results = await Promise.allSettled([
       engineSetup?.close(), machineLogins?.close(), machines?.close(), pool.closeAll(), dictation.stop(), demo?.close(),
+      ...[...startingTeams.values()].flatMap((live) => [...live.executions?.values() ?? []].map((execution) => execution.stop())),
     ]);
     if (results.some((result) => result.status === 'rejected')) console.warn('Some application services could not close cleanly.');
     opened?.close();

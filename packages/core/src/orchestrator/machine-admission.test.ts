@@ -168,6 +168,24 @@ describe('Machine admission and mailbox recovery', () => {
     expect(f.mocks.Alice![0]!.prompts).toHaveLength(0);
   });
 
+  it('retries an admission failure while retaining the ready provider session', async () => {
+    const f = fixture();
+    await f.drain(f.orchestrator.start());
+    const deliver = f.store.markDelivered.bind(f.store);
+    const record = vi.spyOn(f.store, 'markDelivered').mockImplementationOnce(() => { throw new Error('Store temporarily unavailable'); });
+    await f.drain(f.orchestrator.promptFromUser(['Alice'], 'Keep this request'));
+    expect(f.orchestrator.statusOf('Alice')).toBe('failed');
+    expect(f.orchestrator.failureOf('Alice')).toBe('Store temporarily unavailable');
+    expect(f.runtimes.get('Alice')?.lifecycle).toBe('ready');
+    record.mockImplementation(deliver);
+    await f.drain(f.orchestrator.retryAgent('Alice'));
+    expect(f.mocks.Alice).toHaveLength(1);
+    expect(f.mocks.Alice![0]!.prompts).toHaveLength(1);
+    expect(f.orchestrator.mailbox('Alice')).toHaveLength(0);
+    expect(f.orchestrator.statusOf('Alice')).toBe('idle');
+    expect(f.orchestrator.failureOf('Alice')).toBeUndefined();
+  });
+
   it('does not silently drop a missing attachment or retry it forever', async () => {
     const f = fixture();
     f.store.commit({ id: 'old', teamId: team.id, fromAgentId: null, toAgentId: 'Alice', body: 'Image', at: 0,

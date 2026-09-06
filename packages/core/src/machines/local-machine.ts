@@ -1,8 +1,8 @@
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
-import { childEnvironment } from '../adapters/acp/child-env.js';
-import { childTransport } from '../adapters/acp/child-transport.js';
+import { childEnvironment } from '../process/child-env.js';
+import { childTransport } from '../process/child-transport.js';
 import type {
   Machine,
   MachineIdentity,

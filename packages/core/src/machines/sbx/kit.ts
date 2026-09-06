@@ -66,3 +66,24 @@ export function sbxKit(options: SbxKitOptions) {
 export function renderSbxKit(options: SbxKitOptions): string {
   return `${JSON.stringify(sbxKit(options), null, 2)}\n`;
 }
+
+/** Explain a refused cold start without changing the recorded Machine or its private data. */
+export function sbxKitMismatch(recorded: SbxKitOptions, desired: SbxKitOptions): string | undefined {
+  if (recorded.image !== desired.image) {
+    return 'This sandbox uses an earlier software version. Updating existing sandboxes is not supported yet. Its data and sign-in were kept; use the matching app version or create another agent.';
+  }
+  if (recorded.workspace?.sharedSkillsPath !== desired.workspace?.sharedSkillsPath) {
+    return 'The shared skills folder for this sandbox changed. Restore its original folder before starting. Its data was kept.';
+  }
+  if (recorded.workspace?.path !== desired.workspace?.path ||
+      JSON.stringify(recorded.workspace?.commonGit ?? []) !== JSON.stringify(desired.workspace?.commonGit ?? [])) {
+    return 'The workspace or shared Git folders for this sandbox changed. Restore the original folders before starting. Its data was kept.';
+  }
+  if (recorded.dataBytes !== desired.dataBytes || recorded.dockerBytes !== desired.dockerBytes || recorded.workspaceBytes !== desired.workspaceBytes) {
+    return 'The saved storage configuration does not match this sandbox. Storage changes are not supported yet. Its data was kept.';
+  }
+  if (renderSbxKit(recorded) !== renderSbxKit(desired)) {
+    return 'The saved runtime configuration does not match this sandbox. Its data was kept; use the matching app version or create another agent.';
+  }
+  return undefined;
+}

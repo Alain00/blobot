@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { spawn } from 'node:child_process';
-import { childTransport } from './acp/child-transport.js';
+import { childTransport } from '../process/child-transport.js';
 import { LocalMachine } from '../machines/local-machine.js';
 import { MachineLogin, loginText, loginUrl, type RuntimeLoginSpec } from './login.js';
 import type { MachineTransport } from '../machines/machine.js';

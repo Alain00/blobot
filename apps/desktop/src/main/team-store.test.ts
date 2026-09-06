@@ -828,22 +828,52 @@ describe('deleting a team', () => {
     expect(workspaces.purged).toHaveLength(0);
   });
 
-  it('blocks a full clean with unknown Machine size before removing anything, while ordinary deletion can retain inaccessible data', async () => {
+  it('cleans measured work when private state size is unknown, without inventing reclaimed bytes', async () => {
     const team = await createTeam(spec, deps());
     const agent = store.agentsOfTeam(team.id)[0]!;
     const machine = machineFor('local', { agentId: agent.id, workspacePath: '/fixture/agent' });
     vi.spyOn(machine, 'measure').mockResolvedValue(null);
-    const stop = vi.spyOn(machine, 'stop').mockRejectedValue(new Error('Machine unavailable. Its data was kept.'));
-    const machines = new Map([[agent.id, machine]]);
-    const context = { ...deps(), machines };
-    expect(await measureTeam(team.id, context)).toMatchObject({ bytes: null, stateBytes: null });
-    await expect(deleteTeam(team.id, context, { clean: true })).rejects.toThrow('size is unavailable');
-    expect(workspaces.purged).toHaveLength(0);
-    expect(stop).not.toHaveBeenCalled();
-    expect(store.teamById(team.id)).toBeDefined();
-    const deleted = await deleteTeam(team.id, context);
-    expect(deleted.removals[0]).toMatchObject({ work: 'unknown', detail: 'Machine unavailable. Its data was kept.' });
+    const destroy = vi.spyOn(machine, 'destroy');
+    workspaces.sizes = { Alice: 2048, Bob: 1024 };
+    const context = { ...deps(), machines: new Map([[agent.id, machine]]) };
+    expect(await measureTeam(team.id, context)).toMatchObject({ bytes: null, workBytes: 3072, stateBytes: null });
+    const deleted = await deleteTeam(team.id, context, { clean: true });
+    expect(workspaces.purged).toHaveLength(2);
+    expect(destroy).toHaveBeenCalledOnce();
+    expect(deleted.freedBytes).toBe(3072);
+  });
+
+  it('attempts private state removal after workspace removal fails and preserves both outcomes', async () => {
+    const team = await createTeam(spec, deps());
+    const agent = store.agentsOfTeam(team.id)[0]!;
+    const machine = machineFor('local', { agentId: agent.id, workspacePath: '/fixture/agent' });
+    const destroy = vi.spyOn(machine, 'destroy');
+    workspaces.purgeOutcome = new Error('Working folder unavailable.');
+    const deleted = await deleteTeam(team.id, { ...deps(), machines: new Map([[agent.id, machine]]) }, { clean: true });
+    expect(destroy).toHaveBeenCalledOnce();
+    expect(deleted.removals[0]).toMatchObject({ work: 'unknown', state: 'discarded', detail: 'Working folder unavailable.' });
+  });
+
+  it('keeps work untouched after stop fails, attempts state cleanup and reports its failure independently', async () => {
+    const team = await createTeam(spec, deps());
+    const agent = store.agentsOfTeam(team.id)[0]!;
+    const machine = machineFor('local', { agentId: agent.id, workspacePath: '/fixture/agent' });
+    vi.spyOn(machine, 'stop').mockRejectedValue(new Error('Busy.'));
+    const destroy = vi.spyOn(machine, 'destroy').mockRejectedValue(new Error('Ownership unavailable.'));
+    const deleted = await deleteTeam(team.id, { ...deps(), machines: new Map([[agent.id, machine]]) });
+    expect(destroy).toHaveBeenCalledOnce();
     expect(workspaces.removed.map((request) => request.agentName)).toEqual(['Bob']);
+    expect(deleted.removals[0]).toMatchObject({ work: 'unknown', state: 'unknown' });
+    expect(deleted.removals[0]!.detail).toContain('Ownership unavailable.');
+  });
+
+  it('does not lose a successful work removal when private state removal fails', async () => {
+    const team = await createTeam(spec, deps());
+    const agent = store.agentsOfTeam(team.id)[0]!;
+    const machine = machineFor('local', { agentId: agent.id, workspacePath: '/fixture/agent' });
+    vi.spyOn(machine, 'destroy').mockRejectedValue(new Error('State unavailable.'));
+    const deleted = await deleteTeam(team.id, { ...deps(), machines: new Map([[agent.id, machine]]) });
+    expect(deleted.removals[0]).toMatchObject({ work: 'discarded', state: 'unknown' });
   });
 
   it('prices work and state separately and stops the Machine before removing work and its data', async () => {

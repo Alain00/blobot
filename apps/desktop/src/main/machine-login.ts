@@ -1,12 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { MachineLogin, machinePlacement, type AgentRecord, type SleepingRuntime } from '@blobot/core';
+import { MachineLogin, machinePlacement, type AgentRecord, type Machine, type MachineRuntimeAccess, type SleepingRuntime } from '@blobot/core';
 import type { UiAgentMachine, UiLoginChallenge, SetupProgress } from '../shared/machines.js';
-import { DesktopBoxMachine } from './machines.js';
 import { imageFor, loginFor } from './runtime-for.js';
 
 export interface MachineLoginAccess {
   readonly record: AgentRecord;
-  readonly machine: DesktopBoxMachine;
+  readonly machine: Machine & { readonly runtimeAccess: MachineRuntimeAccess };
   readonly execution: SleepingRuntime;
   readonly retry: () => Promise<void>;
   readonly pendingMessages?: () => number;
@@ -32,7 +31,7 @@ export class MachineLogins {
     return { placement: machinePlacement(access.record.machine), power: access.execution.power,
       pendingMessages: access.pendingMessages?.() ?? 0,
       methods: loginFor(access.record.runtimeId)?.methods ?? [],
-      ...(access.machine.lastDetection === undefined ? {} : { detection: access.machine.lastDetection }),
+      ...(access.machine.runtimeAccess.lastDetection === undefined ? {} : { detection: access.machine.runtimeAccess.lastDetection }),
       ...(attempt === undefined ? {} : { operation: attempt.operation }),
       ...(attempt?.challenge === undefined ? {} : { challenge: attempt.challenge }),
     };
@@ -71,7 +70,7 @@ export class MachineLogins {
         delete attempt.challenge; delete attempt.login;
         signal.throwIfAborted();
         update('checking', 'Checking this agent’s runtime…');
-        const detection = await access.machine.checkRuntime();
+        const detection = await access.machine.runtimeAccess.check();
         ready = detection.readiness === 'ready';
         update('checking', detection.detail);
       }, deadline);
@@ -81,7 +80,7 @@ export class MachineLogins {
         void access.retry().catch((error: unknown) => {
           update('failed', error instanceof Error ? error.message : 'This agent could not reopen. Try again.');
         });
-      } else update('done', access.machine.lastDetection?.detail ?? 'Runtime status could not be checked.');
+      } else update('done', access.machine.runtimeAccess.lastDetection?.detail ?? 'Runtime status could not be checked.');
     }).catch((error: unknown) => {
       const cancelled = attempt.abort.signal.aborted || access.execution.lifecycle === 'stopped';
       update(cancelled ? 'cancelled' : 'failed', cancelled ? 'Sign-in cancelled.'

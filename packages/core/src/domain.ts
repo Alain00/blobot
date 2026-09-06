@@ -121,5 +121,5 @@ export type { MachinePower } from './machines/power.js';
 export { DEFAULT_MACHINE_LIMITS, machineLimits } from './machines/resources.js';
 export { machinePlacement } from './machines/placement.js';
 export type { MachineLimits } from './machines/resources.js';
-export type { MachinePlacement } from './machines/placement.js';
+export type { MachinePlacement, StoredMachinePlacement } from './machines/placement.js';
 export type { DetectionSubject, MachineDetection } from './detect/machine-runtime.js';

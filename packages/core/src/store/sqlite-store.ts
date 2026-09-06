@@ -24,7 +24,7 @@ import { trustLevelOf, type TrustLevel } from '../trust.js';
 import { verbosityLevelOf, type VerbosityLevel } from '../verbosity.js';
 import { DEFAULT_COMPACTION, type CompactionSetting } from '../orchestrator/domain.js';
 import type { BlobotDatabase } from './database.js';
-import { machinePlacement, type MachinePlacement } from '../machines/placement.js';
+import { machinePlacement, type StoredMachinePlacement } from '../machines/placement.js';
 import {
   agentMessages,
   agentProfiles,
@@ -1773,7 +1773,7 @@ type MessageRow = typeof messages.$inferSelect;
 type AgentRow = typeof agents.$inferSelect;
 type AgentProfileRow = typeof agentProfiles.$inferSelect;
 
-function placementColumns(value: MachinePlacement | undefined) {
+function placementColumns(value: StoredMachinePlacement | undefined) {
   const placement = machinePlacement(value);
   return placement.kind === 'local'
     ? { machineKind: null, machineCpus: null, machineMemoryBytes: null }
@@ -1784,7 +1784,14 @@ function placementOf(row: {
   machineKind: string | null; machineCpus: number | null; machineMemoryBytes: number | null;
 }, key: 'machine' | 'defaultMachine') {
   if ((row.machineKind === null || row.machineKind === 'local') && row.machineCpus === null && row.machineMemoryBytes === null) return {};
-  const placement = machinePlacement({ kind: row.machineKind, limits: { maxCpus: row.machineCpus, maxMemoryBytes: row.machineMemoryBytes } });
+  // Only placement validation is isolated here. Database errors and unrelated record failures
+  // still propagate. A damaged row remains editable/deletable without hiding healthy peers.
+  let placement: StoredMachinePlacement;
+  try {
+    placement = machinePlacement({ kind: row.machineKind, limits: { maxCpus: row.machineCpus, maxMemoryBytes: row.machineMemoryBytes } });
+  } catch {
+    placement = { kind: 'invalid', detail: 'Stored Machine settings are invalid and must be repaired before use.' };
+  }
   return { [key]: placement };
 }
 

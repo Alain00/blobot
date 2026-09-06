@@ -5,6 +5,12 @@ export type MachinePlacement =
   | { readonly kind: 'local' }
   | { readonly kind: 'box'; readonly limits: MachineLimits };
 
+/** A damaged persisted choice stays visible and cannot be mistaken for legacy local state. */
+export type StoredMachinePlacement = MachinePlacement | {
+  readonly kind: 'invalid';
+  readonly detail: string;
+};
+
 /** IPC and persistence both refuse an unknown kind instead of silently running locally. */
 export function machinePlacement(value: unknown): MachinePlacement {
   if (value === undefined) return { kind: 'local' };

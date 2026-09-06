@@ -1099,6 +1099,20 @@ export class Orchestrator {
     return this.#store.undelivered(agentId);
   }
 
+  /** Includes reserved work before the provider admits a turn, such as Machine verification. */
+  isBusy(agentId: string): boolean { return this.#busy.has(agentId) || this.#retries.has(agentId); }
+
+  /** A failed per-Agent factory must remain visible while the rest of its team runs. */
+  failAgent(agentId: string, reason: string): void {
+    this.#requireAgent(agentId);
+    this.#trackers.get(agentId)?.markFailed(reason);
+  }
+
+  /** Actionable refusal for the Agent, independent of where its execution lives. */
+  failureOf(agentId: string): string | undefined {
+    return this.#trackers.get(agentId)?.failure;
+  }
+
   /** A deliberate retry after sign-in or another remedy, scoped to this member only. */
   retryAgent(agentId: string): Promise<void> {
     if (this.#disposed) return Promise.reject(new Error('This team is closing.'));
@@ -1108,11 +1122,18 @@ export class Orchestrator {
     if (this.#busy.has(agentId)) return Promise.resolve();
     const retry = (async () => {
       const runtime = this.#runtimes.get(agentId);
-      if (runtime === undefined) return;
+      if (runtime === undefined) throw new Error('Edit this agent’s execution settings and reopen its team to retry.');
       try {
         if (runtime.lifecycle !== 'ready') {
           if (runtime.retryStart === undefined) throw new Error('Reopen this team to retry this agent.');
           await runtime.retryStart();
+        }
+        const tracker = this.#trackers.get(agentId);
+        // Admission can fail while the provider remains ready (for example a transient
+        // store write). An explicit retry clears that failure without replacing its session.
+        if (runtime.lifecycle === 'ready' && tracker?.status === 'failed') {
+          tracker.lifecycleChanged('starting');
+          tracker.lifecycleChanged('ready');
         }
         this.#mailDuringStartup.delete(agentId);
         await this.#wake(agentId);

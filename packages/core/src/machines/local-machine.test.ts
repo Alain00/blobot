@@ -81,8 +81,15 @@ describe('LocalMachine', () => {
     expect(await alice.measure()).toBe(0);
   });
 
+  it('uses the supplied host factory and rejects a silent fallback to local execution', () => {
+    const identity = { agentId: 'alice', workspacePath: '/workspace' };
+    const local = new LocalMachine(identity);
+    expect(machineFor('local', identity, () => local)).toBe(local);
+    expect(() => machineFor('box', identity, () => local)).toThrow('different execution location');
+  });
+
   it('refuses an unavailable box instead of running on the host', () => {
     expect(() => machineFor('box', { agentId: 'alice', workspacePath: '/workspace' }))
-      .toThrow('Sandbox machines are not available');
+      .toThrow('requires a host Machine factory');
   });
 });

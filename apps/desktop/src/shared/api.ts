@@ -173,7 +173,7 @@ export interface UiAgent {
   readonly runtimeLabel: string;
   /** Execution power, independent of work status and runtime sign-in. */
   readonly machinePower?: MachinePower;
-  readonly machine?: import('@blobot/core/domain').MachinePlacement;
+  readonly machine?: import('@blobot/core/domain').StoredMachinePlacement;
   readonly workspacePath: string;
   readonly branch?: string;
   /** The blobatar's hue, when the user chose one. Absent means the name derives it. */
@@ -276,7 +276,7 @@ export interface UiTeamMember {
 
 /** A row in the rail's team list. Every team the user has created, running or not. */
 export interface UiTeamSummary {
-  readonly defaultMachine?: import('@blobot/core/domain').MachinePlacement;
+  readonly defaultMachine?: import('@blobot/core/domain').StoredMachinePlacement;
   readonly id: string;
   readonly name: string;
   readonly workspacePath: string;
@@ -648,6 +648,7 @@ export interface UiAgentRemoval {
   readonly agentName: string;
   /** `unknown` is a workspace blobot could not reach, which is the ordinary reason to delete. */
   readonly work: 'discarded' | 'kept' | 'unknown';
+  readonly state?: 'discarded' | 'unknown';
   readonly detail?: string;
 }
 
@@ -1240,12 +1241,14 @@ export interface BlobotApi {
   engineSetup(): Promise<EngineSetupView>;
   startEngineSetup(kind: 'install' | 'sign_in' | 'check'): Promise<string>;
   cancelEngineSetup(id: string): Promise<void>;
+  removeRetainedMachine(agentId: string): Promise<void>;
   agentMachine(teamId: string, agentId: string): Promise<UiAgentMachine>;
   startMachineLogin(teamId: string, agentId: string, method: string): Promise<string>;
   openMachineLogin(teamId: string, agentId: string, id: string): Promise<void>;
   answerMachineLogin(teamId: string, agentId: string, id: string, value: string): Promise<void>;
   cancelMachineLogin(teamId: string, agentId: string, id: string): Promise<void>;
   retryMachine(teamId: string, agentId: string): Promise<void>;
+  cancelMachineStart(teamId: string, agentId: string): Promise<void>;
   onMachines(listener: () => void): () => void;
   machineIdleAfterMs(): Promise<number>;
   setMachineIdleAfterMs(value: number): Promise<number>;

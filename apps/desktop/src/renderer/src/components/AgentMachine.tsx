@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { AgentStatus } from '@blobot/core/domain';
 import type { UiAgent, UiAgentMachine } from '../../../shared/api.js';
-import { EngineSetupControls } from './MachineSettings.js';
 import { READINESS_WORD } from './readiness.js';
 
 export function AgentMachine({ teamId, agent, status }: {
@@ -16,7 +15,7 @@ export function AgentMachine({ teamId, agent, status }: {
   const latest = useRef(0);
   const refresh = useCallback(() => {
     const request = ++latest.current;
-    void window.blobot.agentMachine(teamId, agent.id).then((next) => { if (request === latest.current) setView(next); })
+    void window.blobot.agentMachine(teamId, agent.id).then((next) => { if (request === latest.current) { setView(next); setError(undefined); } })
       .catch(() => { if (request === latest.current) setError('This sandbox could not be checked. Reopen the team and try again.'); });
   }, [teamId, agent.id]);
   // Sleep changes power without changing runtime status. Recheck the cached-readiness label.
@@ -31,17 +30,25 @@ export function AgentMachine({ teamId, agent, status }: {
   useEffect(() => { setInput(''); }, [view?.operation?.id, challengeKey]);
   useEffect(() => { if (challengeKey !== undefined) setExpanded(true); }, [challengeKey]);
   const placement = agent.machine;
-  if (placement?.kind !== 'box') return null;
   const operation = view?.operation, challenge = view?.challenge;
   const signingIn = operation !== undefined && !['done', 'failed', 'cancelled'].includes(operation.phase);
   const working = status !== 'idle' && status !== 'failed';
-  const needsAction = status === 'failed' || signingIn || (view?.pendingMessages ?? 0) > 0;
+  const needsAction = status === 'failed' || signingIn || view?.power === 'waking' || view?.preparation !== undefined || (view?.pendingMessages ?? 0) > 0;
   const open = expanded ?? needsAction;
   const act = (work: () => Promise<unknown>) => {
     setError(undefined); setActing(true);
     void work().then(refresh).catch((error: unknown) => setError(error instanceof Error ? error.message : 'This action did not complete.'))
       .finally(() => setActing(false));
   };
+  if (placement?.kind !== 'box') {
+    if (status !== 'failed' && (view?.pendingMessages ?? 0) === 0) return null;
+    return <section className="agentmachine" aria-label={`${agent.name}’s execution`}>
+      {view?.failure !== undefined && <p className="refusal" role="alert">{view.failure}</p>}
+      {(view?.pendingMessages ?? 0) > 0 && <p className="note">Your message is queued until this agent can work.</p>}
+      <button className="btn" disabled={acting} onClick={() => act(() => window.blobot.retryMachine(teamId, agent.id))}>try again</button>
+      {error !== undefined && <p className="refusal" role="alert">{error}</p>}
+    </section>;
+  }
   return <section className="agentmachine" aria-label={`${agent.name}’s sandbox`}>
     <button className="agentmachinehead" onClick={() => setExpanded(!open)} aria-expanded={open}>
       <span>sandbox on this computer</span>
@@ -49,6 +56,11 @@ export function AgentMachine({ teamId, agent, status }: {
       <ChevronDown size={13} aria-hidden />
     </button>
     {open && <div className="agentmachinebody">
+      {!signingIn && status === 'failed' && view?.failure !== undefined && <p className="refusal" role="alert">{view.failure}</p>}
+      {view?.preparation !== undefined && <p className="note muted" role="status" aria-live="polite">{view.preparation.detail}
+        {view.preparation.received !== undefined && <span className="mono"> · {Math.round(view.preparation.received / 1024 ** 2)} MB
+          {view.preparation.total === undefined ? '' : ` of ${Math.round(view.preparation.total / 1024 ** 2)} MB`}</span>}
+      </p>}
       {(view?.pendingMessages ?? 0) > 0 && <p className="note">{view?.pendingMessages === 1 ? 'Your message is queued until this agent can work.' : `${view?.pendingMessages} messages are queued until this agent can work.`}</p>}
       {operation !== undefined && <p className="note muted" role="status" aria-live="polite">{operation.detail}</p>}
       {!signingIn && view?.detection !== undefined && <p className="note muted">
@@ -75,11 +87,16 @@ export function AgentMachine({ teamId, agent, status }: {
           onClick={() => act(() => window.blobot.answerMachineLogin(teamId, agent.id, operation!.id, choice.value))}>{choice.label}</button>)}</div>
       </div>}
       <div className="machineactions">
+        {view?.power === 'waking' && !signingIn && <button className="btn" disabled={acting}
+          onClick={() => act(() => window.blobot.cancelMachineStart(teamId, agent.id))}>cancel startup</button>}
         {signingIn ? <button className="btn" disabled={acting} onClick={() => act(() => window.blobot.cancelMachineLogin(teamId, agent.id, operation!.id))}>cancel sign-in</button> : <>
           {(status === 'failed' || (view?.pendingMessages ?? 0) > 0) && <button className="btn" disabled={acting}
             onClick={() => act(() => window.blobot.retryMachine(teamId, agent.id))}>try again</button>}
-          {(view?.methods ?? []).map((method) => <button key={method.id} className="btn" disabled={acting || working} title={method.detail}
-            onClick={() => act(() => window.blobot.startMachineLogin(teamId, agent.id, method.id))}>sign in to {method.label}</button>)}
+          {view?.detection?.readiness === 'needs_sign_in' && (view.methods ?? []).map((method) => <div key={method.id}>
+            <button className="btn" disabled={acting || working} aria-describedby={method.detail ? `login-${agent.id}-${method.id}` : undefined}
+              onClick={() => act(() => window.blobot.startMachineLogin(teamId, agent.id, method.id))}>sign in to {method.label}</button>
+            {method.detail && <p className="note muted" id={`login-${agent.id}-${method.id}`}>{method.detail}</p>}
+          </div>)}
         </>}
         <button className="btn" onClick={() => act(() => window.blobot.openInWorkspace(teamId, agent.id, '.'))}>open working folder</button>
       </div>
@@ -87,8 +104,8 @@ export function AgentMachine({ teamId, agent, status }: {
       <details className="machinedisclosure"><summary>Sandbox setup and access</summary>
         <p>This agent has its own home and login. Its working folder and shared Git history are writable on this computer.
           It can reach the Internet and local network, using the runtime’s selected approval settings.</p>
-        <p>Its private home holds 8 GiB, with 20 GiB for Docker data. CPU and memory limits are fixed for this sandbox.</p>
-        <EngineSetupControls compact />
+        {view?.storage !== undefined && <p>This sandbox may use up to {view.storage.homeBytes / 1024 ** 3} GiB for its home and {view.storage.softwareBytes / 1024 ** 3} GiB for software it installs.</p>}
+        <p>CPU and memory limits are fixed for this sandbox. Set up sandboxes in Settings → Machines.</p>
       </details>
     </div>}
   </section>;

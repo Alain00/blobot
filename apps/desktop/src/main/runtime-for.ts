@@ -39,6 +39,8 @@ export interface RuntimeRequest {
   /** The human name. OpenCode needs it: the persona is an agent definition with a key. */
   readonly agentName: string;
   readonly cwd: string;
+  /** Shared Git metadata required by linked worktrees, derived from the selected Workspace. */
+  readonly gitDirectories?: readonly string[];
   readonly persona: string;
   readonly resumeSessionId?: string;
   /** The user's own binary, as detection found it. Ticket 07: never a bundled copy. */
@@ -93,6 +95,7 @@ export function runtimeFor(request: RuntimeRequest): AgentRuntime {
     case 'claude-code':
       return new ClaudeAgentRuntime({
         ...shared,
+        ...(request.gitDirectories === undefined ? {} : { gitDirectories: request.gitDirectories }),
         ...(request.executablePath === undefined
           ? {}
           : { claudeExecutable: request.executablePath }),

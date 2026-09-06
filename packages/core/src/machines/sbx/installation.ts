@@ -146,6 +146,9 @@ export class SbxInstaller {
       }
       options.signal?.throwIfAborted();
       await rename(staging, destination);
+      // The verified private installation owns the bytes now. Linux packages remain until
+      // the OS installer has consumed them; returning their path is not an installation receipt.
+      await rm(archive, { force: true }).catch(() => {});
       return { kind: 'installed', executable: this.executable };
     } catch {
       throw new Error(options.signal?.aborted === true ? 'Sandbox installation cancelled.'

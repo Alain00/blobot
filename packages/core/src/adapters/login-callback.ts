@@ -87,7 +87,17 @@ export async function openLoginCallbackRelay(machine: Machine, guestNode: string
       server.maxConnections = 4;
       servers.push(server);
       await new Promise<void>((resolve, reject) => {
-        const error = () => reject(new Error('The browser callback port is in use. Close the other sign-in and try again.'));
+        const error = (cause: NodeJS.ErrnoException) => {
+          server.off('error', error);
+          // IPv4 still serves localhost when this host has no IPv6 loopback stack.
+          // A occupied IPv6 port is different: another listener could consume the return.
+          if (host === '::1' && ['EAFNOSUPPORT', 'EPROTONOSUPPORT', 'EADDRNOTAVAIL'].includes(cause.code ?? '')) {
+            resolve(); return;
+          }
+          reject(new Error(cause.code === 'EADDRINUSE'
+            ? 'The browser callback port is in use. Close the other sign-in and try again.'
+            : 'The browser callback could not bind to localhost. Check this computer’s network settings and try again.'));
+        };
         server.once('error', error);
         server.listen(callback.port, host, () => { server.off('error', error); resolve(); });
       });

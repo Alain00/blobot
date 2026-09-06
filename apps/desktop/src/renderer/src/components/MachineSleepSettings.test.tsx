@@ -2,17 +2,21 @@
 import React, { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { BlobotApi } from '../../../shared/api.js';
 import { MachineSleepSettings } from './MachineSleepSettings.js';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 let root: Root | undefined;
 afterEach(() => { if (root !== undefined) act(() => root?.unmount()); document.body.replaceChildren(); });
 
-async function draw(fails = false) {
+async function draw(fails = false, sleepError?: string) {
   const save = vi.fn(async (value: number) => { if (fails) throw new Error('disk'); return value; });
-  Object.defineProperty(window, 'blobot', { configurable: true, value: {
-    machineIdleAfterMs: async () => 7_200_000, setMachineIdleAfterMs: save,
-  } });
+  const api = {
+    engineSetup: async () => ({ readiness: { state: 'ready' }, canInstall: true, kvmAvailable: true,
+      previewEnabled: true, configuredMachines: [], ...(sleepError === undefined ? {} : { sleepError }) }),
+    machineIdleAfterMs: async () => sleepError === undefined ? 7_200_000 : 0, setMachineIdleAfterMs: save,
+  } satisfies Pick<BlobotApi, 'engineSetup' | 'machineIdleAfterMs' | 'setMachineIdleAfterMs'>;
+  Object.defineProperty(window, 'blobot', { configurable: true, value: api });
   const host = document.createElement('div'); document.body.append(host); root = createRoot(host);
   await act(async () => { root!.render(<MachineSleepSettings />); });
   const input = host.querySelector('input')!;
@@ -45,5 +49,19 @@ describe('Machine sleep settings', () => {
     await f.edit('3'); await f.submit();
     expect(f.host.querySelector('[role="alert"]')?.textContent).toContain('could not be saved');
     expect(f.button.disabled).toBe(false);
+  });
+  it.each(['0', '2'])('keeps unreadable settings blank and permits an explicit repair to %s hours', async (hours) => {
+    const f = await draw(false, 'The saved sleep settings could not be read. Choose them again.');
+    expect(f.input.value).toBe('');
+    expect(f.input.disabled).toBe(false);
+    expect(f.button.disabled).toBe(true);
+    expect(f.host.querySelector('[role="alert"]')?.textContent).toContain('could not be read');
+    expect(f.save).not.toHaveBeenCalled();
+    await f.edit(hours);
+    expect(f.button.disabled).toBe(false);
+    await act(async () => f.button.click());
+    expect(f.save).toHaveBeenCalledExactlyOnceWith(Number(hours) * 3_600_000);
+    expect(f.host.querySelector('[role="alert"]')).toBeNull();
+    expect(f.button.disabled).toBe(true);
   });
 });

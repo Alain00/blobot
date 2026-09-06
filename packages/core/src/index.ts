@@ -27,7 +27,7 @@ export type { MachinePower } from './machines/power.js';
 export { DEFAULT_MACHINE_LIMITS, machineLimits } from './machines/resources.js';
 export type { MachineLimits } from './machines/resources.js';
 export { machinePlacement } from './machines/placement.js';
-export type { MachinePlacement } from './machines/placement.js';
+export type { MachinePlacement, StoredMachinePlacement } from './machines/placement.js';
 export { machineFor } from './machines/machine-for.js';
 export { MachineUnavailableError } from './machines/machine.js';
 export { SbxImageStore, verifyRuntimeImageArchive } from './machines/sbx/image-store.js';
@@ -37,13 +37,14 @@ export type { SbxInstallation } from './machines/sbx/installation.js';
 export { sbxClientEnvironment } from './machines/sbx/client-environment.js';
 export type { SbxPtyRunner } from './machines/sbx/engine.js';
 export { SbxRegistry } from './machines/sbx/registry.js';
+export type { SbxRecord } from './machines/sbx/registry.js';
 export { OwnedSbxMachine } from './machines/sbx/owned-machine.js';
-export { SBX_INITIAL_STORAGE } from './machines/sbx/kit.js';
+export { SBX_INITIAL_STORAGE, sbxKitMismatch } from './machines/sbx/kit.js';
 export { runtimeImageBuild } from './machines/runtime-image.js';
 export type { RuntimeImageBuild, RuntimeImageDefinition } from './machines/runtime-image.js';
 export type {
   Machine, MachineKind, MachineCommand, MachineIdentity, MachineLocation, MachineReadiness,
-  MachineReconcileOutcome, MachineRuntimeRequirements, MachineSpawnRequest, MachineStartRequest,
+  MachineReconcileOutcome, MachineRuntimeRequirements, MachineRuntimeAccess, MachineSpawnRequest, MachineStartRequest,
   MachineTransport,
 } from './machines/machine.js';
 
@@ -447,7 +448,7 @@ export { WhisperTranscriber, parseTranscription, wavHeader } from './speech/whis
 export type { WhisperTranscriberOptions } from './speech/whisper.js';
 export { SPEECH_PROVIDERS, authorizationFor, speechProvider, validateSpeechKey } from './speech/providers.js';
 export type { KeyValidation, SpeechProviderId, SpeechProviderSpec } from './speech/providers.js';
-export { BLOBOT_KEY_VARIABLE, childEnvironment } from './adapters/acp/child-env.js';
+export { BLOBOT_KEY_VARIABLE, childEnvironment } from './process/child-env.js';
 export { OPENAI_LIVE_MODEL, OPENAI_REALTIME_URL, OpenAiTranscriber, localeLanguage } from './speech/openai.js';
 export type { OpenAiTranscriberOptions } from './speech/openai.js';
 export { DEEPGRAM_LISTEN_URL, DeepgramTranscriber, deepgramQuery } from './speech/deepgram.js';

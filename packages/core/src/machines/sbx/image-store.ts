@@ -107,10 +107,10 @@ export class SbxImageStore {
 
   private async installOne(build: RuntimeImageBuild, options: InstallRuntimeImageOptions): Promise<void> {
     options.signal?.throwIfAborted();
-    const existing = await this.row(build);
-    if (existing !== undefined) { this.matches(existing, build); return; }
-    await mkdir(this.cacheDirectory, { recursive: true });
     const file = join(this.cacheDirectory, `${build.sha256}.tar`);
+    const existing = await this.row(build, options.signal);
+    if (existing !== undefined) { this.matches(existing, build); await rm(file, { force: true }); return; }
+    await mkdir(this.cacheDirectory, { recursive: true });
     const cached = await stat(file).catch(() => undefined);
     if (cached?.size !== build.bytes || await digest(file) !== build.sha256) {
       if (cached !== undefined) await rm(file);
@@ -120,19 +120,25 @@ export class SbxImageStore {
     }
     options.signal?.throwIfAborted();
     await verifyRuntimeImageArchive(file, build);
-    // Recheck after a long download; never overwrite a different image that appeared meanwhile.
-    const appeared = await this.row(build);
-    if (appeared !== undefined) { this.matches(appeared, build); return; }
     options.signal?.throwIfAborted();
-    const loaded = await this.run(['template', 'load', file]);
+    // Recheck after a long download; never overwrite a different image that appeared meanwhile.
+    const appeared = await this.row(build, options.signal);
+    if (appeared !== undefined) { this.matches(appeared, build); await rm(file, { force: true }); return; }
+    options.signal?.throwIfAborted();
+    const loaded = await this.run(['template', 'load', file], options.signal);
+    options.signal?.throwIfAborted();
     if (loaded.code !== 0 || loaded.missing) throw new Error('Runtime could not be loaded into the sandbox engine.');
-    const installed = await this.row(build);
+    const installed = await this.row(build, options.signal);
     if (installed === undefined) throw new Error('Loaded runtime was not found in the sandbox engine.');
     this.matches(installed, build);
+    await rm(file, { force: true });
   }
 
-  private async row(build: RuntimeImageBuild): Promise<Record<string, unknown> | undefined> {
-    const result = await this.run(['template', 'ls', '--json']);
+  private async row(build: RuntimeImageBuild, signal?: AbortSignal): Promise<Record<string, unknown> | undefined> {
+    signal?.throwIfAborted();
+    const args = ['template', 'ls', '--json'];
+    const result = await (signal === undefined ? this.run(args) : this.run(args, signal));
+    signal?.throwIfAborted();
     if (result.code !== 0 || result.missing) throw new Error('Sandbox image store did not answer.');
     const inventory = object(JSON.parse(result.stdout));
     if (!Array.isArray(inventory['images'])) throw new Error('Sandbox image inventory is incomplete.');

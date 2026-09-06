@@ -12,7 +12,7 @@ import type {
 import { Blob } from './Blob.js';
 import { IconPick } from './IconPick.js';
 import { LeadPicker } from './Lead.js';
-import { MachinePick } from './MachinePick.js';
+import { MachinePick, MachineCapacity } from './MachinePick.js';
 import { usePlaySound } from '../sound/useSound.js';
 
 /**
@@ -27,7 +27,7 @@ import { usePlaySound } from '../sound/useSound.js';
 
 /** What became of each agent's work, in the words the provider used. Never summarised away. */
 function RemovalNotes({ removals }: { removals: readonly UiAgentRemoval[] }): React.JSX.Element {
-  const worth = removals.filter((removal) => removal.work !== 'discarded');
+  const worth = removals.filter((removal) => removal.work !== 'discarded' || removal.state === 'unknown');
   if (worth.length === 0) {
     return (
       <div className="note muted">
@@ -41,7 +41,7 @@ function RemovalNotes({ removals }: { removals: readonly UiAgentRemoval[] }): Re
         <div className="note" key={removal.agentName}>
           <b>{removal.agentName}</b>{' '}
           <span className="muted">
-            {removal.work === 'kept' ? 'kept its work. ' : 'could not be cleaned up. '}
+            {removal.work === 'discarded' ? 'had its working folder removed. ' : removal.work === 'kept' ? 'kept its work. ' : 'could not have its working folder removed. '}
             {removal.detail}
           </span>
         </div>
@@ -91,12 +91,13 @@ export function saySize(bytes: number): string {
  */
 function sizeLine(usage: UiTeamDiskUsage | undefined): string {
   if (usage === undefined) return 'measuring…';
-  if (usage.bytes === null) return 'size unavailable · full clean unavailable';
+  if (usage.workBytes === null) return 'working-folder size unavailable · full clean unavailable';
+  if (usage.stateBytes === null) return `work ${saySize(usage.workBytes)} · private state size unavailable; it will also be removed`;
   if (usage.bytes === 0) return 'these workspaces are holding nothing';
   const each = usage.agents
     .filter((agent) => agent.bytes !== null && agent.bytes > 0)
     .map((agent) => `${agent.agentName} ${saySize(agent.bytes ?? 0)}`);
-  return [`recovers about ${saySize(usage.bytes)}`, ...(usage.stateBytes ? [`work ${saySize(usage.workBytes ?? 0)} · state ${saySize(usage.stateBytes)}`] : []), ...each].join(' · ');
+  return [`recovers about ${saySize(usage.bytes ?? usage.workBytes)}`, ...(usage.stateBytes ? [`work ${saySize(usage.workBytes ?? 0)} · state ${saySize(usage.stateBytes)}`] : []), ...each].join(' · ');
 }
 
 export function DeleteTeam({
@@ -188,7 +189,7 @@ export function DeleteTeam({
               <button
                 className={`listrow pick${clean ? ' on' : ''}`}
                 aria-pressed={clean}
-                disabled={busy || usage === undefined || usage.bytes === null}
+                disabled={busy || usage === undefined || usage.workBytes === null}
                 onClick={() => setClean(!clean)}
               >
                 <span className="who">
@@ -217,7 +218,7 @@ export function DeleteTeam({
                   beforehand: the estimate on the button was of a directory two agents were
                   still writing to. */}
               {freed !== undefined && (
-                <div className="note mono muted">{saySize(freed)} recovered from disk</div>
+                <div className="note mono muted">{saySize(freed)} of measured data recovered from disk</div>
               )}
               <RemovalNotes removals={removals} />
               <div className="modalfoot">
@@ -252,7 +253,8 @@ export function EditTeam({
   const [roster, setRoster] = useState<readonly UiAgentProfile[]>([]);
   const [memberMachines, setMemberMachines] = useState<Readonly<Record<string, MachinePlacement>>>({});
   const [previewEnabled, setPreviewEnabled] = useState(false);
-  useEffect(() => { void window.blobot.engineSetup().then((view) => setPreviewEnabled(view.previewEnabled)).catch(() => {}); }, []);
+  const [hostCapacity, setHostCapacity] = useState<import('../../../shared/api.js').EngineSetupView['host']>();
+  useEffect(() => { void window.blobot.engineSetup().then((view) => { setPreviewEnabled(view.previewEnabled); setHostCapacity(view.host); }).catch(() => {}); }, []);
   const [chosen, setChosen] = useState<readonly string[]>([]);
   /**
    * Who leads. Seeded from the team, and undefined is a real value here in a way it is not on
@@ -333,7 +335,7 @@ export function EditTeam({
     onSaved();
     // Somebody leaving is the half that can leave work behind, so the dialog stays open to say
     // what happened to it. Nobody leaving is nothing to report.
-    if ((result.removals ?? []).some((removal) => removal.work !== 'discarded')) {
+    if ((result.removals ?? []).some((removal) => removal.work !== 'discarded' || removal.state === 'unknown')) {
       setRemovals(result.removals ?? []);
       return;
     }
@@ -401,6 +403,7 @@ export function EditTeam({
 
               {joining.length > 0 && <details className="machinedisclosure">
                 <summary>Where new members work</summary>
+                <MachineCapacity host={hostCapacity} placements={joining.map((agent) => memberMachines[agent.id] ?? team.defaultMachine ?? { kind: 'local' })} />
                 {joining.map((agent) => <div key={agent.id} className="machinemember">
                   <span>{agent.name}</span>
                   <MachinePick label={`Where ${agent.name} works`} value={memberMachines[agent.id] ?? team.defaultMachine ?? { kind: 'local' }} previewEnabled={previewEnabled}
@@ -408,7 +411,7 @@ export function EditTeam({
                 </div>)}
                 <p>Sandboxes use a private home and runtime login. Their working folder and shared Git history stay writable on this computer.
                   They can reach the Internet and local network with the runtime’s selected approval settings.</p>
-                <p>Each sandbox has an 8 GiB home and 20 GiB for Docker data. CPU and memory limits are fixed after creation.</p>
+                <p>Each sandbox has an 8 GiB home and 20 GiB for software it installs. CPU and memory limits are fixed after creation.</p>
               </details>}
 
               <IconPick

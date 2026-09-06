@@ -576,7 +576,7 @@ export function App(): React.JSX.Element {
                   /* Unbriefed, and only then: the card is the invitation and the tray's door is
                      absent while it is up, so the two are never both on screen. */
                   notice: <>
-                    {snapshot.agents.filter((agent) => agent.id === pane.agentId && agent.machine?.kind === 'box')
+                    {snapshot.agents.filter((agent) => agent.id === pane.agentId)
                       .map((agent) => <AgentMachine key={`${team.id}:${agent.id}`} teamId={team.id} agent={agent} status={state.statuses[agent.id] ?? 'idle'} />)}
                     {(state.handbooks[pane.agentId] ?? []).length === 0 && (
                           <HandbookNotice

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { childEnvironment } from './child-env.js';
-import { childEnv as cursorEnv } from '../cursor/stdio.js';
+import { childEnv as cursorEnv } from '../adapters/cursor/stdio.js';
 
 describe('the environment a runtime is spawned with', () => {
   afterEach(() => {

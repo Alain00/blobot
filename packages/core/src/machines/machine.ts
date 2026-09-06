@@ -1,4 +1,12 @@
 import type { MachineLimits } from './resources.js';
+import type { MachineDetection } from '../detect/machine-runtime.js';
+
+/** Optional guest-runtime management; consumers do not depend on a desktop implementation. */
+export interface MachineRuntimeAccess {
+  readonly lastDetection: MachineDetection | undefined;
+  check(): Promise<MachineDetection>;
+  beforeStart(): Promise<void>;
+}
 
 /** A process channel, independent of ACP, Electron and any particular engine. */
 export interface MachineTransport {
@@ -78,6 +86,7 @@ export interface MachineStartRequest {
  */
 export interface Machine {
   readonly kind: MachineKind;
+  readonly runtimeAccess?: MachineRuntimeAccess;
   location(): MachineLocation;
   readiness(): Promise<MachineReadiness>;
   reconcile(): Promise<MachineReconcileOutcome>;

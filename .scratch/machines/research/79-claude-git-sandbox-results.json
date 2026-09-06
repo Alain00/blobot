@@ -1,0 +1,466 @@
+{
+  "fixture": "79-claude-git-sandbox",
+  "createdAt": "2026-09-06T10:06:39.304Z",
+  "pins": {
+    "cli": "2.1.260",
+    "cliSha256": "3c269f66801028823e24a63ced9fdd3988cb86cf85fccd9f03f87e463b9d3e3c",
+    "bridgeSha256": "e189787d1c445c3842262bd9d98171a535127c6d36bbe698fff235cc14100792",
+    "helperSha256": "9857709d297e4c21a87aee1a69ca90f8512b30c8fc51ab40044436c66adceddb"
+  },
+  "cases": [
+    {
+      "nested": false,
+      "allowGitWrites": true,
+      "policy": {
+        "enabled": true,
+        "failIfUnavailable": true,
+        "autoAllowBashIfSandboxed": false,
+        "allowUnsandboxedCommands": false,
+        "network": {
+          "allowLocalBinding": true
+        },
+        "filesystem": {
+          "allowWrite": [
+            "/private/tmp/blobot-claude79-KYipTP/ordinary/source/.git"
+          ]
+        }
+      },
+      "command": "printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/ordinary/project/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/ordinary/project' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/ordinary/project' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && '/opt/homebrew/Cellar/node/25.6.1/bin/node' -e 'require(\"node:net\").createServer().listen(0,\"127.0.0.1\",function(){console.log(\"fixture79-loopback\");this.close()})'",
+      "messagesSent": 2,
+      "requests": [
+        {
+          "path": "/api/hello",
+          "method": "HEAD",
+          "apiKeyWasSynthetic": false,
+          "toolResults": []
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "method": "POST",
+          "apiKeyWasSynthetic": true,
+          "toolResults": []
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "method": "POST",
+          "apiKeyWasSynthetic": true,
+          "toolResults": [
+            {
+              "tool_use_id": "toolu_fixture79",
+              "type": "tool_result",
+              "content": "[fixture-agent afa4520] fixture79\n 1 file changed, 1 insertion(+)\n create mode 100644 fixture.txt\nfixture79-loopback",
+              "is_error": false
+            }
+          ]
+        }
+      ],
+      "process": {
+        "code": 0,
+        "signal": null,
+        "stderr": ""
+      },
+      "observation": {
+        "initialized": true,
+        "approvals": [
+          {
+            "title": "printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/ordinary/project/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/ordinary/project' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/ordinary/project' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && '/opt/homebrew/Cellar/node/25.6.1/bin/node' -e 'require(\"node:net\").createServer().listen(0,\"127.0.0.1\",function(){console.log(\"fixture79-loopback\");this.close()})'",
+            "kinds": [
+              "reject_once",
+              "allow_once",
+              "allow_always"
+            ]
+          }
+        ],
+        "events": [
+          {
+            "type": "usage_updated",
+            "used": 20,
+            "size": 1000000,
+            "agentId": "fixture79",
+            "sessionId": "32f4baee-fe11-405e-82a8-4656c7c093b8",
+            "at": 1788689200430
+          },
+          {
+            "type": "tool_call_started",
+            "toolCallId": "toolu_fixture79",
+            "title": "Terminal",
+            "kind": "execute",
+            "rawInput": {},
+            "agentId": "fixture79",
+            "sessionId": "32f4baee-fe11-405e-82a8-4656c7c093b8",
+            "at": 1788689200431
+          },
+          {
+            "type": "tool_call_updated",
+            "toolCallId": "toolu_fixture79",
+            "status": "in_progress",
+            "title": "printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/ordinary/project/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/ordinary/project' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/ordinary/project' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && '/opt/homebrew/Cellar/node/25.6.1/bin/node' -e 'require(\"node:net\").createServer().listen(0,\"127.0.0.1\",function(){console.log(\"fixture79-loopback\");this.close()})'",
+            "kind": "execute",
+            "rawInput": {
+              "command": "printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/ordinary/project/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/ordinary/project' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/ordinary/project' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && '/opt/homebrew/Cellar/node/25.6.1/bin/node' -e 'require(\"node:net\").createServer().listen(0,\"127.0.0.1\",function(){console.log(\"fixture79-loopback\");this.close()})'",
+              "description": "Commit synthetic files in fixture worktrees",
+              "timeout": 10000
+            },
+            "output": "Commit synthetic files in fixture worktrees",
+            "agentId": "fixture79",
+            "sessionId": "32f4baee-fe11-405e-82a8-4656c7c093b8",
+            "at": 1788689200435
+          },
+          {
+            "type": "tool_call_updated",
+            "toolCallId": "toolu_fixture79",
+            "status": "in_progress",
+            "agentId": "fixture79",
+            "sessionId": "32f4baee-fe11-405e-82a8-4656c7c093b8",
+            "at": 1788689200649
+          },
+          {
+            "type": "tool_call_updated",
+            "toolCallId": "toolu_fixture79",
+            "status": "completed",
+            "output": "```console\n[fixture-agent afa4520] fixture79\n 1 file changed, 1 insertion(+)\n create mode 100644 fixture.txt\nfixture79-loopback\n```",
+            "agentId": "fixture79",
+            "sessionId": "32f4baee-fe11-405e-82a8-4656c7c093b8",
+            "at": 1788689200650
+          },
+          {
+            "type": "agent_message_delta",
+            "messageId": "msg_fixture79_2",
+            "text": "Synthetic final response after the Bash result.",
+            "agentId": "fixture79",
+            "sessionId": "32f4baee-fe11-405e-82a8-4656c7c093b8",
+            "at": 1788689200655
+          },
+          {
+            "type": "usage_updated",
+            "used": 20,
+            "size": 1000000,
+            "costUsd": 0.0006000000000000001,
+            "agentId": "fixture79",
+            "sessionId": "32f4baee-fe11-405e-82a8-4656c7c093b8",
+            "at": 1788689200669
+          },
+          {
+            "type": "agent_message_completed",
+            "agentId": "fixture79",
+            "sessionId": "32f4baee-fe11-405e-82a8-4656c7c093b8",
+            "at": 1788689200669,
+            "messageId": "msg_fixture79_2",
+            "text": "Synthetic final response after the Bash result."
+          },
+          {
+            "type": "turn_ended",
+            "turnId": "turn_1",
+            "stopReason": "end_turn",
+            "agentId": "fixture79",
+            "sessionId": "32f4baee-fe11-405e-82a8-4656c7c093b8",
+            "at": 1788689200669
+          }
+        ]
+      },
+      "commits": [
+        "fixture79"
+      ]
+    },
+    {
+      "nested": true,
+      "allowGitWrites": false,
+      "policy": {
+        "enabled": true,
+        "failIfUnavailable": true,
+        "autoAllowBashIfSandboxed": false,
+        "allowUnsandboxedCommands": false,
+        "network": {
+          "allowLocalBinding": true
+        }
+      },
+      "command": "printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/nested-control/project/one/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/nested-control/project/one' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/nested-control/project/one' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/nested-control/project/two/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/nested-control/project/two' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/nested-control/project/two' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && '/opt/homebrew/Cellar/node/25.6.1/bin/node' -e 'require(\"node:net\").createServer().listen(0,\"127.0.0.1\",function(){console.log(\"fixture79-loopback\");this.close()})'",
+      "messagesSent": 2,
+      "requests": [
+        {
+          "path": "/api/hello",
+          "method": "HEAD",
+          "apiKeyWasSynthetic": false,
+          "toolResults": []
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "method": "POST",
+          "apiKeyWasSynthetic": true,
+          "toolResults": []
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "method": "POST",
+          "apiKeyWasSynthetic": true,
+          "toolResults": [
+            {
+              "type": "tool_result",
+              "content": "Exit code 128\nfatal: Unable to create '/private/tmp/blobot-claude79-KYipTP/nested-control/source/one/.git/worktrees/one/index.lock': Operation not permitted",
+              "is_error": true,
+              "tool_use_id": "toolu_fixture79"
+            }
+          ]
+        }
+      ],
+      "process": {
+        "code": 0,
+        "signal": null,
+        "stderr": ""
+      },
+      "observation": {
+        "initialized": true,
+        "approvals": [
+          {
+            "title": "printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/nested-control/project/one/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/nested-control/project/one' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/nested-control/project/one' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/nested-control/project/two/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/nested-control/project/two' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/nested-control/project/two' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && '/opt/homebrew/Cellar/node/25.6.1/bin/node' -e 'require(\"node:net\").createServer().listen(0,\"127.0.0.1\",function(){console.log(\"fixture79-loopback\");this.close()})'",
+            "kinds": [
+              "reject_once",
+              "allow_once",
+              "allow_always"
+            ]
+          }
+        ],
+        "events": [
+          {
+            "type": "usage_updated",
+            "used": 20,
+            "size": 1000000,
+            "agentId": "fixture79",
+            "sessionId": "a8e0dc8a-aa76-42c8-b7ec-377c6be61a50",
+            "at": 1788689203013
+          },
+          {
+            "type": "tool_call_started",
+            "toolCallId": "toolu_fixture79",
+            "title": "Terminal",
+            "kind": "execute",
+            "rawInput": {},
+            "agentId": "fixture79",
+            "sessionId": "a8e0dc8a-aa76-42c8-b7ec-377c6be61a50",
+            "at": 1788689203013
+          },
+          {
+            "type": "tool_call_updated",
+            "toolCallId": "toolu_fixture79",
+            "status": "in_progress",
+            "title": "printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/nested-control/project/one/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/nested-control/project/one' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/nested-control/project/one' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/nested-control/project/two/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/nested-control/project/two' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/nested-control/project/two' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && '/opt/homebrew/Cellar/node/25.6.1/bin/node' -e 'require(\"node:net\").createServer().listen(0,\"127.0.0.1\",function(){console.log(\"fixture79-loopback\");this.close()})'",
+            "kind": "execute",
+            "rawInput": {
+              "command": "printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/nested-control/project/one/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/nested-control/project/one' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/nested-control/project/one' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/nested-control/project/two/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/nested-control/project/two' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/nested-control/project/two' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && '/opt/homebrew/Cellar/node/25.6.1/bin/node' -e 'require(\"node:net\").createServer().listen(0,\"127.0.0.1\",function(){console.log(\"fixture79-loopback\");this.close()})'",
+              "description": "Commit synthetic files in fixture worktrees",
+              "timeout": 10000
+            },
+            "output": "Commit synthetic files in fixture worktrees",
+            "agentId": "fixture79",
+            "sessionId": "a8e0dc8a-aa76-42c8-b7ec-377c6be61a50",
+            "at": 1788689203021
+          },
+          {
+            "type": "tool_call_updated",
+            "toolCallId": "toolu_fixture79",
+            "status": "failed",
+            "output": "```\nExit code 128\nfatal: Unable to create '/private/tmp/blobot-claude79-KYipTP/nested-control/source/one/.git/worktrees/one/index.lock': Operation not permitted\n```",
+            "error": "```\nExit code 128\nfatal: Unable to create '/private/tmp/blobot-claude79-KYipTP/nested-control/source/one/.git/worktrees/one/index.lock': Operation not permitted\n```",
+            "agentId": "fixture79",
+            "sessionId": "a8e0dc8a-aa76-42c8-b7ec-377c6be61a50",
+            "at": 1788689203488
+          },
+          {
+            "type": "agent_message_delta",
+            "messageId": "msg_fixture79_2",
+            "text": "Synthetic final response after the Bash result.",
+            "agentId": "fixture79",
+            "sessionId": "a8e0dc8a-aa76-42c8-b7ec-377c6be61a50",
+            "at": 1788689203512
+          },
+          {
+            "type": "usage_updated",
+            "used": 20,
+            "size": 1000000,
+            "costUsd": 0.0006000000000000001,
+            "agentId": "fixture79",
+            "sessionId": "a8e0dc8a-aa76-42c8-b7ec-377c6be61a50",
+            "at": 1788689203573
+          },
+          {
+            "type": "agent_message_completed",
+            "agentId": "fixture79",
+            "sessionId": "a8e0dc8a-aa76-42c8-b7ec-377c6be61a50",
+            "at": 1788689203573,
+            "messageId": "msg_fixture79_2",
+            "text": "Synthetic final response after the Bash result."
+          },
+          {
+            "type": "turn_ended",
+            "turnId": "turn_1",
+            "stopReason": "end_turn",
+            "agentId": "fixture79",
+            "sessionId": "a8e0dc8a-aa76-42c8-b7ec-377c6be61a50",
+            "at": 1788689203573
+          }
+        ]
+      },
+      "commits": [
+        "initial",
+        "initial"
+      ]
+    },
+    {
+      "nested": true,
+      "allowGitWrites": true,
+      "policy": {
+        "enabled": true,
+        "failIfUnavailable": true,
+        "autoAllowBashIfSandboxed": false,
+        "allowUnsandboxedCommands": false,
+        "network": {
+          "allowLocalBinding": true
+        },
+        "filesystem": {
+          "allowWrite": [
+            "/private/tmp/blobot-claude79-KYipTP/nested/source/one/.git",
+            "/private/tmp/blobot-claude79-KYipTP/nested/source/two/.git"
+          ]
+        }
+      },
+      "command": "printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/nested/project/one/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/nested/project/one' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/nested/project/one' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/nested/project/two/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/nested/project/two' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/nested/project/two' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && '/opt/homebrew/Cellar/node/25.6.1/bin/node' -e 'require(\"node:net\").createServer().listen(0,\"127.0.0.1\",function(){console.log(\"fixture79-loopback\");this.close()})'",
+      "messagesSent": 2,
+      "requests": [
+        {
+          "path": "/api/hello",
+          "method": "HEAD",
+          "apiKeyWasSynthetic": false,
+          "toolResults": []
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "method": "POST",
+          "apiKeyWasSynthetic": true,
+          "toolResults": []
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "method": "POST",
+          "apiKeyWasSynthetic": true,
+          "toolResults": [
+            {
+              "tool_use_id": "toolu_fixture79",
+              "type": "tool_result",
+              "content": "[fixture-agent 773f812] fixture79\n 1 file changed, 1 insertion(+)\n create mode 100644 fixture.txt\n[fixture-agent 773f812] fixture79\n 1 file changed, 1 insertion(+)\n create mode 100644 fixture.txt\nfixture79-loopback",
+              "is_error": false
+            }
+          ]
+        }
+      ],
+      "process": {
+        "code": 0,
+        "signal": null,
+        "stderr": ""
+      },
+      "observation": {
+        "initialized": true,
+        "approvals": [
+          {
+            "title": "printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/nested/project/one/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/nested/project/one' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/nested/project/one' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/nested/project/two/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/nested/project/two' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/nested/project/two' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && '/opt/homebrew/Cellar/node/25.6.1/bin/node' -e 'require(\"node:net\").createServer().listen(0,\"127.0.0.1\",function(){console.log(\"fixture79-loopback\");this.close()})'",
+            "kinds": [
+              "reject_once",
+              "allow_once",
+              "allow_always"
+            ]
+          }
+        ],
+        "events": [
+          {
+            "type": "usage_updated",
+            "used": 20,
+            "size": 1000000,
+            "agentId": "fixture79",
+            "sessionId": "210f1829-6178-4c48-b633-2c50aaac4ae9",
+            "at": 1788689206748
+          },
+          {
+            "type": "tool_call_started",
+            "toolCallId": "toolu_fixture79",
+            "title": "Terminal",
+            "kind": "execute",
+            "rawInput": {},
+            "agentId": "fixture79",
+            "sessionId": "210f1829-6178-4c48-b633-2c50aaac4ae9",
+            "at": 1788689206748
+          },
+          {
+            "type": "tool_call_updated",
+            "toolCallId": "toolu_fixture79",
+            "status": "in_progress",
+            "title": "printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/nested/project/one/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/nested/project/one' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/nested/project/one' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/nested/project/two/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/nested/project/two' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/nested/project/two' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && '/opt/homebrew/Cellar/node/25.6.1/bin/node' -e 'require(\"node:net\").createServer().listen(0,\"127.0.0.1\",function(){console.log(\"fixture79-loopback\");this.close()})'",
+            "kind": "execute",
+            "rawInput": {
+              "command": "printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/nested/project/one/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/nested/project/one' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/nested/project/one' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && printf fixture79 > '/private/tmp/blobot-claude79-KYipTP/nested/project/two/fixture.txt' && git -C '/private/tmp/blobot-claude79-KYipTP/nested/project/two' add fixture.txt && git -C '/private/tmp/blobot-claude79-KYipTP/nested/project/two' -c user.name=Fixture -c user.email=fixture@example.invalid -c commit.gpgsign=false -c core.hooksPath=/dev/null commit -m fixture79 && '/opt/homebrew/Cellar/node/25.6.1/bin/node' -e 'require(\"node:net\").createServer().listen(0,\"127.0.0.1\",function(){console.log(\"fixture79-loopback\");this.close()})'",
+              "description": "Commit synthetic files in fixture worktrees",
+              "timeout": 10000
+            },
+            "output": "Commit synthetic files in fixture worktrees",
+            "agentId": "fixture79",
+            "sessionId": "210f1829-6178-4c48-b633-2c50aaac4ae9",
+            "at": 1788689206758
+          },
+          {
+            "type": "tool_call_updated",
+            "toolCallId": "toolu_fixture79",
+            "status": "in_progress",
+            "agentId": "fixture79",
+            "sessionId": "210f1829-6178-4c48-b633-2c50aaac4ae9",
+            "at": 1788689207453
+          },
+          {
+            "type": "tool_call_updated",
+            "toolCallId": "toolu_fixture79",
+            "status": "completed",
+            "output": "```console\n[fixture-agent 773f812] fixture79\n 1 file changed, 1 insertion(+)\n create mode 100644 fixture.txt\n[fixture-agent 773f812] fixture79\n 1 file changed, 1 insertion(+)\n create mode 100644 fixture.txt\nfixture79-loopback\n```",
+            "agentId": "fixture79",
+            "sessionId": "210f1829-6178-4c48-b633-2c50aaac4ae9",
+            "at": 1788689207457
+          },
+          {
+            "type": "agent_message_delta",
+            "messageId": "msg_fixture79_2",
+            "text": "Synthetic final response after the Bash result.",
+            "agentId": "fixture79",
+            "sessionId": "210f1829-6178-4c48-b633-2c50aaac4ae9",
+            "at": 1788689207466
+          },
+          {
+            "type": "usage_updated",
+            "used": 20,
+            "size": 1000000,
+            "costUsd": 0.0006000000000000001,
+            "agentId": "fixture79",
+            "sessionId": "210f1829-6178-4c48-b633-2c50aaac4ae9",
+            "at": 1788689207502
+          },
+          {
+            "type": "agent_message_completed",
+            "agentId": "fixture79",
+            "sessionId": "210f1829-6178-4c48-b633-2c50aaac4ae9",
+            "at": 1788689207502,
+            "messageId": "msg_fixture79_2",
+            "text": "Synthetic final response after the Bash result."
+          },
+          {
+            "type": "turn_ended",
+            "turnId": "turn_1",
+            "stopReason": "end_turn",
+            "agentId": "fixture79",
+            "sessionId": "210f1829-6178-4c48-b633-2c50aaac4ae9",
+            "at": 1788689207502
+          }
+        ]
+      },
+      "commits": [
+        "fixture79",
+        "fixture79"
+      ]
+    }
+  ],
+  "temporaryTreeRemoved": true
+}

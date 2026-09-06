@@ -1,12 +1,13 @@
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, expect, it, vi } from 'vitest';
 import type { RuntimeImageBuild } from '../runtime-image.js';
 import { SbxImageStore, verifyRuntimeImageArchive } from './image-store.js';
+import type { SbxCommandRunner } from './engine.js';
 
 const exec = promisify(execFile), roots: string[] = [];
 const hash = (bytes: string | Buffer) => createHash('sha256').update(bytes).digest('hex');
@@ -31,7 +32,7 @@ async function fixture(arch = 'arm64') {
   const build: RuntimeImageBuild = { arch: 'arm64', reference, imageId: `sha256:${imageId}`, url: 'https://example.invalid/runtime.tar',
     sha256: hash(bytes), bytes: bytes.length };
   let rows: unknown[] = [];
-  const run = vi.fn(async (args: readonly string[]) => {
+  const run = vi.fn<SbxCommandRunner>(async args => {
     if (args[1] === 'load') rows = [{ repository: 'docker.io/library/blobot-machine-fixture', tag: 'verified-arm64', id: imageId.slice(0, 12) }];
     return { code: 0, stdout: JSON.stringify({ images: rows }) };
   });
@@ -56,11 +57,27 @@ it('resumes a verified release download and loads only after archive validation'
   });
   const store = new SbxImageStore(cache, f.run, f.fetcher), onProgress = vi.fn();
   await store.install(f.build, { onProgress });
+  await expect(stat(join(cache, `${f.build.sha256}.tar`))).rejects.toMatchObject({ code: 'ENOENT' });
   expect(f.run.mock.calls.filter(([args]) => args[1] === 'load')).toHaveLength(1);
   expect(onProgress).toHaveBeenLastCalledWith(f.bytes.length, f.bytes.length);
   expect(await store.readiness(f.build)).toEqual({ state: 'ready' });
   await store.install(f.build);
   expect(f.fetcher).toHaveBeenCalledTimes(1);
+});
+
+it('keeps a verified archive after a failed load and removes it only when the matching image exists', async () => {
+  const f = await fixture(), cache = join(f.root, 'cache'), normal = f.run.getMockImplementation()!;
+  const store = new SbxImageStore(cache, f.run, f.fetcher);
+  f.run.mockImplementation(async args => args[1] === 'load' ? { code: 1, stdout: '' } : normal(args));
+  await expect(store.install(f.build)).rejects.toThrow('could not be loaded');
+  expect((await stat(join(cache, `${f.build.sha256}.tar`))).size).toBe(f.build.bytes);
+  f.run.mockImplementation(normal);
+  await store.install(f.build);
+  expect(f.fetcher).toHaveBeenCalledTimes(1);
+  await expect(stat(join(cache, `${f.build.sha256}.tar`))).rejects.toMatchObject({ code: 'ENOENT' });
+  await writeFile(join(cache, `${f.build.sha256}.tar`), f.bytes);
+  await store.install(f.build);
+  await expect(stat(join(cache, `${f.build.sha256}.tar`))).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
 it('never loads bytes with a wrong checksum', async () => {
@@ -97,4 +114,22 @@ it('coalesces concurrent installs and respects cancellation before any operation
   await Promise.all([first, store.install(f.build)]);
   expect(f.fetcher).toHaveBeenCalledTimes(1);
   expect(f.run.mock.calls.filter(([args]) => args[1] === 'load')).toHaveLength(1);
+});
+
+it('cancels a pending native import, keeps its archive and makes no post-cancellation success probe', async () => {
+  const f = await fixture(), cache = join(f.root, 'cache'), abort = new AbortController();
+  const normal = f.run.getMockImplementation()!;
+  f.run.mockImplementation(async (args, signal) => {
+    expect(signal).toBe(abort.signal);
+    if (args[1] !== 'load') return normal(args, signal);
+    // Even an import reporting exit 0 as cancellation arrives cannot publish completion.
+    return new Promise(resolve => signal!.addEventListener('abort', () => resolve({ code: 0, stdout: '' }), { once: true }));
+  });
+  const store = new SbxImageStore(cache, f.run, f.fetcher);
+  const install = store.install(f.build, { signal: abort.signal });
+  const rejected = expect(install).rejects.toThrow();
+  await vi.waitFor(() => expect(f.run.mock.calls.some(([args]) => args[1] === 'load')).toBe(true));
+  abort.abort(); await rejected;
+  expect(f.run.mock.calls.filter(([args]) => args[1] === 'ls')).toHaveLength(2);
+  expect((await stat(join(cache, `${f.build.sha256}.tar`))).size).toBe(f.build.bytes);
 });

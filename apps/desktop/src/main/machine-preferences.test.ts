@@ -34,7 +34,10 @@ describe('Machine sleep preferences', () => {
   it('keeps a malformed saved file rather than silently replacing it with defaults', async () => {
     const prefs = await fixture();
     await writeFile(prefs.path, 'invalid');
-    await expect(prefs.load()).rejects.toThrow('kept');
+    await expect(prefs.load()).rejects.toThrow('could not be read');
     expect(await readFile(prefs.path, 'utf8')).toBe('invalid');
+    expect(prefs.readError).toContain('temporarily disabled');
+    await prefs.setIdleAfterMs(1000);
+    expect(prefs.readError).toBeUndefined();
   });
 });

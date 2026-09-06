@@ -10,7 +10,7 @@ import type {
 import { HireAgent } from './AgentForm.js';
 import { Blob } from './Blob.js';
 import type { MachinePlacement } from '@blobot/core/domain';
-import { MachinePick } from './MachinePick.js';
+import { MachinePick, MachineCapacity } from './MachinePick.js';
 import { EngineSetupControls } from './MachineSettings.js';
 
 /**
@@ -91,6 +91,7 @@ export function NewTeam({
   const [defaultMachine, setDefaultMachine] = useState<MachinePlacement>({ kind: 'local' });
   const [memberMachines, setMemberMachines] = useState<Readonly<Record<string, MachinePlacement>>>({});
   const [previewEnabled, setPreviewEnabled] = useState(false);
+  const [hostCapacity, setHostCapacity] = useState<import('../../../shared/api.js').EngineSetupView['host']>();
 
   /** The list, so Tab can take whatever the arrow keys have landed on. */
   const listed = useRef<HTMLDivElement>(null);
@@ -105,7 +106,7 @@ export function NewTeam({
   useEffect(() => {
     rescan();
     void reloadRoster();
-    void window.blobot.engineSetup().then((view) => setPreviewEnabled(view.previewEnabled)).catch(() => {});
+    void window.blobot.engineSetup().then((view) => { setPreviewEnabled(view.previewEnabled); setHostCapacity(view.host); }).catch(() => {});
   }, [reloadRoster, rescan]);
 
   // Escape leaves, once there is a team to go back to. Captured on the window rather than on
@@ -435,6 +436,7 @@ export function NewTeam({
             />
             <div className="pickmachines">
               <span className="mono muted">WHERE THEY WORK</span>
+              <MachineCapacity host={hostCapacity} placements={picked.map((agent) => memberMachines[agent.id] ?? defaultMachine)} />
               <MachinePick label="Where this team works" value={defaultMachine} onChange={setDefaultMachine} previewEnabled={previewEnabled} />
               <details className="machinedisclosure">
                 <summary>Choose for each agent</summary>
@@ -449,7 +451,7 @@ export function NewTeam({
               </details>
               {picked.some((agent) => (memberMachines[agent.id] ?? defaultMachine).kind === 'box') && <>
                 <p className="note muted">First use downloads about 600–800 MB per runtime, shared across agents, plus the sandbox engine.</p>
-                <p className="note muted">Each sandbox has an 8 GiB private home and 20 GiB for Docker data. CPU and memory limits stay fixed after creation.</p>
+                <p className="note muted">Each sandbox has an 8 GiB private home and 20 GiB for software it installs. CPU and memory limits stay fixed after creation.</p>
                 <p className="note muted">Working folders and shared Git history stay writable on this computer. Sandboxes can reach the Internet and your local network.
                   The runtime keeps the approval settings selected for each agent.</p>
                 <details className="machinedisclosure"><summary>Set up sandboxes</summary><EngineSetupControls compact /></details>

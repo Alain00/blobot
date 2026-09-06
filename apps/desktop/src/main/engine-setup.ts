@@ -1,12 +1,15 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import { cpus, totalmem } from 'node:os';
 import { SbxInstaller, sbxHostArtifact, sbxKvmAvailable, sbxClientEnvironment } from '@blobot/core';
 import type { DesktopMachines } from './machines.js';
-import type { EngineSetupView, SetupProgress, UiConfiguredMachine } from '../shared/machines.js';
+import type { EngineSetupView, SetupProgress, UiConfiguredMachine, UiMachineInventory } from '../shared/machines.js';
 export interface EngineSetupEffects {
   readonly configuredMachines?: () => readonly UiConfiguredMachine[];
   readonly changed: () => void;
   readonly openPackage: (path: string) => Promise<string>;
+  readonly sleepError?: () => string | undefined;
+  readonly inventory?: () => Promise<UiMachineInventory>;
 }
 
 /** No terminal or CLI output crosses this boundary. The engine owns its browser and credentials. */
@@ -17,10 +20,13 @@ export class EngineSetup {
   constructor(readonly machines: DesktopMachines, readonly effects: EngineSetupEffects) {}
 
   async view(): Promise<EngineSetupView> {
-    const [readiness, artifact, kvmAvailable] = await Promise.all([
-      this.machines.engine().readiness(), sbxHostArtifact(), sbxKvmAvailable(),
+    const [readiness, artifact, kvmAvailable, inventory] = await Promise.all([
+      this.machines.engine().readiness(), sbxHostArtifact(), sbxKvmAvailable(), this.effects.inventory?.(),
     ]);
     return { readiness, canInstall: artifact !== undefined, kvmAvailable,
+      host: { cpus: cpus().length, memoryBytes: totalmem() },
+      ...(inventory === undefined ? {} : { inventory }),
+      ...(this.effects.sleepError?.() === undefined ? {} : { sleepError: this.effects.sleepError!()! }),
       previewEnabled: this.machines.previewEnabled, configuredMachines: this.effects.configuredMachines?.() ?? [],
       ...(this.#operation === undefined ? {} : { operation: this.#operation }) };
   }
@@ -66,7 +72,7 @@ export class EngineSetup {
         signal.throwIfAborted();
         update({ phase: 'done', detail: readiness.state === 'ready' ? 'Sandboxes are ready.' : readiness.detail });
       } else if (kind === 'sign_in') {
-        update({ phase: 'waiting', detail: 'Continue signing in to Docker in your browser.' });
+        update({ phase: 'waiting', detail: 'Continue signing in to Docker in your browser. If no browser opens, cancel and try again.' });
         await runEngineLogin(this.machines.executable, signal);
         signal.throwIfAborted();
         update({ phase: 'checking', detail: 'Checking sandbox access…' });
@@ -89,26 +95,41 @@ export class EngineSetup {
   async close(): Promise<void> { this.#closed = true; this.#active?.abort.abort(); await this.#active?.task; }
 }
 
+/** Host browser/keyring session endpoints only; never used by sandbox or Agent processes. */
+export function engineLoginEnvironment(source: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  const env = sbxClientEnvironment(source);
+  for (const name of ['DISPLAY', 'WAYLAND_DISPLAY', 'XDG_RUNTIME_DIR', 'DBUS_SESSION_BUS_ADDRESS'] as const) {
+    if (source[name] !== undefined) env[name] = source[name];
+  }
+  return env;
+}
+
 export function runEngineLogin(executable: string, signal: AbortSignal): Promise<void> {
   signal.throwIfAborted();
   return new Promise((resolve, reject) => {
-    const child = spawn(executable, ['login'], { env: sbxClientEnvironment(), stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawn(executable, ['login'], { env: engineLoginEnvironment(), stdio: ['pipe', 'pipe', 'pipe'] });
     // No output is logged or retained, including URLs or possible account identifiers.
     child.stdout.resume(); child.stderr.resume();
     let killer: ReturnType<typeof setTimeout> | undefined;
+    let finished = false;
     const abort = () => {
       child.stdin.end(); child.kill('SIGTERM');
       killer = setTimeout(() => child.kill('SIGKILL'), 1000);
     };
     const finish = (error?: Error) => {
+      if (finished) return;
+      finished = true;
       clearTimeout(killer); signal.removeEventListener('abort', abort);
       if (signal.aborted) reject(new Error('Sandbox sign-in cancelled.'));
       else if (error) reject(error); else resolve();
     };
     child.stdin.on('error', () => {});
     child.once('error', () => finish(new Error('Sandbox sign-in could not start.')));
-    child.once('close', (code) => finish(code === 0 ? undefined : new Error('Docker sign-in did not complete. Try again.')));
+    child.once('close', (code) => finish(code === 0 ? undefined : new Error('Docker browser sign-in did not complete. Check that your browser and account keyring are available, then try again.')));
     signal.addEventListener('abort', abort, { once: true });
     if (signal.aborted) abort();
+    // The managed browser flow has no terminal/input surface. An interactive fallback
+    // must see EOF and fail, rather than wait invisibly for input that cannot arrive.
+    child.stdin.end();
   });
 }

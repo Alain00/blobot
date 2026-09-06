@@ -7,6 +7,7 @@ import { LocalMachine } from './local-machine.js';
 import { SleepingRuntime } from './sleeping-runtime.js';
 import type { MachinePower } from './power.js';
 import type { Machine } from './machine.js';
+import type { RuntimeImageDefinition } from './runtime-image.js';
 
 function fixture(script = scenario('reply').wait(100).say('hello', { overMs: 0 }).end()) {
   const clock = new VirtualClock();
@@ -39,6 +40,106 @@ const consume = async (stream: AsyncIterable<AgentEvent>) => {
 };
 
 describe('sleeping Agent execution', () => {
+  it('passes the adapter’s image requirement into Machine startup', async () => {
+    const f = fixture();
+    const image: RuntimeImageDefinition = {
+      cliVersion: 'fixture', guestNode: '/node', moduleRoot: '/modules', executable: '/runtime',
+      sharedSkillLocations: [], allowedEnvironment: [], builds: [{
+        arch: process.arch === 'x64' ? 'amd64' : 'arm64', reference: 'fixture/runtime@sha256:expected',
+        imageId: 'fixture', url: 'https://example.invalid/fixture', sha256: 'a'.repeat(64), bytes: 1,
+      }],
+    };
+    Object.defineProperty(f.runtimes[0], 'machineImage', { value: image });
+    await f.runtime.start();
+    expect(f.starts).toHaveBeenCalledWith(expect.objectContaining({ runtime: { image: image.builds[0]!.reference } }));
+    await f.runtime.stop();
+  });
+
+  it.each(['prompt', 'restart'] as const)('serializes shutdown behind %s workspace verification', async (operation) => {
+    const f = fixture();
+    await f.runtime.start();
+    let release!: () => void;
+    const machine: Machine = f.machine;
+    machine.beforeWork = () => new Promise<void>((resolve) => { release = resolve; });
+    const work = operation === 'prompt'
+      ? consume(f.runtime.sendPrompt({ text: 'do not submit after close', from: 'user' }))
+      : f.runtime.restart();
+    const refused = expect(work).rejects.toThrow('closed');
+    await f.clock.advance(0);
+    const stopping = f.runtime.stop();
+    await f.clock.advance(0);
+    expect(f.stops).not.toHaveBeenCalled();
+    release();
+    await refused;
+    await stopping;
+    expect(f.stops).toHaveBeenCalledTimes(1);
+    expect(f.runtime.power).toBe('asleep');
+    expect(f.runtimes[0]?.prompts).toHaveLength(0);
+  });
+
+  it('cancels startup without closing the execution and permits a later retry', async () => {
+    const f = fixture();
+    f.starts.mockImplementationOnce(({ signal }) => new Promise((_resolve, reject) => {
+      signal!.addEventListener('abort', () => reject(signal!.reason), { once: true });
+    }));
+    const starting = f.runtime.start();
+    const refused = expect(starting).rejects.toThrow('startup was cancelled');
+    await f.clock.advance(0);
+    await f.runtime.cancelStart();
+    await refused;
+    expect(f.stops).toHaveBeenCalledTimes(1);
+    expect(f.runtime.lifecycle).toBe('dead');
+    await f.runtime.retryStart();
+    expect(f.runtime.lifecycle).toBe('ready');
+    await f.runtime.stop();
+  });
+
+  it('cancels an in-flight Machine start on shutdown and releases its resources', async () => {
+    const f = fixture();
+    f.starts.mockImplementationOnce(({ signal }) => new Promise((_resolve, reject) => {
+      expect(signal).toBeDefined();
+      signal!.addEventListener('abort', () => reject(new Error('start cancelled')), { once: true });
+    }));
+    const starting = f.runtime.start();
+    const refused = expect(starting).rejects.toThrow('start cancelled');
+    await f.clock.advance(0);
+    await f.runtime.stop();
+    await refused;
+    expect(f.runtime.power).toBe('asleep');
+    expect(f.runtime.lifecycle).toBe('stopped');
+    expect(f.runtimes[0]?.lifecycle).toBe('stopped');
+  });
+
+  it('stops the Machine when its provider unexpectedly dies while awake', async () => {
+    const f = fixture();
+    await f.runtime.start();
+    await f.runtimes[0]!.stop();
+    await f.clock.advance(0);
+    expect(f.runtime.lifecycle).toBe('dead');
+    expect(f.runtime.power).toBe('asleep');
+    expect(f.stops).toHaveBeenCalledTimes(1);
+    await f.runtime.retryStart();
+    expect(f.runtime.lifecycle).toBe('ready');
+    expect(f.resumes).toEqual([undefined, 'first-session']);
+    await f.runtime.stop();
+  });
+
+  it('defers adapter construction failure to per-Agent startup and allows a corrected retry', async () => {
+    const clock = new VirtualClock();
+    const machine = new LocalMachine({ agentId: 'alice', workspacePath: '/fixture' });
+    const create = vi.fn(() => new MockAgentRuntime({ agentId: 'alice', clock, startupMs: 0, script: scenario('empty').end() }));
+    create.mockImplementationOnce(() => { throw new Error('Invalid Agent Git identity'); });
+    const runtime = new SleepingRuntime({ machine, clock, startRequest: { mailboxPort: 3456 }, canSleep: () => true, create });
+    expect(runtime.agentId).toBe('alice');
+    expect(runtime.accepts).toEqual({ images: false, textFiles: false });
+    await expect(runtime.start()).rejects.toThrow('Invalid Agent Git identity');
+    expect(runtime.lifecycle).toBe('dead');
+    await runtime.retryStart();
+    expect(runtime.lifecycle).toBe('ready');
+    expect(create).toHaveBeenCalledTimes(2);
+    await runtime.stop();
+  });
+
   it('cancels a sign-in while preparing its Machine without entering the login', async () => {
     const f = fixture();
     await f.runtime.start();
