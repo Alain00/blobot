@@ -1,5 +1,15 @@
 # Machines implementation
 
+## 2026-09-06 — Machine choice and approval policy
+
+[Does a sandbox answer the fourth trust level](issues/10-does-a-machine-answer-the-fourth-level.md)
+is resolved: the author's same-harness-policy decision supersedes the proposed
+box-only fifth level. Launch composition preserves the Agent's existing trust;
+no new bypass mode or Machine-conditioned profile control is added. Reviewed all
+five adapter call sites and current disclosure/network decisions. Existing policy
+regressions remain green in the full core run (1,095 passed / 47 skipped).
+Operational setup/login/UI work is still in progress and has its own checkpoint.
+
 ## 2026-09-05 — execution seam
 
 The author asked to begin development. The first implementation follows *The engine, the

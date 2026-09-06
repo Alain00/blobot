@@ -322,6 +322,8 @@ none is discarded, and the destination is unchanged:
 
 ## Decisions so far
 
+- [Does a sandbox answer the fourth trust level](issues/10-does-a-machine-answer-the-fourth-level.md): Machine choice preserves the selected harness policy; the historical box-only fifth level is withdrawn under the accepted open-network/shared-Git boundary.
+
 - [What a sandbox lets blobot say](issues/09-what-a-machine-lets-blobot-say.md): kind-specific words reflect host worktrees and open network reach; the shipped permission disclosure uses the selected runtime option's scope instead of a universal Claude file. Approval choices are unchanged, with tests and builds passing.
 
 - [Egress from a box: the allowlist, and how a block is said](issues/15-egress-from-a-box.md): open Internet plus host/local-network reach, preserving approval posture; scoped rule ownership/migration/revocation implemented and tested in RC5. Destination restrictions belong to a separate future effort.

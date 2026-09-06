@@ -1,8 +1,33 @@
 Type: grilling
-Status: open
-Blocked by: 04, 05, 09, 13
+Status: resolved
 
 # Does a sandbox answer the fourth trust level
+
+## Answer — 2026-09-06
+
+No additional trust level follows from choosing a Machine. Guillermo explicitly
+accepted the same selected harness approval policy on local and box, open Internet
+and host/local-network access, and deferred destination restrictions. That choice
+supersedes this ticket's historical proposal for a box-only fifth level, not merely
+its wording. Keep the existing adapter-supported careful/normal/trusting/unattended
+choices; do not pass bypass permissions because an Agent has a private VM.
+
+The concrete boundary is the accepted writable worktree and common Git metadata,
+private per-Agent guest home/Docker storage, and scoped read-only operator skills.
+Guest credentials, tools and native fences still differ from local execution.
+Shared Git permits repository configuration/hooks and network access can reach host
+services; neither is a reason to describe destructive or publishing actions as
+universally contained. A denied harness request retains its existing permission
+channel. A startup/engine failure retains mail and requires retry, with no fallback
+to a local execution or elevation of the selected posture.
+
+Reviewed `runtime-for.ts`, all five adapters' launch composition, `trust.ts` and
+the current disclosure/egress decisions. Machine selection does not modify the
+trust field passed to an adapter, and the provider-owned translations remain the
+same. No new classifier, policy level, permission persistence or conditional hire
+control is required. The former image dependency concerned the rejected fifth
+level and is removed. This resolves the decision under the author's completion
+delegation; it makes no new claim about every provider's enforcement.
 
 ## Current network amendment, 2026-09-06
 
