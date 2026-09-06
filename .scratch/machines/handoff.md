@@ -52,9 +52,13 @@ diff whitespace and current guide/review links pass.
 
 ## PR contract
 
-Push this branch and open a draft PR targeting main, with first paragraph:
+Published [draft PR #5](https://github.com/Alain00/blobot/pull/5), targeting main,
+under `guillermolg00`. Verified draft status, exact first paragraph, matching
+remote head and no merge conflicts. First paragraph:
 **Este PR todavía no está listo: aún no he terminado de revisar todo.**
 
-Keep the account/platform gate, scope deviations, validation and important flows
-visible in the body. Use Guillermo's account. No merge is authorized. Locate the
-published PR with `gh pr view feat/machines`; do not create a duplicate.
+The body records the account/platform gate, scope deviations, validation, important
+flows and review links. No merge is authorized. There are no automated PR checks
+configured for this branch; the validation above was run locally, while the native
+image CI results belong to their separately published build. Locate the existing
+PR with `gh pr view feat/machines`; do not create a duplicate.

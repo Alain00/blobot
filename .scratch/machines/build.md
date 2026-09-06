@@ -996,3 +996,13 @@ Core 1,098/47 and desktop 632/1; types/builds and Electron checks pass.
 All implementation and evidence changes are ready for a draft PR under Guillermo's
 identity, with his not-ready review note first. No merge is authorized. Preserve
 the unrelated existing 19-line pnpm-lock.yaml change outside this work's commits.
+
+
+## 2026-09-06 — draft PR published
+
+[PR #5](https://github.com/Alain00/blobot/pull/5) is open as a draft against main,
+authored by `guillermolg00`, with Guillermo's exact not-ready review note first.
+GitHub reports no merge conflict. The branch is pushed; all own commits use
+Guillermo's verified name/email with no coauthor trailers. The
+[handoff](handoff.md) records current validation and the remaining release gate.
+No merge was performed. The unrelated pnpm-lock.yaml edit remains untouched.
