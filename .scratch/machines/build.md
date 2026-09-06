@@ -853,3 +853,14 @@ base equivalence, the streaming receiver and durable verified cutover are unfini
 Source/target role measurements in one box are not a full migration. Existing
 activation/reconfiguration guards remain. Continue the full goal without reopening
 the accepted network or worktree decisions.
+
+## 2026-09-06 — streaming receiver checkpoint
+
+[The receiver](research/57-streaming-restore.md) now passes a real held-guest
+synthetic restoration, including failure and abort. Bundle/description codecs
+bound preflight data and preserve raw names. Full core: 1,025 passed / 47 skipped;
+core types/build pass. [Same-image comparison](research/56-same-image-base-selection-and-attributes.md)
+shows untouched base entries can remain intact, while seven equal-PAX entries
+still need attribute reconciliation. Continue that backend, composed three-tree
+transfer and candidate cutover; no resource-replacement or activation guard moved.
+The image ticket remains claimed. No product answer is pending.

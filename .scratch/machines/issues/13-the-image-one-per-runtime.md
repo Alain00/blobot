@@ -665,3 +665,18 @@ relationships. Six synthetic full restorations yield identical PAX archives.
 Empty selections skip tar. Full core is 1,002 passed / 47 skipped; types/build
 pass. Remaining: attributes outside PAX, same-image base comparison, the actual
 three-tree receiver and candidate cutover verification. Keep this ticket claimed.
+
+### Streaming receiver checkpoint — 2026-09-06
+
+[Same-image comparison](../research/56-same-image-base-selection-and-attributes.md)
+leaves all 60,946 source entries with both ioctl queries unavailable untouched.
+Seven equal-PAX entries still have different observed attributes, so content
+selection alone is insufficient. No exception turns unknown attributes into zero.
+
+[The compiled receiver](../research/57-streaming-restore.md) restores a synthetic
+private tree in an actual held guest. It checks the full received index, rejects
+truncation, terminates helpers on failure, skips empty selection and requires
+attribute hooks. Bounded bundle/description codecs carry preflight metadata before
+archive bytes. Full core: 1,025 passed / 47 skipped; core types/build pass.
+The actual attribute backend, composed three-tree migration and verified cutover
+remain unfinished. This is a checkpoint; the ticket and existing guards stay open.
