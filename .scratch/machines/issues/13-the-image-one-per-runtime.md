@@ -4,6 +4,17 @@ Blocked by: none
 
 # The image: one per runtime
 
+## Current implementation scope, 2026-09-06
+
+[Post-creation resource changes](25-post-creation-resource-changes.md) are deferred
+under the author's autonomy delegation, after actual full-state reconstruction
+and native-route investigations. CPU/RAM are selected at creation; ordinary
+stop/start retains this same Machine. Full-copy replacement remains guarded and
+is no longer an activation prerequisite for that unchanged-storage lifecycle.
+Remaining image gates still require actual readiness, mount/capacity/ownership,
+distribution and normal persistence validation. No preservation test is relabeled
+as a pass, and this image ticket remains claimed until those gates are finished.
+
 ## Question
 
 Ticket `01` point 7 is given: blobot builds **its own minimal Linux image per runtime**, in its

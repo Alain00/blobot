@@ -62,6 +62,14 @@ amended, and it is not to be worked around quietly.
 
 ## Notes
 
+**Current sizing scope, 2026-09-06.** Under the author's autonomy delegation,
+[post-creation CPU/RAM changes](issues/25-post-creation-resource-changes.md) are
+deferred after actual restoration and native-route evidence. Choose limits at
+creation and retain the same Machine for normal stop/start. That optional
+replacement capability is no longer a prerequisite for the normal lifecycle;
+all remaining image/runtime/readiness/ownership gates still apply. Earlier notes
+about awaiting full-copy restoration for every activation are superseded narrowly.
+
 **Autonomous completion and PR, 2026-09-06 (Guillermo).** The author is going to
 sleep and asks for the complete implementation plus a detailed final review.
 Resolve subsequent decisions autonomously using documented references, established
@@ -71,6 +79,12 @@ an unverified guarantee. Continue in `/Users/guillermo/Work/blobot/.scratch/mach
 Keep validated commits per ticket. When the complete work is ready, push the
 implementation branch and open a PR against `main` describing its important
 implementation details and user flows. This authorizes that PR publication.
+
+**PR review status and attribution, 2026-09-06 (Guillermo).** Open the PR as a
+draft. Its very first paragraph must say: **Este PR todavía no está listo: aún
+no he terminado de revisar todo.** The author has not finished his own review.
+Use Guillermo's verified Git/GitHub identity for this work's commits and PR;
+retain other people's authorship on their pre-existing commits.
 
 **Design direction, 2026-09-06 (Guillermo).** Be meticulous about design: simple,
 organized, understandable and minimal, respecting the site's existing design.
@@ -377,6 +391,12 @@ In scope, not yet sharp enough to ticket. Graduates as the frontier advances.
 ## Out of scope
 
 Ruled beyond this destination. These do not graduate; they return only as a fresh effort.
+
+- [Change CPU and RAM without replacing unverifiable Machine state](issues/25-post-creation-resource-changes.md):
+  implementation decision under the author's 2026-09-06 autonomy delegation.
+  sbx has no verified native same-storage resize; full reconstruction still fails
+  its preservation gate. Choose CPU/RAM at creation and show them read-only later.
+  Record this deviation prominently in the PR; do not claim the editor completed.
 
 - **Destination filtering and a configurable network policy.** Guillermo explicitly deferred
   restrictions to another effort after choosing open Internet and host/local-network reach.

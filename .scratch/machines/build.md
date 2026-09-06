@@ -881,3 +881,18 @@ Guillermo now delegates subsequent decisions while asleep, requests full review,
 and authorizes pushing/opening the finished branch as a PR against `main` with
 the important implementation and flows. This supersedes question pauses. Keep
 the current simple UI direction and exact evidence limits. No pending question.
+
+## 2026-09-06 — scope decision and PR attribution
+
+Attribute/backend checkpoint: `d1a1b24`. [Native resize revalidation](research/61-native-resource-resize-and-storage-reuse.md)
+does not establish a same-storage CPU/RAM update. Under the author's explicit
+decision delegation, [post-creation resource edits](issues/25-post-creation-resource-changes.md)
+move to a future engine capability effort. Choose limits before creation and
+show them read-only afterward. This is a reported plan deviation, not completed
+resize. Keep the same Machine for ordinary stop/start and retain all other
+activation gates. Continue the image/runtime integration and claimed screen work.
+
+The PR must be a draft beginning **Este PR todavía no está listo: aún no he
+terminado de revisar todo.** Git author/committer already use Guillermo's verified
+email, matching the signed-in `guillermolg00` GitHub account. Use that identity
+for this work and preserve pre-existing authorship of other contributors.

@@ -4,6 +4,15 @@ Blocked by: 17
 
 # A box's lifecycle, engine setup, and the pool
 
+## Resource capability amendment, 2026-09-06
+
+[Change CPU and RAM without replacing unverifiable Machine state](25-post-creation-resource-changes.md)
+records the measured capability limit and delegated implementation decision.
+Production sbx limits are chosen before creation and retained with that Machine;
+the existing staged two-volume replacement is not a general-purpose box resize.
+Keep normal stop/start, explicit deletion and ownership checks. A future resize
+capability must close its own complete-preservation gate before being offered.
+
 ## Question
 
 The second half of *The first engine: sbx behind the interface, and a box's life*, split on

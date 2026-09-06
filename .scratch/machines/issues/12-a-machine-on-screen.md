@@ -14,6 +14,13 @@ its runtime's selected approval policy. No network list/editor is in scope. Prof
 already implemented by [Where a profile is addressed from, on screen](18-the-profile-conversation-on-screen.md).
 Machine placement/setup controls still must respect the image/runtime activation gates.
 
+[Post-creation resource changes](25-post-creation-resource-changes.md) are deferred
+by the documented implementation decision under Guillermo's autonomy delegation.
+Choose CPU/RAM before box creation; show the actual persisted values read-only in
+Settings afterward. Do not carry the prototype's editable existing-Machine inputs
+into production. This amends that part of the screen plan; startup/login, queued
+delivery, folder access and the minimal inline layout remain in scope.
+
 ## Question
 
 Two surfaces do not exist and both are governed by `DESIGN.md`.
