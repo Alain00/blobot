@@ -1,10 +1,12 @@
+import { CURSOR_MACHINE_IMAGE } from './image.js';
 import { LocalMachine } from '../../machines/local-machine.js';
-import { requireLocalMachine, type Machine } from '../../machines/machine.js';
+import type { Machine } from '../../machines/machine.js';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { childEnvironment } from '../acp/child-env.js';
 import { isExecutable, searchPath } from '../acp/child-transport.js';
 import type { LineTransport } from '../acp/jsonrpc.js';
+import { cursorCliConfig } from './permissions.js';
 
 /**
  * The version this adapter was measured against (`.scratch/cursor-runtime/issues/01`,
@@ -42,6 +44,7 @@ export interface SpawnCursorOptions {
   readonly cwd: string;
   /** The per-agent config directory. Becomes `CURSOR_CONFIG_DIR` on the child. */
   readonly configDir: string;
+  readonly config?: Readonly<Record<string, unknown>>;
   /** The user's own `cursor-agent`, from detection. */
   readonly cursorExecutable?: string;
   readonly env?: Readonly<Record<string, string>>;
@@ -65,12 +68,13 @@ export type SpawnCursor = (options: SpawnCursorOptions) => LineTransport;
  * between a file and an argv, and the file is the half ticket 01 measured as enforced.
  */
 export const spawnCursor: SpawnCursor = (options) => {
-  requireLocalMachine(options.machine);
   const machine = options.machine ?? new LocalMachine({ agentId: 'standalone', workspacePath: options.cwd });
   return machine.spawn({
-    command: { kind: 'exec', executable: resolveCursorExecutable(options.cursorExecutable), args: cursorArgv(options.cwd) },
+    command: { kind: 'exec', executable: machine.kind === 'box' ? CURSOR_MACHINE_IMAGE.executable : resolveCursorExecutable(options.cursorExecutable), args: cursorArgv(options.cwd) },
     cwd: options.cwd,
     env: cursorEnvironmentLayer(options),
+    ...(machine.kind === 'box' ? { configs: [{ root: '/home/agent', relativePath: '.config/blobot/cursor/cli-config.json',
+      patch: options.config ?? { ...cursorCliConfig('normal', 'box') } }] } : {}),
     ...(options.onStderr === undefined ? {} : { onStderr: options.onStderr }),
   });
 };
@@ -103,7 +107,7 @@ function cursorEnvironmentLayer(options: SpawnCursorOptions): NodeJS.ProcessEnv 
     NO_COLOR: '1',
     CURSOR_API_KEY: undefined,
     CURSOR_AUTH_TOKEN: undefined,
-    CURSOR_CONFIG_DIR: options.configDir,
+    CURSOR_CONFIG_DIR: options.machine?.kind === 'box' ? '/home/agent/.config/blobot/cursor' : options.configDir,
   };
 }
 

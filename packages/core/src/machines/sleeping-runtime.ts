@@ -19,6 +19,8 @@ export interface SleepingRuntimeOptions {
   readonly canSleep: () => boolean;
   readonly onPowerChange?: (power: MachinePower) => void;
   readonly onSessionOpened?: (sessionId: string) => void;
+  /** Explicit launch may check a guest login before a bridge accepts a conversation. */
+  readonly beforeRuntimeStart?: () => Promise<void>;
 }
 
 /**
@@ -36,6 +38,7 @@ export class SleepingRuntime implements AgentRuntime {
   #idleAfterMs: number;
   #lastActivity: number;
   #timer: AbortController | undefined;
+  #remedyAbort: AbortController | undefined;
   #transition: Promise<void> = Promise.resolve();
   #detach: Unsubscribe[] = [];
   readonly #events = new Set<(event: AgentEvent) => void>();
@@ -82,6 +85,50 @@ export class SleepingRuntime implements AgentRuntime {
     if (this.#closed) return;
     this.#setLifecycle('ready');
     this.#touch();
+  }
+
+  /** Run a user-requested sign-in with the Machine awake and no provider session attached. */
+  async remedy<T>(work: (signal: AbortSignal) => Promise<T>): Promise<T> {
+    if (this.#closed || this.#busy !== 0 || this.#lifecycle === 'starting') {
+      throw new Error('Wait for this agent to finish before signing in.');
+    }
+    this.#busy += 1;
+    this.#activitySequence += 1;
+    this.#timer?.abort();
+    this.#setLifecycle('starting');
+    const abort = new AbortController();
+    this.#remedyAbort = abort;
+    try {
+      let result!: T;
+      await this.#serialize(async () => {
+        abort.signal.throwIfAborted();
+        try {
+          this.#unsubscribeRuntime();
+          this.#startedOnce = true;
+          await this.#runtime.stop();
+          abort.signal.throwIfAborted();
+          this.#setPower('waking');
+          await this.#options.machine.start(this.#options.startRequest);
+          abort.signal.throwIfAborted();
+          this.#setPower('awake');
+          result = await work(abort.signal);
+          abort.signal.throwIfAborted();
+        } finally {
+          try {
+            await this.#options.machine.stop();
+            this.#setPower('asleep');
+          } catch (error) {
+            this.#setPower('unknown');
+            throw error;
+          }
+        }
+      });
+      return result;
+    } finally {
+      this.#remedyAbort = undefined;
+      if (!this.#closed) this.#setLifecycle('dead');
+      this.#busy -= 1;
+    }
   }
 
   async *sendPrompt(prompt: Prompt, onAdmitted?: () => void): AsyncIterable<AgentEvent> {
@@ -194,6 +241,7 @@ export class SleepingRuntime implements AgentRuntime {
   async stop(): Promise<void> {
     this.#closed = true;
     this.#timer?.abort();
+    this.#remedyAbort?.abort();
     await this.#serialize(async () => {
       this.#unsubscribeRuntime();
       const results = await Promise.allSettled([this.#runtime.stop()]);
@@ -226,6 +274,8 @@ export class SleepingRuntime implements AgentRuntime {
       this.#setPower('waking');
       try {
         await this.#options.machine.start(this.#options.startRequest);
+        await this.#options.beforeRuntimeStart?.();
+        if (this.#closed) return;
         if (this.#startedOnce) {
           const sessionId = this.#runtime.sessionId || undefined;
           this.#unsubscribeRuntime();

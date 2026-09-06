@@ -1,0 +1,136 @@
+{
+  "startedAt": "2026-09-06T00:56:13.022Z",
+  "root": "/private/tmp/blobot-production-launch-yABwLu",
+  "steps": [
+    {
+      "name": "download-verify-load-published-image",
+      "startedAt": "2026-09-06T00:56:13.902Z",
+      "ms": 14321.755625,
+      "passed": true
+    },
+    {
+      "name": "fresh:owned-start",
+      "startedAt": "2026-09-06T00:56:28.472Z",
+      "ms": 14976.193958999998,
+      "passed": true
+    }
+  ],
+  "rounds": [
+    {
+      "round": "fresh",
+      "mcpLogs": [
+        "[mcp] listening on 127.0.0.1:55271"
+      ],
+      "requests": [],
+      "replies": [],
+      "stderr": [],
+      "closes": [],
+      "toolCalls": 0,
+      "owned": {
+        "name": "blobot-ef2d8fdb-e49c-46b4-8a75-dfb54869a4df",
+        "id": "8d16f69b-e98d-40b4-8544-f1cad2858d28",
+        "limits": {
+          "maxCpus": 2,
+          "maxMemoryBytes": 2147483648
+        },
+        "baseline": {
+          "memoryKiB": 2066016,
+          "mounts": "[[\"/\",\"overlay\",[\"relatime\",\"rw\"]],[\"/dev\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/dev/mqueue\",\"mqueue\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/pts\",\"devpts\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/shm\",\"tmpfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/etc/hosts\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/etc/resolv.conf\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/home/agent\",\"ext4\",[\"relatime\",\"rw\"]],[\"/private/tmp/blobot-production-launch-yABwLu/source/.git\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/private/tmp/blobot-production-launch-yABwLu/worktree\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/proc\",\"proc\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/run\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/run/secrets\",\"tmpfs\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys\",\"sysfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys/fs/cgroup\",\"cgroup2\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/var/lib/docker\",\"ext4\",[\"relatime\",\"rw\"]]]"
+        }
+      },
+      "detection": {
+        "subject": {
+          "kind": "agent",
+          "agentId": "research64_e6dba1e8-d1bf-4175-b666-4418bc2ba39f"
+        },
+        "runtimeId": "claude",
+        "readiness": "unknown",
+        "detail": "This runtime has no readiness probe."
+      }
+    }
+  ],
+  "launches": [],
+  "cleanup": {
+    "errors": [],
+    "boxes": [],
+    "images": [
+      {
+        "id": "94670d5b2a24",
+        "repository": "docker.io/docker/sandbox-templates",
+        "tag": "claude-code-docker",
+        "flavor": "claude-code-docker",
+        "created_at": "2026-09-04T18:58:46Z",
+        "size": 936879795
+      },
+      {
+        "id": "5fc81bc7a127",
+        "repository": "docker.io/docker/sandbox-templates",
+        "tag": "shell-docker",
+        "flavor": "shell-docker",
+        "created_at": "2026-09-04T18:54:27Z",
+        "size": 588725040
+      }
+    ],
+    "imagesUnchanged": true,
+    "temporaryRootRemoved": true
+  },
+  "scope": "Published Claude arm64; current OwnedSbxMachine and ClaudeAgentRuntime/spawnClaudeBridge. No prompt, login, credential import, provider turn or global setting change.",
+  "build": {
+    "arch": "arm64",
+    "reference": "blobot-machine-claude:3b4535de48403a040fa7302506592d41d4107bf5134a59bbbd93e03a36b72192-arm64",
+    "imageId": "sha256:3b4535de48403a040fa7302506592d41d4107bf5134a59bbbd93e03a36b72192",
+    "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-claude-arm64-3b4535de48403a040fa7302506592d41d4107bf5134a59bbbd93e03a36b72192.tar",
+    "sha256": "75881fe4b412dc3cf7daf36071d75e7f1a8c093ecc845c21ec909b43cb6c11ea",
+    "bytes": 693360640
+  },
+  "engine": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "beforeImages": [
+    {
+      "id": "94670d5b2a24",
+      "repository": "docker.io/docker/sandbox-templates",
+      "tag": "claude-code-docker",
+      "flavor": "claude-code-docker",
+      "created_at": "2026-09-04T18:58:46Z",
+      "size": 936879795
+    },
+    {
+      "id": "5fc81bc7a127",
+      "repository": "docker.io/docker/sandbox-templates",
+      "tag": "shell-docker",
+      "flavor": "shell-docker",
+      "created_at": "2026-09-04T18:54:27Z",
+      "size": 588725040
+    }
+  ],
+  "sourceHashes": {
+    "adapters/acp/npm-bridge.ts": "cd623269f9ec69116ed4b26274154a7b7a0e47c598882bbb1efdef0d3d0996da",
+    "adapters/claude/stdio-bridge.ts": "0742530210969226626102cfde932f56ebf3885e430d3ed499e1ffe41820ac2d",
+    "adapters/claude/image.ts": "1c2e341cc1586635f80ed90b658392338ba0e2dafbd16653fbb93496f95a34e5",
+    "adapters/claude/claude-agent-runtime.ts": "ecb4b435fef67b5d8167de528406f8537009e9eac4c344fa0903524b7be8f417",
+    "machines/sbx/transport.ts": "fe6b6a14942e3db34686cb24be037433e1837bf0e65d1003c350186d06c1e322",
+    "machines/sbx/bootstrap.ts": "d294e7b939af907c9c2141903f8c4d0e81f887ae5ffd4d1c81c6fbacabcf466a",
+    "machines/sbx/kit.ts": "114e3e5225bdedf008f2c51c8fabd17b247f38777e17e372bff80a08a30c648b",
+    "machines/sbx/owned-machine.ts": "8fac1cc803f5c2df7d3b4811dc4244f8498493c52998df45f793d45d2ac7669f"
+  },
+  "minimumFreeBytes": 23322836992,
+  "download": {
+    "received": 693360640,
+    "total": 693360640
+  },
+  "sourceHead": "902460a4b09e274ee32ffec6d543591e03fc6d77",
+  "passed": false,
+  "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ 'unknown'\n- 'needs_sign_in'\n\n    at <anonymous> (/Users/guillermo/Work/blobot/.scratch/machines/research/64-production-box-launch-fixture.mts:111:12)",
+  "finishedAt": "2026-09-06T00:56:51.846Z"
+}

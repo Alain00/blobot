@@ -1,3 +1,4 @@
+import { CLAUDE_MACHINE_IMAGE } from './image.js';
 import {
   bridgeEntryPathOf,
   resolveBridgeExecutable,
@@ -22,6 +23,7 @@ export const CLAUDE_BRIDGE: NpmBridgeSpec = {
   entry: 'dist/index.js',
   overrideEnv: 'BLOBOT_CLAUDE_BRIDGE',
   binary: 'claude',
+  guestExecutable: CLAUDE_MACHINE_IMAGE.executable,
   executableEnv: 'CLAUDE_CODE_EXECUTABLE',
   agent: 'Claude',
   install: 'Claude Code',

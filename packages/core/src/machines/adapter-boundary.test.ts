@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { MACHINE_CLIENT_CAPABILITIES } from '../adapters/acp/client-capabilities.js';
 import { LocalMachine } from './local-machine.js';
-import type { Machine, MachineTransport } from './machine.js';
+import type { Machine, MachineSpawnRequest, MachineTransport } from './machine.js';
 import { spawnClaudeBridge } from '../adapters/claude/stdio-bridge.js';
 import { spawnCodexBridge } from '../adapters/codex/stdio-bridge.js';
 import { spawnOpencode } from '../adapters/opencode/stdio.js';
@@ -62,7 +62,7 @@ describe('the Machine boundary across every adapter', () => {
     expect(spawn.mock.calls[4]?.[0].env).toMatchObject({ CURSOR_API_KEY: undefined, CURSOR_AUTH_TOKEN: undefined });
   });
 
-  it('rejects box runtimes before any host configuration or palette preparation', () => {
+  it('constructs box runtimes without host configuration or palette preparation', () => {
     const machine: Machine = {
       kind: 'box', mailboxHostname: 'host.docker.internal',
       location: () => { throw new Error('must not prepare'); },
@@ -74,7 +74,33 @@ describe('the Machine boundary across every adapter', () => {
     };
     const options = { agentId: 'alice', agentName: 'Alice', cwd: '/workspace', persona: 'Alice', machine };
     for (const Runtime of [ClaudeAgentRuntime, CodexAgentRuntime, OpencodeAgentRuntime, FxAgentRuntime, CursorAgentRuntime]) {
-      expect(() => new Runtime(options)).toThrow('Sandbox runtime preparation is not implemented');
+      expect(() => new Runtime(options)).not.toThrow();
+    }
+  });
+
+  it('launches box runtimes with guest executables, guest modules and guest Cursor configuration', () => {
+    const transport: MachineTransport = { write() {}, async *lines() {}, async close() {}, onClose: () => () => {} };
+    const spawn = vi.fn((_request: MachineSpawnRequest) => transport);
+    const machine: Machine = {
+      kind: 'box', mailboxHostname: 'host.docker.internal',
+      location: () => { throw new Error('must not inspect'); },
+      readiness: async () => ({ state: 'ready' }), reconcile: async () => ({ state: 'absent', detail: 'Not created.' }),
+      start: async () => { throw new Error('must not start'); }, spawn,
+      stop: async () => {}, destroy: async () => {}, measure: async () => null,
+    };
+    const shared = { machine, cwd: '/host/worktree', env: { GIT_AUTHOR_NAME: 'Alice' } };
+    spawnClaudeBridge({ ...shared, claudeExecutable: '/absent/host/claude' });
+    spawnCodexBridge({ ...shared, codexExecutable: '/absent/host/codex' });
+    spawnOpencode({ ...shared, opencodeExecutable: '/absent/host/opencode' });
+    spawnFx({ ...shared, fxExecutable: '/absent/host/fx', trust: 'normal' });
+    spawnCursor({ ...shared, cursorExecutable: '/absent/host/cursor', configDir: '/absent/host/config' });
+    for (const [request] of spawn.mock.calls) {
+      expect(request.cwd).toBe('/host/worktree');
+      expect(request.command).not.toHaveProperty('localEntryPath');
+      expect(request.env).not.toHaveProperty('ELECTRON_RUN_AS_NODE');
+      expect(request.env).not.toHaveProperty('HOME');
+      expect(request.env).not.toHaveProperty('PATH');
+      expect(JSON.stringify(request)).not.toContain('/absent/host');
     }
   });
 });

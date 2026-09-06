@@ -905,3 +905,27 @@ The orchestrator retains refused messages, reserves budget during wake, preserve
 user attachment association and retries one execution after a remedy. Persisted backlog
 still waits for a user action. Core 1,065/47; core typecheck/build and desktop typecheck pass.
 Next: persisted placement, creation limits, real setup/login IPC and minimal operational UI.
+
+## 2026-09-06 — persisted placement and production launch checkpoint
+
+The Team stores a creation default; each Agent stores its own immutable local/box
+placement and creation limits. Migration 0023 retains legacy local behavior and
+refuses malformed placement. Later joiners inherit the Team default. Desktop
+startup, cleanup and measurement now construct the appropriate per-Agent Machine.
+All five adapters launch image-owned executables/config in boxes without resolving
+host binaries or carrying host credentials. Session rows are written only after
+an actual provider session opens, including the first successful retry.
+
+Sign-in runs as a cancellable, serialized execution remedy with the provider
+detached; shutdown cancels it and cannot race Machine cleanup. A separate guest
+login probe precedes normal runtime launch, because [the real Claude image](research/64-production-box-launch-acceptance.md)
+accepts ACP initialize/session/new even while its login probe says needs_sign_in.
+Actual published arm64 Claude startup, MCP handshake and stop/reopen of the same
+Machine pass without prompts or host credentials. This does not validate a real
+account login or tools. Other runtime acceptance remains on the evidence ledger.
+
+Validation: core 1,080 passed / 47 skipped; desktop 626 passed / 1 skipped;
+core/desktop types and builds pass. Remaining: operational engine installation,
+browser/guest-login IPC, creation controls and the minimal Machine UI. Engine and
+login source research is in [62](research/62-engine-installation-integration.md)
+and [63](research/63-guest-login-ui-mechanisms.md). No UI box offer is enabled yet.

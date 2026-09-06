@@ -24,6 +24,7 @@ import { trustLevelOf, type TrustLevel } from '../trust.js';
 import { verbosityLevelOf, type VerbosityLevel } from '../verbosity.js';
 import { DEFAULT_COMPACTION, type CompactionSetting } from '../orchestrator/domain.js';
 import type { BlobotDatabase } from './database.js';
+import { machinePlacement, type MachinePlacement } from '../machines/placement.js';
 import {
   agentMessages,
   agentProfiles,
@@ -144,6 +145,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
   createTeam(team: Team & { createdAt: number }): Team {
     this.#db.insert(teams).values({
       id: team.id,
+      ...placementColumns(team.defaultMachine),
       name: team.name,
       workspacePath: team.workspacePath,
       workspaceKind: team.workspaceKind,
@@ -192,6 +194,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       .filter((row) => options.includeDeleted === true || row.deletedAt === null)
       .map((row) => ({
         id: row.id,
+        ...placementOf(row, 'defaultMachine'),
         name: row.name,
         workspacePath: row.workspacePath,
         workspaceKind: row.workspaceKind,
@@ -451,6 +454,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
   createAgent(agent: AgentRecord): AgentRecord {
     this.#db.insert(agents).values({
       id: agent.id,
+      ...placementColumns(agent.machine),
       teamId: agent.teamId,
       profileId: agent.profileId ?? null,
       name: agent.name,
@@ -1769,6 +1773,21 @@ type MessageRow = typeof messages.$inferSelect;
 type AgentRow = typeof agents.$inferSelect;
 type AgentProfileRow = typeof agentProfiles.$inferSelect;
 
+function placementColumns(value: MachinePlacement | undefined) {
+  const placement = machinePlacement(value);
+  return placement.kind === 'local'
+    ? { machineKind: null, machineCpus: null, machineMemoryBytes: null }
+    : { machineKind: placement.kind, machineCpus: placement.limits.maxCpus, machineMemoryBytes: placement.limits.maxMemoryBytes };
+}
+
+function placementOf(row: {
+  machineKind: string | null; machineCpus: number | null; machineMemoryBytes: number | null;
+}, key: 'machine' | 'defaultMachine') {
+  if ((row.machineKind === null || row.machineKind === 'local') && row.machineCpus === null && row.machineMemoryBytes === null) return {};
+  const placement = machinePlacement({ kind: row.machineKind, limits: { maxCpus: row.machineCpus, maxMemoryBytes: row.machineMemoryBytes } });
+  return { [key]: placement };
+}
+
 function toProfileRecord(row: AgentProfileRow): AgentProfileRecord {
   return {
     id: row.id,
@@ -1826,6 +1845,7 @@ function toMessage(row: MessageRow): Message {
 function toAgentRecord(row: AgentRow): AgentRecord {
   return {
     id: row.id,
+    ...placementOf(row, 'machine'),
     teamId: row.teamId,
     name: row.name,
     role: row.role,

@@ -1,4 +1,4 @@
-import type { Agent, MachinePower, Orchestrator, SqliteStore, Team } from '@blobot/core';
+import type { Agent, Machine, MachinePower, Orchestrator, SleepingRuntime, SqliteStore, Team } from '@blobot/core';
 
 /**
  * A team that is running right now: rows from the database, plus the live objects built
@@ -14,6 +14,8 @@ export interface RunningTeam {
   /** What blobot knows about each model's usable context, in tokens. Absent means unmeasured. */
   readonly contextCeilings: Record<string, number>;
   readonly branches: Record<string, string>;
+  readonly machines?: ReadonlyMap<string, Machine>;
+  readonly executions?: ReadonlyMap<string, SleepingRuntime>;
   /** Live execution state, not inferred from a quiet turn or persisted as an awake flag. */
   readonly powerOf?: (agentId: string) => MachinePower;
   readonly setIdleAfterMs?: (value: number) => void;

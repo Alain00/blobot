@@ -18,10 +18,10 @@ export interface SbxKitOptions {
   readonly sharedSkillLocations?: readonly string[];
 }
 
-/** No slugging or truncation: two distinct Agent ids must never adopt the same volumes. */
+/** Reversible encoding: Agent ids exclude dots, while sbx accepts dots but not underscores. */
 export function sbxNameFor(agentId: string): string {
-  if (!/^[a-z0-9][a-z0-9-]{0,95}$/.test(agentId)) throw new Error('Invalid Machine Agent id');
-  return `blobot-${agentId}`;
+  if (!/^[a-z0-9][a-z0-9_-]{0,95}$/.test(agentId)) throw new Error('Invalid Machine Agent id');
+  return `blobot-${agentId.replaceAll('_', '.')}`;
 }
 
 export function sbxKit(options: SbxKitOptions) {

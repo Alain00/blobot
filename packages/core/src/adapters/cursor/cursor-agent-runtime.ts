@@ -42,9 +42,9 @@ import {
 import { offerableNames } from './palette.js';
 import { LocalMachine } from '../../machines/local-machine.js';
 import { CURSOR_MACHINE_IMAGE } from './image.js';
-import { requireLocalMachine, type Machine } from '../../machines/machine.js';
+import type { Machine } from '../../machines/machine.js';
 import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
-import { CURSOR_SESSION_MODE } from './permissions.js';
+import { CURSOR_SESSION_MODE, cursorCliConfig } from './permissions.js';
 import { cursorPersonaBlocks } from './persona.js';
 import { spawnCursor, VERIFIED_CURSOR_VERSION, type SpawnCursor } from './stdio.js';
 
@@ -162,7 +162,6 @@ export class CursorAgentRuntime implements AgentRuntime {
 
   constructor(options: CursorAgentRuntimeOptions) {
     this.agentId = options.agentId;
-    requireLocalMachine(options.machine);
     this.#options = {
       ...options,
       machine: options.machine ?? new LocalMachine({ agentId: options.agentId, workspacePath: options.cwd }),
@@ -170,7 +169,8 @@ export class CursorAgentRuntime implements AgentRuntime {
     this.#pictures = new PictureWatch(options.pictures);
     this.#clock = options.clock ?? new SystemClock();
     this.#spawn = options.spawn ?? spawnCursor;
-    this.#configDir = options.configDir ?? defaultCursorConfigDir(options.agentId);
+    this.#configDir = options.machine?.kind === 'box' ? '/home/agent/.config/blobot/cursor'
+      : options.configDir ?? defaultCursorConfigDir(options.agentId);
   }
 
   get sessionId(): string {
@@ -218,7 +218,7 @@ export class CursorAgentRuntime implements AgentRuntime {
       // The posture goes to disk before the child exists, so there is no window in which the
       // process runs under somebody else's permissions. The file is in blobot's own data
       // directory and nothing is ever written into the AgentWorkspace, which is a checkout.
-      writeCursorConfig({
+      if (this.#options.machine?.kind !== 'box') writeCursorConfig({
         dir: this.#configDir,
         trust: this.trust,
         machineKind: this.#options.machine?.kind ?? 'local',
@@ -237,6 +237,7 @@ export class CursorAgentRuntime implements AgentRuntime {
       ...(this.#options.machine === undefined ? {} : { machine: this.#options.machine }),
       cwd: this.#options.cwd,
       configDir: this.#configDir,
+      config: { ...cursorCliConfig(this.trust, this.#options.machine?.kind ?? 'local') },
       ...(this.#options.cursorExecutable === undefined
         ? {}
         : { cursorExecutable: this.#options.cursorExecutable }),

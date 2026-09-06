@@ -27,6 +27,7 @@ import {
   WorkspaceError,
   refSlug,
   uuidv7,
+  machinePlacement,
   type CommitOutcome,
   type SwitchOutcome,
   type AgentProfileRecord,
@@ -38,6 +39,7 @@ import {
   type WorkspaceInspection,
   type WorkspaceProvider,
   type Machine,
+  type MachinePlacement,
   type WorkspaceTree,
 } from '@blobot/core';
 
@@ -77,6 +79,8 @@ export interface NewAgentSpec {
 
 /** Forming a team out of agents that already exist. */
 export interface NewTeamSpec {
+  readonly defaultMachine?: MachinePlacement;
+  readonly memberMachines?: Readonly<Record<string, MachinePlacement>>;
   readonly name: string;
   readonly workspacePath: string;
   readonly turnBudget: number;
@@ -289,6 +293,11 @@ export function editAgentProfile(
  */
 export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promise<Team> {
   const name = spec.name.trim();
+  const defaultMachine = machinePlacement(spec.defaultMachine);
+  const memberMachines = new Map(Object.entries(spec.memberMachines ?? {}).map(([id, value]) => {
+    if (!spec.profileIds.includes(id)) throw new Error('Machine placement belongs to an unselected agent.');
+    return [id, machinePlacement(value)] as const;
+  }));
 
   if (spec.profileIds.length === 0) {
     throw new TeamCreationError('no_agents', 'A team needs at least one agent.');
@@ -343,6 +352,7 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
     ...(repoPaths.length === 0 ? {} : { workspaceRepos: repoPaths }),
     ...(spec.icon === undefined ? {} : { icon: spec.icon }),
     turnBudget: spec.turnBudget,
+    ...(defaultMachine.kind === 'local' ? {} : { defaultMachine }),
   };
   deps.store.createTeam({ ...team, createdAt: now });
 
@@ -359,6 +369,7 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
     });
     deps.store.createAgent({
       id,
+      machine: memberMachines.get(profile.id) ?? defaultMachine,
       teamId: team.id,
       profileId: profile.id,
       name: profile.name,
@@ -1023,6 +1034,7 @@ export async function editTeamRoster(
     });
     deps.store.createAgent({
       id,
+      ...(team.defaultMachine === undefined ? {} : { machine: team.defaultMachine }),
       teamId: team.id,
       profileId: profile.id,
       name: profile.name,

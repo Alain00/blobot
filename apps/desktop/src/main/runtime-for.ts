@@ -18,10 +18,16 @@ import {
   codexCeiling,
   opencodeCeiling,
   agentGitEnvironment,
+  CLAUDE_MACHINE_IMAGE,
+  CODEX_MACHINE_IMAGE,
+  CURSOR_MACHINE_IMAGE,
+  FX_MACHINE_IMAGE,
+  OPENCODE_MACHINE_IMAGE,
   type AgentRuntime,
   type Machine,
   type PictureStore,
   type TrustLevel,
+  type RuntimeImageDefinition,
 } from '@blobot/core';
 
 export interface RuntimeRequest {
@@ -124,6 +130,15 @@ export function runtimeFor(request: RuntimeRequest): AgentRuntime {
     default:
       throw new Error(`${request.agentName} is set up for ${request.runtimeId}, which blobot cannot run`);
   }
+}
+
+const MACHINE_IMAGES: Readonly<Record<string, RuntimeImageDefinition>> = {
+  'claude-code': CLAUDE_MACHINE_IMAGE, codex: CODEX_MACHINE_IMAGE,
+  cursor: CURSOR_MACHINE_IMAGE, fx: FX_MACHINE_IMAGE, opencode: OPENCODE_MACHINE_IMAGE,
+};
+
+export function imageFor(runtimeId: string): RuntimeImageDefinition | undefined {
+  return Object.hasOwn(MACHINE_IMAGES, runtimeId) ? MACHINE_IMAGES[runtimeId] : undefined;
 }
 
 /**

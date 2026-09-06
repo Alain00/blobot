@@ -1,5 +1,6 @@
+import { OPENCODE_MACHINE_IMAGE } from './image.js';
 import { LocalMachine } from '../../machines/local-machine.js';
-import { requireLocalMachine, type Machine } from '../../machines/machine.js';
+import type { Machine } from '../../machines/machine.js';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { isExecutable, searchPath } from '../acp/child-transport.js';
@@ -44,10 +45,9 @@ export type SpawnOpencode = (options: SpawnOpencodeOptions) => LineTransport;
  * decides what blobot *offers* rather than what the agent *can do*.
  */
 export const spawnOpencode: SpawnOpencode = (options) => {
-  requireLocalMachine(options.machine);
   const machine = options.machine ?? new LocalMachine({ agentId: 'standalone', workspacePath: options.cwd });
   return machine.spawn({
-    command: { kind: 'exec', executable: resolveOpencodeExecutable(options.opencodeExecutable), args: ['acp'] },
+    command: { kind: 'exec', executable: machine.kind === 'box' ? OPENCODE_MACHINE_IMAGE.executable : resolveOpencodeExecutable(options.opencodeExecutable), args: ['acp'] },
     cwd: options.cwd,
     env: {
       ...options.env,

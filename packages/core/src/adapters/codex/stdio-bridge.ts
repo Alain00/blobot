@@ -1,3 +1,4 @@
+import { CODEX_MACHINE_IMAGE } from './image.js';
 import {
   bridgeEntryPathOf,
   resolveBridgeExecutable,
@@ -28,6 +29,7 @@ export const CODEX_BRIDGE: NpmBridgeSpec = {
   entry: 'dist/index.js',
   overrideEnv: 'BLOBOT_CODEX_BRIDGE',
   binary: 'codex',
+  guestExecutable: CODEX_MACHINE_IMAGE.executable,
   executableEnv: 'CODEX_PATH',
   agent: 'Codex',
   install: 'Codex',

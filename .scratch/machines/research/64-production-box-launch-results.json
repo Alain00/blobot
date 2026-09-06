@@ -1,0 +1,901 @@
+{
+  "startedAt": "2026-09-06T00:57:30.837Z",
+  "root": "/private/tmp/blobot-production-launch-0ShZzB",
+  "steps": [
+    {
+      "name": "download-verify-load-published-image",
+      "startedAt": "2026-09-06T00:57:31.710Z",
+      "ms": 12122.629291,
+      "passed": true
+    },
+    {
+      "name": "fresh:owned-start",
+      "startedAt": "2026-09-06T00:57:44.192Z",
+      "ms": 14730.387292000001,
+      "passed": true
+    },
+    {
+      "name": "fresh:production-runtime-start",
+      "startedAt": "2026-09-06T00:58:00.762Z",
+      "ms": 598.0597089999974,
+      "passed": true
+    },
+    {
+      "name": "fresh:runtime-close",
+      "startedAt": "2026-09-06T00:58:01.630Z",
+      "ms": 16.675084000002244,
+      "passed": true
+    },
+    {
+      "name": "fresh:owned-stop",
+      "startedAt": "2026-09-06T00:58:01.647Z",
+      "ms": 6872.546417000001,
+      "passed": true
+    },
+    {
+      "name": "reopened:owned-start",
+      "startedAt": "2026-09-06T00:58:08.775Z",
+      "ms": 4495.459292,
+      "passed": true
+    },
+    {
+      "name": "reopened:production-runtime-start",
+      "startedAt": "2026-09-06T00:58:14.867Z",
+      "ms": 614.8859159999993,
+      "passed": true
+    },
+    {
+      "name": "reopened:runtime-close",
+      "startedAt": "2026-09-06T00:58:15.790Z",
+      "ms": 16.359707999996317,
+      "passed": true
+    },
+    {
+      "name": "reopened:owned-stop",
+      "startedAt": "2026-09-06T00:58:15.807Z",
+      "ms": 6866.6729170000035,
+      "passed": true
+    }
+  ],
+  "rounds": [
+    {
+      "round": "fresh",
+      "mcpLogs": [
+        "[mcp] listening on 127.0.0.1:55958",
+        "[mcp] research64_a786aae8-5252-4c56-8c30-bf3cd0d768ca handshaked. It has 1 of blobot's own tools"
+      ],
+      "requests": [
+        {
+          "method": "initialize",
+          "ms": 0.2669999999998254
+        },
+        {
+          "method": "session/new",
+          "ms": 437.14291700000103,
+          "sandbox": {
+            "enabled": false
+          },
+          "settingSources": [
+            "user",
+            "project",
+            "local"
+          ],
+          "mcpServers": [
+            {
+              "type": "http",
+              "name": "blobot",
+              "url": "http://host.docker.internal:55958/agents/research64_a786aae8-5252-4c56-8c30-bf3cd0d768ca/mcp",
+              "headerNames": [
+                "Authorization"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "session/set_mode",
+          "ms": 590.3214579999985
+        },
+        {
+          "method": "session/close",
+          "ms": 867.5645000000004
+        }
+      ],
+      "replies": [
+        {
+          "method": "initialize",
+          "ms": 0.2629579999993439,
+          "responseMs": 436.5132080000003,
+          "result": {
+            "protocolVersion": 1,
+            "agentCapabilities": {
+              "_meta": {
+                "claudeCode": {
+                  "promptQueueing": true
+                }
+              },
+              "promptCapabilities": {
+                "image": true,
+                "embeddedContext": true
+              },
+              "mcpCapabilities": {
+                "http": true,
+                "sse": true
+              },
+              "auth": {
+                "logout": {}
+              },
+              "providers": {},
+              "loadSession": true,
+              "sessionCapabilities": {
+                "additionalDirectories": {},
+                "close": {},
+                "delete": {},
+                "fork": {},
+                "list": {},
+                "resume": {}
+              }
+            },
+            "agentInfo": {
+              "name": "@agentclientprotocol/claude-agent-acp",
+              "title": "Claude Agent",
+              "version": "0.70.0"
+            },
+            "authMethods": [],
+            "_meta": {
+              "jetbrains": {
+                "air": {
+                  "version": 1,
+                  "capabilities": [
+                    "sessionFailure",
+                    "agentFileChangeReport"
+                  ]
+                }
+              },
+              "steering": {
+                "supported": true
+              },
+              "goal": {
+                "version": 1,
+                "controlMethod": "_session/goal",
+                "actions": [
+                  "set",
+                  "clear"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "method": "session/new",
+          "ms": 437.1394169999985,
+          "responseMs": 590.0761669999993,
+          "result": {
+            "sessionId": "a71c4644-56c2-4f12-a56d-3ca904a28ebf",
+            "modes": {
+              "currentModeId": "default",
+              "availableModes": [
+                {
+                  "id": "auto",
+                  "name": "Auto",
+                  "description": "Use a model classifier to approve/deny permission prompts"
+                },
+                {
+                  "id": "default",
+                  "name": "Manual",
+                  "description": "Standard behavior, prompts for dangerous operations"
+                },
+                {
+                  "id": "acceptEdits",
+                  "name": "Accept Edits",
+                  "description": "Auto-accept file edit operations"
+                },
+                {
+                  "id": "plan",
+                  "name": "Plan Mode",
+                  "description": "Planning mode, no actual tool execution"
+                },
+                {
+                  "id": "dontAsk",
+                  "name": "Don't Ask",
+                  "description": "Don't prompt for permissions, deny if not pre-approved"
+                },
+                {
+                  "id": "bypassPermissions",
+                  "name": "Bypass Permissions",
+                  "description": "Bypass all permission checks"
+                }
+              ]
+            },
+            "configOptions": [
+              {
+                "id": "mode",
+                "name": "Mode",
+                "description": "Session permission mode",
+                "category": "mode",
+                "type": "select",
+                "currentValue": "default",
+                "options": [
+                  {
+                    "value": "auto",
+                    "name": "Auto",
+                    "description": "Use a model classifier to approve/deny permission prompts"
+                  },
+                  {
+                    "value": "default",
+                    "name": "Manual",
+                    "description": "Standard behavior, prompts for dangerous operations"
+                  },
+                  {
+                    "value": "acceptEdits",
+                    "name": "Accept Edits",
+                    "description": "Auto-accept file edit operations"
+                  },
+                  {
+                    "value": "plan",
+                    "name": "Plan Mode",
+                    "description": "Planning mode, no actual tool execution"
+                  },
+                  {
+                    "value": "dontAsk",
+                    "name": "Don't Ask",
+                    "description": "Don't prompt for permissions, deny if not pre-approved"
+                  },
+                  {
+                    "value": "bypassPermissions",
+                    "name": "Bypass Permissions",
+                    "description": "Bypass all permission checks"
+                  }
+                ]
+              },
+              {
+                "id": "model",
+                "name": "Model",
+                "description": "AI model to use",
+                "category": "model",
+                "type": "select",
+                "currentValue": "default",
+                "options": [
+                  {
+                    "value": "default",
+                    "name": "Default (recommended)",
+                    "description": "Opus (1M context)"
+                  },
+                  {
+                    "value": "opus[1m]",
+                    "name": "Opus (1M context)",
+                    "description": "Opus 5 with 1M context · Best for everyday, complex tasks · $5/$25 per Mtok"
+                  },
+                  {
+                    "value": "sonnet",
+                    "name": "Sonnet",
+                    "description": "Sonnet 5 · Efficient for routine tasks · $2/$10 per Mtok"
+                  },
+                  {
+                    "value": "haiku",
+                    "name": "Haiku",
+                    "description": "Haiku 4.5 · Fastest for quick answers · $1/$5 per Mtok"
+                  }
+                ]
+              },
+              {
+                "id": "effort",
+                "name": "Effort",
+                "description": "Available effort levels for this model",
+                "category": "thought_level",
+                "type": "select",
+                "currentValue": "default",
+                "options": [
+                  {
+                    "value": "default",
+                    "name": "Default"
+                  },
+                  {
+                    "value": "low",
+                    "name": "Low"
+                  },
+                  {
+                    "value": "medium",
+                    "name": "Medium"
+                  },
+                  {
+                    "value": "high",
+                    "name": "High"
+                  },
+                  {
+                    "value": "xhigh",
+                    "name": "Xhigh"
+                  },
+                  {
+                    "value": "max",
+                    "name": "Max"
+                  }
+                ]
+              },
+              {
+                "id": "fast",
+                "name": "Fast mode",
+                "description": "Faster responses on supported models",
+                "category": "model_config",
+                "type": "select",
+                "currentValue": "off",
+                "options": [
+                  {
+                    "value": "on",
+                    "name": "On"
+                  },
+                  {
+                    "value": "off",
+                    "name": "Off"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "method": "session/set_mode",
+          "ms": 590.3182080000006,
+          "responseMs": 596.8395830000009,
+          "result": {}
+        },
+        {
+          "method": "session/close",
+          "ms": 867.5619169999991,
+          "responseMs": 871.0057080000006,
+          "result": {}
+        }
+      ],
+      "stderr": [
+        "[session/query] sessionId=a71c4644-56c2-4f12-a56d-3ca904a28ebf resume=none apiType=native baseUrl=native",
+        "(node:434) [CLAUDE_SDK_CAN_USE_TOOL_SHADOWED] Warning: canUseTool will not be invoked for: Edit, Write, MultiEdit, NotebookEdit, mcp__blobot. Bare allowedTools entries auto-approve the whole tool before the callback is consulted. To gate every tool call, use a PreToolUse hook; or remove the bare names from allowedTools so they fall through to canUseTool. Allow rules from settings files can also shadow the callback but are not visible here.",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ],
+      "closes": [
+        {
+          "ms": 884.1089580000007,
+          "reason": null
+        }
+      ],
+      "toolCalls": 0,
+      "owned": {
+        "name": "blobot-08ce7a1f-f0fc-45b0-9bac-b26722113cdf",
+        "id": "129bfae9-17d5-4850-a596-d5b072d68c17",
+        "limits": {
+          "maxCpus": 2,
+          "maxMemoryBytes": 2147483648
+        },
+        "baseline": {
+          "memoryKiB": 2066016,
+          "mounts": "[[\"/\",\"overlay\",[\"relatime\",\"rw\"]],[\"/dev\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/dev/mqueue\",\"mqueue\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/pts\",\"devpts\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/shm\",\"tmpfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/etc/hosts\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/etc/resolv.conf\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/home/agent\",\"ext4\",[\"relatime\",\"rw\"]],[\"/private/tmp/blobot-production-launch-0ShZzB/source/.git\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/private/tmp/blobot-production-launch-0ShZzB/worktree\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/proc\",\"proc\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/run\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/run/secrets\",\"tmpfs\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys\",\"sysfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys/fs/cgroup\",\"cgroup2\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/var/lib/docker\",\"ext4\",[\"relatime\",\"rw\"]]]"
+        }
+      },
+      "detection": {
+        "subject": {
+          "kind": "agent",
+          "agentId": "research64_a786aae8-5252-4c56-8c30-bf3cd0d768ca"
+        },
+        "runtimeId": "claude-code",
+        "readiness": "needs_sign_in",
+        "detail": "Installed, not signed in"
+      },
+      "guest": {
+        "uid": 1000,
+        "gid": 1000,
+        "home": "/home/agent",
+        "node": "/usr/bin/node",
+        "path": "/opt/blobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "hostSentinelPresent": false,
+        "hostBridgeOverridePresent": false,
+        "sshSocketPresent": false,
+        "credentialFilePresent": false,
+        "cpus": 2,
+        "memTotal": "MemTotal:        2066016 kB",
+        "homeEntries": [
+          ".claude",
+          ".claude.json",
+          ".gitconfig",
+          ".gitignore_global",
+          "lost+found"
+        ],
+        "mainCheckoutVisible": false
+      },
+      "lifecycle": "ready",
+      "sessionId": "a71c4644-56c2-4f12-a56d-3ca904a28ebf",
+      "permissionMode": "default",
+      "mailboxReady": true,
+      "cliProcesses": [],
+      "stopped": "stopped"
+    },
+    {
+      "round": "reopened",
+      "mcpLogs": [
+        "[mcp] listening on 127.0.0.1:56520",
+        "[mcp] research64_a786aae8-5252-4c56-8c30-bf3cd0d768ca handshaked. It has 1 of blobot's own tools"
+      ],
+      "requests": [
+        {
+          "method": "initialize",
+          "ms": 0.07441599999583559
+        },
+        {
+          "method": "session/new",
+          "ms": 475.7773329999982,
+          "sandbox": {
+            "enabled": false
+          },
+          "settingSources": [
+            "user",
+            "project",
+            "local"
+          ],
+          "mcpServers": [
+            {
+              "type": "http",
+              "name": "blobot",
+              "url": "http://host.docker.internal:56520/agents/research64_a786aae8-5252-4c56-8c30-bf3cd0d768ca/mcp",
+              "headerNames": [
+                "Authorization"
+              ]
+            }
+          ]
+        },
+        {
+          "method": "session/set_mode",
+          "ms": 608.1599579999965
+        },
+        {
+          "method": "session/close",
+          "ms": 922.4463329999999
+        }
+      ],
+      "replies": [
+        {
+          "method": "initialize",
+          "ms": 0.0730829999956768,
+          "responseMs": 475.42112500000076,
+          "result": {
+            "protocolVersion": 1,
+            "agentCapabilities": {
+              "_meta": {
+                "claudeCode": {
+                  "promptQueueing": true
+                }
+              },
+              "promptCapabilities": {
+                "image": true,
+                "embeddedContext": true
+              },
+              "mcpCapabilities": {
+                "http": true,
+                "sse": true
+              },
+              "auth": {
+                "logout": {}
+              },
+              "providers": {},
+              "loadSession": true,
+              "sessionCapabilities": {
+                "additionalDirectories": {},
+                "close": {},
+                "delete": {},
+                "fork": {},
+                "list": {},
+                "resume": {}
+              }
+            },
+            "agentInfo": {
+              "name": "@agentclientprotocol/claude-agent-acp",
+              "title": "Claude Agent",
+              "version": "0.70.0"
+            },
+            "authMethods": [],
+            "_meta": {
+              "jetbrains": {
+                "air": {
+                  "version": 1,
+                  "capabilities": [
+                    "sessionFailure",
+                    "agentFileChangeReport"
+                  ]
+                }
+              },
+              "steering": {
+                "supported": true
+              },
+              "goal": {
+                "version": 1,
+                "controlMethod": "_session/goal",
+                "actions": [
+                  "set",
+                  "clear"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "method": "session/new",
+          "ms": 475.7716250000012,
+          "responseMs": 608.0196660000001,
+          "result": {
+            "sessionId": "db9318e4-d115-4316-9e0e-33305540c26d",
+            "modes": {
+              "currentModeId": "default",
+              "availableModes": [
+                {
+                  "id": "auto",
+                  "name": "Auto",
+                  "description": "Use a model classifier to approve/deny permission prompts"
+                },
+                {
+                  "id": "default",
+                  "name": "Manual",
+                  "description": "Standard behavior, prompts for dangerous operations"
+                },
+                {
+                  "id": "acceptEdits",
+                  "name": "Accept Edits",
+                  "description": "Auto-accept file edit operations"
+                },
+                {
+                  "id": "plan",
+                  "name": "Plan Mode",
+                  "description": "Planning mode, no actual tool execution"
+                },
+                {
+                  "id": "dontAsk",
+                  "name": "Don't Ask",
+                  "description": "Don't prompt for permissions, deny if not pre-approved"
+                },
+                {
+                  "id": "bypassPermissions",
+                  "name": "Bypass Permissions",
+                  "description": "Bypass all permission checks"
+                }
+              ]
+            },
+            "configOptions": [
+              {
+                "id": "mode",
+                "name": "Mode",
+                "description": "Session permission mode",
+                "category": "mode",
+                "type": "select",
+                "currentValue": "default",
+                "options": [
+                  {
+                    "value": "auto",
+                    "name": "Auto",
+                    "description": "Use a model classifier to approve/deny permission prompts"
+                  },
+                  {
+                    "value": "default",
+                    "name": "Manual",
+                    "description": "Standard behavior, prompts for dangerous operations"
+                  },
+                  {
+                    "value": "acceptEdits",
+                    "name": "Accept Edits",
+                    "description": "Auto-accept file edit operations"
+                  },
+                  {
+                    "value": "plan",
+                    "name": "Plan Mode",
+                    "description": "Planning mode, no actual tool execution"
+                  },
+                  {
+                    "value": "dontAsk",
+                    "name": "Don't Ask",
+                    "description": "Don't prompt for permissions, deny if not pre-approved"
+                  },
+                  {
+                    "value": "bypassPermissions",
+                    "name": "Bypass Permissions",
+                    "description": "Bypass all permission checks"
+                  }
+                ]
+              },
+              {
+                "id": "model",
+                "name": "Model",
+                "description": "AI model to use",
+                "category": "model",
+                "type": "select",
+                "currentValue": "default",
+                "options": [
+                  {
+                    "value": "default",
+                    "name": "Default (recommended)",
+                    "description": "Opus (1M context)"
+                  },
+                  {
+                    "value": "opus[1m]",
+                    "name": "Opus (1M context)",
+                    "description": "Opus 5 with 1M context · Best for everyday, complex tasks · $5/$25 per Mtok"
+                  },
+                  {
+                    "value": "sonnet",
+                    "name": "Sonnet",
+                    "description": "Sonnet 5 · Efficient for routine tasks · $2/$10 per Mtok"
+                  },
+                  {
+                    "value": "haiku",
+                    "name": "Haiku",
+                    "description": "Haiku 4.5 · Fastest for quick answers · $1/$5 per Mtok"
+                  }
+                ]
+              },
+              {
+                "id": "effort",
+                "name": "Effort",
+                "description": "Available effort levels for this model",
+                "category": "thought_level",
+                "type": "select",
+                "currentValue": "default",
+                "options": [
+                  {
+                    "value": "default",
+                    "name": "Default"
+                  },
+                  {
+                    "value": "low",
+                    "name": "Low"
+                  },
+                  {
+                    "value": "medium",
+                    "name": "Medium"
+                  },
+                  {
+                    "value": "high",
+                    "name": "High"
+                  },
+                  {
+                    "value": "xhigh",
+                    "name": "Xhigh"
+                  },
+                  {
+                    "value": "max",
+                    "name": "Max"
+                  }
+                ]
+              },
+              {
+                "id": "fast",
+                "name": "Fast mode",
+                "description": "Faster responses on supported models",
+                "category": "model_config",
+                "type": "select",
+                "currentValue": "off",
+                "options": [
+                  {
+                    "value": "on",
+                    "name": "On"
+                  },
+                  {
+                    "value": "off",
+                    "name": "Off"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "method": "session/set_mode",
+          "ms": 608.1551659999968,
+          "responseMs": 613.8943329999965,
+          "result": {}
+        },
+        {
+          "method": "session/close",
+          "ms": 922.4445409999971,
+          "responseMs": 926.0467079999944,
+          "result": {}
+        }
+      ],
+      "stderr": [
+        "[session/query] sessionId=db9318e4-d115-4316-9e0e-33305540c26d resume=none apiType=native baseUrl=native",
+        "(node:315) [CLAUDE_SDK_CAN_USE_TOOL_SHADOWED] Warning: canUseTool will not be invoked for: Edit, Write, MultiEdit, NotebookEdit, mcp__blobot. Bare allowedTools entries auto-approve the whole tool before the callback is consulted. To gate every tool call, use a PreToolUse hook; or remove the bare names from allowedTools so they fall through to canUseTool. Allow rules from settings files can also shadow the callback but are not visible here.",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ],
+      "closes": [
+        {
+          "ms": 938.7514159999992,
+          "reason": null
+        }
+      ],
+      "toolCalls": 0,
+      "owned": {
+        "name": "blobot-08ce7a1f-f0fc-45b0-9bac-b26722113cdf",
+        "id": "129bfae9-17d5-4850-a596-d5b072d68c17",
+        "limits": {
+          "maxCpus": 2,
+          "maxMemoryBytes": 2147483648
+        },
+        "baseline": {
+          "memoryKiB": 2066016,
+          "mounts": "[[\"/\",\"overlay\",[\"relatime\",\"rw\"]],[\"/dev\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/dev/mqueue\",\"mqueue\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/pts\",\"devpts\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/shm\",\"tmpfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/etc/hosts\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/etc/resolv.conf\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/home/agent\",\"ext4\",[\"relatime\",\"rw\"]],[\"/private/tmp/blobot-production-launch-0ShZzB/source/.git\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/private/tmp/blobot-production-launch-0ShZzB/worktree\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/proc\",\"proc\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/run\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/run/secrets\",\"tmpfs\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys\",\"sysfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys/fs/cgroup\",\"cgroup2\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/var/lib/docker\",\"ext4\",[\"relatime\",\"rw\"]]]"
+        }
+      },
+      "detection": {
+        "subject": {
+          "kind": "agent",
+          "agentId": "research64_a786aae8-5252-4c56-8c30-bf3cd0d768ca"
+        },
+        "runtimeId": "claude-code",
+        "readiness": "needs_sign_in",
+        "detail": "Installed, not signed in"
+      },
+      "guest": {
+        "uid": 1000,
+        "gid": 1000,
+        "home": "/home/agent",
+        "node": "/usr/bin/node",
+        "path": "/opt/blobot/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "hostSentinelPresent": false,
+        "hostBridgeOverridePresent": false,
+        "sshSocketPresent": false,
+        "credentialFilePresent": false,
+        "cpus": 2,
+        "memTotal": "MemTotal:        2066016 kB",
+        "homeEntries": [
+          ".cache",
+          ".claude",
+          ".claude.json",
+          ".gitconfig",
+          ".gitignore_global",
+          "lost+found"
+        ],
+        "mainCheckoutVisible": false
+      },
+      "lifecycle": "ready",
+      "sessionId": "db9318e4-d115-4316-9e0e-33305540c26d",
+      "permissionMode": "default",
+      "mailboxReady": true,
+      "cliProcesses": [],
+      "stopped": "stopped"
+    }
+  ],
+  "launches": [
+    {
+      "command": {
+        "kind": "exec",
+        "executable": "/usr/bin/node"
+      },
+      "cwd": "/private/tmp/blobot-production-launch-0ShZzB/worktree",
+      "configs": []
+    },
+    {
+      "command": {
+        "kind": "node-module",
+        "package": "@agentclientprotocol/claude-agent-acp",
+        "version": "0.70.0",
+        "entry": "dist/index.js"
+      },
+      "cwd": "/private/tmp/blobot-production-launch-0ShZzB/worktree",
+      "env": {
+        "GIT_AUTHOR_NAME": "Research64",
+        "GIT_COMMITTER_NAME": "Research64",
+        "GIT_AUTHOR_EMAIL": "research64@agents.blobot.invalid",
+        "GIT_COMMITTER_EMAIL": "research64@agents.blobot.invalid",
+        "GIT_CONFIG_COUNT": "1",
+        "GIT_CONFIG_KEY_0": "commit.gpgsign",
+        "GIT_CONFIG_VALUE_0": "false",
+        "CLAUDE_CODE_EXECUTABLE": "/opt/blobot/bin/claude"
+      },
+      "configs": []
+    },
+    {
+      "command": {
+        "kind": "exec",
+        "executable": "/usr/bin/node"
+      },
+      "cwd": "/private/tmp/blobot-production-launch-0ShZzB/worktree",
+      "configs": []
+    },
+    {
+      "command": {
+        "kind": "node-module",
+        "package": "@agentclientprotocol/claude-agent-acp",
+        "version": "0.70.0",
+        "entry": "dist/index.js"
+      },
+      "cwd": "/private/tmp/blobot-production-launch-0ShZzB/worktree",
+      "env": {
+        "GIT_AUTHOR_NAME": "Research64",
+        "GIT_COMMITTER_NAME": "Research64",
+        "GIT_AUTHOR_EMAIL": "research64@agents.blobot.invalid",
+        "GIT_COMMITTER_EMAIL": "research64@agents.blobot.invalid",
+        "GIT_CONFIG_COUNT": "1",
+        "GIT_CONFIG_KEY_0": "commit.gpgsign",
+        "GIT_CONFIG_VALUE_0": "false",
+        "CLAUDE_CODE_EXECUTABLE": "/opt/blobot/bin/claude"
+      },
+      "configs": []
+    }
+  ],
+  "cleanup": {
+    "errors": [],
+    "boxes": [],
+    "images": [
+      {
+        "id": "94670d5b2a24",
+        "repository": "docker.io/docker/sandbox-templates",
+        "tag": "claude-code-docker",
+        "flavor": "claude-code-docker",
+        "created_at": "2026-09-04T18:58:46Z",
+        "size": 936879795
+      },
+      {
+        "id": "5fc81bc7a127",
+        "repository": "docker.io/docker/sandbox-templates",
+        "tag": "shell-docker",
+        "flavor": "shell-docker",
+        "created_at": "2026-09-04T18:54:27Z",
+        "size": 588725040
+      }
+    ],
+    "imagesUnchanged": true,
+    "temporaryRootRemoved": true
+  },
+  "scope": "Published Claude arm64; current OwnedSbxMachine and ClaudeAgentRuntime/spawnClaudeBridge. No prompt, login, credential import, provider turn or global setting change.",
+  "build": {
+    "arch": "arm64",
+    "reference": "blobot-machine-claude:3b4535de48403a040fa7302506592d41d4107bf5134a59bbbd93e03a36b72192-arm64",
+    "imageId": "sha256:3b4535de48403a040fa7302506592d41d4107bf5134a59bbbd93e03a36b72192",
+    "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-claude-arm64-3b4535de48403a040fa7302506592d41d4107bf5134a59bbbd93e03a36b72192.tar",
+    "sha256": "75881fe4b412dc3cf7daf36071d75e7f1a8c093ecc845c21ec909b43cb6c11ea",
+    "bytes": 693360640
+  },
+  "agentId": "research64_a786aae8-5252-4c56-8c30-bf3cd0d768ca",
+  "encodedAgentName": "blobot-research64.a786aae8-5252-4c56-8c30-bf3cd0d768ca",
+  "engine": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "beforeImages": [
+    {
+      "id": "94670d5b2a24",
+      "repository": "docker.io/docker/sandbox-templates",
+      "tag": "claude-code-docker",
+      "flavor": "claude-code-docker",
+      "created_at": "2026-09-04T18:58:46Z",
+      "size": 936879795
+    },
+    {
+      "id": "5fc81bc7a127",
+      "repository": "docker.io/docker/sandbox-templates",
+      "tag": "shell-docker",
+      "flavor": "shell-docker",
+      "created_at": "2026-09-04T18:54:27Z",
+      "size": 588725040
+    }
+  ],
+  "sourceHashes": {
+    "adapters/acp/npm-bridge.ts": "cd623269f9ec69116ed4b26274154a7b7a0e47c598882bbb1efdef0d3d0996da",
+    "adapters/claude/stdio-bridge.ts": "0742530210969226626102cfde932f56ebf3885e430d3ed499e1ffe41820ac2d",
+    "adapters/claude/image.ts": "1c2e341cc1586635f80ed90b658392338ba0e2dafbd16653fbb93496f95a34e5",
+    "adapters/claude/claude-agent-runtime.ts": "ecb4b435fef67b5d8167de528406f8537009e9eac4c344fa0903524b7be8f417",
+    "machines/sbx/transport.ts": "fe6b6a14942e3db34686cb24be037433e1837bf0e65d1003c350186d06c1e322",
+    "machines/sbx/bootstrap.ts": "d294e7b939af907c9c2141903f8c4d0e81f887ae5ffd4d1c81c6fbacabcf466a",
+    "machines/sbx/kit.ts": "114e3e5225bdedf008f2c51c8fabd17b247f38777e17e372bff80a08a30c648b",
+    "machines/sbx/owned-machine.ts": "8fac1cc803f5c2df7d3b4811dc4244f8498493c52998df45f793d45d2ac7669f"
+  },
+  "minimumFreeBytes": 23031627776,
+  "download": {
+    "received": 693360640,
+    "total": 693360640
+  },
+  "sourceHead": "123f43e511f750a88bc4373b6be4426d6498cca6",
+  "passed": true,
+  "finishedAt": "2026-09-06T00:58:24.685Z"
+}

@@ -77,6 +77,7 @@ import { resizeStep, startStep, stopStep, writeStep } from './runtime-step.js';
 import { isWorking, type RunningTeam } from './running-team.js';
 import { TeamPool } from './team-pool.js';
 import { MachinePreferences } from './machine-preferences.js';
+import { DesktopBoxMachine, DesktopMachines } from './machines.js';
 import { DictationHost, TRYOUT_TEAM } from './dictation.js';
 import { DictationSettingsHost } from './dictation-settings.js';
 import { SpeechFiles, type SpeechTarget } from './speech-files.js';
@@ -319,6 +320,13 @@ function asStepRequest(
  */
 let routines: RoutineRunner | undefined;
 let machinePreferences: MachinePreferences | undefined;
+let machines: DesktopMachines | undefined;
+
+function machinesOf(teamId: string) {
+  const team = store?.teamById(teamId);
+  return team === undefined || machines === undefined || store === undefined ? undefined
+    : machines.forTeam(store.agentsOfTeam(teamId), team);
+}
 
 const pool = new TeamPool<RunningTeam>({
   limit: LIVE_TEAM_LIMIT,
@@ -329,6 +337,10 @@ const pool = new TeamPool<RunningTeam>({
       store,
       db: opened.db,
       clock,
+      ...(machines === undefined ? {} : { createMachine: (record: import('@blobot/core').AgentRecord) => machines!.forAgent(record, team) }),
+      beforeRuntimeStart: async (machine) => {
+        if (machine instanceof DesktopBoxMachine) await machine.beforeRuntimeStart();
+      },
       ...(machinePreferences === undefined ? {} : { idleAfterMs: machinePreferences.idleAfterMs }),
       canSleep: () => !pool.isHeld(team.id),
       onMachinePowerChange: () => send('blobot:team'),
@@ -1102,6 +1114,7 @@ async function createWindow(): Promise<void> {
 
 void app.whenReady().then(async () => {
   machinePreferences = new MachinePreferences(join(app.getPath('userData'), 'machine-preferences.json'));
+  machines = new DesktopMachines(join(app.getPath('userData'), 'machines'));
   await machinePreferences.load().catch(() => {
     process.stderr.write('[machines] Saved sleep settings could not be read; automatic sleep is disabled. The file was kept.\n');
   });
@@ -1665,7 +1678,10 @@ void app.whenReady().then(async () => {
       const wasLive = pool.find(teamId) !== undefined;
       await pool.release(teamId);
       try {
-        const removals = await editTeamRoster(teamId, profileIds, { store, clock }, leadProfileId);
+        const agentMachines = machinesOf(teamId);
+        const removals = await editTeamRoster(teamId, profileIds, {
+          store, clock, ...(agentMachines === undefined ? {} : { machines: agentMachines }),
+        }, leadProfileId);
         return { ok: true, removals: removals.map(asUiRemoval) };
       } catch (error) {
         return { ok: false, error: describe(error) };
@@ -1697,7 +1713,8 @@ void app.whenReady().then(async () => {
   ipcMain.handle('blobot:teamDiskUsage', async (_event, teamId: string): Promise<UiTeamDiskUsage> => {
     if (store === undefined) return { bytes: null, workBytes: null, stateBytes: null, agents: [] };
     try {
-      return await measureTeam(teamId, { store, clock });
+      const agentMachines = machinesOf(teamId);
+      return await measureTeam(teamId, { store, clock, ...(agentMachines === undefined ? {} : { machines: agentMachines }) });
     } catch {
       // A team blobot cannot measure is offered nothing rather than a wrong figure.
       return { bytes: null, workBytes: null, stateBytes: null, agents: [] };
@@ -1910,7 +1927,10 @@ void app.whenReady().then(async () => {
     const wasActive = pool.active?.team.id === teamId;
     await pool.release(teamId);
     try {
-      const deletion = await deleteTeam(teamId, { store, clock }, { clean: clean === true });
+      const agentMachines = machinesOf(teamId);
+      const deletion = await deleteTeam(teamId, { store, clock,
+        ...(agentMachines === undefined ? {} : { machines: agentMachines }),
+      }, { clean: clean === true });
       if (wasActive) {
         openError = undefined;
         const next = store.listTeams()[0];

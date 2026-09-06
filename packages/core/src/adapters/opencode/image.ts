@@ -1,4 +1,4 @@
-import type { RuntimeImageDefinition } from '../../machines/runtime-image.js';
+import { MACHINE_GIT_ENVIRONMENT, type RuntimeImageDefinition } from '../../machines/runtime-image.js';
 
 /** Published CI builds, verified by anonymous full-byte download before adding these pins. */
 export const OPENCODE_MACHINE_IMAGE: RuntimeImageDefinition = {
@@ -7,6 +7,7 @@ export const OPENCODE_MACHINE_IMAGE: RuntimeImageDefinition = {
   moduleRoot: '/opt/blobot',
   executable: '/opt/blobot/bin/opencode',
   sharedSkillLocations: ['/home/agent/.config/opencode/skills'],
+  allowedEnvironment: [...MACHINE_GIT_ENVIRONMENT, 'OPENCODE_CONFIG_CONTENT', 'NO_COLOR'],
   builds: [
     {
       arch: 'arm64',

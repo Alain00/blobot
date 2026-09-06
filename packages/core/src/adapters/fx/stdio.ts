@@ -1,5 +1,6 @@
+import { FX_MACHINE_IMAGE } from './image.js';
 import { LocalMachine } from '../../machines/local-machine.js';
-import { requireLocalMachine, type Machine } from '../../machines/machine.js';
+import type { Machine } from '../../machines/machine.js';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { isExecutable, searchPath } from '../acp/child-transport.js';
@@ -46,10 +47,9 @@ export type SpawnFx = (options: SpawnFxOptions) => LineTransport;
  * would be a path blobot chose on a disk nobody asked it to write to.
  */
 export const spawnFx: SpawnFx = (options) => {
-  requireLocalMachine(options.machine);
   const machine = options.machine ?? new LocalMachine({ agentId: 'standalone', workspacePath: options.cwd });
   return machine.spawn({
-    command: { kind: 'exec', executable: resolveFxExecutable(options.fxExecutable), args: ['acp'] },
+    command: { kind: 'exec', executable: machine.kind === 'box' ? FX_MACHINE_IMAGE.executable : resolveFxExecutable(options.fxExecutable), args: ['acp'] },
     cwd: options.cwd,
     env: {
       ...options.env,

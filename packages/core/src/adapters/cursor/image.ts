@@ -1,4 +1,4 @@
-import type { RuntimeImageDefinition } from '../../machines/runtime-image.js';
+import { MACHINE_GIT_ENVIRONMENT, type RuntimeImageDefinition } from '../../machines/runtime-image.js';
 
 /** Published CI builds, verified by anonymous full-byte download before adding these pins. */
 export const CURSOR_MACHINE_IMAGE: RuntimeImageDefinition = {
@@ -7,6 +7,7 @@ export const CURSOR_MACHINE_IMAGE: RuntimeImageDefinition = {
   moduleRoot: '/opt/blobot',
   executable: '/opt/blobot/bin/cursor-agent',
   sharedSkillLocations: ['/home/agent/.cursor/skills'],
+  allowedEnvironment: [...MACHINE_GIT_ENVIRONMENT, 'CURSOR_CONFIG_DIR', 'CURSOR_API_KEY', 'CURSOR_AUTH_TOKEN', 'NO_COLOR'],
   builds: [
     {
       arch: 'arm64',

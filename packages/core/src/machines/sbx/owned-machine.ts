@@ -89,6 +89,12 @@ export class OwnedSbxMachine implements Machine {
     });
   }
 
+  /** Explicit launch/sign-in already owns the execution transition; no nested inspection lock. */
+  async checkRuntime(runtimeId: string): Promise<MachineDetection> {
+    return this.detectRuntime(runtimeId, { agentId: this.#options.agentId,
+      power: this.#started ? 'awake' : 'asleep', inspect: async (read) => read() });
+  }
+
   /** Explicit sign-in before an Agent runtime launches. The watched PTY stays opaque. */
   async signInRuntime(runtimeId: string, perform: SbxPtyRunner): Promise<{ readonly completed: boolean; readonly detection: MachineDetection }> {
     return this.#locked(async () => {

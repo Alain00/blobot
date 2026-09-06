@@ -15,6 +15,9 @@ import { blob, index, integer, primaryKey, real, sqliteTable, text, unique } fro
 
 export const teams = sqliteTable('teams', {
   id: text('id').primaryKey(),
+  machineKind: text('machine_kind', { enum: ['local', 'box'] }),
+  machineCpus: integer('machine_cpus'),
+  machineMemoryBytes: integer('machine_memory_bytes'),
   // Load-bearing: the branch is `blobot/<team>/<agent>` with no id suffix, so a name
   // collision is a filesystem collision. This is where that becomes enforceable.
   name: text('name').notNull().unique(),
@@ -146,6 +149,9 @@ export const agents = sqliteTable(
   'agents',
   {
     id: text('id').primaryKey(),
+    machineKind: text('machine_kind', { enum: ['local', 'box'] }),
+    machineCpus: integer('machine_cpus'),
+    machineMemoryBytes: integer('machine_memory_bytes'),
     teamId: text('team_id')
       .notNull()
       .references(() => teams.id),

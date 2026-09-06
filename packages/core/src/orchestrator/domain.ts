@@ -6,6 +6,7 @@
 import type { AttachmentKind } from '../runtime.js';
 import type { TrustLevel } from '../trust.js';
 import type { VerbosityLevel } from '../verbosity.js';
+import type { MachinePlacement } from '../machines/placement.js';
 
 /**
  * The two answers to "may blobot start this agent a fresh session when its window fills up".
@@ -19,6 +20,8 @@ export type CompactionSetting = 'auto' | 'off';
 export const DEFAULT_COMPACTION: CompactionSetting = 'auto';
 
 export interface Team {
+  /** Creation default for new members. Existing members retain their own placement. */
+  readonly defaultMachine?: MachinePlacement;
   readonly id: string;
   /** Load-bearing: the branch is `blobot/<team>/<agent>`. */
   readonly name: string;
@@ -141,6 +144,8 @@ export interface AgentDefinition {
 }
 
 export interface Agent {
+  /** Immutable execution choice for this membership. Absent means this computer. */
+  readonly machine?: MachinePlacement;
   readonly id: string;
   readonly teamId: string;
   /** The AgentProfile this Agent was instantiated from, when it came from one. */

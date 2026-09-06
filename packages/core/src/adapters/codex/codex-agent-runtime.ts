@@ -37,7 +37,7 @@ import type {
 import { offerableNames, offeredName } from './palette.js';
 import { LocalMachine } from '../../machines/local-machine.js';
 import { CODEX_MACHINE_IMAGE } from './image.js';
-import { requireLocalMachine, type Machine } from '../../machines/machine.js';
+import type { Machine } from '../../machines/machine.js';
 import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
 import { CODEX_POSTURE_MODE, codexModeFor } from './permissions.js';
 import {
@@ -186,7 +186,6 @@ export class CodexAgentRuntime implements AgentRuntime {
 
   constructor(options: CodexAgentRuntimeOptions) {
     this.agentId = options.agentId;
-    requireLocalMachine(options.machine);
     this.#options = {
       ...options,
       machine: options.machine ?? new LocalMachine({ agentId: options.agentId, workspacePath: options.cwd }),

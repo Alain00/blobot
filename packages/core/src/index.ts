@@ -26,9 +26,16 @@ export { DEFAULT_MACHINE_IDLE_MS, machineIdleMs } from './machines/power.js';
 export type { MachinePower } from './machines/power.js';
 export { DEFAULT_MACHINE_LIMITS, machineLimits } from './machines/resources.js';
 export type { MachineLimits } from './machines/resources.js';
+export { machinePlacement } from './machines/placement.js';
+export type { MachinePlacement } from './machines/placement.js';
 export { machineFor } from './machines/machine-for.js';
 export { MachineUnavailableError } from './machines/machine.js';
 export { SbxImageStore, verifyRuntimeImageArchive } from './machines/sbx/image-store.js';
+export { SbxEngine, sbxCommandRunner } from './machines/sbx/engine.js';
+export type { SbxPtyRunner } from './machines/sbx/engine.js';
+export { SbxRegistry } from './machines/sbx/registry.js';
+export { OwnedSbxMachine } from './machines/sbx/owned-machine.js';
+export { SBX_INITIAL_STORAGE } from './machines/sbx/kit.js';
 export { runtimeImageBuild } from './machines/runtime-image.js';
 export type { RuntimeImageBuild, RuntimeImageDefinition } from './machines/runtime-image.js';
 export type {
@@ -432,3 +439,9 @@ export { MISTRAL_MODEL, MISTRAL_TRANSCRIPTIONS_URL, MistralTranscriber } from '.
 export type { MistralTranscriberOptions } from './speech/mistral.js';
 export { nodeSocket, resample16to24 } from './speech/socket.js';
 export type { SocketFactory, SocketLike } from './speech/socket.js';
+
+export { CLAUDE_MACHINE_IMAGE } from './adapters/claude/image.js';
+export { CODEX_MACHINE_IMAGE } from './adapters/codex/image.js';
+export { OPENCODE_MACHINE_IMAGE } from './adapters/opencode/image.js';
+export { FX_MACHINE_IMAGE } from './adapters/fx/image.js';
+export { CURSOR_MACHINE_IMAGE } from './adapters/cursor/image.js';

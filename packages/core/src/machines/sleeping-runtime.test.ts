@@ -39,6 +39,68 @@ const consume = async (stream: AsyncIterable<AgentEvent>) => {
 };
 
 describe('sleeping Agent execution', () => {
+  it('runs sign-in without an attached provider and retries the latest conversation afterward', async () => {
+    const f = fixture();
+    await f.runtime.start();
+    await f.runtime.restart();
+    const session = f.runtime.sessionId;
+    const original = f.runtimes[0]!;
+    expect(await f.runtime.remedy(async (signal) => {
+      expect(signal.aborted).toBe(false);
+      expect(original.lifecycle).toBe('stopped');
+      expect(f.runtime.lifecycle).toBe('starting');
+      expect(f.runtime.power).toBe('awake');
+      await f.clock.advance(2000);
+      expect(f.runtime.power).toBe('awake');
+      return 'signed in';
+    })).toBe('signed in');
+    expect(f.runtime.power).toBe('asleep');
+    expect(f.runtime.lifecycle).toBe('dead');
+    await f.runtime.retryStart();
+    expect(f.resumes.at(-1)).toBe(session);
+    expect(f.runtime.lifecycle).toBe('ready');
+    await f.runtime.stop();
+  });
+
+  it('stops the Machine after failed sign-in without losing the conversation', async () => {
+    const f = fixture();
+    await f.runtime.start();
+    await expect(f.runtime.remedy(async () => { throw new Error('sign-in cancelled'); }))
+      .rejects.toThrow('sign-in cancelled');
+    expect(f.stops).toHaveBeenCalledTimes(1);
+    expect(f.runtime.power).toBe('asleep');
+    expect(f.runtime.lifecycle).toBe('dead');
+    await f.runtime.retryStart();
+    expect(f.resumes).toEqual([undefined, 'first-session']);
+    await f.runtime.stop();
+  });
+
+  it('aborts sign-in on shutdown and serializes its Machine cleanup with shutdown', async () => {
+    const f = fixture();
+    await f.runtime.start();
+    let entered!: () => void;
+    const active = new Promise<void>((resolve) => { entered = resolve; });
+    let release!: () => void;
+    const cleanup = new Promise<void>((resolve) => { release = resolve; });
+    f.stops.mockImplementationOnce(() => cleanup);
+    const signingIn = f.runtime.remedy((signal) => new Promise<void>((_resolve, reject) => {
+      signal.addEventListener('abort', () => reject(new Error('cancelled')), { once: true });
+      entered();
+    }));
+    const rejected = expect(signingIn).rejects.toThrow('cancelled');
+    await active;
+    const stopping = f.runtime.stop();
+    await f.clock.advance(0);
+    expect(f.stops).toHaveBeenCalledTimes(1);
+    release();
+    await rejected;
+    await stopping;
+    expect(f.stops).toHaveBeenCalledTimes(2);
+    expect(f.runtime.power).toBe('asleep');
+    expect(f.runtime.lifecycle).toBe('stopped');
+    await expect(f.runtime.retryStart()).rejects.toThrow('closed');
+  });
+
   it('preserves the adapter’s actionable launch refusal while marking power unknown', async () => {
     const f = fixture();
     vi.spyOn(f.runtimes[0]!, 'start').mockRejectedValue(new Error('This Agent needs to sign in before it can start.'));

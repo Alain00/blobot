@@ -708,3 +708,18 @@ clean up. [The API research](../research/58-xattr-acl-reconciliation-and-fileatt
 documents inherited special-inode state, so no unknown-as-zero exception is adopted.
 Continue the native-route investigation and remaining runtime/activation work;
 keep this ticket claimed and the existing replacement guard.
+
+### Production adapter launch checkpoint — 2026-09-06
+
+All five adapters now resolve their pinned executable/module and configuration
+inside the guest. Host executable overrides, host module paths and Electron's
+Node override are excluded. The desktop shares verified image downloads and
+creates/adopts an owned Machine per persisted Agent placement. [Published Claude
+arm64 acceptance](../research/64-production-box-launch-acceptance.md) passes actual
+ACP initialize/session/new/default-mode, inbound MCP handshake and stop/reopen of
+the same Machine. No login, tools or inference were performed; ACP ready does not
+prove signed in, so the desktop checks guest login before ordinary launch.
+
+Core 1,080/47 and desktop 626/1; types/builds pass. The remaining runtime/platform
+acceptance and operational setup/login UI are still open. Post-creation resource
+editing remains explicitly deferred by the sizing scope decision.

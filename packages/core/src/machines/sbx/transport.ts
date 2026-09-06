@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { posix } from 'node:path';
 import { childTransport } from '../../adapters/acp/child-transport.js';
-import type { MachineSpawnRequest, MachineTransport } from '../machine.js';
+import type { MachineConfigPatch, MachineSpawnRequest, MachineTransport } from '../machine.js';
 import { SBX_BOOTSTRAP_SOURCE } from './bootstrap.js';
 import { sbxClientEnvironment } from './client-environment.js';
 
@@ -9,11 +9,7 @@ const MAX_HEADER_BYTES = 1024 * 1024;
 const FORBIDDEN_ENV = /^(?:BLOBOT_[A-Z0-9_]+_API_KEY|SSH_AUTH_SOCK|ELECTRON_RUN_AS_NODE|NODE_OPTIONS|NODE_PATH|LD_PRELOAD|LD_LIBRARY_PATH|HOME|PATH|HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|NO_PROXY)$/i;
 
 /** An adapter-owned JSON patch, applied in the guest before the runtime starts. */
-export interface SbxConfigPatch {
-  readonly root: string;
-  readonly relativePath: string;
-  readonly patch: Readonly<Record<string, unknown>>;
-}
+export type SbxConfigPatch = MachineConfigPatch;
 
 export interface SbxExecOptions {
   readonly sandboxName: string;
@@ -49,7 +45,7 @@ export function prepareSbxExec(options: SbxExecOptions, request: MachineSpawnReq
     if (value?.includes('\0')) throw new Error('Invalid launch environment value');
     env[key] = value ?? null;
   }
-  const configs = options.configs ?? [];
+  const configs = [...options.configs ?? [], ...request.configs ?? []];
   for (const config of configs) {
     absoluteGuestPath(config.root);
     if (config.relativePath.includes('\0') || config.relativePath.split('/').some(

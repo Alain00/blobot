@@ -127,6 +127,25 @@ beforeEach(() => {
 afterEach(() => opened.close());
 
 describe('creating a team', () => {
+  it('persists a default and per-member overrides, including for later joiners', async () => {
+    const box = { kind: 'box', limits: { maxCpus: 3, maxMemoryBytes: 6 * 1024 ** 3 } } as const;
+    const deps = { store, clock, workspaces, inspect: () => workspaces.inspect() };
+    const team = await createTeam({ ...spec, defaultMachine: box,
+      memberMachines: { [spec.profileIds[1]!]: { kind: 'local' } } }, deps);
+    expect(store.teamById(team.id)?.defaultMachine).toEqual(box);
+    expect(store.agentsOfTeam(team.id).map((agent) => agent.machine?.kind ?? 'local')).toEqual(['box', 'local']);
+    const joiner = hireAgent({ name: 'Charlie', role: 'Review', runtimeId: 'codex' }, { store, clock });
+    await editTeamRoster(team.id, [...spec.profileIds, joiner.id], deps);
+    expect(store.agentsOfTeam(team.id).find((agent) => agent.profileId === joiner.id)?.machine).toEqual(box);
+  });
+
+  it('validates member placement before creating rows or workspaces', async () => {
+    await expect(createTeam({ ...spec, memberMachines: { unknown: { kind: 'local' } } }, {
+      store, clock, workspaces, inspect: () => workspaces.inspect(),
+    })).rejects.toThrow('unselected');
+    expect(store.listTeams()).toHaveLength(0);
+    expect(workspaces.provisioned).toHaveLength(0);
+  });
   it('refuses a profile retired after the creation form opened, before making workspaces', async () => {
     store.tombstoneProfile(spec.profileIds[0]!, clock.now());
     await expect(createTeam(spec, { store, clock, workspaces })).rejects.toMatchObject({ code: 'unknown_agent' });

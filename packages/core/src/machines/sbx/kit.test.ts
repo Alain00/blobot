@@ -20,6 +20,9 @@ describe('a root blobot kit', () => {
   it('uses exact immutable Agent ids, never lossy team/name slugs', () => {
     expect(sbxNameFor('0198abcd-1111-7111-8111-000000000001')).toBe('blobot-0198abcd-1111-7111-8111-000000000001');
     expect(sbxNameFor('alice-1')).not.toBe(sbxNameFor('alice-2'));
+    expect(sbxNameFor('alice_a1b2c3')).toBe('blobot-alice.a1b2c3');
+    expect(sbxNameFor('alice_a1b2c3')).not.toBe(sbxNameFor('alice-a1b2c3'));
+    expect(() => sbxNameFor('alice.a1b2c3')).toThrow();
     for (const id of ['Alice', 'alice/../bob', '', 'a'.repeat(97)]) expect(() => sbxNameFor(id)).toThrow();
   });
 

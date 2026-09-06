@@ -1,5 +1,5 @@
 import { LocalMachine } from '../../machines/local-machine.js';
-import { requireLocalMachine, type Machine } from '../../machines/machine.js';
+import type { Machine } from '../../machines/machine.js';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { isExecutable, searchPath } from './child-transport.js';
@@ -32,6 +32,8 @@ export interface NpmBridgeSpec {
   readonly overrideEnv: string;
   /** The user's own CLI, as it is named on `PATH`. */
   readonly binary: string;
+  /** Fixed by the adapter's published image; never resolved against the host. */
+  readonly guestExecutable?: string;
   /** The environment variable the bridge reads to find that binary. */
   readonly executableEnv: string;
   /** How the agent is named in the sentence a failure to resolve produces. */
@@ -61,20 +63,20 @@ export function spawnNpmBridge(
   spec: NpmBridgeSpec,
   options: SpawnNpmBridgeOptions,
 ): LineTransport {
-  requireLocalMachine(options.machine);
   const machine = options.machine ?? new LocalMachine({ agentId: 'standalone', workspacePath: options.cwd });
+  if (machine.kind === 'box' && spec.guestExecutable === undefined) throw new Error('This bridge has no sandbox executable.');
   return machine.spawn({
     command: {
       kind: 'node-module', package: spec.package, version: spec.version, entry: spec.entry,
-      localEntryPath: bridgeEntryPathOf(spec),
+      ...(machine.kind === 'local' ? { localEntryPath: bridgeEntryPathOf(spec) } : {}),
     },
     cwd: options.cwd,
     env: {
       ...options.env,
-      [spec.executableEnv]: resolveBridgeExecutable(spec, options.executable),
+      [spec.executableEnv]: machine.kind === 'box' ? spec.guestExecutable : resolveBridgeExecutable(spec, options.executable),
       // `process.execPath` is Electron in the desktop app, and Electron only behaves like
       // node when told to. Harmless under plain node, which ignores it.
-      ELECTRON_RUN_AS_NODE: '1',
+      ...(machine.kind === 'local' ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
     },
     ...(options.onStderr === undefined ? {} : { onStderr: options.onStderr }),
   });

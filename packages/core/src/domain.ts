@@ -118,4 +118,8 @@ export type { SpeechModelId } from './speech/catalog.js';
 export type { SpeechReadiness } from './speech/readiness.js';
 export { describeRtf } from './speech/readiness.js';
 export type { MachinePower } from './machines/power.js';
+export { DEFAULT_MACHINE_LIMITS, machineLimits } from './machines/resources.js';
+export { machinePlacement } from './machines/placement.js';
+export type { MachineLimits } from './machines/resources.js';
+export type { MachinePlacement } from './machines/placement.js';
 export type { DetectionSubject, MachineDetection } from './detect/machine-runtime.js';

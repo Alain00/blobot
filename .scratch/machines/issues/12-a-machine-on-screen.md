@@ -750,3 +750,16 @@ Eight new integration regressions cover startup/sign-in refusal, retry, wake fai
 budget reservation, startup backlog, queued attachments, failed storage acknowledgement
 and missing attachment content. Core: 1,065 passed / 47 skipped; typecheck/build pass.
 Desktop typecheck passes. Operational placement/setup/login UI remains claimed.
+
+## Implementation checkpoint: placement and launch, 2026-09-06
+
+Creation placement and limits now persist per Agent, with a Team default for later
+joiners. The desktop supplies actual per-Agent Machines to startup and deletion.
+Initial failure leaves other members running, retains queued mail and preserves
+the previous provider session until a successful retry. Sign-in remedies detach
+the provider, hold execution awake and cancel/clean up serially on shutdown.
+Guest login is checked separately from a successful bridge session handshake.
+
+Core 1,080/47; desktop 626/1; both typechecks/builds pass. Actual published Claude
+launch and same-Machine reopen are measured in [the acceptance receipt](../research/64-production-box-launch-acceptance.md).
+Engine/guest-login operations and the production controls remain claimed.

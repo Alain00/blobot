@@ -14,6 +14,7 @@ import {
   type BlobotDatabase,
   type Clock,
   type Team,
+  type Machine,
   type WorkspaceProvider,
 } from '@blobot/core';
 import type { RunningTeam } from './running-team.js';
@@ -21,7 +22,6 @@ import { FileHandoffArchive } from './handoff-archive.js';
 import { runtimeLabel } from './runtime-labels.js';
 import { runtimeFor } from './runtime-for.js';
 import { resolveCeiling } from './context-ceilings.js';
-import { knownRuntimes } from './known-runtimes.js';
 
 export interface StartTeamOptions {
   readonly team: Team;
@@ -39,6 +39,8 @@ export interface StartTeamOptions {
   readonly idleAfterMs?: number;
   readonly canSleep?: () => boolean;
   readonly onMachinePowerChange?: () => void;
+  readonly createMachine?: (record: AgentRecord) => Machine;
+  readonly beforeRuntimeStart?: (machine: Machine) => Promise<void>;
 }
 
 /**
@@ -62,7 +64,6 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
   const workspaces = options.workspaces ?? workspaceProviderFor(team.workspaceKind);
 
   const records = store.agentsOfTeam(team.id);
-  await refuseMissingRuntimes(records);
   const inspection = await workspaces.inspect(team.workspacePath);
   if (inspection.dirty) {
     // The ticket 06 trap: the user's uncommitted work is in no agent's workspace, so agents
@@ -108,6 +109,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       // And the same path for the same reason: `composePersona` reads it off the Agent.
       ...(record.verbosity === undefined ? {} : { verbosity: record.verbosity }),
       workspacePath: workspace.path,
+      ...(record.machine === undefined ? {} : { machine: record.machine }),
     });
     // A copied AgentWorkspace has no branch to show, and the UI already treats it as optional.
     if (workspace.branch !== undefined) branches[record.id] = workspace.branch;
@@ -146,35 +148,37 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
   const overrides = store.contextCeilings();
   const runtimes = new Map<string, AgentRuntime>();
   const executions = new Map<string, SleepingRuntime>();
+  const machines = new Map<string, Machine>();
   for (const record of records) {
     const agent = agents.find((candidate) => candidate.id === record.id);
     if (agent === undefined) continue;
     runtimeLabels[record.id] = runtimeLabel(record.runtimeId);
     const measured = resolveCeiling(overrides, record.runtimeId, record.runtimeOptions?.['model']);
     if (measured !== undefined) contextCeilings[record.id] = measured;
-    const machine = machineFor('local', { agentId: agent.id, workspacePath: agent.workspacePath });
+    const machine = options.createMachine?.({ ...record, workspacePath: agent.workspacePath })
+      ?? machineFor(record.machine?.kind ?? 'local', { agentId: agent.id, workspacePath: agent.workspacePath });
+    machines.set(agent.id, machine);
     const endpoint = mcp.endpointFor(agent.id, machine.mailboxHostname);
     // The whole difference between a relaunch and a resume. Undefined on a first launch, and
     // a session the provider has forgotten is not fatal: the adapter falls back to a new one.
     const resumeSessionId = store.lastProviderSessionOf(agent.id);
     // The one branch on a provider in the whole app, and it produces an `AgentRuntime`:
     // nothing below this line knows which runtime an agent is.
-    let openedOnce = false;
     const runtime = new SleepingRuntime({
       machine,
       clock,
       startRequest: { mailboxPort: mcp.port },
+      beforeRuntimeStart: async () => options.beforeRuntimeStart?.(machine),
       ...(options.idleAfterMs === undefined ? {} : { idleAfterMs: options.idleAfterMs }),
       ...(resumeSessionId === undefined ? {} : { resumeSessionId }),
       canSleep: () => (options.canSleep?.() ?? true) &&
         orchestrator.statusOf(agent.id) === 'idle' && orchestrator.mailbox(agent.id).length === 0,
       onPowerChange: () => options.onMachinePowerChange?.(),
       onSessionOpened: (sessionId) => {
-        if (openedOnce) store.startSession({
+        store.startSession({
           id: uuidv7(clock.now()), agentId: agent.id, providerSessionId: sessionId,
           personaText: personas.get(agent.id) ?? '', startedAt: clock.now(),
         });
-        openedOnce = true;
       },
       create: (latestSessionId) => runtimeFor({
       machine,
@@ -185,7 +189,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       persona: personas.get(agent.id) ?? '',
       ...(latestSessionId === undefined ? {} : { resumeSessionId: latestSessionId }),
       // Ticket 07: the user's own binary, never a bundled copy.
-      ...(record.executablePath === undefined ? {} : { executablePath: record.executablePath }),
+      ...(machine.kind === 'box' || record.executablePath === undefined ? {} : { executablePath: record.executablePath }),
       // What this agent was set to when it was hired or last edited. A team takes it at its
       // next start, which is this line.
       ...(record.runtimeOptions === undefined ? {} : { options: record.runtimeOptions }),
@@ -259,20 +263,6 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     log(`[${agent.id}] ${compacted.how} · session ${compacted.sessionId}`);
   });
 
-  for (const agent of agents) {
-    const runtime = runtimes.get(agent.id);
-    const providerSessionId = runtime?.sessionId;
-    store.startSession({
-      id: uuidv7(clock.now()),
-      agentId: agent.id,
-      ...(providerSessionId === undefined || providerSessionId === ''
-        ? {}
-        : { providerSessionId }),
-      personaText: personas.get(agent.id) ?? '',
-      startedAt: clock.now(),
-    });
-  }
-
   // Ticket 15's first hazard: a dead port or a rejected token yields a perfectly normal
   // `sessionId` and nothing in the ACP stream, so the agent simply has no tool and only finds
   // out when it tries. The inbound handshake is the only honest signal — a report, not a gate.
@@ -292,6 +282,8 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
     runtimeLabels,
     contextCeilings,
     branches,
+    machines,
+    executions,
     powerOf: (agentId) => executions.get(agentId)?.power ?? 'unknown',
     setIdleAfterMs: (value) => { for (const execution of executions.values()) execution.setIdleAfterMs(value); },
     demoMode: false,
@@ -308,33 +300,4 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       await mcp.stop();
     },
   };
-}
-
-/**
- * Refuse a launch that has nothing to spawn, in the words the picker used.
- *
- * This is **not** ticket 11's gate. That ticket refuses to let detection stand between the user
- * and *trying*, and it is right: every auth probe answers "is a credential present", so a
- * signed-out runtime is still allowed to start and say so itself. `not_installed` is the one
- * state that is not a guess. There is no binary, the spawn is going to fail, and the only
- * question is whether the user reads `spawn opencode ENOENT` or reads which runtime is missing
- * and whose agent needs it.
- *
- * Detection is the memo, not a fresh probe: a team is started often, the answer is a second and
- * a half, and the surfaces that *show* readiness are the ones that ask again.
- */
-async function refuseMissingRuntimes(records: readonly AgentRecord[]): Promise<void> {
-  const detections = await knownRuntimes();
-  const missing = new Map<string, string[]>();
-  for (const record of records) {
-    const detection = detections.find((entry) => entry.runtimeId === record.runtimeId);
-    if (detection?.readiness !== 'not_installed') continue;
-    missing.set(detection.label, [...(missing.get(detection.label) ?? []), record.name]);
-  }
-  if (missing.size === 0) return;
-  const said = [...missing].map(([label, names]) => `${label} (${names.join(', ')})`);
-  throw new Error(
-    `${said.join(' and ')} is not installed on this machine. Install it from the runtime ` +
-      'picker on the agents screen, or give the agent a runtime you have.',
-  );
 }

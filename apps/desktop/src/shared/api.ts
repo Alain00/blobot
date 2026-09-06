@@ -1070,6 +1070,8 @@ export interface NewAgentSpec {
 }
 
 export interface NewTeamSpec {
+  readonly defaultMachine?: import('@blobot/core/domain').MachinePlacement;
+  readonly memberMachines?: Readonly<Record<string, import('@blobot/core/domain').MachinePlacement>>;
   readonly name: string;
   readonly workspacePath: string;
   readonly turnBudget: number;

@@ -28,6 +28,14 @@ export interface MachineSpawnRequest {
   /** Only explicitly supplied entries travel. Host inheritance belongs to LocalMachine. */
   readonly env?: Readonly<Record<string, string | undefined>>;
   readonly onStderr?: (line: string) => void;
+  /** Adapter-owned configuration applied in the guest before spawning its process. */
+  readonly configs?: readonly MachineConfigPatch[];
+}
+
+export interface MachineConfigPatch {
+  readonly root: string;
+  readonly relativePath: string;
+  readonly patch: Readonly<Record<string, unknown>>;
 }
 
 /** Adapter-owned image requirement, with no runtime-id switch or provider domain catalog. */
@@ -89,12 +97,5 @@ export class MachineUnavailableError extends Error {
   constructor(readonly kind: MachineKind, message: string) {
     super(message);
     this.name = 'MachineUnavailableError';
-  }
-}
-
-/** Until the image/configuration/Workspace work lands, box must never fall back to the host. */
-export function requireLocalMachine(machine: Pick<Machine, 'kind'> | undefined): void {
-  if (machine !== undefined && machine.kind !== 'local') {
-    throw new MachineUnavailableError(machine.kind, 'Sandbox runtime preparation is not implemented yet.');
   }
 }

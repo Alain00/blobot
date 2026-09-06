@@ -1,4 +1,4 @@
-import type { RuntimeImageDefinition } from '../../machines/runtime-image.js';
+import { MACHINE_GIT_ENVIRONMENT, type RuntimeImageDefinition } from '../../machines/runtime-image.js';
 
 /** Published CI builds, verified by anonymous full-byte download before adding these pins. */
 export const CODEX_MACHINE_IMAGE: RuntimeImageDefinition = {
@@ -7,6 +7,7 @@ export const CODEX_MACHINE_IMAGE: RuntimeImageDefinition = {
   moduleRoot: '/opt/blobot',
   executable: '/opt/blobot/bin/codex',
   sharedSkillLocations: ['/home/agent/.agents/skills'],
+  allowedEnvironment: [...MACHINE_GIT_ENVIRONMENT, 'CODEX_PATH', 'INITIAL_AGENT_MODE', 'NO_BROWSER'],
   builds: [
     {
       arch: 'arm64',
