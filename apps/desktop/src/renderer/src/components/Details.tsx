@@ -14,6 +14,7 @@ import type {
 import { sizeOf } from './Attached.js';
 import { Blob } from './Blob.js';
 import { WorkspacePanel } from './Workspaces.js';
+import { SessionSkills } from './SessionSkills.js';
 
 /**
  * What the machinery under this team is doing: `CONTEXT` and `WORKSPACE`, behind one glyph in
@@ -32,6 +33,7 @@ import { WorkspacePanel } from './Workspaces.js';
  * reveals them.
  */
 export function Details({
+  teamId,
   agents,
   usage,
   injection,
@@ -43,6 +45,7 @@ export function Details({
   onPlan,
   startOpen = false,
 }: {
+  teamId?: string;
   agents: readonly UiAgent[];
   usage: Record<string, UiUsage>;
   injection: Record<string, UiInjection>;
@@ -81,6 +84,9 @@ export function Details({
       <Popover.Portal>
         <Popover.Content className="detailspop" side="bottom" align="end" sideOffset={8} collisionPadding={12}>
           <Context agents={agents} usage={usage} injection={injection} handbooks={handbooks} />
+          {teamId && <section className="skillrows" aria-label="Skills in this team"><div className="ctxhead"><span className="mono muted">SKILLS</span></div>
+            {agents.map((agent) => <SessionSkills key={agent.id} teamId={teamId} agent={agent} />)}
+          </section>}
           <WorkspacePanel
             statuses={workspaces}
             agents={agents}

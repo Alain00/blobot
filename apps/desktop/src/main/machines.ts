@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import {
-  LocalMachine, PersonalDirectories, OwnedSbxMachine, SbxEngine, SbxImageStore, SbxRegistry, SBX_INITIAL_STORAGE, SBX_INSTALL_VERSION, DEFAULT_MACHINE_LIMITS,
+  LocalMachine, PersonalDirectories, PersonalSkills, OwnedSbxMachine, SbxEngine, SbxImageStore, SbxRegistry, SBX_INITIAL_STORAGE, SBX_INSTALL_VERSION, DEFAULT_MACHINE_LIMITS,
   boxWorkspaceMounts, machinePlacement, runtimeImageBuild, sbxCommandRunner,
   sbxKitMismatch,
   type AgentRecord, type Machine, type MachineDetection, type MachineLocation, type MachineReadiness,
@@ -25,6 +25,7 @@ interface ImageRequest {
 export class DesktopMachines {
   readonly registry: SbxRegistry;
   readonly personal: PersonalDirectories;
+  readonly skills: PersonalSkills;
   readonly #imageStores = new Map<string, SbxImageStore>();
   readonly #abort = new AbortController();
   readonly #downloads = new Set<Promise<void>>();
@@ -33,6 +34,7 @@ export class DesktopMachines {
     personalRoot = join(dirname(directory), 'profiles')) {
     this.registry = new SbxRegistry(join(directory, 'agents'));
     this.personal = new PersonalDirectories(personalRoot);
+    this.skills = new PersonalSkills(this.personal);
   }
 
   get executable(): string {

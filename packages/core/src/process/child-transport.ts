@@ -14,12 +14,14 @@ import type { MachineTransport } from '../machines/machine.js';
 export function childTransport(
   child: ChildProcessWithoutNullStreams,
   onStderr: ((line: string) => void) | undefined,
-  options: { readonly killAfterMs?: number } = {},
+  options: { readonly killAfterMs?: number; readonly processGroup?: boolean } = {},
 ): MachineTransport {
   const killAfterMs = options.killAfterMs ?? 2_000;
   const closeListeners = new Set<(reason: string | undefined) => void>();
   let closedBy: string | undefined;
   let closed = false;
+  let exited = child.exitCode !== null || child.signalCode !== null;
+  let closing: Promise<void> | undefined;
 
   const announceClose = (reason: string | undefined): void => {
     if (closed) return;
@@ -33,6 +35,7 @@ export function childTransport(
   // pipe must fail this transport, not crash the Electron main process with an unhandled EPIPE.
   child.stdin.on('error', (error) => announceClose(error.message));
   child.on('exit', (code, signal) => {
+    exited = true;
     announceClose(
       code === 0 || code === null
         ? signal === null
@@ -57,21 +60,30 @@ export function childTransport(
     lines(): AsyncIterable<string> {
       return createInterface({ input: child.stdout, crlfDelay: Infinity });
     },
-    async close(): Promise<void> {
-      if (child.exitCode !== null) return;
-      // Both runtimes exit on stdin EOF, so a clean stop is closing the pipe. The kill is the
-      // fallback for a process that has stopped reading it.
-      child.stdin.end();
-      await new Promise<void>((resolve) => {
-        const timer = setTimeout(() => {
-          child.kill('SIGKILL');
-          resolve();
-        }, killAfterMs);
-        child.once('exit', () => {
-          clearTimeout(timer);
-          resolve();
+    close(): Promise<void> {
+      if (closing) return closing;
+      closing = (async () => {
+        if (child.pid === undefined && closed) return; // spawn failed: there is no process to stop
+        // Both runtimes exit on stdin EOF, so a clean stop is closing the pipe. The kill is the
+        // fallback for a process that has stopped reading it.
+        if (!exited) await new Promise<void>((resolve, reject) => {
+          let confirmation: ReturnType<typeof setTimeout> | undefined;
+          const finish = () => { clearTimeout(timer); clearTimeout(confirmation); resolve(); };
+          const timer = setTimeout(() => {
+            child.kill('SIGKILL');
+            confirmation = setTimeout(() => {
+              child.removeListener('exit', finish);
+              reject(new Error('Could not confirm agent process exit. Personal files remain borrowed.'));
+            }, 2_000);
+          }, killAfterMs);
+          child.once('exit', finish);
+          child.stdin.end();
         });
-      });
+        // A bridge may exit before the CLI or a background tool it launched. LocalMachine
+        // creates a dedicated process group, so this never signals the app or another Agent.
+        if (options.processGroup && child.pid !== undefined) await closeProcessGroup(child.pid);
+      })().catch((error) => { closing = undefined; throw error; });
+      return closing;
     },
     onClose(listener: (reason: string | undefined) => void): () => void {
       if (closed) {
@@ -82,6 +94,17 @@ export function childTransport(
       return () => closeListeners.delete(listener);
     },
   };
+}
+
+async function closeProcessGroup(pid: number): Promise<void> {
+  const gone = (error: unknown) => error instanceof Error && 'code' in error && error.code === 'ESRCH';
+  try { process.kill(-pid, 'SIGKILL'); } catch (error) { if (gone(error)) return; throw error; }
+  const deadline = Date.now() + 2_000;
+  while (Date.now() < deadline) {
+    try { process.kill(-pid, 0); } catch (error) { if (gone(error)) return; throw error; }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error('Background agent processes have not stopped. Personal files remain borrowed.');
 }
 
 /** The first executable of that name on `PATH`, or nothing. */

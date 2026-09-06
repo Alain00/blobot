@@ -459,3 +459,8 @@ export { MISTRAL_MODEL, MISTRAL_TRANSCRIPTIONS_URL, MistralTranscriber } from '.
 export type { MistralTranscriberOptions } from './speech/mistral.js';
 export { nodeSocket, resample16to24 } from './speech/socket.js';
 export type { SocketFactory, SocketLike } from './speech/socket.js';
+export { PersonalSkills } from './skills/personal-skills.js';
+export { CLAUDE_SKILL_DISCOVERY } from './adapters/claude/palette.js';
+export { CODEX_SKILL_DISCOVERY } from './adapters/codex/palette.js';
+export { OPENCODE_SKILL_DISCOVERY } from './adapters/opencode/palette.js';
+export { inspectSkillLocations, type SkillDiscovery } from './skills/inventory.js';

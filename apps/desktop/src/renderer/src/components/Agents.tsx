@@ -4,6 +4,7 @@ import type { TeamOpenResult, UiAgentProfile, UiRuntimeChoice, UiTeamSummary } f
 import { EditAgent, HireAgent, RetireAgent } from './AgentForm.js';
 import { Blob } from './Blob.js';
 import { IndividualTeam } from './IndividualTeam.js';
+import { Skills } from './Skills.js';
 
 /**
  * Your agents: everyone you have hired, on no team and on several at once.
@@ -54,6 +55,7 @@ export function Agents({
    *  to be replaced by a reloaded one, and a copy held here would go stale on save. */
   const [editing, setEditing] = useState<string | undefined>();
   const [retiring, setRetiring] = useState<string | undefined>();
+  const [skills, setSkills] = useState<UiAgentProfile>();
 
   const reload = useCallback(async (): Promise<void> => {
     setRoster(await window.blobot.listAgents());
@@ -78,7 +80,7 @@ export function Agents({
   // Escape closes the screen, because every other layer in this app answers to it and one that
   // does not reads as stuck. Not while a dialog is open: Radix is already closing that, and
   // both would go at once.
-  const dialogOpen = hiring || editingAgent !== undefined || retiringAgent !== undefined;
+  const dialogOpen = hiring || editingAgent !== undefined || retiringAgent !== undefined || skills !== undefined;
   useEffect(() => {
     if (dialogOpen) return;
     const onKey = (event: KeyboardEvent): void => {
@@ -88,6 +90,7 @@ export function Agents({
     return () => window.removeEventListener('keydown', onKey);
   }, [dialogOpen, onClose]);
 
+  if (skills) return <Skills profile={skills} onClose={() => setSkills(undefined)} />;
   return (
     <div className="agentspage">
       <div className="agentssheet">
@@ -144,6 +147,7 @@ export function Agents({
                 <span className="rowacts">
                   <IndividualTeam agent={agent} teams={teams}
                     onCreate={onCreateIndividualTeam} onOpen={onOpenIndividualTeam} />
+                  <button className="btn" aria-label={`Skills for ${agent.name}`} onClick={() => setSkills(agent)}>skills</button>
                   <button
                     className="iconbtn sm"
                     onClick={() => setEditing(agent.id)}

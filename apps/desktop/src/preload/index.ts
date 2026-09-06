@@ -56,6 +56,17 @@ import type {
  * renderer that will eventually filter on `runtime_id`.
  */
 const api: BlobotApi = {
+  skills: {
+    list: (profileId) => invokeAction(() => ipcRenderer.invoke('skills:list', profileId)),
+    chooseFolder: () => invokeAction(() => ipcRenderer.invoke('skills:chooseFolder')),
+    preview: (profileId, input) => invokeAction(() => ipcRenderer.invoke('skills:preview', profileId, input)),
+    create: (profileId, input) => invokeAction(() => ipcRenderer.invoke('skills:create', profileId, input)),
+    importDraft: (profileId, path) => invokeAction(() => ipcRenderer.invoke('skills:importDraft', profileId, path)),
+    read: (profileId, name) => invokeAction(() => ipcRenderer.invoke('skills:read', profileId, name)),
+    check: (profileId, name) => invokeAction(() => ipcRenderer.invoke('skills:check', profileId, name)),
+    act: (profileId, action) => invokeAction(() => ipcRenderer.invoke('skills:act', profileId, action)),
+    inventory: (teamId, agentId) => invokeAction(() => ipcRenderer.invoke('skills:inventory', teamId, agentId)),
+  },
   engineSetup: () => invokeAction(() => ipcRenderer.invoke('blobot:engineSetup')) as Promise<EngineSetupView>,
   startEngineSetup: (kind) => invokeAction(() => ipcRenderer.invoke('blobot:startEngineSetup', kind)) as Promise<string>,
   cancelEngineSetup: (id) => invokeAction(() => ipcRenderer.invoke('blobot:cancelEngineSetup', id)) as Promise<void>,

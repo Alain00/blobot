@@ -163,3 +163,27 @@ MCP/skills. A selectable inheritance editor is a separate capability effort,
 deferred under the author's completion delegation; no generic loader or additional
 profile control is added now. This neither changes the accepted skills mount nor
 makes the palette an enforcement boundary.
+
+## Fourth amendment, 2026-09-06: portable personal skills
+
+The separately authorized [skills MVP](../../.scratch/skills/spec.md) adds management of an
+AgentProfile's personal skills. `.agents/skills` inside the existing personal volume is the
+canonical store. Claude owns its internal `.claude/skills` alias and refuses to replace other
+content there; that conflict does not prevent another adapter from using the kit. Claude and
+Codex receive the personal root on both new and resumed ACP sessions. OpenCode receives an
+additional native skills path in its session configuration. No HOME or authentication root is
+rewritten. Existing local inheritance and the sandbox's readonly operator mount remain.
+
+The manager reads complete, bounded packages, preserves license notices and source metadata,
+and stages changes outside native discovery. Publication uses a durable journal and recovery
+copies. An execution lease starts before Machine startup and ends only after provider process
+and Machine shutdown. Local runtimes have their own POSIX process group; closing a bridge also
+closes remaining processes in that group and verifies exit. Failed cleanup retains the lease.
+Direct user edits retain their native runtime semantics and cannot be deferred by the manager.
+
+The desktop inventory distinguishes personal, project and computer ownership. Native labels
+such as Claude's “project” description or Codex's “user” scope do not override filesystem
+ownership. Palette entries still require both authored files and runtime advertisement; a
+duplicate name across scopes is displayed as a conflict with no claimed universal precedence.
+Cursor and fx have no personal native integration in this cut. MCPs, private remote Git auth,
+plugin management and project installation remain separate work.

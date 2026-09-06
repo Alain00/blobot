@@ -1,14 +1,21 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { mkdtemp, realpath, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ClaudeAgentRuntime } from './claude-agent-runtime.js';
 import { FakeBridge } from './fake-bridge.js';
 import { claudeSandboxFor } from './sandbox.js';
 import { claudeModeFor, vouchedTools } from './permissions.js';
 import { LocalMachine } from '../../machines/local-machine.js';
 import { PersonalDirectories } from '../../personal/personal-directory.js';
+const roots: string[] = [];
+afterEach(async () => { await Promise.all(roots.splice(0).map((path) => rm(path, { recursive: true, force: true }))); });
 
 describe('native policy independent of approvals', () => {
   it('permits the exact personal folder beside Git metadata without changing approvals on new and resumed sessions', async () => {
-    const personal = new PersonalDirectories('/fixture/profiles').forProfile('ana');
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'blobot-personal-policy-'))); roots.push(root);
+    const personal = new PersonalDirectories(join(root, 'profiles')).forProfile('ana');
+    await personal.prepare();
     for (const resumeSessionId of [undefined, 'prior-session']) {
       const bridge = new FakeBridge();
       const runtime = new ClaudeAgentRuntime({ agentId: 'ana-blue', cwd: '/fixture/work', spawn: () => bridge,
@@ -19,8 +26,9 @@ describe('native policy independent of approvals', () => {
         const session = bridge.received.find(message => message.method === (resumeSessionId === undefined ? 'session/new' : 'session/load'))!;
         expect(session.params).toMatchObject({ _meta: { claudeCode: { options: { sandbox: {
           enabled: true, autoAllowBashIfSandboxed: false, allowUnsandboxedCommands: false,
-          filesystem: { allowWrite: ['/fixture/repo/.git', '/fixture/profiles/ana/files'] },
+          filesystem: { allowWrite: ['/fixture/repo/.git', personal.path] },
         } } } } });
+        expect(session.params).toMatchObject({ additionalDirectories: [personal.path] });
       } finally { await runtime.stop(); }
     }
   });

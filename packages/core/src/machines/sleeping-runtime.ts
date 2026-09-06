@@ -22,6 +22,8 @@ export interface SleepingRuntimeOptions {
   readonly onSessionOpened?: (sessionId: string) => void;
   /** Explicit launch may check a guest login before a bridge accepts a conversation. */
   readonly beforeRuntimeStart?: () => Promise<void>;
+  /** Personal files stay borrowed until both provider and Machine finish shutting down. */
+  readonly acquireResources?: () => Promise<() => Promise<void>>;
 }
 
 /**
@@ -50,6 +52,7 @@ export class SleepingRuntime implements AgentRuntime {
   #permission: PermissionHandler | undefined;
   #startedOnce = false;
   #activitySequence = 0;
+  #releaseResources: (() => Promise<void>) | undefined;
 
   constructor(options: SleepingRuntimeOptions) {
     this.#options = options;
@@ -114,6 +117,7 @@ export class SleepingRuntime implements AgentRuntime {
           await this.#runtime?.stop();
           cancelled.throwIfAborted();
           this.#setPower('waking');
+          this.#releaseResources ??= await this.#options.acquireResources?.();
           await this.#options.machine.start(this.#startRequest(cancelled));
           cancelled.throwIfAborted();
           this.#setPower('awake');
@@ -121,7 +125,7 @@ export class SleepingRuntime implements AgentRuntime {
           cancelled.throwIfAborted();
         } finally {
           try {
-            await this.#options.machine.stop();
+            await this.#shutdown();
             this.#setPower('asleep');
           } catch (error) {
             this.#setPower('unknown');
@@ -206,8 +210,7 @@ export class SleepingRuntime implements AgentRuntime {
       this.#unsubscribeRuntime();
       try {
         if (busy) await this.#runtime?.cancel();
-        await this.#runtime?.stop();
-        await this.#options.machine.stop();
+        await this.#shutdown();
         await change.call(this.#options.machine, desired);
         this.#setPower('asleep');
       } catch {
@@ -230,8 +233,7 @@ export class SleepingRuntime implements AgentRuntime {
       this.#setPower('sleeping');
       this.#unsubscribeRuntime();
       try {
-        await this.#runtime?.stop();
-        await this.#options.machine.stop();
+        await this.#shutdown();
         this.#setPower('asleep');
         slept = true;
       } catch {
@@ -258,8 +260,7 @@ export class SleepingRuntime implements AgentRuntime {
     this.#wakeAbort?.abort();
     await this.#serialize(async () => {
       this.#unsubscribeRuntime();
-      const results = await Promise.allSettled([this.#runtime?.stop()]);
-      results.push(...await Promise.allSettled([this.#options.machine.stop()]));
+      const results = await Promise.allSettled([this.#shutdown()]);
       this.#setLifecycle('stopped');
       this.#setPower(results.every((result) => result.status === 'fulfilled') ? 'asleep' : 'unknown');
       if (results.some((result) => result.status === 'rejected')) throw new Error('Agent execution did not fully stop.');
@@ -297,6 +298,8 @@ export class SleepingRuntime implements AgentRuntime {
         if (this.#creationFailure !== undefined) {
           const { error } = this.#creationFailure; this.#creationFailure = undefined; throw error;
         }
+        if (this.#releaseResources && this.#startedOnce) await this.#shutdown();
+        this.#releaseResources ??= await this.#options.acquireResources?.();
         if (this.#runtime === undefined || this.#startedOnce) {
           const sessionId = this.sessionId || undefined;
           this.#unsubscribeRuntime();
@@ -321,8 +324,7 @@ export class SleepingRuntime implements AgentRuntime {
         // fresh process wrapper, including when Machine startup itself was what failed.
         this.#startedOnce = true;
         this.#unsubscribeRuntime();
-        await this.#runtime?.stop().catch(() => {});
-        await this.#options.machine.stop().catch(() => {});
+        await this.#shutdown().catch(() => {});
         this.#setPower('unknown');
         this.#setLifecycle('dead');
         // Adapters already own their actionable launch/sign-in refusal. Do not erase it.
@@ -352,8 +354,7 @@ export class SleepingRuntime implements AgentRuntime {
       this.#unsubscribeRuntime();
       this.#setPower('unknown');
       this.#setLifecycle('dead');
-      await this.#runtime?.stop().catch(() => {});
-      await this.#options.machine.stop().catch(() => {});
+      await this.#shutdown().catch(() => {});
       throw new Error('This Machine could not be verified before work. Its stored data was kept.');
     }
   }
@@ -371,7 +372,7 @@ export class SleepingRuntime implements AgentRuntime {
           this.#setLifecycle('dead');
           this.#unsubscribeRuntime();
           void this.#serialize(async () => {
-            try { await this.#options.machine.stop(); this.#setPower('asleep'); }
+            try { await this.#shutdown(); this.#setPower('asleep'); }
             catch { this.#setPower('unknown'); }
           });
         }
@@ -379,6 +380,14 @@ export class SleepingRuntime implements AgentRuntime {
     ];
   }
   #unsubscribeRuntime(): void { for (const detach of this.#detach) detach(); this.#detach = []; }
+  async #shutdown(): Promise<void> {
+    const results = await Promise.allSettled([this.#runtime?.stop()]);
+    results.push(...await Promise.allSettled([this.#options.machine.stop()]));
+    if (results.some((result) => result.status === 'rejected')) throw new Error('Agent execution did not fully stop.');
+    const release = this.#releaseResources;
+    this.#releaseResources = undefined;
+    await release?.();
+  }
   #serialize(work: () => Promise<void>): Promise<void> {
     const next = this.#transition.then(work);
     this.#transition = next.catch(() => {});

@@ -1,0 +1,44 @@
+{
+  "kind": "codex",
+  "root": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-native-skill-qgkvtu",
+  "name": "blobot-probe-c34d93c6",
+  "started": true,
+  "invoked": true,
+  "rawFixtureCommands": [
+    "$blobot-probe-c34d93c6"
+  ],
+  "rawCommandCount": 227,
+  "canonicalAlias": true,
+  "proofReturned": true,
+  "messages": [
+    "Warning: Skill descriptions were shortened to fit the skills context budget. Codex can still see every skill, but some descriptions are shorter. Disable unused skills or plugins to leave more room for the rest.\n\n",
+    "I’m using the blobot-probe-c34d93c6 skill to read its proof file.\n",
+    "PERSONAL-SKILL-965fd388-81e0-4383-95f4-70c7582e37db"
+  ],
+  "errors": [],
+  "requests": [
+    {
+      "method": "session/new",
+      "additionalDirectories": [
+        "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-native-skill-qgkvtu/profiles/ana/files"
+      ]
+    }
+  ],
+  "toolEvents": [
+    {
+      "type": "tool_call",
+      "kind": "execute",
+      "title": "cat /private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-native-skill-qgkvtu/profiles/ana/files/.agents/skills/blobot-probe-c34d93c6/SKILL.md /private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-native-skill-qgkvtu/profiles/ana/files/.agents/skills/blobot-probe-c34d93c6/references/proof.txt",
+      "rawInput": {
+        "command": "cat /private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-native-skill-qgkvtu/profiles/ana/files/.agents/skills/blobot-probe-c34d93c6/SKILL.md /private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-native-skill-qgkvtu/profiles/ana/files/.agents/skills/blobot-probe-c34d93c6/references/proof.txt",
+        "cwd": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-native-skill-qgkvtu/workspace"
+      },
+      "status": "in_progress"
+    },
+    {
+      "type": "tool_call_update",
+      "status": "completed"
+    }
+  ],
+  "diagnostics": []
+}

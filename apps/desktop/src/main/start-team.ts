@@ -45,6 +45,7 @@ export interface StartTeamOptions {
   readonly onStarting?: (live: RunningTeam) => void;
   readonly createMachine?: (record: AgentRecord) => Machine;
   readonly beforeRuntimeStart?: (machine: Machine, record: AgentRecord) => Promise<void>;
+  readonly acquireResources?: (record: AgentRecord) => Promise<() => Promise<void>>;
 }
 
 /**
@@ -186,6 +187,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       clock,
       startRequest: { mailboxPort: mcp.port },
       beforeRuntimeStart: async () => options.beforeRuntimeStart?.(machine, record),
+      ...(options.acquireResources ? { acquireResources: () => options.acquireResources!(record) } : {}),
       ...(options.idleAfterMs === undefined ? {} : { idleAfterMs: options.idleAfterMs }),
       ...(resumeSessionId === undefined ? {} : { resumeSessionId }),
       canSleep: () => (options.canSleep?.() ?? true) &&

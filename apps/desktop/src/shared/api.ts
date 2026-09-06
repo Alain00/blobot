@@ -1238,6 +1238,7 @@ export type UiDictationStart =
   | { readonly ok: false; readonly error: string };
 
 export interface BlobotApi {
+  readonly skills: import('./skills.js').SkillsApi;
   engineSetup(): Promise<EngineSetupView>;
   startEngineSetup(kind: 'install' | 'sign_in' | 'check'): Promise<string>;
   cancelEngineSetup(id: string): Promise<void>;

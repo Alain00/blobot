@@ -4,6 +4,10 @@ import { isAbsolute, join, relative, sep } from 'node:path';
 export interface BoxPaletteScope { readonly sharedSkillsPath?: string; }
 export interface AuthoredDirectory { readonly path: string; readonly kind: 'skills' | 'commands' | 'mixed'; }
 
+export function personalPaletteNames(personalPath?: string): Set<string> {
+  return personalPath ? boxPaletteNames(personalPath, [{ path: join(personalPath, '.agents/skills'), kind: 'skills' }], {}) : new Set();
+}
+
 /** Enumerate only files the same-path mounts let the guest resolve, including loose work. */
 export function boxPaletteNames(cwd: string, directories: readonly AuthoredDirectory[], scope: BoxPaletteScope): Set<string> {
   const names = new Set<string>();

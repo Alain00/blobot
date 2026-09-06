@@ -68,8 +68,9 @@ export class LocalMachine implements Machine {
       env: childEnvironment(request.env, isModule ? { ELECTRON_RUN_AS_NODE: '1' } : undefined,
         { [PERSONAL_DIRECTORY_ENV]: this.#personal?.path }),
       stdio: ['pipe', 'pipe', 'pipe'],
+      detached: process.platform !== 'win32',
     });
-    return childTransport(child, request.onStderr);
+    return childTransport(child, request.onStderr, { processGroup: process.platform !== 'win32' });
   }
 
   // The runtime closes its transport. LocalMachine owns no VM, volumes or user login to delete.

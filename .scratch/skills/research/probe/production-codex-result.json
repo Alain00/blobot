@@ -1,0 +1,228 @@
+{
+  "kind": "codex",
+  "root": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA",
+  "name": "blobot-production-23be5b52",
+  "inputKind": "folder",
+  "previewFiles": [
+    "SKILL.md",
+    "references/fresh.txt",
+    "references/resumed.txt"
+  ],
+  "installed": {
+    "skills": [
+      {
+        "name": "blobot-production-23be5b52",
+        "description": "Run this offline fixture only when explicitly asked for blobot-production-23be5b52.",
+        "source": {
+          "kind": "local-import",
+          "originalPath": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA/source/blobot-production-23be5b52"
+        },
+        "modified": false
+      }
+    ],
+    "drafts": [],
+    "pending": [],
+    "executions": 0
+  },
+  "aliasCanonical": true,
+  "runs": [
+    {
+      "phase": "fresh",
+      "rawCommands": [
+        "$blobot-production-23be5b52"
+      ],
+      "requests": [
+        {
+          "method": "session/new",
+          "cwd": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA/workspace",
+          "additionalDirectories": [
+            "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA/profiles/ana/files"
+          ]
+        }
+      ],
+      "toolEvents": [
+        {
+          "type": "tool_call",
+          "title": "Read file '/private/var/folders/_w/scx5nsn90499n4jsp5lrb00000gn/T/blobot-production-skill-XCAhCA/profiles/ana/files/.agents/skills/blobot-production-23be5b52/SKILL.md'",
+          "kind": "read",
+          "status": "in_progress",
+          "locations": [
+            {
+              "path": "/private/var/folders/_w/scx5nsn90499n4jsp5lrb00000gn/T/blobot-production-skill-XCAhCA/profiles/ana/files/.agents/skills/blobot-production-23be5b52/SKILL.md"
+            }
+          ]
+        },
+        {
+          "type": "tool_call_update",
+          "status": "failed"
+        },
+        {
+          "type": "tool_call",
+          "title": "Read file '/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA/profiles/ana/files/.agents/skills/blobot-production-23be5b52/SKILL.md'",
+          "kind": "read",
+          "status": "in_progress",
+          "locations": [
+            {
+              "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA/profiles/ana/files/.agents/skills/blobot-production-23be5b52/SKILL.md"
+            }
+          ]
+        },
+        {
+          "type": "tool_call_update",
+          "status": "completed"
+        },
+        {
+          "type": "tool_call",
+          "title": "Read file '/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA/profiles/ana/files/.agents/skills/blobot-production-23be5b52/references/fresh.txt'",
+          "kind": "read",
+          "status": "in_progress",
+          "locations": [
+            {
+              "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA/profiles/ana/files/.agents/skills/blobot-production-23be5b52/references/fresh.txt"
+            }
+          ]
+        },
+        {
+          "type": "tool_call_update",
+          "status": "completed"
+        }
+      ],
+      "messages": [
+        "Warning: Skill descriptions were shortened to fit the skills context budget. Codex can still see every skill, but some descriptions are shorter. Disable unused skills or plugins to leave more room for the rest.\n\n",
+        "I’m using the blobot-production-23be5b52 skill to read the fresh resource.\n",
+        "FRESH-e6524fc9-50ec-4435-b54e-61877fbb717f"
+      ],
+      "errors": [],
+      "diagnostics": [],
+      "sessionId": "01a0782e-a29c-7430-a1b5-81aafa7ede7b",
+      "resumed": false,
+      "palette": [
+        {
+          "name": "$blobot-production-23be5b52",
+          "description": "Run this offline fixture only when explicitly asked for blobot-production-23be5b52."
+        }
+      ],
+      "sameSession": true,
+      "proofReturned": true
+    },
+    {
+      "phase": "resumed",
+      "rawCommands": [
+        "$blobot-production-23be5b52"
+      ],
+      "requests": [
+        {
+          "method": "session/load",
+          "cwd": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA/workspace",
+          "sessionId": "01a0782e-a29c-7430-a1b5-81aafa7ede7b",
+          "additionalDirectories": [
+            "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA/profiles/ana/files"
+          ]
+        }
+      ],
+      "toolEvents": [
+        {
+          "type": "tool_call",
+          "title": "Read file '/private/var/folders/_w/scx5nsn90499n4jsp5lrb00000gn/T/blobot-production-skill-XCAhCA/profiles/ana/files/.agents/skills/blobot-production-23be5b52/SKILL.md'",
+          "kind": "read",
+          "status": "failed",
+          "locations": [
+            {
+              "path": "/private/var/folders/_w/scx5nsn90499n4jsp5lrb00000gn/T/blobot-production-skill-XCAhCA/profiles/ana/files/.agents/skills/blobot-production-23be5b52/SKILL.md"
+            }
+          ]
+        },
+        {
+          "type": "tool_call_update",
+          "status": "failed"
+        },
+        {
+          "type": "tool_call",
+          "title": "Read file '/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA/profiles/ana/files/.agents/skills/blobot-production-23be5b52/SKILL.md'",
+          "kind": "read",
+          "status": "completed",
+          "locations": [
+            {
+              "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA/profiles/ana/files/.agents/skills/blobot-production-23be5b52/SKILL.md"
+            }
+          ]
+        },
+        {
+          "type": "tool_call_update",
+          "status": "completed"
+        },
+        {
+          "type": "tool_call",
+          "title": "Read file '/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA/profiles/ana/files/.agents/skills/blobot-production-23be5b52/references/fresh.txt'",
+          "kind": "read",
+          "status": "completed",
+          "locations": [
+            {
+              "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA/profiles/ana/files/.agents/skills/blobot-production-23be5b52/references/fresh.txt"
+            }
+          ]
+        },
+        {
+          "type": "tool_call_update",
+          "status": "completed"
+        },
+        {
+          "type": "tool_call",
+          "title": "Read file '/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA/profiles/ana/files/.agents/skills/blobot-production-23be5b52/references/resumed.txt'",
+          "kind": "read",
+          "status": "in_progress",
+          "locations": [
+            {
+              "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA/profiles/ana/files/.agents/skills/blobot-production-23be5b52/references/resumed.txt"
+            }
+          ]
+        },
+        {
+          "type": "tool_call_update",
+          "status": "completed"
+        }
+      ],
+      "messages": [
+        "I’m reading the skill’s resumed resource.\n",
+        "RESUMED-1dd9547d-2ada-445f-b042-7e9c59551f91"
+      ],
+      "errors": [],
+      "diagnostics": [],
+      "sessionId": "01a0782e-a29c-7430-a1b5-81aafa7ede7b",
+      "resumed": true,
+      "palette": [
+        {
+          "name": "$blobot-production-23be5b52",
+          "description": "Run this offline fixture only when explicitly asked for blobot-production-23be5b52."
+        }
+      ],
+      "sameSession": true,
+      "proofReturned": true
+    }
+  ],
+  "globalFilesUnchanged": {
+    "/Users/guillermo/.claude/settings.json": true,
+    "/Users/guillermo/.claude/.credentials.json": true,
+    "/Users/guillermo/.codex/config.toml": true,
+    "/Users/guillermo/.codex/auth.json": true,
+    "/Users/guillermo/.config/opencode/opencode.json": true,
+    "/Users/guillermo/.config/opencode/opencode.jsonc": true,
+    "/Users/guillermo/.local/share/opencode/auth.json": true
+  },
+  "catalogueAfter": {
+    "skills": [
+      {
+        "name": "blobot-production-23be5b52",
+        "description": "Run this offline fixture only when explicitly asked for blobot-production-23be5b52.",
+        "source": {
+          "kind": "local-import",
+          "originalPath": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-XCAhCA/source/blobot-production-23be5b52"
+        },
+        "modified": false
+      }
+    ],
+    "drafts": [],
+    "pending": [],
+    "executions": 0
+  }
+}

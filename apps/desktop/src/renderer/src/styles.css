@@ -1554,7 +1554,7 @@ textarea.field{resize:vertical;line-height:1.5}
 /* Talking is a visible entry point. Editing and retiring keep their hover/focus reveal. */
 .agentcardwrap .rowacts > .iconbtn{opacity:0;pointer-events:none}
 .agentcardwrap:hover .rowacts > .iconbtn,.agentcardwrap:focus-within .rowacts > .iconbtn{opacity:1;pointer-events:auto}
-.agentcardwrap > .listrow.tall{padding-right:146px;min-height:64px}
+.agentcardwrap > .listrow.tall{padding-right:208px;min-height:64px}
 .agentcardwrap .nm{flex-wrap:wrap;overflow-wrap:anywhere}
 .agenttalk{padding:5px 12px;font-size:12px}
 .individualteamlist{display:flex;flex-direction:column;gap:6px;max-height:45vh;overflow:auto}
@@ -2290,3 +2290,46 @@ button.listrow:not(.pick):hover{outline:1px solid var(--line);outline-offset:-1p
    reading. Short, and the full sentence about a moved folder stays at the launch refusal, which
    is where the fix is. */
 .ftnone{padding:12px;font-size:10px;letter-spacing:.06em}
+
+/* Personal skills are a working surface belonging to a profile. */
+.skillspage{position:fixed;z-index:59}
+.skillssheet{max-width:760px;gap:20px}
+.skillspacer{flex:1}
+.skilladd .modalhead .subhead,.skillinventory .modalhead .subhead{flex:1;min-width:0}
+.skillrows{display:flex;flex-direction:column;gap:8px;min-width:0}
+.skillrow{flex-direction:column;align-items:flex-start;text-align:left;gap:5px;overflow-wrap:anywhere}
+.skillrow > .mono{font-size:11px}
+.skilldraft,.skillpendingrow{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.skilldraft > span{overflow-wrap:anywhere;min-width:0}
+.skillactions,.skillsources{display:flex;flex-wrap:wrap;gap:8px}
+.skillform{display:flex;flex-direction:column;gap:14px;margin-top:18px}
+.skillform label{display:flex;flex-direction:column;gap:7px;font-size:13px}
+.skillform .field{width:100%;box-sizing:border-box}
+.skillform textarea{resize:vertical;min-height:64px}
+.skillpreviewlist{display:flex;flex-direction:column;gap:12px;margin:18px 0}
+.skillpreview{padding:14px;background:var(--raised);border-radius:12px;overflow-wrap:anywhere}
+.skillpreview p{font-size:13px;margin:9px 0}
+.skillpreview .mono{font-size:11px}
+.skillchoice{display:flex;align-items:center;gap:9px}
+.skillchoice input{accent-color:var(--ink)}
+.skillfiles{font-size:11px;line-height:1.8;padding-left:20px;max-height:240px;overflow:auto;overflow-wrap:anywhere}
+.skillpending{border-radius:12px;background:var(--raised);padding:16px;display:flex;flex-direction:column;gap:12px;font-size:13px}
+.skillpending p{margin:0}
+.skillpendingrow .refusal{display:block}
+.skillmetadata{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 18px;font-size:12px;margin:0}
+.skillmetadata dt{color:var(--muted)}
+.skillmetadata dd{margin:0;overflow-wrap:anywhere}
+.skillmetadata .mono{font-size:11px}
+.skilltext{white-space:pre-wrap;overflow-wrap:anywhere;font-family:var(--sans);font-size:13px;line-height:1.65;padding:18px;background:var(--raised);border-radius:12px;margin:0}
+.skillinventory .skillrows{margin-top:20px}
+.skillpath{font-size:11px;overflow-wrap:anywhere}
+.skillssheet summary,.skilladd summary,.skillinventory summary{cursor:pointer;font-size:12px;color:var(--muted)}
+@media(max-width:600px){
+  .skillspage{padding:22px 14px}
+  .skillssheet .agentshead{flex-wrap:wrap}
+  .skillssheet .subhead.lg{font-size:20px}
+  .agentcardwrap > .listrow.tall{padding-right:12px;padding-bottom:52px}
+  .agentcardwrap .rowacts{top:auto;bottom:10px}
+  .skillmetadata{grid-template-columns:1fr;gap:4px}
+  .skillmetadata dd{margin-bottom:7px}
+}
