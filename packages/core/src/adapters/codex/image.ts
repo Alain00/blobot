@@ -7,7 +7,7 @@ export const CODEX_MACHINE_IMAGE: RuntimeImageDefinition = {
   moduleRoot: '/opt/blobot',
   executable: '/opt/blobot/bin/codex',
   sharedSkillLocations: ['/home/agent/.agents/skills'],
-  allowedEnvironment: [...MACHINE_GIT_ENVIRONMENT, 'CODEX_PATH', 'INITIAL_AGENT_MODE', 'NO_BROWSER'],
+  allowedEnvironment: [...MACHINE_GIT_ENVIRONMENT, 'CODEX_PATH', 'CODEX_CONFIG', 'INITIAL_AGENT_MODE', 'NO_BROWSER'],
   builds: [
     {
       arch: 'arm64',

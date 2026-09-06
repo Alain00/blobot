@@ -15,8 +15,35 @@ import { CodexAgentRuntime } from '../adapters/codex/codex-agent-runtime.js';
 import { OpencodeAgentRuntime } from '../adapters/opencode/opencode-agent-runtime.js';
 import { FxAgentRuntime } from '../adapters/fx/fx-agent-runtime.js';
 import { CursorAgentRuntime } from '../adapters/cursor/cursor-agent-runtime.js';
+import { FakeCodex } from '../adapters/codex/fake-codex.js';
+import { CODEX_MACHINE_IMAGE } from '../adapters/codex/image.js';
+import { prepareSbxExec } from './sbx/transport.js';
 
 describe('the Machine boundary across every adapter', () => {
+  it('admits the Codex runtime persona through its real sandbox launch contract', async () => {
+    const bridge = new FakeCodex();
+    const machine: Machine = {
+      kind: 'box', mailboxHostname: 'host.docker.internal',
+      location: () => { throw new Error('must not inspect'); },
+      readiness: async () => ({ state: 'ready' }),
+      reconcile: async () => ({ state: 'absent', detail: 'Not created.' }),
+      start: async () => { throw new Error('must not start'); },
+      spawn(request) {
+        const launch = prepareSbxExec({ ...CODEX_MACHINE_IMAGE, sandboxName: 'blobot-codex-test' }, request);
+        const body = JSON.parse(launch.header.subarray(4).toString('utf8'));
+        expect(JSON.parse(body.env.CODEX_CONFIG).developer_instructions).toContain('You are Alice.');
+        return bridge;
+      },
+      stop: async () => {}, destroy: async () => {}, measure: async () => null,
+    };
+    const runtime = new CodexAgentRuntime({ agentId: 'alice', cwd: '/workspace', persona: 'You are Alice.', machine });
+    try {
+      await runtime.start();
+      expect(runtime.lifecycle).toBe('ready');
+      expect(runtime.sessionId).toBe('session_fake_codex');
+    } finally { await runtime.stop(); }
+  });
+
   it('pins every adapter to capabilities that cannot reach the host filesystem or terminal', () => {
     expect(MACHINE_CLIENT_CAPABILITIES).toEqual({
       fs: { readTextFile: false, writeTextFile: false }, terminal: false,

@@ -51,3 +51,11 @@ login/composer spacing and the narrow creation flow; see
 [the captures and procedure](research/71-machine-screen-verification.md).
 Skipped tests include deliberately opt-in live/provider/platform cases; they are
 not included in the passing total and do not discharge the release gate.
+
+
+The final live runtime pass found one additional concrete defect: Codex's adapter
+always supplies CODEX_CONFIG, but its image contract rejected that key before ACP.
+The narrow contract correction has a runtime-to-transport regression and a real
+fresh/reopen repeat in [research72](research/72-desktop-runtime-launch-acceptance.md).
+The repeat reaches the provider's authentication gate; no Codex login/MCP success
+is inferred. Total confirmed findings corrected: six.

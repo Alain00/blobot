@@ -975,3 +975,24 @@ Validation: core 1,098 passed / 47 skipped; desktop 632 passed / 1 skipped;
 core and desktop typechecks/builds pass. Electron submission asserts the persisted
 mixed placement; layout checks and final screenshots pass. The Codex-only runtime
 launch fix and its actual follow-up receipt are recorded in the next image checkpoint.
+
+
+## 2026-09-06 — final published-runtime launch checkpoint
+
+Operational setup/login/UI is committed as `b657256`.
+[Published desktop runtime acceptance](research/72-desktop-runtime-launch-acceptance.md)
+confirms OpenCode ACP/session/MCP and same-Machine reopen. A Codex allowlist omission
+was fixed narrowly, regression-tested through its actual adapter/transport contract
+and remeasured: Codex and Cursor now reach the provider's authentication gate,
+with no session/MCP success claimed. Every owned VM/image/cache fixture was cleaned.
+
+[The current acceptance ledger](research/53-first-box-evidence-ledger.md)
+credits the installer, login-challenge/cancellation, large JSON, short SSE and
+published startup measurements. Real account/provider-turn, client-streaming,
+clean-host installer and Linux/KVM checks remain explicitly open. The image and
+first-box tickets remain claimed; production activation is disabled by default.
+Core 1,098/47 and desktop 632/1; types/builds and Electron checks pass.
+
+All implementation and evidence changes are ready for a draft PR under Guillermo's
+identity, with his not-ready review note first. No merge is authorized. Preserve
+the unrelated existing 19-line pnpm-lock.yaml change outside this work's commits.

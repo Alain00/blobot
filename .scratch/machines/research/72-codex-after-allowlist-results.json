@@ -1,0 +1,514 @@
+{
+  "startedAt": "2026-09-06T01:44:26.621Z",
+  "root": "/private/tmp/blobot-research72-jnNhsM",
+  "runtimes": [
+    {
+      "runtimeId": "codex",
+      "agentId": "research72_18ae3930-46bd-4421-b68c-865535420d53",
+      "cliVersion": "0.151.0",
+      "build": {
+        "arch": "arm64",
+        "reference": "blobot-machine-codex:475f185a738767edbd26a87ad2e6141c473f4698a3acadafcbd3b0740e88125c-arm64",
+        "imageId": "sha256:475f185a738767edbd26a87ad2e6141c473f4698a3acadafcbd3b0740e88125c",
+        "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-codex-arm64-475f185a738767edbd26a87ad2e6141c473f4698a3acadafcbd3b0740e88125c.tar",
+        "sha256": "23afd9ac9381563f4bc02b9a4b0cf04b6f8da59a840b5dd7f1b078e358b505d2",
+        "bytes": 719340032
+      },
+      "rounds": [
+        {
+          "label": "fresh",
+          "launches": [
+            {
+              "command": {
+                "kind": "node-module",
+                "package": "@agentclientprotocol/codex-acp",
+                "version": "1.7.0",
+                "entry": "dist/index.js"
+              },
+              "cwd": "/private/tmp/blobot-research72-jnNhsM/codex/worktree",
+              "env": {
+                "NO_BROWSER": "1",
+                "GIT_AUTHOR_NAME": "Research72",
+                "GIT_COMMITTER_NAME": "Research72",
+                "GIT_AUTHOR_EMAIL": "research72@agents.blobot.invalid",
+                "GIT_COMMITTER_EMAIL": "research72@agents.blobot.invalid",
+                "GIT_CONFIG_COUNT": "1",
+                "GIT_CONFIG_KEY_0": "commit.gpgsign",
+                "GIT_CONFIG_VALUE_0": "false",
+                "CODEX_CONFIG": "{\"developer_instructions\":\"You have no subagents. Codex collaboration tools such as spawn_agent, send_message and list_agents are not how this team works, and an agent you spawn is not your teammate. Your teammates are the ones named in your role above, they are already running, and the only way to reach one is the message_agent tool from the blobot MCP server.\"}",
+                "INITIAL_AGENT_MODE": "read-only",
+                "CODEX_PATH": "/opt/blobot/bin/codex"
+              },
+              "configs": []
+            }
+          ],
+          "requests": [
+            {
+              "method": "initialize",
+              "ms": 0.32608399999298854
+            },
+            {
+              "method": "session/new",
+              "ms": 549.7417499999938,
+              "cwd": "/private/tmp/blobot-research72-jnNhsM/codex/worktree",
+              "mcpServers": [
+                {
+                  "type": "http",
+                  "name": "blobot",
+                  "url": "http://host.docker.internal:54497/agents/research72_18ae3930-46bd-4421-b68c-865535420d53/mcp",
+                  "headerNames": [
+                    "Authorization"
+                  ]
+                }
+              ]
+            }
+          ],
+          "replies": [
+            {
+              "method": "initialize",
+              "ms": 0.32224999999743886,
+              "responseMs": 549.5354999999981,
+              "result": {
+                "protocolVersion": 1,
+                "agentInfo": {
+                  "name": "@agentclientprotocol/codex-acp",
+                  "title": "Codex",
+                  "version": "1.7.0"
+                },
+                "authMethods": [
+                  {
+                    "id": "api-key",
+                    "name": "API Key"
+                  }
+                ]
+              }
+            },
+            {
+              "method": "session/new",
+              "ms": 549.7404589999933,
+              "responseMs": 555.9604589999944,
+              "error": {
+                "code": -32000,
+                "message": "Authentication required"
+              }
+            }
+          ],
+          "inboundMethods": [],
+          "stderr": [],
+          "mcpLogs": [
+            "[mcp] listening on 127.0.0.1:54497"
+          ],
+          "closes": [
+            {
+              "ms": 2568.165624999994,
+              "reason": "the agent process was killed by SIGKILL"
+            }
+          ],
+          "toolCalls": 0,
+          "owned": {
+            "name": "blobot-d11b4e63-e35f-40f5-9734-ca9c7ad1a4d1",
+            "id": "125d990a-76e7-4659-a567-c958a09d6865",
+            "limits": {
+              "maxCpus": 2,
+              "maxMemoryBytes": 2147483648
+            },
+            "baseline": {
+              "memoryKiB": 2066016,
+              "mounts": "[[\"/\",\"overlay\",[\"relatime\",\"rw\"]],[\"/dev\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/dev/mqueue\",\"mqueue\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/pts\",\"devpts\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/shm\",\"tmpfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/etc/hosts\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/etc/resolv.conf\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/home/agent\",\"ext4\",[\"relatime\",\"rw\"]],[\"/private/tmp/blobot-research72-jnNhsM/codex/source/.git\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/private/tmp/blobot-research72-jnNhsM/codex/worktree\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/proc\",\"proc\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/run\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/run/secrets\",\"tmpfs\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys\",\"sysfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys/fs/cgroup\",\"cgroup2\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/var/lib/docker\",\"ext4\",[\"relatime\",\"rw\"]]]"
+            }
+          },
+          "mounts": {
+            "path": "/private/tmp/blobot-research72-jnNhsM/codex/worktree",
+            "commonGit": [
+              "/private/tmp/blobot-research72-jnNhsM/codex/source/.git"
+            ]
+          },
+          "detection": {
+            "subject": {
+              "kind": "agent",
+              "agentId": "research72_18ae3930-46bd-4421-b68c-865535420d53"
+            },
+            "runtimeId": "codex",
+            "readiness": "needs_sign_in",
+            "detail": "Installed, not signed in"
+          },
+          "desktopGate": {
+            "passed": false,
+            "refusal": "Installed, not signed in"
+          },
+          "guestBefore": {
+            "uid": 1000,
+            "home": "/home/agent",
+            "cpus": 2,
+            "memTotal": "MemTotal:        2066016 kB",
+            "sshSocketPresent": false,
+            "mainCheckoutVisible": false,
+            "hostSecretEnvNames": [],
+            "homeEntries": [
+              ".codex",
+              ".gitconfig",
+              ".gitignore_global",
+              "lost+found"
+            ]
+          },
+          "observing": false,
+          "runtimeStarted": false,
+          "refusal": "Authentication required",
+          "lifecycle": "dead",
+          "mailboxReady": false,
+          "guestAfter": {
+            "uid": 1000,
+            "home": "/home/agent",
+            "cpus": 2,
+            "memTotal": "MemTotal:        2066016 kB",
+            "sshSocketPresent": false,
+            "mainCheckoutVisible": false,
+            "hostSecretEnvNames": [],
+            "homeEntries": [
+              ".codex",
+              ".gitconfig",
+              ".gitignore_global",
+              "lost+found"
+            ]
+          },
+          "stopped": "stopped"
+        },
+        {
+          "label": "reopened",
+          "launches": [
+            {
+              "command": {
+                "kind": "node-module",
+                "package": "@agentclientprotocol/codex-acp",
+                "version": "1.7.0",
+                "entry": "dist/index.js"
+              },
+              "cwd": "/private/tmp/blobot-research72-jnNhsM/codex/worktree",
+              "env": {
+                "NO_BROWSER": "1",
+                "GIT_AUTHOR_NAME": "Research72",
+                "GIT_COMMITTER_NAME": "Research72",
+                "GIT_AUTHOR_EMAIL": "research72@agents.blobot.invalid",
+                "GIT_COMMITTER_EMAIL": "research72@agents.blobot.invalid",
+                "GIT_CONFIG_COUNT": "1",
+                "GIT_CONFIG_KEY_0": "commit.gpgsign",
+                "GIT_CONFIG_VALUE_0": "false",
+                "CODEX_CONFIG": "{\"developer_instructions\":\"You have no subagents. Codex collaboration tools such as spawn_agent, send_message and list_agents are not how this team works, and an agent you spawn is not your teammate. Your teammates are the ones named in your role above, they are already running, and the only way to reach one is the message_agent tool from the blobot MCP server.\"}",
+                "INITIAL_AGENT_MODE": "read-only",
+                "CODEX_PATH": "/opt/blobot/bin/codex"
+              },
+              "configs": []
+            }
+          ],
+          "requests": [
+            {
+              "method": "initialize",
+              "ms": 0.07308300000295276
+            },
+            {
+              "method": "session/new",
+              "ms": 428.00737500000105,
+              "cwd": "/private/tmp/blobot-research72-jnNhsM/codex/worktree",
+              "mcpServers": [
+                {
+                  "type": "http",
+                  "name": "blobot",
+                  "url": "http://host.docker.internal:55105/agents/research72_18ae3930-46bd-4421-b68c-865535420d53/mcp",
+                  "headerNames": [
+                    "Authorization"
+                  ]
+                }
+              ]
+            }
+          ],
+          "replies": [
+            {
+              "method": "initialize",
+              "ms": 0.07162500000413274,
+              "responseMs": 427.94679200000246,
+              "result": {
+                "protocolVersion": 1,
+                "agentInfo": {
+                  "name": "@agentclientprotocol/codex-acp",
+                  "title": "Codex",
+                  "version": "1.7.0"
+                },
+                "authMethods": [
+                  {
+                    "id": "api-key",
+                    "name": "API Key"
+                  }
+                ]
+              }
+            },
+            {
+              "method": "session/new",
+              "ms": 428.0062079999989,
+              "responseMs": 437.6802500000049,
+              "error": {
+                "code": -32000,
+                "message": "Authentication required"
+              }
+            }
+          ],
+          "inboundMethods": [],
+          "stderr": [],
+          "mcpLogs": [
+            "[mcp] listening on 127.0.0.1:55105"
+          ],
+          "closes": [
+            {
+              "ms": 2447.1956250000003,
+              "reason": "the agent process was killed by SIGKILL"
+            }
+          ],
+          "toolCalls": 0,
+          "owned": {
+            "name": "blobot-d11b4e63-e35f-40f5-9734-ca9c7ad1a4d1",
+            "id": "125d990a-76e7-4659-a567-c958a09d6865",
+            "limits": {
+              "maxCpus": 2,
+              "maxMemoryBytes": 2147483648
+            },
+            "baseline": {
+              "memoryKiB": 2066016,
+              "mounts": "[[\"/\",\"overlay\",[\"relatime\",\"rw\"]],[\"/dev\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/dev/mqueue\",\"mqueue\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/pts\",\"devpts\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/shm\",\"tmpfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/etc/hosts\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/etc/resolv.conf\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/home/agent\",\"ext4\",[\"relatime\",\"rw\"]],[\"/private/tmp/blobot-research72-jnNhsM/codex/source/.git\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/private/tmp/blobot-research72-jnNhsM/codex/worktree\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/proc\",\"proc\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/run\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/run/secrets\",\"tmpfs\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys\",\"sysfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys/fs/cgroup\",\"cgroup2\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/var/lib/docker\",\"ext4\",[\"relatime\",\"rw\"]]]"
+            }
+          },
+          "mounts": {
+            "path": "/private/tmp/blobot-research72-jnNhsM/codex/worktree",
+            "commonGit": [
+              "/private/tmp/blobot-research72-jnNhsM/codex/source/.git"
+            ]
+          },
+          "detection": {
+            "subject": {
+              "kind": "agent",
+              "agentId": "research72_18ae3930-46bd-4421-b68c-865535420d53"
+            },
+            "runtimeId": "codex",
+            "readiness": "needs_sign_in",
+            "detail": "Installed, not signed in"
+          },
+          "desktopGate": {
+            "passed": false,
+            "refusal": "Installed, not signed in"
+          },
+          "guestBefore": {
+            "uid": 1000,
+            "home": "/home/agent",
+            "cpus": 2,
+            "memTotal": "MemTotal:        2066016 kB",
+            "sshSocketPresent": false,
+            "mainCheckoutVisible": false,
+            "hostSecretEnvNames": [],
+            "homeEntries": [
+              ".codex",
+              ".gitconfig",
+              ".gitignore_global",
+              "lost+found"
+            ]
+          },
+          "observing": false,
+          "runtimeStarted": false,
+          "refusal": "Authentication required",
+          "lifecycle": "dead",
+          "mailboxReady": false,
+          "guestAfter": {
+            "uid": 1000,
+            "home": "/home/agent",
+            "cpus": 2,
+            "memTotal": "MemTotal:        2066016 kB",
+            "sshSocketPresent": false,
+            "mainCheckoutVisible": false,
+            "hostSecretEnvNames": [],
+            "homeEntries": [
+              ".codex",
+              ".gitconfig",
+              ".gitignore_global",
+              "lost+found"
+            ]
+          },
+          "stopped": "stopped"
+        }
+      ],
+      "steps": [
+        {
+          "phase": "desktop-install-image",
+          "ms": 11043.559208,
+          "passed": true
+        },
+        {
+          "phase": "fresh:desktop-machine-start",
+          "ms": 17206.79225,
+          "passed": true
+        },
+        {
+          "phase": "fresh:runtimeFor-start",
+          "ms": 2561.0254580000037,
+          "error": "Authentication required",
+          "passed": false
+        },
+        {
+          "phase": "fresh:runtime-stop",
+          "ms": 2003.087707999999,
+          "passed": true
+        },
+        {
+          "phase": "fresh:desktop-machine-stop",
+          "ms": 6963.348375000001,
+          "passed": true
+        },
+        {
+          "phase": "reopened:desktop-machine-start",
+          "ms": 5209.563166,
+          "passed": true
+        },
+        {
+          "phase": "reopened:runtimeFor-start",
+          "ms": 2439.9676249999975,
+          "error": "Authentication required",
+          "passed": false
+        },
+        {
+          "phase": "reopened:runtime-stop",
+          "ms": 2002.6572920000035,
+          "passed": true
+        },
+        {
+          "phase": "reopened:desktop-machine-stop",
+          "ms": 6793.457709000002,
+          "passed": true
+        }
+      ],
+      "cleanup": {
+        "errors": [],
+        "boxes": [],
+        "images": [
+          {
+            "id": "94670d5b2a24",
+            "repository": "docker.io/docker/sandbox-templates",
+            "tag": "claude-code-docker",
+            "flavor": "claude-code-docker",
+            "created_at": "2026-09-04T18:58:46Z",
+            "size": 936879795
+          },
+          {
+            "id": "5fc81bc7a127",
+            "repository": "docker.io/docker/sandbox-templates",
+            "tag": "shell-docker",
+            "flavor": "shell-docker",
+            "created_at": "2026-09-04T18:54:27Z",
+            "size": 588725040
+          }
+        ],
+        "imagesUnchanged": true,
+        "temporaryAreaRemoved": true
+      },
+      "initiallyAbsent": true,
+      "completed": true
+    }
+  ],
+  "cleanup": {
+    "boxes": [],
+    "images": [
+      {
+        "id": "94670d5b2a24",
+        "repository": "docker.io/docker/sandbox-templates",
+        "tag": "claude-code-docker",
+        "flavor": "claude-code-docker",
+        "created_at": "2026-09-04T18:58:46Z",
+        "size": 936879795
+      },
+      {
+        "id": "5fc81bc7a127",
+        "repository": "docker.io/docker/sandbox-templates",
+        "tag": "shell-docker",
+        "flavor": "shell-docker",
+        "created_at": "2026-09-04T18:54:27Z",
+        "size": 588725040
+      }
+    ],
+    "imagesUnchanged": true,
+    "temporaryRootRemoved": true
+  },
+  "scope": "DesktopMachines(preview=true) + runtimeFor + production MCP; fresh synthetic homes/worktrees. No login, prompt, inference, host credentials or host skills.",
+  "host": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v25.6.1",
+    "os": "ProductName:\t\tmacOS\nProductVersion:\t\t26.6.2\nBuildVersion:\t\t25G83"
+  },
+  "engine": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "beforeImages": [
+    {
+      "id": "94670d5b2a24",
+      "repository": "docker.io/docker/sandbox-templates",
+      "tag": "claude-code-docker",
+      "flavor": "claude-code-docker",
+      "created_at": "2026-09-04T18:58:46Z",
+      "size": 936879795
+    },
+    {
+      "id": "5fc81bc7a127",
+      "repository": "docker.io/docker/sandbox-templates",
+      "tag": "shell-docker",
+      "flavor": "shell-docker",
+      "created_at": "2026-09-04T18:54:27Z",
+      "size": 588725040
+    }
+  ],
+  "sourceHashes": {
+    "apps/desktop/src/main/machines.ts": "0eb3335a7dfe5b4a6fe42926d2350eb5a285bda389418654be6dc0a522378880",
+    "apps/desktop/src/main/runtime-for.ts": "6b291ec2a70a09f4dcfd9dd85b53d33a4fc0406060752f26a03d73c074d94b47",
+    "packages/core/src/workspace/box-mounts.ts": "049375805a0f5ecc27fadd0249ebc260c0627a9773d3e6783ac155e283c5fd5d",
+    "packages/core/src/machines/sbx/owned-machine.ts": "7af7cfa4e418cc8284e0ebb616cd7e642ddfe8141bf1565f81385259fe2359c5",
+    "packages/core/src/machines/sbx/transport.ts": "fe6b6a14942e3db34686cb24be037433e1837bf0e65d1003c350186d06c1e322",
+    "packages/core/src/machines/sbx/bootstrap.ts": "d294e7b939af907c9c2141903f8c4d0e81f887ae5ffd4d1c81c6fbacabcf466a",
+    "packages/core/src/mcp/peer-message-server.ts": "c0ad14237823a9263c01d7415ce0fef5623b017644b026aa50d86ffa8a9a4ea6",
+    "packages/core/src/adapters/acp/npm-bridge.ts": "cd623269f9ec69116ed4b26274154a7b7a0e47c598882bbb1efdef0d3d0996da",
+    "packages/core/src/adapters/codex/image.ts": "94eb6f936508b05fad50ebd2904b0af081058ad22d74e53e141980e2be84bec3",
+    "packages/core/src/adapters/codex/codex-agent-runtime.ts": "621f786b8583e4c5609f1ed12f9003c2c8501634c5f001d23f4a9b2d008bb123",
+    "packages/core/src/adapters/codex/stdio-bridge.ts": "10bfb5c2f72689b10add733be4f6ded60fb03a350b8abdff9feeaeb13f6d0092",
+    "packages/core/src/adapters/opencode/image.ts": "a5fad54afc2e806be6896cf41fc7637aa9d5942f932fc88746bf9e3ae9d5f5c4",
+    "packages/core/src/adapters/opencode/opencode-agent-runtime.ts": "2f6c66e5efc00405164eb33a994c7bd90fd5a5eee1801ad5dfa8fc162b71affe",
+    "packages/core/src/adapters/opencode/stdio.ts": "4b917110c9d3377d7c78a872e5db6d1f126322b363219eb5b93a0fdcba5284fc",
+    "packages/core/src/adapters/cursor/image.ts": "3ade832a520c1c729a04197c26a18256c9cf58603672d7371fcd52b16514d3f8",
+    "packages/core/src/adapters/cursor/cursor-agent-runtime.ts": "7686f205c978de1158dbcac00ee13f20554f5fa6d76187ef13d85446afc7127d",
+    "packages/core/src/adapters/cursor/stdio.ts": "89c656205c60e81fdb7edecd658b012378317ccdf728225ae9d41f32d842810c"
+  },
+  "minimumFreeBytes": 24174579712,
+  "completed": true,
+  "postflightSourceHashes": {
+    "apps/desktop/src/main/machines.ts": "0eb3335a7dfe5b4a6fe42926d2350eb5a285bda389418654be6dc0a522378880",
+    "apps/desktop/src/main/runtime-for.ts": "6b291ec2a70a09f4dcfd9dd85b53d33a4fc0406060752f26a03d73c074d94b47",
+    "packages/core/src/workspace/box-mounts.ts": "049375805a0f5ecc27fadd0249ebc260c0627a9773d3e6783ac155e283c5fd5d",
+    "packages/core/src/machines/sbx/owned-machine.ts": "7af7cfa4e418cc8284e0ebb616cd7e642ddfe8141bf1565f81385259fe2359c5",
+    "packages/core/src/machines/sbx/transport.ts": "fe6b6a14942e3db34686cb24be037433e1837bf0e65d1003c350186d06c1e322",
+    "packages/core/src/machines/sbx/bootstrap.ts": "d294e7b939af907c9c2141903f8c4d0e81f887ae5ffd4d1c81c6fbacabcf466a",
+    "packages/core/src/mcp/peer-message-server.ts": "c0ad14237823a9263c01d7415ce0fef5623b017644b026aa50d86ffa8a9a4ea6",
+    "packages/core/src/adapters/acp/npm-bridge.ts": "cd623269f9ec69116ed4b26274154a7b7a0e47c598882bbb1efdef0d3d0996da",
+    "packages/core/src/adapters/codex/image.ts": "94eb6f936508b05fad50ebd2904b0af081058ad22d74e53e141980e2be84bec3",
+    "packages/core/src/adapters/codex/codex-agent-runtime.ts": "621f786b8583e4c5609f1ed12f9003c2c8501634c5f001d23f4a9b2d008bb123",
+    "packages/core/src/adapters/codex/stdio-bridge.ts": "10bfb5c2f72689b10add733be4f6ded60fb03a350b8abdff9feeaeb13f6d0092",
+    "packages/core/src/adapters/opencode/image.ts": "a5fad54afc2e806be6896cf41fc7637aa9d5942f932fc88746bf9e3ae9d5f5c4",
+    "packages/core/src/adapters/opencode/opencode-agent-runtime.ts": "2f6c66e5efc00405164eb33a994c7bd90fd5a5eee1801ad5dfa8fc162b71affe",
+    "packages/core/src/adapters/opencode/stdio.ts": "4b917110c9d3377d7c78a872e5db6d1f126322b363219eb5b93a0fdcba5284fc",
+    "packages/core/src/adapters/cursor/image.ts": "3ade832a520c1c729a04197c26a18256c9cf58603672d7371fcd52b16514d3f8",
+    "packages/core/src/adapters/cursor/cursor-agent-runtime.ts": "7686f205c978de1158dbcac00ee13f20554f5fa6d76187ef13d85446afc7127d",
+    "packages/core/src/adapters/cursor/stdio.ts": "89c656205c60e81fdb7edecd658b012378317ccdf728225ae9d41f32d842810c"
+  },
+  "finishedAt": "2026-09-06T01:45:35.125Z"
+}

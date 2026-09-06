@@ -723,3 +723,27 @@ prove signed in, so the desktop checks guest login before ordinary launch.
 Core 1,080/47 and desktop 626/1; types/builds pass. The remaining runtime/platform
 acceptance and operational setup/login UI are still open. Post-creation resource
 editing remains explicitly deferred by the sizing scope decision.
+
+
+### Final implementation checkpoint — 2026-09-06
+
+Operational setup/login/UI is committed as `b657256`. All image recipes, native
+arm64/amd64 publication pins, verified downloads, private home/Docker volumes,
+host worktrees and per-Agent production launch paths are implemented. Existing
+Machine storage is retained on stop/reopen; post-creation resize remains deferred.
+
+[The current desktop launch receipt](../research/72-desktop-runtime-launch-acceptance.md)
+adds actual published OpenCode ACP/session/MCP fresh and reopen to Claude's prior
+receipt. Codex exposed one adapter-generated environment omission: CODEX_CONFIG
+was rejected before ACP. Adding only that key and a real adapter-to-transport
+regression fixes it; actual fresh/reopen now reaches ACP and its provider's
+Authentication required response. Cursor reaches the same auth gate. Neither is
+reported as an authenticated session or MCP success. fx still needs login before
+initialize. Complete cleanup is recorded after every owned fixture.
+
+Validation: core 1,098 passed / 47 skipped; desktop 632 passed / 1 skipped;
+core/desktop types and builds pass. **This ticket remains claimed for acceptance**:
+actual account login, credential persistence and authenticated runtime behavior
+are unmeasured, as is Linux/KVM. The [current ledger](../research/53-first-box-evidence-ledger.md)
+is the exact checklist. Box activation stays behind the explicit development
+preview and is refused by default before any engine call.
