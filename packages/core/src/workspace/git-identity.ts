@@ -9,7 +9,8 @@ export function agentGitEnvironment(
   if (name === '' || /[\x00-\x1f<>]/.test(name)) throw new Error('Invalid Agent Git identity.');
   const email = `${refSlug(name)}@agents.blobot.invalid`;
   const count = Number(inherited['GIT_CONFIG_COUNT'] ?? '0');
-  if (!Number.isSafeInteger(count) || count < 0 || count > 10_000) throw new Error('Invalid inherited Git configuration.');
+  // The appended signing override counts toward the bound too.
+  if (!Number.isSafeInteger(count) || count < 0 || count >= 10_000) throw new Error('Invalid inherited Git configuration.');
   const env: Record<string, string> = {};
   for (let i = 0; i < count; i++) {
     for (const part of ['KEY', 'VALUE']) {

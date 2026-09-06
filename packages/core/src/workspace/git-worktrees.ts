@@ -4,6 +4,7 @@ import { mkdir, rm } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { promisify } from 'node:util';
+import { HOST_GIT_ENVIRONMENT, hostGitArguments } from './host-git.js';
 import { inspectWorkspace } from './inspect.js';
 import { directorySize } from './size.js';
 import {
@@ -280,7 +281,8 @@ export class GitWorktreeWorkspaces implements WorkspaceProvider {
 
   async #git(workspacePath: string, args: string[]): Promise<string> {
     try {
-      const { stdout } = await run('git', ['-C', workspacePath, ...args], {
+      const { stdout } = await run('git', ['-C', workspacePath, ...hostGitArguments(args)], {
+        env: { ...process.env, ...HOST_GIT_ENVIRONMENT },
         maxBuffer: 8 * 1024 * 1024,
       });
       return stdout;

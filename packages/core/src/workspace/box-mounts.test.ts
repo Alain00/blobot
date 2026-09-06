@@ -81,3 +81,13 @@ it('refuses overlapping, ambiguous and reserved mounts, and a retargeted recorde
   await rm(path, { recursive: true }); await symlink(other, path);
   await expect(verifyBoxMountPaths(plan)).rejects.toThrow('no longer available');
 });
+
+it('identifies an unavailable recorded skills mount without silently dropping or retargeting it', async () => {
+  const root = await fixture(), path = join(root, 'work'), skills = join(root, 'skills'), other = join(root, 'other');
+  await mkdir(path); await mkdir(other);
+  const plan = { path, commonGit: [], sharedSkillsPath: skills };
+  await expect(verifyBoxMountPaths(plan)).rejects.toThrow('shared skills folder');
+  await mkdir(skills); await verifyBoxMountPaths(plan);
+  await rm(skills, { recursive: true }); await symlink(other, skills);
+  await expect(verifyBoxMountPaths(plan)).rejects.toThrow('shared skills folder');
+});

@@ -56,3 +56,14 @@ it('preserves inherited Git config pairs while overriding signing and ignores un
   expect(result['GIT_CONFIG_KEY_1']).toBe('commit.gpgsign');
   expect(result).not.toHaveProperty('SECRET');
 });
+
+it('includes its signing override in the configuration entry limit', () => {
+  const inherited: Record<string, string> = { GIT_CONFIG_COUNT: '9999' };
+  for (let index = 0; index < 9999; index++) {
+    inherited[`GIT_CONFIG_KEY_${index}`] = 'core.quotepath';
+    inherited[`GIT_CONFIG_VALUE_${index}`] = 'false';
+  }
+  expect(agentGitEnvironment('Alice', inherited)['GIT_CONFIG_COUNT']).toBe('10000');
+  inherited['GIT_CONFIG_COUNT'] = '10000';
+  expect(() => agentGitEnvironment('Alice', inherited)).toThrow('Invalid inherited Git configuration');
+});

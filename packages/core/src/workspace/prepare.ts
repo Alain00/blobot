@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { mkdir, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
+import { HOST_GIT_ENVIRONMENT, hostGitArguments } from './host-git.js';
 import { inspectWorkspace } from './inspect.js';
 import { WorkspaceError, refSlug, type WorkspaceInspection } from './workspace.js';
 
@@ -69,6 +70,8 @@ async function identity(path: string): Promise<string[]> {
 }
 
 async function git(path: string, args: string[]): Promise<string> {
-  const { stdout } = await run('git', ['-C', path, ...args]);
+  const { stdout } = await run('git', ['-C', path, ...hostGitArguments(args)], {
+    env: { ...process.env, ...HOST_GIT_ENVIRONMENT },
+  });
   return stdout;
 }

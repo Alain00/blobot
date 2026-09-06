@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { promisify } from 'node:util';
 import { currentBranch } from './branches.js';
 import { readChurn, type Churn } from './churn.js';
+import { HOST_GIT_ENVIRONMENT, hostGitArguments } from './host-git.js';
 import type { AgentWorkspace, WorkspaceInspection } from './workspace.js';
 
 const run = promisify(execFile);
@@ -88,9 +89,11 @@ export type CommandRunner = (
 
 export const spawnCommand: CommandRunner = async (command, args, options = {}) => {
   try {
-    const { stdout, stderr } = await run(command, [...args], {
+    const { stdout, stderr } = await run(command, command === 'git' ? hostGitArguments(args) : [...args], {
       ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
-      ...(options.env === undefined ? {} : { env: { ...process.env, ...options.env } }),
+      ...(command === 'git'
+        ? { env: { ...process.env, ...options.env, ...HOST_GIT_ENVIRONMENT } }
+        : options.env === undefined ? {} : { env: { ...process.env, ...options.env } }),
       timeout: options.timeoutMs ?? 8_000,
       maxBuffer: 4 * 1024 * 1024,
     });

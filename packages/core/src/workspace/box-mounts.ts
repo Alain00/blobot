@@ -4,6 +4,7 @@ import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { promisify } from 'node:util';
 import { homedir } from 'node:os';
 import { inspectWorkspace } from './inspect.js';
+import { HOST_GIT_ENVIRONMENT, hostGitArguments } from './host-git.js';
 import type { AgentWorkspace, ProvisionRequest, WorkspaceInspection } from './workspace.js';
 
 const run = promisify(execFile);
@@ -40,8 +41,8 @@ export function validateBoxWorkspaceMounts(plan: BoxWorkspaceMounts): void {
 }
 
 async function git(cwd: string, args: readonly string[]): Promise<string> {
-  const { stdout } = await run('git', [...args], { cwd, timeout: 8_000, maxBuffer: 4 * 1024 * 1024,
-    env: { PATH: process.env['PATH'], GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1', GIT_OPTIONAL_LOCKS: '0' } });
+  const { stdout } = await run('git', hostGitArguments(args), { cwd, timeout: 8_000, maxBuffer: 4 * 1024 * 1024,
+    env: { PATH: process.env['PATH'], GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1', GIT_OPTIONAL_LOCKS: '0', ...HOST_GIT_ENVIRONMENT } });
   return stdout.trim();
 }
 
@@ -99,6 +100,9 @@ export async function boxWorkspaceMounts(
 export async function verifyBoxMountPaths(plan: BoxWorkspaceMounts): Promise<void> {
   validateBoxWorkspaceMounts(plan);
   for (const path of [plan.path, ...plan.commonGit, ...plan.sharedSkillsPath === undefined ? [] : [plan.sharedSkillsPath]]) {
-    if (await realpath(path) !== path || !(await lstat(path)).isDirectory()) throw new Error('A recorded workspace mount is no longer available.');
+    const available = await realpath(path).then(async canonical => canonical === path && (await lstat(path)).isDirectory()).catch(() => false);
+    if (!available) throw new Error(path === plan.sharedSkillsPath
+      ? 'The shared skills folder recorded for this sandbox is unavailable or moved. Restore the original folder before starting. Its data was kept.'
+      : 'A recorded workspace or shared Git folder is no longer available. Restore the original folder before starting. Its data was kept.');
   }
 }
