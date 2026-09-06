@@ -1700,12 +1700,14 @@ void app.whenReady().then(async () => {
     ): Promise<TeamDeletionResult> => {
       if (store === undefined) return { ok: false, error: 'No database is open.' };
       const wasLive = pool.find(teamId) !== undefined;
-      await pool.release(teamId);
       try {
-        const agentMachines = machinesOf(teamId);
-        const removals = await editTeamRoster(teamId, profileIds, {
-          store, clock, ...(agentMachines === undefined ? {} : { machines: agentMachines }),
-        }, leadProfileId, memberMachines);
+        const activeStore = store;
+        const removals = await pool.withReleased(teamId, async () => {
+          const agentMachines = machinesOf(teamId);
+          return editTeamRoster(teamId, profileIds, {
+            store: activeStore, clock, ...(agentMachines === undefined ? {} : { machines: agentMachines }),
+          }, leadProfileId, memberMachines);
+        });
         return { ok: true, removals: removals.map(asUiRemoval) };
       } catch (error) {
         return { ok: false, error: describe(error) };
@@ -1949,12 +1951,14 @@ void app.whenReady().then(async () => {
   ipcMain.handle('blobot:deleteTeam', async (_event, teamId: string, clean = false): Promise<TeamDeletionResult> => {
     if (store === undefined) return { ok: false, error: 'No database is open.' };
     const wasActive = pool.active?.team.id === teamId;
-    await pool.release(teamId);
     try {
-      const agentMachines = machinesOf(teamId);
-      const deletion = await deleteTeam(teamId, { store, clock,
-        ...(agentMachines === undefined ? {} : { machines: agentMachines }),
-      }, { clean: clean === true });
+      const activeStore = store;
+      const deletion = await pool.withReleased(teamId, async () => {
+        const agentMachines = machinesOf(teamId);
+        return deleteTeam(teamId, { store: activeStore, clock,
+          ...(agentMachines === undefined ? {} : { machines: agentMachines }),
+        }, { clean: clean === true });
+      });
       if (wasActive) {
         openError = undefined;
         const next = store.listTeams()[0];

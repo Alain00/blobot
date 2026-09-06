@@ -49,6 +49,89 @@ function pool(limit: number): {
 }
 
 describe('the live teams', () => {
+  it('waits for an evicted execution to stop before starting the same team again', async () => {
+    let finishClose!: () => void;
+    let starts = 0;
+    const teams = new TeamPool<Fake>({ limit: 1, isWorking: () => false,
+      start: async (row) => {
+        starts += 1;
+        const slow = row.id === 'alpha' && starts === 1;
+        const live: Fake = { team: row, working: false, closed: false,
+          close: () => slow ? new Promise<void>((resolve) => {
+            finishClose = () => { live.closed = true; resolve(); };
+          }) : void (live.closed = true) };
+        return live;
+      } });
+    const original = await teams.select(team('alpha'));
+    const switching = teams.select(team('beta'));
+    await expect.poll(() => typeof finishClose).toBe('function');
+    const returning = teams.select(team('alpha'));
+    await Promise.resolve();
+    expect(starts).toBe(2);
+    finishClose();
+    await switching;
+    const replacement = await returning;
+    expect(original.closed).toBe(true);
+    expect(replacement).not.toBe(original);
+    expect(starts).toBe(3);
+    await teams.closeAll();
+  });
+
+  it('rejects stale starts and keeps admission closed throughout a roster change', async () => {
+    let finishStart!: (live: Fake) => void;
+    let finishClose!: () => void;
+    let finishChange!: () => void;
+    let changed = false;
+    const starts: string[] = [];
+    const teams = new TeamPool<Fake>({ limit: 3, isWorking: () => false,
+      start: (row) => {
+        starts.push(row.name);
+        if (starts.length === 1) return new Promise((resolve) => { finishStart = resolve; });
+        const live: Fake = { team: row, working: false, closed: false, close() { this.closed = true; } };
+        return Promise.resolve(live);
+      } });
+    const opening = teams.select(team('alpha'));
+    const refused = expect(opening).rejects.toThrow('changing');
+    const original: Fake = { team: team('alpha'), working: false, closed: false,
+      close: () => new Promise<void>((resolve) => { finishClose = () => { original.closed = true; resolve(); }; }) };
+    const editing = teams.withReleased('alpha', async () => {
+      changed = true;
+      await new Promise<void>((resolve) => { finishChange = resolve; });
+    });
+    await expect(teams.select(team('alpha'))).rejects.toThrow('changing');
+    finishStart(original);
+    await refused;
+    await expect.poll(() => typeof finishClose).toBe('function');
+    expect(changed).toBe(false);
+    expect(teams.find('alpha')).toBeUndefined();
+    finishClose();
+    await expect.poll(() => changed).toBe(true);
+    await expect(teams.select(team('alpha'))).rejects.toThrow('changing');
+    finishChange();
+    await editing;
+    await teams.select({ ...team('alpha'), name: 'Updated roster' });
+    expect(starts).toEqual(['alpha', 'Updated roster']);
+    await teams.closeAll();
+  });
+
+  it('drains an admitted durable change on shutdown and closes its execution only once', async () => {
+    let finishChange!: () => void;
+    let closes = 0;
+    const teams = new TeamPool<Fake>({ limit: 3, isWorking: () => false,
+      start: async (row) => ({ team: row, working: false, closed: false, close() { closes += 1; } }) });
+    await teams.select(team('alpha'));
+    const changing = teams.withReleased('alpha', () => new Promise<void>((resolve) => { finishChange = resolve; }));
+    await expect.poll(() => typeof finishChange).toBe('function');
+    let closed = false;
+    const closing = teams.closeAll().then(() => { closed = true; });
+    await Promise.resolve();
+    expect(closed).toBe(false);
+    await expect(teams.withReleased('beta', async () => {})).rejects.toThrow('closing');
+    finishChange();
+    await Promise.all([changing, closing]);
+    expect(closes).toBe(1);
+  });
+
   it('drains an in-flight start on shutdown and refuses to publish or start another team', async () => {
     let finish!: (live: Fake) => void;
     let finishClose!: () => void;
