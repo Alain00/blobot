@@ -24,7 +24,7 @@ export class DesktopMachines {
     const installed = join(this.directory, 'engine', SBX_INSTALL_VERSION, 'bin', 'sbx');
     return existsSync(installed) ? installed : 'sbx';
   }
-  engine(): SbxEngine { return new SbxEngine(sbxCommandRunner(this.executable)); }
+  engine(signal?: AbortSignal): SbxEngine { return new SbxEngine(sbxCommandRunner(this.executable), signal); }
   images(): SbxImageStore {
     const executable = this.executable;
     let images = this.#imageStores.get(executable);

@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { SbxEngine, type SbxCommandResult } from './engine.js';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { SbxEngine, sbxCommandRunner, type SbxCommandResult } from './engine.js';
 import { SBX_DEVELOPMENT_PIN } from './observations.js';
 
 function fixture() {
@@ -15,6 +18,40 @@ function fixture() {
   return { run, engine: new SbxEngine(run) };
 }
 describe('explicit sbx engine setup and readiness', () => {
+  it('terminates a pending native command when its operation is cancelled', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'blobot-engine-cancel-'));
+    const marker = join(directory, 'pid');
+    const abort = new AbortController();
+    const result = sbxCommandRunner(process.execPath)(['-e',
+      "require('node:fs').writeFileSync(process.argv[1], String(process.pid)); setInterval(() => {}, 1000)", marker], abort.signal);
+    const rejected = expect(result).rejects.toThrow('Sandbox engine did not answer');
+    try {
+      await vi.waitFor(async () => expect(Number(await readFile(marker, 'utf8'))).toBeGreaterThan(0));
+      const pid = Number(await readFile(marker, 'utf8'));
+      abort.abort();
+      await rejected;
+      await vi.waitFor(() => expect(() => process.kill(pid, 0)).toThrow());
+    } finally { abort.abort(); await result.catch(() => {}); await rm(directory, { recursive: true, force: true }); }
+  });
+
+  it('does not change shared settings when cancellation arrives after confirmation', async () => {
+    const { run } = fixture();
+    const abort = new AbortController();
+    const engine = new SbxEngine(run, abort.signal);
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => { release = resolve; });
+    const setup = engine.configureIsolation(async () => {
+      run.mockImplementationOnce(async () => { await pending; return { code: 0, stdout: '{"sandboxes":[]}' }; });
+      return true;
+    });
+    const result = expect(setup).rejects.toThrow();
+    await vi.waitFor(() => expect(run).toHaveBeenCalledTimes(3));
+    abort.abort();
+    release();
+    await result;
+    expect(run.mock.calls.some(([args]) => args.includes('set') || args.includes('restart'))).toBe(false);
+  });
+
   it('onboarding reuses configured isolation without a shared restart or consent prompt', async () => {
     const { run, engine } = fixture();
     const confirm = vi.fn(async () => true);

@@ -4,7 +4,7 @@ import { sbxClientEnvironment } from './client-environment.js';
 import { verifySbxVersion } from './observations.js';
 
 export interface SbxCommandResult { readonly code: number; readonly stdout: string; readonly missing?: boolean; }
-export type SbxCommandRunner = (args: readonly string[]) => Promise<SbxCommandResult>;
+export type SbxCommandRunner = (args: readonly string[], signal?: AbortSignal) => Promise<SbxCommandResult>;
 /** The desktop owns a watched PTY. Its bytes are forwarded, never inspected or retained. */
 export type SbxPtyRunner = (request: {
   readonly args: readonly string[];
@@ -12,8 +12,10 @@ export type SbxPtyRunner = (request: {
 }) => Promise<void>;
 
 export function sbxCommandRunner(executable = 'sbx', timeoutMs = 90_000): SbxCommandRunner {
-  return (args) => new Promise((resolve, reject) => {
-    execFile(executable, [...args], { env: sbxClientEnvironment(), timeout: timeoutMs, maxBuffer: 1024 * 1024 }, (error, stdout) => {
+  return (args, signal) => new Promise((resolve, reject) => {
+    signal?.throwIfAborted();
+    execFile(executable, [...args], { env: sbxClientEnvironment(), timeout: timeoutMs, maxBuffer: 1024 * 1024,
+      ...(signal === undefined ? {} : { signal }) }, (error, stdout) => {
       if (error?.code === 'ENOENT') resolve({ code: 127, stdout: '', missing: true });
       else if (error?.killed || (error !== null && typeof error.code !== 'number')) reject(new Error('Sandbox engine did not answer.'));
       else resolve({ code: error === null ? 0 : Number(error.code), stdout });
@@ -32,11 +34,11 @@ function object(value: unknown): Record<string, unknown> {
  * command is offered here; the development pin is not a production distribution policy.
  */
 export class SbxEngine {
-  constructor(readonly run: SbxCommandRunner = sbxCommandRunner()) {}
+  constructor(readonly run: SbxCommandRunner = sbxCommandRunner(), readonly signal?: AbortSignal) {}
 
   async readiness(purpose: 'display' | 'work' = 'display'): Promise<MachineReadiness> {
     try {
-      const status = await this.run(['daemon', 'status', '--json']);
+      const status = await this.invoke(['daemon', 'status', '--json']);
       if (status.missing) return { state: 'not_installed', detail: 'Sandbox engine is not installed on this computer.' };
       if (status.code !== 0 || object(JSON.parse(status.stdout))['status'] !== 'running') {
         return { state: 'unknown', detail: 'Sandbox engine is stopped or could not be checked.' };
@@ -110,11 +112,17 @@ export class SbxEngine {
     }
   }
   private async command(args: readonly string[]): Promise<string> {
-    const result = await this.run(args);
+    const result = await this.invoke(args);
     if (result.code !== 0 || result.missing) throw new Error('Sandbox setup could not complete.');
     return result.stdout;
   }
   private async json(args: readonly string[]): Promise<Record<string, unknown>> {
     return object(JSON.parse(await this.command(args)));
+  }
+  private async invoke(args: readonly string[]): Promise<SbxCommandResult> {
+    this.signal?.throwIfAborted();
+    const result = await (this.signal === undefined ? this.run(args) : this.run(args, this.signal));
+    this.signal?.throwIfAborted();
+    return result;
   }
 }

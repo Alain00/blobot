@@ -11,6 +11,7 @@ export interface EngineSetupEffects {
 
 /** No terminal or CLI output crosses this boundary. The engine owns its browser and credentials. */
 export class EngineSetup {
+  #closed = false;
   #operation: SetupProgress | undefined;
   #active: { id: string; abort: AbortController; task: Promise<void> } | undefined;
   constructor(readonly machines: DesktopMachines, readonly effects: EngineSetupEffects) {}
@@ -24,6 +25,7 @@ export class EngineSetup {
       ...(this.#operation === undefined ? {} : { operation: this.#operation }) };
   }
   start(kind: 'install' | 'sign_in' | 'check'): string {
+    if (this.#closed) throw new Error('The application is closing.');
     if (!['install', 'sign_in', 'check'].includes(kind)) throw new Error('Unknown sandbox setup action.');
     if (this.#active !== undefined) throw new Error('Sandbox setup is already in progress.');
     const id = randomUUID(), abort = new AbortController();
@@ -36,7 +38,8 @@ export class EngineSetup {
       const signal = AbortSignal.any([abort.signal, AbortSignal.timeout(20 * 60_000)]);
       signal.throwIfAborted();
       if (kind === 'install') {
-        const installed = await this.machines.engine().readiness();
+        const installed = await this.machines.engine(signal).readiness();
+        signal.throwIfAborted();
         if (installed.state === 'not_installed') {
           const installer = new SbxInstaller(this.machines.directory);
           let lastProgressAt = 0;
@@ -50,6 +53,7 @@ export class EngineSetup {
           signal.throwIfAborted();
           if (result.kind === 'package') {
             const error = await this.effects.openPackage(result.path);
+            signal.throwIfAborted();
             if (error) throw new Error('The system package installer could not open. Check that a graphical package installer is available.');
             update({ phase: 'done', detail: 'Finish installing in the system installer, then check again.' });
             return;
@@ -58,7 +62,7 @@ export class EngineSetup {
         signal.throwIfAborted();
         update({ phase: 'checking', detail: 'Preparing the sandbox engine…' });
         // The setup button discloses this shared setting change; an occupied engine refuses it.
-        const readiness = await this.machines.engine().setup(async () => !signal.aborted);
+        const readiness = await this.machines.engine(signal).setup(async () => !signal.aborted);
         signal.throwIfAborted();
         update({ phase: 'done', detail: readiness.state === 'ready' ? 'Sandboxes are ready.' : readiness.detail });
       } else if (kind === 'sign_in') {
@@ -66,11 +70,12 @@ export class EngineSetup {
         await runEngineLogin(this.machines.executable, signal);
         signal.throwIfAborted();
         update({ phase: 'checking', detail: 'Checking sandbox access…' });
-        const readiness = await this.machines.engine().readiness('work');
+        const readiness = await this.machines.engine(signal).readiness('work');
+        signal.throwIfAborted();
         update({ phase: 'done', detail: readiness.state === 'ready' ? 'Sandboxes are ready.' : readiness.detail });
       } else {
         update({ phase: 'checking', detail: 'Checking sandbox access…' });
-        const readiness = await this.machines.engine().start();
+        const readiness = await this.machines.engine(signal).start();
         signal.throwIfAborted();
         update({ phase: 'done', detail: readiness.state === 'ready' ? 'Sandboxes are ready.' : readiness.detail });
       }
@@ -81,7 +86,7 @@ export class EngineSetup {
     this.#active = { id, abort, task }; return id;
   }
   cancel(id: string): void { if (this.#active?.id === id) this.#active.abort.abort(); }
-  async close(): Promise<void> { this.#active?.abort.abort(); await this.#active?.task; }
+  async close(): Promise<void> { this.#closed = true; this.#active?.abort.abort(); await this.#active?.task; }
 }
 
 export function runEngineLogin(executable: string, signal: AbortSignal): Promise<void> {
