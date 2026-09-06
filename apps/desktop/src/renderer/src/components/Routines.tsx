@@ -103,9 +103,7 @@ export function Routines({
         {/* The one place the limitation is stated, and it is stated rather than apologised for.
             blobot is a desktop app and not a daemon: a schedule it cannot keep is worse than one
             it can, and this is the sentence that keeps the promise honest. */}
-        <div className="note muted">
-          blobot runs these while it is open. It does not run them in the background.
-        </div>
+        <div className="note muted">blobot runs these only while it is open, never in the background.</div>
 
         {error !== undefined && <div className="refusal">{error}</div>}
 

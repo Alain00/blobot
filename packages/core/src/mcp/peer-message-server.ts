@@ -32,8 +32,17 @@ export interface PeerMessageEndpoint {
 }
 
 export interface PeerMessageServerOptions {
-  /** The orchestrator's handler. Must never block: a stalled call hangs the sender's turn. */
-  readonly handler: PeerMessageHandler;
+  /**
+   * The orchestrator's handler. Must never block: a stalled call hangs the sender's turn.
+   *
+   * **Omit it and `message_agent` is not advertised at all**, which is what a *thread* does —
+   * one agent working directly with the operator, with no teammate to write to. Absent, never
+   * advertised-and-refusing: Codex already taught the alternative's cost, where a runtime that
+   * offers a capability the situation cannot honour produces an agent that tries it, and that
+   * adapter had to spend a paragraph saying in words that it had no subagents.
+   * `.scratch/rail/issues/02-what-a-thread-strips.md`.
+   */
+  readonly handler?: PeerMessageHandler;
   /**
    * Issue 05's `propose_routine`. **Omit it and the tool is not advertised at all** — a tool a
    * model can see and call is a capability it will believe in, so a team that keeps no Routines
@@ -242,7 +251,7 @@ interface JsonRpcRequest {
 }
 
 export class PeerMessageServer {
-  readonly #handler: PeerMessageHandler;
+  readonly #handler: PeerMessageHandler | undefined;
   readonly #proposeRoutine: RoutineProposalHandler | undefined;
   readonly #recordEntry: RecordEntryHandler | undefined;
   readonly #onLog: ((line: string) => void) | undefined;
@@ -458,7 +467,7 @@ export class PeerMessageServer {
 
   #tools(): object[] {
     return [
-      TOOL,
+      ...(this.#handler === undefined ? [] : [TOOL]),
       ...(this.#proposeRoutine === undefined ? [] : [PROPOSE_ROUTINE_TOOL]),
       ...(this.#recordEntry === undefined ? [] : [RECORD_ENTRY_TOOL]),
     ];
@@ -471,9 +480,10 @@ export class PeerMessageServer {
     if (message.params?.name === RECORD_ENTRY_TOOL.name) {
       return this.#callRecordEntry(agentId, message);
     }
-    if (message.params?.name !== TOOL.name) {
+    if (message.params?.name !== TOOL.name || this.#handler === undefined) {
       return toolError(`no tool named '${message.params?.name ?? ''}' on this server`);
     }
+    const handler = this.#handler;
     const args = message.params.arguments ?? {};
     const agent = typeof args['agent'] === 'string' ? args['agent'] : undefined;
     const body = typeof args['message'] === 'string' ? args['message'] : undefined;
@@ -483,7 +493,7 @@ export class PeerMessageServer {
     }
 
     try {
-      const ack: PeerMessageAck = await this.#handler({
+      const ack: PeerMessageAck = await handler({
         from: agentId,
         agent,
         message: body,

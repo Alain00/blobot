@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentEvent, Message } from '@blobot/core/domain';
-import type { UiAgentMessage, UiLog } from '../../shared/api.js';
+import type { UiAgentMessage, UiLog, UiRailAgent, UiTeamSummary } from '../../shared/api.js';
 import {
   addressedBy,
   compactionLine,
@@ -14,6 +14,7 @@ import {
   messagesIn,
   notesIn,
   paneAfterSnapshot,
+  railRowsOf,
   commandMenu,
   reduce,
   rowsOf,
@@ -2254,5 +2255,207 @@ describe("a turn's pictures on one row", () => {
   it('leaves a picture that could not be drawn out of it, because it is a sentence', () => {
     const rows = rowsOf([ran('t1'), ran('t2'), shot('p1'), missing('p2')]);
     expect(rows.filter((row) => row.kind === 'pictures')).toHaveLength(0);
+  });
+});
+
+/**
+ * The rail's contents: one list of two kinds, ordered by recency, with a pin.
+ *
+ * `.scratch/rail/`. This is the single seam for ordering, pinning, mixing and the `+N`, which is
+ * why it is a pure function and why the interesting cases are here rather than in `Rail.test.tsx`
+ * — the component's job is to render what this says.
+ */
+describe('the rail rows', () => {
+  const team = (id: string, over: Partial<UiTeamSummary> = {}): UiTeamSummary => ({
+    id,
+    name: id,
+    workspacePath: `/${id}`,
+    workspaceKind: 'git',
+    members: [{ id: `${id}_a`, name: 'A' }],
+    ...over,
+  });
+  const person = (id: string, over: Partial<UiRailAgent> = {}): UiRailAgent => ({
+    id,
+    name: id,
+    role: 'works',
+    hiredAt: 0,
+    ...over,
+  });
+  const rows = (options: Parameters<typeof railRowsOf>[0]): string[] =>
+    railRowsOf(options).map((row) => row.id);
+
+  it('mixes both kinds into one order by recency', () => {
+    const list = railRowsOf({
+      teams: [
+        team('api', { lastActiveAt: 100 }),
+        team('web', { lastActiveAt: 300 }),
+        team('ida-thread', { threadFor: 'ida', lastActiveAt: 200, members: [{ id: 'ida_1', name: 'Ida' }] }),
+      ],
+      profiles: [person('ida', { hiredAt: 5, threadId: 'ida-thread' })],
+      statuses: {},
+      unread: [],
+      pinned: [],
+    });
+    // The thread is drawn as its *agent*, at the thread's own recency, and never as a team.
+    expect(list.map((row) => `${row.kind}:${row.id}`)).toEqual(['team:web', 'agent:ida', 'team:api']);
+  });
+
+  it('sorts an agent nobody has talked to on their hire time, so the order is total', () => {
+    // Not a missing value handled separately: hire time is what a never-talked agent last did,
+    // and a fresh hire landing near the top is where the person who just made them is looking.
+    expect(
+      rows({
+        teams: [team('api', { lastActiveAt: 100 })],
+        profiles: [person('fresh', { hiredAt: 900 }), person('old', { hiredAt: 1 })],
+        statuses: {},
+        unread: [],
+        pinned: [],
+      }),
+    ).toEqual(['fresh', 'api', 'old']);
+  });
+
+  it('lifts pinned rows into a block on top, in pin order rather than in recency order', () => {
+    // The block exists so the rows a person returns to stay where they left them; re-sorting it
+    // under them would undo the whole point.
+    expect(
+      rows({
+        teams: [team('api', { lastActiveAt: 100 }), team('web', { lastActiveAt: 300 })],
+        profiles: [person('ida', { hiredAt: 200 })],
+        statuses: {},
+        unread: [],
+        pinned: ['api', 'ida'],
+      }),
+    ).toEqual(['api', 'ida', 'web']);
+  });
+
+  it('ignores a pin whose row is gone, so a stale id needs no reconciliation', () => {
+    expect(
+      rows({
+        teams: [team('api', { lastActiveAt: 100 })],
+        profiles: [],
+        statuses: {},
+        unread: [],
+        pinned: ['deleted', 'api'],
+      }),
+    ).toEqual(['api']);
+  });
+
+  it('counts the members a mark cannot hold, and only past three', () => {
+    const four = team('api', {
+      members: ['a', 'b', 'c', 'd'].map((id) => ({ id, name: id })),
+    });
+    const three = team('web', {
+      members: ['a', 'b', 'c'].map((id) => ({ id: `w${id}`, name: id })),
+    });
+    const list = railRowsOf({ teams: [four, three], profiles: [], statuses: {}, unread: [], pinned: [] });
+    expect(list.find((row) => row.id === 'api')).toMatchObject({ more: 1 });
+    // A stack capped at three is honest about a team of exactly three.
+    expect(list.find((row) => row.id === 'web')).not.toHaveProperty('more');
+  });
+
+  it('drops the count while a status is showing, because the right says one thing at a time', () => {
+    const four = team('api', { members: ['a', 'b', 'c', 'd'].map((id) => ({ id, name: id })) });
+    const list = railRowsOf({
+      teams: [four],
+      profiles: [],
+      statuses: { a: 'working' },
+      unread: [],
+      pinned: [],
+    });
+    expect(list[0]).not.toHaveProperty('more');
+  });
+
+  it('names the one member waiting, and counts when there are several', () => {
+    const pair = team('api', {
+      members: [
+        { id: 'a', name: 'A' },
+        { id: 'b', name: 'B' },
+      ],
+    });
+    const one = railRowsOf({
+      teams: [pair],
+      profiles: [],
+      statuses: { a: 'waiting', b: 'idle' },
+      unread: [],
+      pinned: [],
+    });
+    expect(one[0]?.status).toEqual({ status: 'waiting', label: '1 waiting' });
+    const both = railRowsOf({
+      teams: [pair],
+      profiles: [],
+      statuses: { a: 'waiting', b: 'waiting' },
+      unread: [],
+      pinned: [],
+    });
+    expect(both[0]?.status).toEqual({ status: 'waiting', label: '2 waiting' });
+  });
+
+  it('carries the Machine behind a thread, on every loaded team and not just the open one', () => {
+    // The dot used to be read off the open team's roster, so opening another team put the light
+    // out on an agent that was still awake. The summaries carry it now, per member.
+    const list = railRowsOf({
+      teams: [
+        team('ida-thread', { threadFor: 'ida', members: [{ id: 'ida_1', name: 'Ida', machinePower: 'awake' }] }),
+        team('ola-thread', { threadFor: 'ola', members: [{ id: 'ola_1', name: 'Ola' }] }),
+      ],
+      profiles: [person('ida', { threadId: 'ida-thread' }), person('ola', { threadId: 'ola-thread' })],
+      statuses: {},
+      unread: [],
+      pinned: [],
+    });
+    const ida = list.find((row) => row.id === 'ida');
+    const ola = list.find((row) => row.id === 'ola');
+    expect(ida?.kind === 'agent' && ida.power).toBe('awake');
+    // Absent, not `unknown`: a team the pool is not holding has nothing running to ask.
+    expect(ola?.kind === 'agent' && ola.power).toBeUndefined();
+  });
+
+  it('says nothing at all when everything is idle', () => {
+    const list = railRowsOf({
+      teams: [team('api')],
+      profiles: [],
+      statuses: { api_a: 'idle' },
+      unread: [],
+      pinned: [],
+    });
+    expect(list[0]?.status).toBeUndefined();
+  });
+
+  it('gives an agent row its thread’s status and never its seats’', () => {
+    // Argued both ways on `08` and decided against: pressing that row opens the agent's thread,
+    // which is not where a team's permission request is, so the row would be reporting a problem
+    // it cannot lead you to. The team row carries it, and is both correct and pressable.
+    const list = railRowsOf({
+      teams: [
+        team('api', { members: [{ id: 'seat', name: 'Ida', profileId: 'ida' }] }),
+        team('ida-thread', { threadFor: 'ida', members: [{ id: 'ida_1', name: 'Ida' }] }),
+      ],
+      profiles: [person('ida', { threadId: 'ida-thread' })],
+      statuses: { seat: 'waiting', ida_1: 'idle' },
+      unread: ['seat'],
+      pinned: [],
+    });
+    const agent = list.find((row) => row.kind === 'agent');
+    expect(agent?.status).toBeUndefined();
+    expect(agent?.unread).toBe(false);
+    expect(list.find((row) => row.kind === 'team')?.status?.status).toBe('waiting');
+  });
+
+  it('carries the thread’s own last line onto the agent’s row', () => {
+    const list = railRowsOf({
+      teams: [
+        team('ida-thread', {
+          threadFor: 'ida',
+          lastLine: 'that looks right to me',
+          lastActiveAt: 7,
+          members: [{ id: 'ida_1', name: 'Ida' }],
+        }),
+      ],
+      profiles: [person('ida', { threadId: 'ida-thread' })],
+      statuses: {},
+      unread: ['ida_1'],
+      pinned: [],
+    });
+    expect(list[0]).toMatchObject({ last: 'that looks right to me', at: 7, unread: true });
   });
 });

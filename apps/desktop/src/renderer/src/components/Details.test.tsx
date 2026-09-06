@@ -205,8 +205,8 @@ describe('what blobot sent', () => {
     const host = render({ alice: { used: 37_000, size: 1_000_000 } }, { alice: SENT });
     click(host, 0);
     const lines = [...(host.querySelectorAll('.sentrow') ?? [])].map((row) => row.textContent);
-    // Hidden at zero like both neighbours. The notice card above the composer is where an
-    // unbriefed agent is named, unmissably, and two surfaces saying it is one too many.
+    // Hidden at zero like both neighbours. This row prices what blobot spends on a turn, and
+    // an empty Handbook costs nothing; the tray's door is where a count of zero is said.
     expect(lines.some((line) => line?.startsWith('handbook'))).toBe(false);
   });
 

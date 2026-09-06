@@ -1,15 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Command } from 'cmdk';
-import type { UiAgent, UiTeam, UiTeamSummary } from '../../../shared/api.js';
+import type { UiAgent, UiRailAgent, UiTeam, UiTeamSummary } from '../../../shared/api.js';
 import { Blob } from './Blob.js';
 import { TeamMark } from './TeamMark.js';
 
-/** One findable agent: who, and on which team, since the same person can be on several. */
+/**
+ * One findable agent: the **person**, not the seat.
+ *
+ * `.scratch/rail/issues/05`. It used to be one row per membership, so Alice on four teams was
+ * four rows — the sixteen-row list this whole redesign refused, and worse in a search result,
+ * where rows have no grouping to tell them apart. Selecting one opens their thread, which is
+ * what their rail row does. A member of a team is still found by finding the team.
+ */
 interface Found {
-  readonly teamId: string;
-  readonly teamName: string;
   readonly id: string;
   readonly name: string;
+  readonly role: string;
   readonly hue?: number;
   readonly shape?: string;
 }
@@ -37,6 +43,7 @@ export function Navigator({
   team,
   teams,
   agents,
+  profiles,
   onClose,
   onSelectAgent,
   onSelectTeam,
@@ -49,9 +56,11 @@ export function Navigator({
   teams: readonly UiTeamSummary[];
   /** The open team's roster, which is the only one carrying roles and hues. */
   agents: readonly UiAgent[];
+  /** Every hired agent, which is what this list is. Absent in demo mode. */
+  profiles?: readonly UiRailAgent[];
   onClose: () => void;
-  /** `teamId` is the open team for everyone the rail is already drawing panes for. */
-  onSelectAgent: (teamId: string, agentId: string) => void;
+  /** Opens that agent's thread, by AgentProfile id. The same act as their rail row. */
+  onSelectAgent: (profileId: string) => void;
   /** Absent in demo mode, which has one team and no way to leave it. */
   onSelectTeam?: (teamId: string) => void;
   onOpenAgents?: () => void;
@@ -60,33 +69,17 @@ export function Navigator({
   onNewTeam?: () => void;
 }): React.JSX.Element {
   const [query, setQuery] = useState('');
-  const byId = new Map(agents.map((agent) => [agent.id, agent]));
-
-  // Every agent on every team, the open team's first: those are the ones a click already
-  // reaches, and the ones the user is most often looking for. The rest carry their team's name,
-  // because "Alice" on two teams is two agents with two workspaces and two sessions, and the
-  // team is the only thing that tells them apart.
-  const here: readonly Found[] = agents.map((agent) => ({
-    teamId: team.id,
-    teamName: team.name,
-    id: agent.id,
-    name: agent.name,
-    ...(agent.hue === undefined ? {} : { hue: agent.hue }),
-    ...(agent.shape === undefined ? {} : { shape: agent.shape }),
+  const roles = new Map(agents.map((agent) => [agent.name, agent.role]));
+  const found: readonly Found[] = (profiles ?? []).map((profile) => ({
+    id: profile.id,
+    name: profile.name,
+    role: profile.role,
+    ...(profile.hue === undefined ? {} : { hue: profile.hue }),
+    ...(profile.shape === undefined ? {} : { shape: profile.shape }),
   }));
-  const elsewhere: readonly Found[] = teams
-    .filter((row) => row.id !== team.id)
-    .flatMap((row) =>
-      row.members.map((member) => ({
-        teamId: row.id,
-        teamName: row.name,
-        id: member.id,
-        name: member.name,
-        ...(member.hue === undefined ? {} : { hue: member.hue }),
-        ...(member.shape === undefined ? {} : { shape: member.shape }),
-      })),
-    );
-  const found = [...here, ...elsewhere];
+  // A **thread** is never findable as a team: it is one thing, and it is already in the list
+  // above under the agent's own name. `.scratch/rail/issues/05-where-a-thread-is-hidden.md`.
+  const findableTeams = teams.filter((row) => row.threadFor === undefined);
 
   // Escape closes it even when the field has not taken focus yet, and cmdk does not claim the
   // key. Captured on the window rather than on the sheet, for the same reason *your agents*
@@ -121,15 +114,13 @@ export function Navigator({
               <Command.Group heading="AGENTS">
                 {found.map((row) => (
                   <Command.Item
-                    // Agent ids are per membership, so the same person on two teams is two
-                    // rows and neither key collides.
-                    key={`${row.teamId}:${row.id}`}
-                    value={`agent:${row.teamId}:${row.id}`}
-                    // What cmdk matches on. The team's name is in here so that typing a team
-                    // narrows to its people, which is how you find "the reviewer on hermes"
-                    // without remembering the reviewer's name.
-                    keywords={[row.name, row.teamName, byId.get(row.id)?.role ?? '']}
-                    onSelect={() => onSelectAgent(row.teamId, row.id)}
+                    // One row per person, so the profile id is the key.
+                    key={row.id}
+                    value={`agent:${row.id}`}
+                    // What cmdk matches on. The role is in here so that "reviewer" finds the
+                    // reviewer without remembering their name.
+                    keywords={[row.name, row.role, roles.get(row.name) ?? '']}
+                    onSelect={() => onSelectAgent(row.id)}
                   >
                     <Blob
                       name={row.name}
@@ -138,19 +129,16 @@ export function Navigator({
                       {...(row.shape === undefined ? {} : { shape: row.shape })}
                     />
                     <span>{row.name}</span>
-                    {/* Which team, unless it is the one already on screen — that row is what
-                        everything else here is relative to, and labelling it would put the same
-                        word down the whole list. */}
-                    <span className="r">
-                      {row.teamId === team.id ? (byId.get(row.id)?.role ?? '') : row.teamName}
-                    </span>
+                    {/* The role, and never a team. A row is the person, and a person on four
+                        teams has no one team to name here. */}
+                    <span className="r">{row.role}</span>
                   </Command.Item>
                 ))}
               </Command.Group>
             )}
 
             <Command.Group heading="TEAMS">
-              {teams.map((row) => (
+              {findableTeams.map((row) => (
                 <Command.Item
                   key={row.id}
                   value={`team:${row.id}`}
@@ -160,7 +148,11 @@ export function Navigator({
                 >
                   {/* The folder: this list is about where things are, not about who is in
                       them, and a team with nobody on it is still a folder. */}
-                  <TeamMark {...(row.icon === undefined ? {} : { icon: row.icon })} size={20} />
+                  <TeamMark
+                    {...(row.icon === undefined ? {} : { icon: row.icon })}
+                    members={row.members}
+                    size={20}
+                  />
                   <span>{row.name}</span>
                   <span className="r">{row.workspacePath}</span>
                 </Command.Item>

@@ -89,7 +89,7 @@ export function saySize(bytes: number): string {
  * `alice 2.9 GB · bob 180 MB` is one to be recognised. An agent holding nothing is left out
  * rather than listed as zero; it is not what the line is for.
  */
-function sizeLine(usage: UiTeamDiskUsage | undefined): string {
+export function sizeLine(usage: UiTeamDiskUsage | undefined): string {
   if (usage === undefined) return 'measuring…';
   if (usage.workBytes === null) return 'working-folder size unavailable · full clean unavailable';
   if (usage.stateBytes === null) return `work ${saySize(usage.workBytes)} · private state size unavailable; it will also be removed`;
@@ -98,6 +98,110 @@ function sizeLine(usage: UiTeamDiskUsage | undefined): string {
     .filter((agent) => agent.bytes !== null && agent.bytes > 0)
     .map((agent) => `${agent.agentName} ${saySize(agent.bytes ?? 0)}`);
   return [`recovers about ${saySize(usage.bytes ?? usage.workBytes)}`, ...(usage.stateBytes ? [`work ${saySize(usage.workBytes ?? 0)} · state ${saySize(usage.stateBytes)}`] : []), ...each].join(' · ');
+}
+
+/**
+ * Taking one agent off a team, from the sidebar's context menu on their face.
+ *
+ * The counterpart to `AddMember`, and the reason the two are separate: adding is one act with
+ * nothing to report, and a departure ends a session and leaves a branch or a copy behind, so it
+ * has to say what happens to the work before it does it and what happened to it after. The whole
+ * roster is still what goes on the wire — `editTeam` takes a roster, because a persona names one
+ * — and it is composed here rather than asked of the user.
+ *
+ * It is a **membership** that ends. The AgentProfile is untouched and stays on its other teams,
+ * which is ADR-0001's whole point and the sentence this dialog leads with.
+ */
+export function RemoveMember({
+  team,
+  member,
+  onClose,
+  onRemoved,
+}: {
+  team: UiTeamSummary;
+  /** The one leaving. Their `profileId` is what the roster is composed of. */
+  member: { readonly id: string; readonly name: string; readonly profileId?: string };
+  onClose: () => void;
+  onRemoved: () => void;
+}): React.JSX.Element {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | undefined>();
+  const [removals, setRemovals] = useState<readonly UiAgentRemoval[] | undefined>();
+  const playSound = usePlaySound();
+
+  const remove = async (): Promise<void> => {
+    playSound('remove');
+    setBusy(true);
+    setError(undefined);
+    const staying = team.members
+      .filter((row) => row.id !== member.id)
+      .map((row) => row.profileId)
+      .filter((id): id is string => id !== undefined);
+    // A lead who has left leads nothing, and nobody is promoted in their place — `EditTeam`'s
+    // rule, which is the app's rule, and it is not this dialog's to change.
+    const lead = team.leadProfileId === member.profileId ? undefined : team.leadProfileId;
+    const result = await window.blobot.editTeam(team.id, staying, lead, {});
+    setBusy(false);
+    if (!result.ok) {
+      setError(result.error ?? 'The team could not be changed.');
+      return;
+    }
+    onRemoved();
+    // The half that can leave work behind is the half worth staying open for. Nothing left
+    // behind is nothing to report, and the dialog goes.
+    if ((result.removals ?? []).some((removal) => removal.work !== 'discarded' || removal.state === 'unknown')) {
+      setRemovals(result.removals ?? []);
+      return;
+    }
+    onClose();
+  };
+
+  return (
+    <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="scrim" />
+        <Dialog.Content className="modal" aria-describedby={undefined}>
+          <header className="modalhead">
+            <div>
+              <div className="eyebrow mono">TAKE OFF THE TEAM</div>
+              <Dialog.Title className="display sm">{member.name}</Dialog.Title>
+            </div>
+            <Dialog.Close className="iconbtn" aria-label="Close">
+              <X size={17} aria-hidden />
+            </Dialog.Close>
+          </header>
+          {removals !== undefined ? (
+            <>
+              <RemovalNotes removals={removals} />
+              <div className="modalfoot">
+                <Dialog.Close className="btn primary">done</Dialog.Close>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="prose">
+                <p>
+                  {member.name} stays hired and keeps every other team. The conversation stays
+                  where it is.
+                </p>
+                <p className="note muted">{whatHappensTo(team.workspaceKind)}</p>
+                <p className="note muted">
+                  {team.name} restarts, because a persona names the roster.
+                </p>
+              </div>
+              {error !== undefined && <p role="alert">{error}</p>}
+              <div className="modalfoot">
+                <Dialog.Close className="btn">cancel</Dialog.Close>
+                <button className="btn primary" disabled={busy} onClick={() => void remove()}>
+                  {busy ? 'taking off…' : `take ${member.name} off`}
+                </button>
+              </div>
+            </>
+          )}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
 }
 
 export function DeleteTeam({
@@ -123,6 +227,8 @@ export function DeleteTeam({
   /** What the clean would recover. `undefined` while it is still being counted. */
   const [usage, setUsage] = useState<UiTeamDiskUsage | undefined>();
   const [freed, setFreed] = useState<number | undefined>();
+  /** A **thread**: this agent's own conversation rather than a team. Only the copy changes. */
+  const thread = team.threadFor !== undefined;
 
   // Measured as the dialog opens rather than when the option is ticked: the size is the reason
   // to tick it, so it has to be on screen before the decision, not after.
@@ -159,7 +265,16 @@ export function DeleteTeam({
         <Dialog.Content className="modal" aria-describedby={undefined}>
           <header className="modalhead">
             <div>
-              <div className="eyebrow mono">DELETE A TEAM</div>
+              {/* The same dialog, and the noun is what changes. Deleting a conversation reuses
+                  the team-delete flow whole — the same worktree removal before the tombstone,
+                  the same full-clean tick with its priced figure, the same independent reporting
+                  of what was kept — because that ordering and that pricing were bought
+                  expensively in the Machines review and must not have a second implementation.
+                  A thread's Team name *is* the agent's name, which is the one place that
+                  invented string is worth drawing. `.scratch/rail/issues/06`. */}
+              <div className="eyebrow mono">
+                {thread ? 'DELETE A CONVERSATION' : 'DELETE A TEAM'}
+              </div>
               <Dialog.Title className="display sm">{team.name}</Dialog.Title>
             </div>
             <Dialog.Close className="iconbtn" aria-label="Close">
@@ -171,16 +286,28 @@ export function DeleteTeam({
             <>
               <div className="prose">
                 <p>
-                  The team stops and leaves the rail.{' '}
+                  {thread ? 'The conversation ends.' : 'The team stops and leaves the rail.'}{' '}
                   {clean
                     ? 'Every agent gets its workspace deleted whatever is in it, so work that was never merged goes with it. Nothing here is recoverable, by blobot or by git.'
                     : whatHappensTo(team.workspaceKind)}
                 </p>
-                <p>
-                  <span className="mono">{team.workspacePath}</span> is not touched, and the
-                  transcript stays in the database: what these agents were told is a record, not
-                  a side effect.
-                </p>
+                {thread ? (
+                  // Said because it is the thing a person would otherwise assume: the Team is
+                  // tombstoned and its transcript kept but unreachable, and saying hello makes a
+                  // new thread with a new folder. Reattaching the tombstone instead would make
+                  // deletion mean *hide* while the folder was gone anyway, so the returning
+                  // history would reference paths that no longer exist.
+                  <p>
+                    {team.name} stays hired and keeps their row. This conversation does not come
+                    back: saying hello starts a new one.
+                  </p>
+                ) : (
+                  <p>
+                    <span className="mono">{team.workspacePath}</span> is not touched, and the
+                    transcript stays in the database: what these agents were told is a record, not
+                    a side effect.
+                  </p>
+                )}
               </div>
 
               {/* The option, priced. A tick rather than prose because it changes what the
@@ -208,7 +335,13 @@ export function DeleteTeam({
               <div className="modalfoot">
                 <Dialog.Close className="btn">keep it</Dialog.Close>
                 <button className="btn primary" disabled={busy} onClick={() => void remove()}>
-                  {busy ? 'deleting…' : clean ? 'delete and clean' : 'delete team'}
+                  {busy
+                    ? 'deleting…'
+                    : clean
+                      ? 'delete and clean'
+                      : thread
+                        ? 'delete conversation'
+                        : 'delete team'}
                 </button>
               </div>
             </>

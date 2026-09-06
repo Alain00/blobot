@@ -39,6 +39,9 @@ export function FileTree({
   demoMode,
   revision,
   panel,
+  teamName,
+  onAddMember,
+  onRemoveMember,
   onPanel,
   onSelectAgent,
   onSelectTeam,
@@ -56,6 +59,12 @@ export function FileTree({
    */
   revision: number;
   panel: SidebarPanelKind;
+  /** The head, in the chooser. See {@link SidebarShell}. */
+  teamName?: string;
+  /** Hiring onto this team, from the head's `+`. See {@link SidebarShell}. */
+  onAddMember?: () => void;
+  /** Taking one agent off it, from the chooser's context menu. See {@link SidebarShell}. */
+  onRemoveMember?: (agentId: string) => void;
   onPanel: (panel: SidebarPanelKind) => void;
   onSelectAgent: (agentId: string) => void;
   /**
@@ -102,7 +111,27 @@ export function FileTree({
   const agent = agents.find((row) => row.id === agentId);
   const status = workspaces.find((row) => row.agentId === agentId);
   const here = reading?.key === key ? reading : undefined;
-  const shell = { agents, workspaces, panel, onPanel, onSelectAgent, onSelectTeam } as const;
+  /**
+   * The pane is about somebody this render cannot name.
+   *
+   * A **thread** holds an AgentProfile and its Agent does not exist until the first message, and
+   * an agent pane outlives the roster for the frame in which a team is being swapped — which is
+   * long on a team that was asleep. Both used to fall through to the chooser, so switching to a
+   * sleeping agent left the previous team's face at the top of the panel.
+   */
+  const waiting =
+    pane.kind === 'thread'
+      ? ('no folder' as const)
+      : pane.kind === 'agent' && agent === undefined
+        ? ('opening' as const)
+        : undefined;
+  const shell = {
+    agents, workspaces, panel, onPanel, onSelectAgent, onSelectTeam,
+    ...(waiting === undefined ? {} : { waiting }),
+    ...(teamName === undefined ? {} : { teamName }),
+    ...(onAddMember === undefined ? {} : { onAddMember }),
+    ...(onRemoveMember === undefined ? {} : { onRemoveMember }),
+  } as const;
 
   return (
     <SidebarShell

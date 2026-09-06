@@ -231,6 +231,58 @@ describe('reading teams back', () => {
   });
 });
 
+/**
+ * A **thread**: the Team behind one agent's own conversation.
+ *
+ * `.scratch/rail/issues/01-what-a-thread-is.md`. A *value*, never the
+ * `members.length === 1 && members[0].profileId === agent.id` predicate that two files had each
+ * invented separately — a predicate wrong in both directions, since a real team of one vanished
+ * into a person's row and a thread somebody joined silently became a team.
+ */
+describe('a thread', () => {
+  function thread(id: string, profileId: string): void {
+    store.createTeam({
+      id,
+      name: id,
+      workspacePath: `/home/x/blobot/${id}`,
+      workspaceKind: 'git',
+      threadFor: profileId,
+      turnBudget: 10,
+      createdAt: 30,
+    });
+  }
+
+  it('is told apart from a one-member team by the stored value alone', () => {
+    thread('team_thread', 'profile_ida');
+    expect(store.teamById('team_thread')?.threadFor).toBe('profile_ida');
+    expect(store.threadOf('profile_ida')?.id).toBe('team_thread');
+    // `team_1` has two members and is not a thread; a one-member team would be no different.
+    expect(store.teamById('team_1')?.threadFor).toBeUndefined();
+    expect(store.threadOf('nobody')).toBeUndefined();
+  });
+
+  it('is one per agent, and the database is what says so', () => {
+    // The `UNIQUE` constraint is where *one thread per agent* lives, rather than in every call
+    // site: the row is the person, and *which of your four conversations with Alice* is a
+    // question nobody messaging a colleague has to answer.
+    thread('team_thread', 'profile_ida');
+    expect(() => thread('team_second', 'profile_ida')).toThrow();
+  });
+
+  it('leaves every other team’s value NULL, so several teams are not one thread', () => {
+    // SQLite's unique index permits many NULLs, which is what makes the column usable at all.
+    store.createTeam({
+      id: 'team_2',
+      name: 'storefront',
+      workspacePath: '/other',
+      workspaceKind: 'git',
+      turnBudget: 4,
+      createdAt: 10,
+    });
+    expect(store.listTeams().filter((row) => row.threadFor !== undefined)).toEqual([]);
+  });
+});
+
 describe('resuming a session', () => {
   it('reads back the newest provider session id, so an agent comes back remembering', () => {
     store.startSession({

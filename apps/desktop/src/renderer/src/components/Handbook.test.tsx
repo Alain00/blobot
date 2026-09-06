@@ -1,12 +1,11 @@
 /**
  * @vitest-environment jsdom
  *
- * The Handbook where a person meets it: the panel behind the tray's door, and the notice card
- * above an unbriefed agent's composer.
+ * The Handbook where a person meets it: the panel behind the tray's door.
  *
- * The claims worth holding are the ones a screenshot would not catch. That the door and the card
- * are **never both present**, because each is carrying the other's job in the state it belongs
- * to. That the panel offers **removal and never editing**, since an entry you edited is neither
+ * The claims worth holding are the ones a screenshot would not catch. That the door is drawn at
+ * **every count**, empty included, since the notice card that used to carry the invitation is
+ * gone. That the panel offers **removal and never editing**, since an entry you edited is neither
  * yours nor the agent's. That `add one` **writes nothing** and only hands the composer some
  * words, which is what keeps `record_entry` the single path into a Handbook and therefore keeps
  * the transcript's disclosure complete. And that the door survives an agent whose Workspace has
@@ -17,7 +16,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { UiHandbookEntry, UiWorkspaceStatus } from '../../../shared/api.js';
-import { ComposerFooter, HandbookNotice } from './Handbook.js';
+import { ComposerFooter } from './Handbook.js';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -84,11 +83,11 @@ const text = (host: HTMLElement, selector: string): string | undefined =>
   host.querySelector(selector)?.textContent ?? undefined;
 
 describe('the door on the tray', () => {
-  it('counts the entries, and is absent while the Handbook is empty', () => {
-    // The tray's own rule is against a door to an empty room: the notice card above the composer
-    // is carrying the invitation in that state, and two surfaces saying *unbriefed* is one too
-    // many.
-    expect(footer([]).host.textContent).not.toContain('handbook');
+  it('counts the entries, empty included', () => {
+    // It used to be absent at zero, because the notice card above the composer carried the
+    // invitation there. That card is gone — briefing is the agent's own first words now — so
+    // this is the only way into a Handbook nobody has written in yet.
+    expect(footer([]).host.textContent).toContain('handbook · 0');
 
     const { host } = footer([entry('e1', 1, 'nothing ships on a Friday')]);
     expect(host.textContent).toContain('handbook · 1');
@@ -228,49 +227,5 @@ describe('the panel', () => {
     expect(state.removed).toEqual([]);
     // And it shuts, because the field it just filled is behind this dialog.
     expect(panel()).toBeNull();
-  });
-});
-
-describe('the notice card', () => {
-  function notice(busy = false): { host: HTMLElement; briefed: number } {
-    const counted = { briefed: 0 };
-    const host = document.createElement('div');
-    document.body.append(host);
-    act(() => {
-      createRoot(host).render(
-        <HandbookNotice
-          agentName="Mara"
-          teamName="Vlue"
-          busy={busy}
-          onBrief={() => (counted.briefed += 1)}
-        />,
-      );
-    });
-    return { host, get briefed() { return counted.briefed; } };
-  }
-
-  it('states a fact about the agent and names where what you say stays', () => {
-    const { host } = notice();
-    expect(text(host, '.hbnt')).toBe('Mara has not been briefed');
-    // A Handbook is about the work and stays with the team. Nobody takes a handbook to a new
-    // job, and the card is the only place that sentence is said before there are any entries.
-    expect(text(host, '.hbnd')).toContain('stays with Vlue');
-  });
-
-  it('carries no dismiss, because there is no third state to draw', () => {
-    // Persisting is the decision: it states a fact rather than announcing an event, and it
-    // stops being true the moment there is an entry. A dismiss would invent *unbriefed and
-    // hidden*, which nothing could then draw.
-    expect(notice().host.querySelectorAll('button')).toHaveLength(1);
-  });
-
-  it('shuts while the agent is mid-turn, because the invitation is a turn', () => {
-    const busy = notice(true);
-    press(busy.host, '.hbnbtn');
-    expect(busy.briefed).toBe(0);
-
-    const idle = notice();
-    press(idle.host, '.hbnbtn');
-    expect(idle.briefed).toBe(1);
   });
 });

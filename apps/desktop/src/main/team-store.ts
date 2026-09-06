@@ -121,6 +121,11 @@ export interface CreateTeamDeps {
    * asking one of the three what a folder is would mean having already picked one.
    */
   readonly inspect?: (path: string) => Promise<WorkspaceInspection>;
+  /**
+   * Makes a thread's folder under `~/blobot`. Injected by tests, for the same reason `inspect`
+   * is: a `git init` on the real home directory is not something a unit test may do.
+   */
+  readonly prepare?: (name: string) => Promise<WorkspaceInspection>;
 }
 
 /** Refusals the flows are expected to render, rather than crash on. */
@@ -409,17 +414,139 @@ export async function prepareWorkspace(name: string): Promise<WorkspaceInspectio
 }
 
 /**
- * Recheck the audience when opening an individual team from a profile. A chooser snapshot
- * may predate a roster edit; it must not silently open a team that now includes somebody else.
- * Names are mutable labels, never identity. Ordinary team navigation remains unrestricted.
+ * An agent's **thread**: the Team behind their own conversation, made by their first message.
+ *
+ * `.scratch/rail/issues/04-the-first-message-makes-the-folder.md`. It is created **on send** and
+ * never on press, so twenty idle clicks on twenty rail rows leave twenty nothings rather than
+ * twenty repositories under a directory the user is meant to open in an editor.
+ *
+ * Four things happen here and the order matters: the folder, the Team row, the Agent, and the
+ * lead. The folder first, because a `git init` that fails must leave no row behind; the lead
+ * last, because it is an agent id and the agent row is what the line above made.
+ *
+ * The name is the agent's, disambiguated when an ordinary team already holds it. It is never
+ * drawn: the one place the string surfaces is the branch, which for the ordinary case reads
+ * `blobot/alice/alice`.
  */
-export function individualTeamOf(store: SqliteStore, profileId: string, teamId: string): Team | undefined {
+export async function createThread(profileId: string, deps: CreateTeamDeps): Promise<Team> {
+  const existing = deps.store.threadOf(profileId);
+  if (existing !== undefined) return existing;
+  const profile = deps.store.profileById(profileId);
+  if (profile === undefined || profile.deletedAt !== undefined) {
+    throw new TeamCreationError('unknown_agent', 'That agent no longer exists.');
+  }
+
+  const inspection = await prepareThreadWorkspace(profile.name, deps.prepare ?? prepareWorkspace);
+  const now = deps.clock.now();
+  const team: Team = {
+    id: `team_${uuidv7(now)}`,
+    name: freeTeamName(deps.store, profile.name),
+    threadFor: profileId,
+    workspacePath: inspection.path,
+    workspaceKind: inspection.kind,
+    turnBudget: DEFAULT_TURN_BUDGET,
+  };
+  deps.store.createTeam({ ...team, createdAt: now });
+
+  const id = `${refSlug(profile.name)}_${randomBytes(3).toString('hex')}`;
+  const workspaces = deps.workspaces ?? workspaceProviderFor(inspection.kind);
+  const workspace = await workspaces.provision({
+    workspacePath: team.workspacePath,
+    teamName: team.name,
+    agentId: id,
+    agentName: profile.name,
+  });
+  deps.store.createAgent({
+    id,
+    // A thread always runs on this computer. Placement is chosen per member at creation and a
+    // thread has no creation screen, so it takes the app's default rather than provisioning a
+    // sandbox nobody asked for. A box-placed one-member team is still made through ordinary
+    // team creation, and that Team is not a thread.
+    machine: machinePlacement(undefined),
+    teamId: team.id,
+    profileId: profile.id,
+    name: profile.name,
+    role: profile.role,
+    runtimeId: profile.runtimeId,
+    ...(profile.instructions === undefined ? {} : { instructions: profile.instructions }),
+    ...(profile.hue === undefined ? {} : { hue: profile.hue }),
+    ...(profile.shape === undefined ? {} : { shape: profile.shape }),
+    ...(profile.executablePath === undefined ? {} : { executablePath: profile.executablePath }),
+    ...(profile.runtimeOptions === undefined ? {} : { runtimeOptions: profile.runtimeOptions }),
+    ...(profile.trust === undefined ? {} : { trust: profile.trust }),
+    ...(profile.compaction === undefined ? {} : { compaction: profile.compaction }),
+    ...(profile.verbosity === undefined ? {} : { verbosity: profile.verbosity }),
+    workspacePath: workspace.path,
+    ...(workspace.branch === undefined ? {} : { branch: workspace.branch }),
+    createdAt: deps.clock.now(),
+  });
+  // The single member leads, because an unaddressed prompt has to route and a NULL lead
+  // disables send until an `@mention` resolves — which here would be a composer that never
+  // enables. Everything the word *lead* implies is suppressed in `composePersona` and
+  // `#leadBrief` instead; see `.scratch/rail/issues/02`.
+  deps.store.setTeamLead(team.id, id);
+  return { ...team, leadAgentId: id };
+}
+
+/** What a thread is given when nobody chose. The same figure ordinary team creation offers. */
+const DEFAULT_TURN_BUDGET = 10;
+
+/**
+ * The folder a thread gets, under `~/blobot`, and what happens when the name is taken.
+ *
+ * **A collision disambiguates silently**: `alice`, then `alice-2`. `prepareWorkspace`'s own
+ * `already_there` refusal advises *"Choose it yourself if it is the one you mean"*, which
+ * assumes a folder picker this flow has not got, with the user's message already typed. One
+ * thread per agent is what makes the suffix safe: it never means two folders for one agent, it
+ * means something unrelated already owns that name. Adopting whatever is there on a name match
+ * was refused outright — that is a checkout an agent could commit home.
+ *
+ * A genuine failure is not a collision and is not silent: `git init` failing, or `~/blobot` not
+ * being writable, comes back as the error it is, and the caller keeps the typed message.
+ */
+async function prepareThreadWorkspace(
+  agentName: string,
+  prepare: (name: string) => Promise<WorkspaceInspection>,
+): Promise<WorkspaceInspection> {
+  for (let attempt = 1; attempt <= 50; attempt += 1) {
+    const candidate = attempt === 1 ? agentName : `${agentName}-${attempt}`;
+    try {
+      return await prepare(candidate);
+    } catch (error) {
+      if (error instanceof WorkspaceError && error.code === 'already_there') continue;
+      throw error;
+    }
+  }
+  throw new WorkspaceError(
+    'already_there',
+    `Fifty folders under ${join(homedir(), 'blobot')} are already called ${refSlug(agentName)}. Tidy one up and try again.`,
+  );
+}
+
+/**
+ * A Team name nobody is using. `teams.name` is unique because it is half of a branch name, and
+ * a thread's name is the agent's — so an ordinary team called *alice* has to be stepped around.
+ * The string is never drawn; the branch is where it surfaces.
+ */
+function freeTeamName(store: SqliteStore, agentName: string): string {
+  for (let attempt = 1; ; attempt += 1) {
+    const candidate = attempt === 1 ? agentName : `${agentName}-${attempt}`;
+    if (store.teamByName(candidate) === undefined) return candidate;
+  }
+}
+
+/**
+ * Recheck the audience when opening an agent's thread from a profile.
+ *
+ * A stored value, never the `members.length === 1 && members[0].profileId === agent.id`
+ * inference this and `IndividualTeam.tsx` each used to make separately. That predicate was wrong
+ * in both directions: a real team of one vanished into a person's row, and a thread somebody
+ * joined silently became a team. `.scratch/rail/issues/01-what-a-thread-is.md`.
+ */
+export function threadOf(store: SqliteStore, profileId: string): Team | undefined {
   const profile = store.profileById(profileId);
   if (profile === undefined || profile.deletedAt !== undefined) return undefined;
-  const team = store.teamById(teamId);
-  if (team === undefined) return undefined;
-  const members = store.agentsOfTeam(teamId);
-  return members.length === 1 && members[0]?.profileId === profileId ? team : undefined;
+  return store.threadOf(profileId);
 }
 
 /** The creation flow's first screen: what is at the path the user picked. */

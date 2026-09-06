@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Select from '@radix-ui/react-select';
 import { Check, ChevronDown, Shuffle, X } from 'lucide-react';
@@ -10,6 +10,7 @@ import type {
   UiAgentProfile,
   VerbosityLevel,
   UiRuntimeChoice,
+  UiTeamDiskUsage,
 } from '../../../shared/api.js';
 import { ATTENDED_TRUST_LEVELS } from '@blobot/core/domain';
 import { Blob, SEEN } from './Blob.js';
@@ -18,6 +19,7 @@ import { READINESS_WORD } from './readiness.js';
 import { RuntimeMark } from './RuntimeMark.js';
 import { RuntimeOptions } from './RuntimeOptions.js';
 import { TrustPick } from './TrustPick.js';
+import { sizeLine } from './TeamEdits.js';
 import { CompactionPick } from './CompactionPick.js';
 import { VerbosityPick } from './VerbosityPick.js';
 import { RuntimeSetup } from './RuntimeSetup.js';
@@ -691,11 +693,50 @@ export function RetireAgent({
   onRetired: () => Promise<void> | void;
 }): React.JSX.Element {
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | undefined>();
+  /**
+   * The acknowledgement, and it is never ticked when the dialog opens.
+   *
+   * Retiring is two acts with two costs: the agent stops being somebody you can put on a team,
+   * and **their conversation with you is deleted** — the Team, the folder, the branch and the
+   * history. That second one is not a side effect and is never silent, so the retire does not
+   * proceed until the user has said yes to it in a control of its own.
+   * `.scratch/rail/issues/06-retiring-an-agent.md`.
+   */
+  const [acknowledged, setAcknowledged] = useState(false);
+  /** What the conversation's folder is holding. `undefined` while it is still being counted. */
+  const [usage, setUsage] = useState<UiTeamDiskUsage | undefined>();
+  const threadId = agent.threadId;
+
+  // Measured as the dialog opens rather than on the tick: the size is part of what is being
+  // acknowledged, so it has to be on screen before the decision and not after.
+  useEffect(() => {
+    if (threadId === undefined) return;
+    let live = true;
+    void window.blobot
+      .teamDiskUsage(threadId)
+      .then((measured) => {
+        if (live) setUsage(measured);
+      })
+      .catch(() => {
+        if (live) setUsage({ bytes: null, workBytes: null, stateBytes: null, agents: [] });
+      });
+    return () => {
+      live = false;
+    };
+  }, [threadId]);
 
   const retire = async (): Promise<void> => {
     setBusy(true);
-    await window.blobot.retireAgent(agent.id);
+    // `true` because the dialog above says the folder goes and prices exactly that. A workspace
+    // blobot cannot reach is not a refusal: the ordinary reason to retire somebody whose folder
+    // is gone is that the folder is gone.
+    const result = await window.blobot.retireAgent(agent.id, threadId !== undefined);
     setBusy(false);
+    if (!result.ok) {
+      setError(result.error ?? 'That agent could not be retired.');
+      return;
+    }
     await onRetired();
     onClose();
   };
@@ -728,9 +769,37 @@ export function RetireAgent({
             </p>
           </div>
 
+          {/* Drawn as the tick this app already has, and never ticked on open. Absent when there
+              is no conversation to end, because a control asking about nothing is worse than
+              no control. */}
+          {threadId !== undefined && (
+            <button
+              className={`listrow pick${acknowledged ? ' on' : ''}`}
+              aria-pressed={acknowledged}
+              disabled={busy}
+              onClick={() => setAcknowledged(!acknowledged)}
+            >
+              <span className="who">
+                <span className="nm">
+                  <b>end your conversation</b>{' '}
+                  <span className="muted">its folder and history go with it</span>
+                </span>
+                <span className="sub mono muted">{sizeLine(usage)}</span>
+              </span>
+              <span className={`tick${acknowledged ? ' on' : ''}`}>
+                {acknowledged && <Check size={14} aria-hidden />}
+              </span>
+            </button>
+          )}
+
+          {error !== undefined && <div className="refusal">{error}</div>}
           <div className="modalfoot">
             <Dialog.Close className="btn">keep</Dialog.Close>
-            <button className="btn primary" disabled={busy} onClick={() => void retire()}>
+            <button
+              className="btn primary"
+              disabled={busy || (threadId !== undefined && !acknowledged)}
+              onClick={() => void retire()}
+            >
               {busy ? 'retiring…' : 'retire'}
             </button>
           </div>

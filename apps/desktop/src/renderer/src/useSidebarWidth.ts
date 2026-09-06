@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const KEY = 'blobot.sidebarWidth';
+const OPEN_KEY = 'blobot.sidebarOpen';
 const DEFAULT = 300;
 /** Below this the panel is not narrow, it is shut. One gesture for smaller and for away. */
 export const SIDEBAR_FLOOR = 220;
@@ -34,10 +35,19 @@ export interface SidebarWidth {
  *
  * One global width, not per team: a per-team sidebar width is a preference nobody has, and the
  * rail is global already.
+ *
+ * **Open by default, and shut is what is remembered.** It shipped closed, on the reasoning that a
+ * flank should be asked for — and asking for it every single time is not asking, it is a chore.
+ * The panel is the only rendering of which files an agent has touched, which is the test the
+ * flanks rule now makes a flank pass, so the useful default is the one where that fact is on
+ * screen. Closing it is a decision and is kept, exactly as the width and the chosen panel are,
+ * and by the same mechanism.
  */
 export function useSidebarWidth(railWidth: number, startOpen = false): SidebarWidth {
   const [width, setWidth] = useState(stored);
-  const [open, setOpen] = useState(startOpen);
+  // `--screen=files` still forces it open, which is now a redundancy rather than a lever: it
+  // costs nothing and it survives someone shutting the panel on this machine.
+  const [open, setOpen] = useState(() => startOpen || storedOpen());
   const [dragging, setDragging] = useState(false);
   const [room, setRoom] = useState(() => window.innerWidth);
   const from = useRef(0);
@@ -74,6 +84,7 @@ export function useSidebarWidth(railWidth: number, startOpen = false): SidebarWi
       // it is the app acting rather than the hand.
       if (width < SIDEBAR_FLOOR) {
         setOpen(false);
+        rememberOpen(false);
         setWidth(DEFAULT);
         remember(DEFAULT);
         return;
@@ -87,7 +98,11 @@ export function useSidebarWidth(railWidth: number, startOpen = false): SidebarWi
     width: open ? Math.min(Math.max(width, SIDEBAR_FLOOR), ceiling) : 0,
     open,
     dragging,
-    toggle: () => setOpen((was) => !was),
+    toggle: () =>
+      setOpen((was) => {
+        rememberOpen(!was);
+        return !was;
+      }),
     onPointerDown,
     onPointerMove,
     onPointerUp,
@@ -109,5 +124,23 @@ function remember(width: number): void {
     window.localStorage.setItem(KEY, String(width));
   } catch {
     // Nothing to do: the width is still applied for this session.
+  }
+}
+
+/** Open unless this machine says otherwise. An absent value is a machine that never shut it. */
+function storedOpen(): boolean {
+  try {
+    return window.localStorage.getItem(OPEN_KEY) !== 'closed';
+  } catch {
+    // A renderer with storage denied gets the default, which is open.
+    return true;
+  }
+}
+
+function rememberOpen(open: boolean): void {
+  try {
+    window.localStorage.setItem(OPEN_KEY, open ? 'open' : 'closed');
+  } catch {
+    // Nothing to do: it is still open or shut for this session.
   }
 }

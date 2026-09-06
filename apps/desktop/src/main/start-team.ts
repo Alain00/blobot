@@ -122,7 +122,12 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
 
   let orchestrator: Orchestrator;
   const mcp = new PeerMessageServer({
-    handler: (call) => orchestrator.handleMessageAgent(call),
+    // A **thread** advertises no `message_agent`: it is one agent working directly with the
+    // operator, and a mailbox with nowhere to send is a capability the model will believe in.
+    // `.scratch/rail/issues/02-what-a-thread-strips.md`.
+    ...(team.threadFor === undefined
+      ? { handler: (call: Parameters<Orchestrator['handleMessageAgent']>[0]) => orchestrator.handleMessageAgent(call) }
+      : {}),
     // Issue 05. Offered because this team's Routines are rows in the same file everything else
     // is in; an agent may propose one and no agent may arm one.
     proposeRoutine: (call) => orchestrator.handleProposeRoutine(call),

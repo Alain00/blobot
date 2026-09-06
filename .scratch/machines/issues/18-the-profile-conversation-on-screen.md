@@ -91,3 +91,28 @@ punctuation was aligned with DESIGN.md; its 11 tests, typecheck and build pass. 
 full run remains 971 passed / 46 skipped. The real built renderer's create/cancel/select
 interactions and narrow layout pass with a synthetic API; this does not certify provider turns
 or box activation. The Machine screen and full-state preservation remain with their tickets.
+
+## Superseded, 2026-09-06
+
+**The chooser dialog is removed. `talk` stays and does what an agent's rail row does.**
+
+This ticket's dialog exists to pick among several individual Teams for one profile, and
+`.scratch/rail/issues/01` made that question impossible to ask: an agent has **one** thread, and
+the `UNIQUE` `thread_for` column is what enforces it rather than any call site. So there is
+nothing to choose between, and one behaviour behind two doors — the rail row and `talk` — replaces
+two mechanisms.
+
+What survives is this ticket's entry point and its guard. The recheck is still there, as
+`threadOf(store, profileId)`, and it is now a lookup on a stored value rather than the
+`members.length === 1 && members[0].profileId === agent.id` inference two files had each invented
+separately — a predicate wrong in both directions, since a real team of one vanished into a
+person's row and a thread somebody joined silently became a team.
+
+What is reversed is the visibility. This ticket made an individual Team a **visible** Team with an
+ordinary working surface; a thread is the one Team the user never sees as one, hidden from the
+rail's team rows, the navigator, the roster editor and the team pane. The Teams already created
+through this flow are **not backfilled**: nothing recorded intent when they were made, so they stay
+ordinary teams where the user left them.
+
+Do not read the Answer above as current on the dialog, on choosing among several, or on a
+one-member Team presenting as a Team. `.scratch/rail/` is where those are decided now.

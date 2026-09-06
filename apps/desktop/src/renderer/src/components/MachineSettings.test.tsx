@@ -56,7 +56,7 @@ it('requires a separate retained-data confirmation and sends only the confirmed 
   const row = [...f.host.querySelectorAll('dl > div')].find((node) => node.querySelector('dt')?.textContent === 'Alice')!;
   await act(async () => f.button('remove retained data…', row)!.click());
   expect(f.remove).not.toHaveBeenCalled();
-  expect(row.textContent).toContain('homes, logins and installed software');
+  expect(row.textContent).toContain('home, login and installed software');
   await act(async () => f.button('keep it', row)!.click());
   expect(f.remove).not.toHaveBeenCalled();
   expect(f.button('remove retained data', row)).toBeUndefined();

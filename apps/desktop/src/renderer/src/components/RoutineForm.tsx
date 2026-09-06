@@ -126,7 +126,8 @@ export function RoutineForm({
                               shape={target.agentShape}
                             />
                             <Select.ItemText>
-                              {target.agentName} · {target.teamName}
+                              {target.agentName}
+                              {target.teamName === undefined ? '' : ` · ${target.teamName}`}
                             </Select.ItemText>
                             <Select.ItemIndicator className="selecttick">
                               <Check size={13} aria-hidden />

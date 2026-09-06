@@ -90,6 +90,43 @@ describe('the tool it publishes', () => {
     expect(tools.map((tool) => tool.name)).toEqual(['message_agent']);
   });
 
+  it('does not advertise message_agent at all in a thread, where there is nobody to send to', async () => {
+    // Absent, never advertised-and-refusing. Codex taught the alternative's cost: a runtime that
+    // offers a capability the situation cannot honour produces an agent that tries it, and that
+    // adapter had to spend a paragraph saying in words that it had no subagents.
+    // `.scratch/rail/issues/02-what-a-thread-strips.md`.
+    const server = new PeerMessageServer({
+      recordEntry: async () => ({ recorded: [], ordinals: [], withdrew: [] }),
+    });
+    await server.start();
+    running = server;
+    const endpoint = server.endpointFor('alice');
+    const reply = (await (
+      await fetch(endpoint.url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${endpoint.token}` },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
+      })
+    ).json()) as Record<string, unknown>;
+    const tools = (reply['result'] as { tools: { name: string }[] }).tools;
+    expect(tools.map((tool) => tool.name)).toEqual(['record_entry']);
+
+    // And calling it anyway is a tool error the model can read, never a delivery.
+    const called = (await (
+      await fetch(endpoint.url, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${endpoint.token}` },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 2,
+          method: 'tools/call',
+          params: { name: 'message_agent', arguments: { agent: 'Bob', message: 'hi' } },
+        }),
+      })
+    ).json()) as Record<string, unknown>;
+    expect(toolText(called)).toContain('no tool named');
+  });
+
   it('takes agent, message and the sender-supplied context', async () => {
     const { json } = await harness();
     const listed = await json('tools/list');

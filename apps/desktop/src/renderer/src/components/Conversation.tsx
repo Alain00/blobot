@@ -108,7 +108,11 @@ export function Conversation({
   const rows = rowsOf(items, (agentId) => isInFlight(statuses[agentId] ?? 'idle'), folded.current);
   useFolded(rows, folded);
   const flying = useSwallowed(rows);
-  const inPane = agents.filter((agent) => pane.kind === 'team' || pane.agentId === agent.id);
+  // A thread with no Agent yet matches nobody: there is nothing to draw dots for, because
+  // nothing has been sent. `.scratch/rail/issues/04`.
+  const inPane = agents.filter(
+    (agent) => pane.kind === 'team' || (pane.kind === 'agent' && pane.agentId === agent.id),
+  );
   /*
    * The agents that are in a turn with nothing to show for it yet — `starting` and `thinking`,
    * where the dots are the only sign the message landed. Same shape as a live row so the face

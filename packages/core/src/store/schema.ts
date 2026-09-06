@@ -36,6 +36,20 @@ export const teams = sqliteTable('teams', {
    * costs less than an asset directory with its own lifecycle to get wrong.
    */
   icon: text('icon'),
+  /**
+   * The AgentProfile this Team is the **thread** for, or NULL for an ordinary Team.
+   *
+   * `.scratch/rail/issues/01-what-a-thread-is.md`. A value rather than a shape: two files had
+   * each invented `members.length === 1 && members[0].profileId === agent.id` separately, and
+   * that predicate is wrong in both directions — a real team of one vanishes into a person's
+   * row, and a thread somebody joins silently becomes a team.
+   *
+   * `UNIQUE`, which is where *one thread per agent* is enforced rather than at every call site.
+   * Nothing is backfilled: individual teams created before this column stay ordinary teams,
+   * visible where the user left them, because nothing recorded intent when they were made and
+   * the cost of guessing wrong is a team that appears to have vanished.
+   */
+  threadFor: text('thread_for').unique(),
   turnBudget: integer('turn_budget').notNull().default(10),
   /**
    * The team's **lead**: the agent the team pane addresses when the user names nobody.

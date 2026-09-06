@@ -7,6 +7,13 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
 - **Team** — a named group of Agents working on one Workspace, formed out of AgentProfiles that
   already exist. Owns the repository and scopes the message bus: "which agents can Alice address?" is answered by her Team. Also owns the
   turn budget.
+- **Thread** — the Team behind an agent's own conversation: one member, no team surface. An
+  AgentProfile's row in the rail opens one, it is made by the first message rather than by the
+  press, and it is the only Team the user never sees as a team — hidden from the rail's team
+  rows, the navigator, the roster editor and the team pane. Told apart from a one-member Team by
+  a stored `thread_for` value and never by counting its roster; one per agent, enforced by the
+  database. It names no team in its Persona, composes no lead brief, and advertises no
+  `message_agent`. See `.scratch/rail/`.
 - **AgentProfile** — an Agent that exists on its own: a name, a role, a RuntimeProvider and
   optional standing instructions, belonging to no Team. Agents are hired once and can be on
   several Teams at the same time. *Mara, marketing.* See

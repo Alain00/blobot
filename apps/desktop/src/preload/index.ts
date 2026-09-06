@@ -72,6 +72,8 @@ const api: BlobotApi = {
     return () => { ipcRenderer.removeListener('blobot:machines', listener); };
   },
   machineIdleAfterMs: () => invokeAction(() => ipcRenderer.invoke('blobot:machineIdleAfterMs')) as Promise<number>,
+  liveTeamLimit: () => invokeAction(() => ipcRenderer.invoke('blobot:liveTeamLimit')) as Promise<number>,
+  setLiveTeamLimit: (value: number) => invokeAction(() => ipcRenderer.invoke('blobot:setLiveTeamLimit', value)) as Promise<number>,
   setMachineIdleAfterMs: (value) => invokeAction(() => ipcRenderer.invoke('blobot:setMachineIdleAfterMs', value)) as Promise<number>,
   snapshot: () => ipcRenderer.invoke('blobot:snapshot') as Promise<UiSnapshot>,
   earlier: (teamId: string, before: number) =>
@@ -138,8 +140,8 @@ const api: BlobotApi = {
     ipcRenderer.invoke('blobot:hireAgent', spec) as Promise<HireResult>,
   editAgent: (profileId: string, spec: NewAgentSpec) =>
     ipcRenderer.invoke('blobot:editAgent', profileId, spec) as Promise<EditAgentResult>,
-  retireAgent: (profileId: string) =>
-    ipcRenderer.invoke('blobot:retireAgent', profileId) as Promise<void>,
+  retireAgent: (profileId: string, clean?: boolean) =>
+    ipcRenderer.invoke('blobot:retireAgent', profileId, clean) as Promise<TeamDeletionResult>,
   listRoutines: () => ipcRenderer.invoke('blobot:listRoutines') as Promise<readonly UiRoutine[]>,
   routineTargets: () =>
     ipcRenderer.invoke('blobot:routineTargets') as Promise<readonly UiRoutineTarget[]>,
@@ -159,15 +161,20 @@ const api: BlobotApi = {
   removeHandbookEntry: (entryId: string) =>
     ipcRenderer.invoke('blobot:removeHandbookEntry', entryId) as Promise<void>,
   /** Start the briefing interview. No text travels: the words are core's, not the renderer's. */
-  brief: (agentId: string) => ipcRenderer.invoke('blobot:brief', agentId) as Promise<void>,
   seenRoutineRuns: (agentId: string) =>
     ipcRenderer.invoke('blobot:seenRoutineRuns', agentId) as Promise<void>,
   createTeam: (spec: NewTeamSpec) =>
     ipcRenderer.invoke('blobot:createTeam', spec) as Promise<TeamCreationResult>,
   selectTeam: (teamId: string) =>
     ipcRenderer.invoke('blobot:selectTeam', teamId) as Promise<TeamOpenResult>,
-  selectIndividualTeam: (profileId: string, teamId: string) =>
-    ipcRenderer.invoke('blobot:selectIndividualTeam', profileId, teamId) as Promise<TeamOpenResult>,
+  openThread: (profileId: string) =>
+    ipcRenderer.invoke('blobot:openThread', profileId) as Promise<
+      TeamOpenResult & { agentId?: string }
+    >,
+  promptThread: (profileId: string, text: string, attachmentIds: readonly string[] = []) =>
+    ipcRenderer.invoke('blobot:promptThread', profileId, text, attachmentIds) as Promise<
+      TeamOpenResult & { agentId?: string }
+    >,
   editTeam: (teamId, profileIds, leadProfileId, memberMachines) =>
     ipcRenderer.invoke(
       'blobot:editTeam',

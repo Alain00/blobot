@@ -230,8 +230,12 @@ up. Read it before starting work.
   their own effort at `.scratch/runtime-posture/`.
 
 - **Switching a team no longer restarts it.** `TeamPool` (`apps/desktop/src/main/team-pool.ts`)
-  keeps the last three live, LRU by selection, never evicting the active team or one that is
-  mid-turn. The Claude adapter resumes with `session/load`, re-supplying `mcpServers` and muting
+  keeps the last twenty live — LRU by selection, never evicting the active team or one that is
+  mid-turn, and **the count is the user's setting** (Settings → Machines → *Loaded teams*, stored
+  beside sleep in `machine-preferences.json`, applied to the running pool). It was a hard three
+  until 2026-09-06, which stopped Machines behind the user's back with nothing on screen saying
+  so; the rail's power dot is drawn for every loaded team's thread now, and never off the open
+  team's roster alone. The Claude adapter resumes with `session/load`, re-supplying `mcpServers` and muting
   the transcript replay, so a team that *was* evicted comes back knowing the conversation; a
   session the provider has forgotten falls back to a new one rather than failing the launch.
   Every stream channel leads with a team id, because several teams stream at once now, and a
@@ -561,9 +565,12 @@ up. Read it before starting work.
   (`-32602`), accepted gracefully by Claude and Codex, and **confabulated on by OpenCode**, which
   invented a task and went reading files. So the control sends a minimal instruction on the wire
   that is never drawn. And an empty turn is not a free turn: ~36,000 tokens of cached prefix for
-  seventeen output tokens. And a person meets it in the **agent's pane and nowhere else**: a notice card above the composer
-while the Handbook is empty, carrying *brief them*, and once it is not, a `handbook · 4` door on
-the tray with a **dialog** behind it. It shipped as a panel under the composer and became a dialog
+  seventeen output tokens. And a person meets it in the **agent's pane and nowhere else**: a `handbook · N` door on the
+tray, at every count including zero, with a **dialog** behind it. *The unbriefed notice card that
+used to stand above the composer was withdrawn 2026-09-06 at the author's direction* — it
+announced what an agent did not know directly above that agent's own first words saying it
+better, which is the third party ticket 02 exists to keep out of the room. Briefing is a
+conversation and happens in the conversation. It shipped as a panel under the composer and became a dialog
 the same day, from the first real Handbook: two entries and 774 characters took two thirds of the
 pane against a bound of 8,000, and a body with no ceiling cannot live in the composer's footing.
 It is a dialog rather than a screen over the surface because *your agents* is a **place** and this
@@ -738,7 +745,10 @@ problem, because four Handbooks do not fold into one the way four statuses fold 
   **draws the pane's agent, full stop** — no selection of its own, because a tree quietly showing a
   different checkout than the diff line above it is the `STOPPED`-on-every-rail-row failure again —
   and in the team pane the **empty state is the chooser**, the members' faces with no line over
-  them, clicking one being the same act as its rail row. The head is the face and the name, never
+  them, clicking one being the same act as its rail row. *Amended 2026-09-06: it is **open by
+default** and shutting it is what is remembered; the chooser gets a **head** carrying the team's
+name and a `+` that opens the creation flow's roster step pointed at this team (`AddMember`), and
+taking somebody off is a right-click on their face.* The head is the face and the name, never
   the branch, which the tray forty pixels away already says, and **pressing it is the way back to
   the team**: the face took you in, so the panel must not be one-way.
   **A window onto the work, never an editor.** Read-only in every direction, a click opens the file

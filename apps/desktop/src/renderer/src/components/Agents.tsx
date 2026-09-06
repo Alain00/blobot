@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pencil, Trash2, X } from 'lucide-react';
-import type { TeamOpenResult, UiAgentProfile, UiRuntimeChoice, UiTeamSummary } from '../../../shared/api.js';
+import type { UiAgentProfile, UiRuntimeChoice } from '../../../shared/api.js';
 import { EditAgent, HireAgent, RetireAgent } from './AgentForm.js';
 import { Blob } from './Blob.js';
-import { IndividualTeam } from './IndividualTeam.js';
 
 /**
  * Your agents: everyone you have hired, on no team and on several at once.
@@ -25,9 +24,7 @@ export function Agents({
   onClose,
   onChanged,
   hiringAtOnce,
-  teams,
-  onCreateIndividualTeam,
-  onOpenIndividualTeam,
+  onTalk,
 }: {
   onClose: () => void;
   /**
@@ -43,9 +40,15 @@ export function Agents({
   onChanged?: () => void;
   /** `--screen=hire` only: the dialog a screenshot cannot click its way to. */
   hiringAtOnce?: boolean;
-  teams: readonly UiTeamSummary[];
-  onCreateIndividualTeam: (agent: UiAgentProfile) => void;
-  onOpenIndividualTeam: (profileId: string, team: UiTeamSummary) => Promise<TeamOpenResult>;
+  /**
+   * Open this agent's thread, which is exactly what their rail row does.
+   *
+   * `talk` stays and its chooser dialog goes: that dialog existed to pick among several
+   * individual Teams, and one thread per agent made the question impossible to ask. One
+   * behaviour behind two doors rather than two mechanisms. Machines' ticket `18` is superseded
+   * on this point. `.scratch/rail/issues/05-where-a-thread-is-hidden.md`.
+   */
+  onTalk: (profileId: string) => void;
 }): React.JSX.Element {
   const [roster, setRoster] = useState<readonly UiAgentProfile[]>([]);
   const [runtimes, setRuntimes] = useState<readonly UiRuntimeChoice[]>([]);
@@ -111,8 +114,8 @@ export function Agents({
 
         {roster.length === 0 ? (
           <div className="note muted">
-            An agent is hired once and belongs to nobody. Hire one and it can join this team and
-            any other, at the same time.
+            An agent is hired once and belongs to nobody. It can be on any number of teams at
+            the same time.
           </div>
         ) : (
           <div className="roster">
@@ -142,8 +145,13 @@ export function Agents({
                   </span>
                 </button>
                 <span className="rowacts">
-                  <IndividualTeam agent={agent} teams={teams}
-                    onCreate={onCreateIndividualTeam} onOpen={onOpenIndividualTeam} />
+                  <button
+                    className="btn agenttalk"
+                    onClick={() => onTalk(agent.id)}
+                    aria-label={`Talk with ${agent.name}`}
+                  >
+                    talk
+                  </button>
                   <button
                     className="iconbtn sm"
                     onClick={() => setEditing(agent.id)}

@@ -146,7 +146,8 @@ export interface UiRoutineTarget {
   readonly agentName: string;
   readonly agentHue?: number;
   readonly agentShape?: string;
-  readonly teamName: string;
+  /** Absent for a **thread**, whose Team name is invented and never drawn. See `UiRoutine`. */
+  readonly teamName?: string;
 }
 
 /** What a person filled in. The whole of a Routine, because saving one restates it. */
@@ -254,6 +255,14 @@ export interface UiTeam {
    * pane then waits for a mention, exactly as ticket 12 specified.
    */
   readonly leadAgentId?: string;
+  /**
+   * The AgentProfile this Team is the **thread** for, when it is one.
+   *
+   * The renderer's one branch on it: a thread has no team view, so a pane resolves to its single
+   * agent instead of to `{kind: 'team'}`, and the composer drops the `@mention` menu and the
+   * fan-out cost line — both being counts of members. `.scratch/rail/issues/02` and `05`.
+   */
+  readonly threadFor?: string;
 }
 
 /**
@@ -272,6 +281,14 @@ export interface UiTeamMember {
   readonly hue?: number;
   /** The blobatar's silhouette, when the user chose one. Absent means the name gives it. */
   readonly shape?: string;
+  /**
+   * What this member's Machine is doing, on **any** live team and not just the open one.
+   *
+   * The dot used to be drawn from the open team's roster alone, so switching teams put out the
+   * light on a row whose agent was still running. Absent means the team is not loaded, which is
+   * the one state where blobot genuinely has nothing to report.
+   */
+  readonly machinePower?: import('@blobot/core/domain').MachinePower;
 }
 
 /** A row in the rail's team list. Every team the user has created, running or not. */
@@ -301,6 +318,50 @@ export interface UiTeamSummary {
   readonly leadProfileId?: string;
   /** When it last said anything. Undefined for a team that has never held a turn. */
   readonly lastActiveAt?: number;
+  /**
+   * The last thing said in it, whoever said it. The rail's second line on both kinds of row.
+   *
+   * Bounded here rather than in the renderer, because a row draws one line and shipping a whole
+   * turn's answer across IPC to render forty characters of it is the wrong end to trim at.
+   */
+  readonly lastLine?: string;
+  /**
+   * The AgentProfile this Team is the **thread** for, when it is one.
+   *
+   * A thread is hidden everywhere a team is listed — the rail's team rows, the navigator, the
+   * roster editor, the team pane — and present here all the same, because the delete flow and
+   * its pricing act on it by team id. `.scratch/rail/issues/05-where-a-thread-is-hidden.md`.
+   */
+  readonly threadFor?: string;
+}
+
+/**
+ * One hired agent, as the rail draws them: a row of their own, from the moment they are hired.
+ *
+ * ADR-0001 made visible. An agent exists before and between teams, so it gets a row that is the
+ * *person* and never a seat — Alice on three teams is one row. What that row opens is their
+ * **thread**, which is a Team they never see as one.
+ *
+ * It carries no status and no team of its own: an agent's row is about its thread and says
+ * nothing about its memberships, because pressing it opens the thread, and a signal you cannot
+ * act on from the place it appears is worse than no signal.
+ * `.scratch/rail/issues/08-what-reaches-the-user.md`.
+ */
+export interface UiRailAgent {
+  readonly id: string;
+  readonly name: string;
+  readonly role: string;
+  readonly hue?: number;
+  readonly shape?: string;
+  /**
+   * When they were hired, which is a never-talked agent's activity.
+   *
+   * It is what makes the rail's order **total** with no special case: a fresh hire lands near
+   * the top, where the person who just made them is looking.
+   */
+  readonly hiredAt: number;
+  /** Their thread's Team id, once it exists. Absent until their first message makes one. */
+  readonly threadId?: string;
 }
 
 /**
@@ -501,6 +562,14 @@ export interface UiSnapshot {
   /** Undefined before the first team exists — the app's genuine empty state. */
   readonly team?: UiTeam;
   readonly teams: readonly UiTeamSummary[];
+  /**
+   * Every hired agent, for the rail's second kind of row. Not the open team's roster, which is
+   * `agents`: these are AgentProfiles, and most of them are on no team the user is looking at.
+   *
+   * Optional for the same reason `unread` is: absent and empty say the same thing, and demo
+   * mode's agents are a TypeScript file with no profiles behind them.
+   */
+  readonly profiles?: readonly UiRailAgent[];
   readonly agents: readonly UiAgent[];
   /**
    * Every agent on every *live* team, not just the one on screen. Several teams run at once,
@@ -1047,6 +1116,13 @@ export interface UiAgentProfile {
   readonly verbosity?: VerbosityLevel;
   /** The teams it is currently on, by name. Empty for an agent nobody has put to work yet. */
   readonly teams: readonly string[];
+  /**
+   * This agent's **thread**, once it exists: the Team behind their own conversation.
+   *
+   * Here so the retire dialog can price what it is about to destroy. Absent is the ordinary
+   * state of somebody who has never been spoken to. `.scratch/rail/issues/06`.
+   */
+  readonly threadId?: string;
 }
 
 /** Hiring one. `runtimeId` comes straight back from a `UiRuntimeChoice`, unread. */
@@ -1252,6 +1328,15 @@ export interface BlobotApi {
   onMachines(listener: () => void): () => void;
   machineIdleAfterMs(): Promise<number>;
   setMachineIdleAfterMs(value: number): Promise<number>;
+  /**
+   * How many teams stay loaded at once, and therefore how many Machines stay awake.
+   *
+   * A count and not a duration: this is the other half of sleep. Sleep is what an idle agent
+   * does; this is what happens to a team the user simply looked away from, which until now was
+   * a hard three with nothing on screen saying so.
+   */
+  liveTeamLimit(): Promise<number>;
+  setLiveTeamLimit(value: number): Promise<number>;
   snapshot(): Promise<UiSnapshot>;
   /**
    * One thing the user typed, to everybody they addressed with it.
@@ -1346,8 +1431,17 @@ export interface BlobotApi {
    * Restate an agent's definition. The whole of it, not a patch: this is what the agent is now.
    */
   editAgent(profileId: string, spec: NewAgentSpec): Promise<EditAgentResult>;
-  /** Retires the agent. Teams it is on keep working — ending one is a separate decision. */
-  retireAgent(profileId: string): Promise<void>;
+  /**
+   * Retires the agent, and **deletes its thread with it**.
+   *
+   * Teams it is on keep working: ending one is a separate decision. The conversation is not,
+   * because a thread is not a team in the user's vocabulary, it is this agent's conversation,
+   * and retiring the agent ends it — which is what keeps the rail's contents one sentence,
+   * *every hired agent*, with no exception for people who are gone but still have a folder.
+   * Priced and acknowledged in the dialog before it is called.
+   * `.scratch/rail/issues/06-retiring-an-agent.md`.
+   */
+  retireAgent(profileId: string, clean?: boolean): Promise<TeamDeletionResult>;
   /**
    * Every Routine the user has, armed or not, newest run first. Not scoped to a team: the screen
    * is the whole set, and a Routine belongs to an agent rather than to whatever is on screen.
@@ -1380,21 +1474,29 @@ export interface BlobotApi {
    * into a notification. It takes at that team's next start, like every other persona change.
    */
   removeHandbookEntry(entryId: string): Promise<void>;
-  /**
-   * Start the briefing interview with an agent that has never been told anything.
-   *
-   * **No text travels.** What goes on the wire is core's `BRIEFING_KNOCK`, looked up on the far
-   * side, so the renderer cannot compose a word of what an agent is sent. It never enters the
-   * `messages` row either: there is no third party in the room, and the first words in the
-   * transcript are the agent's own.
-   */
-  brief(agentId: string): Promise<void>;
   /** Opening that agent's pane, which is the only thing that clears issue 11's unread mark. */
   seenRoutineRuns(agentId: string): Promise<void>;
   createTeam(spec: NewTeamSpec): Promise<TeamCreationResult>;
   selectTeam(teamId: string): Promise<TeamOpenResult>;
-  /** Rechecks that this is still an active one-member team of this profile before opening. */
-  selectIndividualTeam(profileId: string, teamId: string): Promise<TeamOpenResult>;
+  /**
+   * Open an agent's **thread**: the Team behind their own conversation.
+   *
+   * `{ok: true}` with no `agentId` is not a failure. It is the ordinary state of a freshly hired
+   * agent, whose thread does not exist until their first message makes one.
+   */
+  openThread(profileId: string): Promise<TeamOpenResult & { agentId?: string }>;
+  /**
+   * Send the first (or any) message in an agent's thread, making the thread if it is not there.
+   *
+   * One call rather than *create* then *prompt*, because the four things that have to happen
+   * first — a folder, a Team, an Agent, a launch — are not the renderer's to sequence, and a
+   * failure halfway through has to leave the typed message where the user can send it again.
+   */
+  promptThread(
+    profileId: string,
+    text: string,
+    attachmentIds?: readonly string[],
+  ): Promise<TeamOpenResult & { agentId?: string }>;
   /**
    * Change who is on a team. The whole roster, not a delta: the screen shows a set of ticks
    * and this is what they say.

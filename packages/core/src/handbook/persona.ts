@@ -44,6 +44,20 @@ const WHEN_TO_RECORD = [
 ];
 
 /**
+ * The same four lines for a **thread**, with the teammate clause taken out.
+ *
+ * That clause exists to settle *told or worked out* for something a colleague said, and a thread
+ * has no colleagues — so in one it is both dead weight in a cached prefix and an invitation to
+ * believe in teammates who are not there. Everything else is a claim about the work and stands.
+ */
+const WHEN_TO_RECORD_THREAD = [
+  'Record something with record_entry when it will still be true next month and is not in the',
+  'files, and say whether you were told it or worked it out. Do it whenever someone asks you to',
+  'remember something. When you are unsure, leave it out: you can record it tomorrow, and what',
+  'you record is in every session until a person removes it.',
+];
+
+/**
  * What an **unbriefed** agent reads, and it is the entire mechanism.
  *
  * One sentence in a cached prefix has to produce two opposite behaviours: woken with nothing to
@@ -53,6 +67,14 @@ const WHEN_TO_RECORD = [
  */
 const EMPTY = [
   'Your Handbook for this team is empty. Nobody has told you about the work here yet.',
+  'If you are started with nothing to do, introduce yourself and ask about the work: what it',
+  'is, who it is for, and what you would need to know that is not in the files. If you are',
+  'given work, do the work.',
+];
+
+/** The same sentence for a **thread**, which has no team for *the work here* to refer to. */
+const EMPTY_THREAD = [
+  'Your Handbook is empty. Nobody has told you about the work you do with this person yet.',
   'If you are started with nothing to do, introduce yourself and ask about the work: what it',
   'is, who it is for, and what you would need to know that is not in the files. If you are',
   'given work, do the work.',
@@ -93,11 +115,31 @@ export const BRIEFING_KNOCK = 'You are starting with nothing to do.';
  * characters each, on every session, so that an agent can name the one it later found wrong.
  * Without a number there is no way to correct anything at all.
  */
-export function composeHandbookBlock(entries: readonly HandbookEntry[]): string[] {
-  if (entries.length === 0) return [...EMPTY, '', ...WHEN_TO_RECORD];
+export function composeHandbookBlock(
+  entries: readonly HandbookEntry[],
+  /**
+   * A **thread**: this agent's own conversation with the operator, and no team.
+   *
+   * The Handbook itself is unchanged and stays per Agent — it is what this agent knows about
+   * *your* work with them, which is a claim about the work and not about members, so it passes
+   * `.scratch/rail/issues/02`'s test. What changes is two words: *this team* is a team the
+   * reader has no idea they are on, and *any other team you are on* invites a comparison to
+   * teammates a thread has none of.
+   */
+  thread = false,
+): string[] {
+  const recording = thread ? WHEN_TO_RECORD_THREAD : WHEN_TO_RECORD;
+  if (entries.length === 0) return [...(thread ? EMPTY_THREAD : EMPTY), '', ...recording];
   return [
-    'Your Handbook for this team, which is what you have been told about the work here. It does',
-    'not follow you to any other team you are on.',
+    ...(thread
+      ? [
+          'Your Handbook for your work with this person, which is what you have been told about',
+          'it. It does not follow you anywhere else.',
+        ]
+      : [
+          'Your Handbook for this team, which is what you have been told about the work here. It does',
+          'not follow you to any other team you are on.',
+        ]),
     // The entry's own ordinal, never its position in this list. A gap means something was
     // removed, and a number an agent read last week still names what it named then.
     ...entries.map((entry) => `${entry.ordinal}. [${shortDate(entry.createdAt)}] ${entry.text}`),
@@ -110,6 +152,6 @@ export function composeHandbookBlock(entries: readonly HandbookEntry[]): string[
     'replaces. You cannot withdraw something you were told; say so instead and let the person',
     'decide.',
     '',
-    ...WHEN_TO_RECORD,
+    ...recording,
   ];
 }

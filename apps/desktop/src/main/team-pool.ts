@@ -9,6 +9,18 @@ export interface PoolableTeam {
   close(): Promise<void> | void;
 }
 
+/**
+ * A live-team count that can be honoured. At least one, because the active team is never
+ * evicted, and bounded above so a typo in a settings field cannot ask for a thousand bridge
+ * processes.
+ */
+export function teamPoolLimit(value: number): number {
+  if (!Number.isSafeInteger(value) || value < 1 || value > 100) {
+    throw new Error('The number of teams that stay loaded must be a whole number from 1 to 100.');
+  }
+  return value;
+}
+
 export interface TeamPoolOptions<T extends PoolableTeam> {
   /**
    * How many teams stay live. A count rather than an idle timer, on purpose: a timer makes
@@ -16,6 +28,9 @@ export interface TeamPoolOptions<T extends PoolableTeam> {
    * which is not a rule anybody can hold in their head. A count is one sentence — the last
    * few teams you touched are still running — and it bounds the process fan-out, which is the
    * cost that actually scales.
+   *
+   * The starting value. It is the user's setting, so it moves while the app is running: see
+   * {@link TeamPool.limit}.
    */
   readonly limit: number;
   start(team: Team): Promise<T>;
@@ -43,6 +58,7 @@ export interface TeamPoolOptions<T extends PoolableTeam> {
  */
 export class TeamPool<T extends PoolableTeam> {
   readonly #options: TeamPoolOptions<T>;
+  #limit: number;
   /** Most recently selected first. The head is the active team. */
   #live: T[] = [];
   /** In-flight starts, so two clicks on the same team do not spawn two sets of agents. */
@@ -58,6 +74,25 @@ export class TeamPool<T extends PoolableTeam> {
 
   constructor(options: TeamPoolOptions<T>) {
     this.#options = options;
+    this.#limit = options.limit;
+  }
+
+  /**
+   * How many teams stay live, now.
+   *
+   * Settable, because it is a preference and not a constant: the number that made the common
+   * shape cheap on a laptop with three teams is the number that put every other team's Machine
+   * to sleep on a machine with twenty. Raising it takes at the next start, which costs nothing;
+   * lowering it collects the excess immediately, under the same rule as any other eviction —
+   * never the active team, never one mid-turn, never one held.
+   */
+  get limit(): number {
+    return this.#limit;
+  }
+
+  set limit(value: number) {
+    this.#limit = teamPoolLimit(value);
+    void this.#evict();
   }
 
   /** The team the user is looking at, or undefined before the first one is selected. */
@@ -223,12 +258,12 @@ export class TeamPool<T extends PoolableTeam> {
   }
 
   async #evict(): Promise<void> {
-    if (this.#live.length <= this.#options.limit) return;
+    if (this.#live.length <= this.#limit) return;
     // Oldest first, and never the active team even at a limit of one — the user is looking
     // at it.
     const doomed: T[] = [];
     for (let index = this.#live.length - 1; index > 0; index -= 1) {
-      if (this.#live.length - doomed.length <= this.#options.limit) break;
+      if (this.#live.length - doomed.length <= this.#limit) break;
       const candidate = this.#live[index];
       if (candidate === undefined || this.#options.isWorking(candidate)) continue;
       if (this.#pinned.has(candidate.team.id)) continue;

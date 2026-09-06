@@ -58,6 +58,7 @@ export function Composer({
   pane,
   usage,
   lead,
+  thread,
   onSend,
   footer,
   notice,
@@ -82,6 +83,16 @@ export function Composer({
    * fact about the team.
    */
   lead?: string;
+  /**
+   * This pane is an agent's **thread**, and who it belongs to.
+   *
+   * Present, the composer drops the `@mention` menu, which is a count of members in a place that
+   * has none. The recipient is the one agent and there is nothing to say who else — and while
+   * the thread has not been made yet there is no Agent at all, so send is open on the strength
+   * of this rather than on a resolved recipient: the first message is what makes the thread.
+   * `.scratch/rail/issues/02` and `04`.
+   */
+  thread?: { readonly name: string };
   /** Everybody the message is addressed to. One agent unless the user named several. */
   onSend: (agentIds: readonly string[], text: string, attachmentIds: readonly string[]) => void;
   /**
@@ -93,7 +104,7 @@ export function Composer({
    */
   footer?: React.ReactNode;
   /**
-   * A statement about the recipient, above the field: today the Handbook's unbriefed card.
+   * A statement about the recipient, above the field: today the Machine's own line.
    *
    * Above rather than in the tray below, because the tray's rule is that nothing on it is a
    * description. A node and not a status, like `footer`, so the composer still knows nothing
@@ -228,7 +239,7 @@ export function Composer({
 
   const partial = /@([\w-]*)$/.exec(draft)?.[1];
   const suggestions =
-    partial === undefined || dismissed
+    partial === undefined || dismissed || thread !== undefined
       ? []
       : agents.filter((agent) => agent.name.toLowerCase().startsWith(partial.toLowerCase()));
 
@@ -314,7 +325,9 @@ export function Composer({
    * untouched: nothing else on screen answers it, so the field still asks for a name.
    */
   const placeholder =
-    pane.kind === 'agent'
+    thread !== undefined
+      ? `Message ${thread.name}`
+      : pane.kind === 'agent'
       ? `Message ${recipient?.name ?? ''}`
       : recipient === undefined
         ? 'Message the team. Start with @ to say who'
@@ -335,7 +348,9 @@ export function Composer({
 
   const send = (): void => {
     const text = draft.trim();
-    if (opening || recipients.length === 0 || text === '') return;
+    // A thread with no Agent yet has no recipient to resolve, and that is the point: sending is
+    // what creates it. Everywhere else an unresolved recipient still closes the control.
+    if (opening || (recipients.length === 0 && thread === undefined) || text === '') return;
     onSend(recipientIds, text, attached.map((one) => one.id));
     setDraft('');
     // One message, one lifetime. Keeping the picture after taking the words would be the
@@ -611,7 +626,7 @@ export function Composer({
       )}
       <button
         className={`send${pane.kind === 'team' && recipient !== undefined ? ' named' : ''}`}
-        disabled={opening || recipients.length === 0 || draft.trim() === ''}
+        disabled={opening || (recipients.length === 0 && thread === undefined) || draft.trim() === ''}
         onClick={send}
         title={
           opening

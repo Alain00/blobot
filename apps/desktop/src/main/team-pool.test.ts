@@ -49,6 +49,32 @@ function pool(limit: number): {
 }
 
 describe('the live teams', () => {
+  it('takes a new limit while it is running, and collects the excess at once', async () => {
+    // How many teams this computer can hold is the user's setting, not a constant: at three,
+    // opening a fourth team stopped an agent that was still awake with nothing on screen
+    // saying why.
+    const { pool: teams, evicted } = pool(3);
+    for (const id of ['a', 'b', 'c', 'd', 'e']) await teams.select(team(id));
+    expect(evicted).toEqual(['a', 'b']);
+
+    teams.limit = 5;
+    for (const id of ['f', 'g']) await teams.select(team(id));
+    expect(evicted).toEqual(['a', 'b']);
+    expect(teams.live).toHaveLength(5);
+
+    // Lowering it does not wait for the next selection.
+    teams.limit = 2;
+    await expect.poll(() => teams.live.length).toBe(2);
+    expect(evicted).toEqual(['a', 'b', 'c', 'd', 'e']);
+    expect(teams.limit).toBe(2);
+
+    // A count nobody could honour is refused rather than rounded into one.
+    for (const bad of [0, -1, 1.5, 101]) expect(() => { teams.limit = bad; }).toThrow();
+    expect(teams.limit).toBe(2);
+    await teams.closeAll();
+  });
+
+
   it('waits for an evicted execution to stop before starting the same team again', async () => {
     let finishClose!: () => void;
     let starts = 0;

@@ -152,6 +152,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       workspaceRepos:
         team.workspaceRepos === undefined ? null : JSON.stringify(team.workspaceRepos),
       icon: team.icon ?? null,
+      threadFor: team.threadFor ?? null,
       turnBudget: team.turnBudget,
       leadAgentId: team.leadAgentId ?? null,
       createdAt: team.createdAt,
@@ -202,6 +203,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
           ? {}
           : { workspaceRepos: JSON.parse(row.workspaceRepos) as string[] }),
         ...(row.icon === null ? {} : { icon: row.icon }),
+        ...(row.threadFor === null ? {} : { threadFor: row.threadFor }),
         turnBudget: row.turnBudget,
         ...(row.leadAgentId === null ? {} : { leadAgentId: row.leadAgentId }),
         createdAt: row.createdAt,
@@ -232,6 +234,17 @@ export class SqliteStore implements MessageStore, AttachmentStore {
   /** The name is unique in the schema because it is half of a branch name. */
   teamByName(name: string): Team | undefined {
     return this.listTeams().find((team) => team.name === name);
+  }
+
+  /**
+   * The **thread** an agent has, if it has one: the Team behind that agent's own conversation.
+   *
+   * A lookup on a stored value, never the `members.length === 1` inference two files used to
+   * make separately. Undefined is the ordinary state of a freshly hired agent, whose thread does
+   * not exist until the first message — see `.scratch/rail/issues/04`.
+   */
+  threadOf(profileId: string): Team | undefined {
+    return this.listTeams().find((team) => team.threadFor === profileId);
   }
 
   /**
@@ -1243,6 +1256,43 @@ export class SqliteStore implements MessageStore, AttachmentStore {
             .get()?.at;
     const times = [said, answered].filter((at): at is number => at !== undefined);
     return times.length === 0 ? undefined : Math.max(...times);
+  }
+
+  /**
+   * The last thing said in a team, with the words, for a rail row's second line.
+   *
+   * `lastActiveAt`'s two queries with the text carried out of them, rather than a third pass:
+   * the rail draws the same fact twice — when, and what — and reading them apart would let a
+   * row show a time from one message and words from another.
+   *
+   * The user's own words count. A row saying what *you* last said is what a chat column does,
+   * and it is the only thing there is to show on a thread nobody has answered yet.
+   */
+  lastSaidIn(teamId: string): { at: number; text: string } | undefined {
+    const said = this.#db
+      .select({ at: messages.at, text: messages.body })
+      .from(messages)
+      .where(eq(messages.teamId, teamId))
+      .orderBy(desc(messages.at))
+      .limit(1)
+      .get();
+    const roster = this.agentsOfTeam(teamId, { includeDeleted: true }).map((agent) => agent.id);
+    const answered =
+      roster.length === 0
+        ? undefined
+        : this.#db
+            .select({ at: agentMessages.at, text: agentMessages.text })
+            .from(agentMessages)
+            .where(inArray(agentMessages.agentId, roster))
+            .orderBy(desc(agentMessages.at))
+            .limit(1)
+            .get();
+    const both = [said, answered].filter(
+      (row): row is { at: number; text: string } => row !== undefined,
+    );
+    if (both.length === 0) return undefined;
+    const latest = both.reduce((best, row) => (row.at > best.at ? row : best));
+    return { at: latest.at, text: latest.text };
   }
 
   /** A row count per table, for the demo's closing line and for eyeballing a transcript. */

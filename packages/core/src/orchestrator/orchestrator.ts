@@ -1391,6 +1391,14 @@ export class Orchestrator {
    * brief is a lead handing work to somebody who stopped being free a minute ago.
    */
   #leadBrief(agentId: string): string | undefined {
+    // A **thread** never composes one. `lead_agent_id` still points at its single member,
+    // because an unaddressed prompt has to route somewhere and a NULL lead disables send until
+    // an `@mention` resolves — which in a thread would be a composer that never enables. So the
+    // designation stays and everything the word implies is suppressed: without this the agent
+    // would be told it leads a team, read its own status back off the roster, and be instructed
+    // to hand work over with a tool it does not have.
+    // `.scratch/rail/issues/02-what-a-thread-strips.md`.
+    if (this.team.threadFor !== undefined) return undefined;
     if (this.team.leadAgentId !== agentId) return undefined;
     return composeLeadBrief(
       this.#agents

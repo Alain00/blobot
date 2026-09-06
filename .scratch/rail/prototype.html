@@ -1,0 +1,197 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>rail prototype</title>
+<!--
+  The column, drawn. Ticket 03.
+
+  Cheap and rough on purpose: real tokens, real 232px, real type scale, approximate blobatars
+  (the shipped ones are generated from a shape band; these are hand-cut SVG blobs at the same
+  five roundnesses, close enough to argue about layout and no closer).
+
+  Four columns, so the arguments are adjacent rather than remembered:
+    A  the mixed list as decided
+    B  the stack, from one member to twelve
+    C  the collision TeamMark.tsx warned about: same roster, no icon, two teams
+    D  agent row: two lines as today, against one
+-->
+<style>
+:root{
+  --recessed:#1d1f21; --ground:#1a1c1e; --tray:#212326; --raised:#282a2e;
+  --ink:#c5c8c6; --muted:#969896; --edge:#2b2e33; --line:#373b41;
+  --sans:'Geist',system-ui,sans-serif; --mono:'Geist Mono',ui-monospace,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font:13px/1.45 var(--sans);
+     display:flex;gap:0;align-items:stretch;min-height:100vh}
+.col{display:flex;flex-direction:column;border-right:1px solid var(--edge)}
+.cap{padding:10px 12px 6px;font-family:var(--mono);font-size:10px;color:var(--muted);
+     letter-spacing:.06em;text-transform:uppercase}
+.note{padding:2px 12px 10px;font-size:11px;color:var(--muted);max-width:232px}
+.rail{width:232px;background:var(--recessed);flex:1;overflow:auto;padding:6px 0 10px}
+button{all:unset;cursor:pointer;font:inherit;color:inherit}
+
+/* rows */
+.teamrow,.agentrow{display:flex;align-items:center;width:calc(100% - 12px);margin:0 6px;
+     text-align:left;border-radius:9px}
+.teamrow{gap:9px;padding:7px 8px}
+.agentrow{gap:6px;padding:4px 8px;border-radius:12px}
+.teamrow:hover,.agentrow:hover{background:#232527}
+.sel{background:var(--raised)}
+.nm{font-size:12px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agentrow .who{min-width:0;flex:1}
+.agentrow .top{display:flex;align-items:baseline;gap:6px}
+.agentrow .sub{display:flex;align-items:baseline;gap:6px;line-height:1.35}
+.agentrow .nm b{font-weight:500}
+.preview,.role{color:var(--muted);font-size:12px;min-width:0;overflow:hidden;
+     text-overflow:ellipsis;white-space:nowrap}
+.when{font-family:var(--mono);font-size:10px;color:var(--muted);flex:0 0 auto}
+.grow{flex:1}
+.stat{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.04em;flex:0 0 auto}
+.stat.wait{background:var(--ink);color:var(--recessed);padding:1px 4px;border-radius:3px}
+.unread{color:var(--ink)}
+
+/* the stack: the team mark is its members' faces */
+.stack{flex:0 0 auto;position:relative;display:grid;place-items:center}
+.stack svg{display:block}
+.stack .row{display:flex;justify-content:center}
+.sticker{position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;border-radius:3px;
+     background:var(--raised);border:1px solid var(--edge);display:grid;place-items:center;
+     font-size:7px;color:var(--muted);filter:grayscale(1)}
+.pinhead{padding:8px 14px 4px;font-family:var(--mono);font-size:9px;color:#6d6f6d;letter-spacing:.08em}
+.sep{height:1px;background:var(--edge);margin:8px 14px}
+.foot{border-top:1px solid var(--edge);padding:6px 0}
+.raildoor{display:flex;align-items:center;gap:8px;width:100%;padding:7px 14px;color:var(--muted);font-size:13px}
+.railfind{display:flex;align-items:center;gap:8px;width:calc(100% - 12px);margin:0 6px 10px;
+     padding:7px 9px;border-radius:9px;background:var(--raised);color:var(--muted);font-size:13px}
+.lab{font-family:var(--mono);font-size:9px;color:var(--muted);padding:14px 14px 4px;letter-spacing:.06em}
+</style>
+<body></body>
+<script>
+// ---- approximate blobatars ---------------------------------------------------
+// Five roundnesses standing in for the nine silhouettes. Hue is the agent's.
+const BLOBS = [
+  'M50 6c26 0 44 18 44 44s-18 44-44 44S6 76 6 50 24 6 50 6z',
+  'M50 5c28 0 45 15 45 43 0 30-16 47-45 47S5 78 5 48C5 20 22 5 50 5z',
+  'M52 4c30 2 43 21 41 49-2 27-19 43-45 43C22 96 6 78 7 49 8 21 24 2 52 4z',
+  'M55 5c29 4 40 25 37 52-3 26-22 39-47 38C21 94 4 74 8 45 12 18 27 1 55 5z',
+  'M57 6c30 6 38 30 33 56-5 24-26 35-50 32C17 91 3 68 9 41 15 15 29 0 57 6z',
+];
+function face(a, px){
+  const d = BLOBS[a.shape % BLOBS.length];
+  const eye = px > 26 ? 6 : 5.5;
+  return `<svg width="${px}" height="${px}" viewBox="0 0 100 100" aria-hidden>
+    <path d="${d}" fill="hsl(${a.hue} 62% 58%)"/>
+    <circle cx="${38}" cy="46" r="${eye}" fill="#141517"/>
+    <circle cx="${64}" cy="46" r="${eye}" fill="#141517"/>
+  </svg>`;
+}
+// the stack, as a cluster: overlapping, cap 3, the extras counted in mono on the row.
+function stack(members, box=34, cap=3){
+  const shown = members.slice(0, cap), n = shown.length;
+  // one face fills the box; two and three are a cluster, smaller and overlapping.
+  const layout = {
+    1: [[0, 0, 1.00]],
+    2: [[0.00, 0.16, 0.70], [0.34, -0.10, 0.66]],
+    3: [[0.30, -0.14, 0.56], [-0.02, 0.14, 0.66], [0.34, 0.26, 0.58]],
+  }[n] || [];
+  return layout.map(([x, y, k], i) => {
+    const px = Math.round(box * k);
+    return `<span style="position:absolute;left:${Math.round(x*box)}px;top:${Math.round(y*box)}px">${face(shown[i], px)}</span>`;
+  }).join('');
+}
+function teamMark(t, box=34){
+  return `<span class="stack" style="width:${box}px;height:${box}px;position:relative;display:block">
+    ${stack(t.members, box, 3)}
+    ${t.icon ? `<span class="sticker">${t.icon}</span>` : ''}
+  </span>`;
+}
+
+const A = (name, hue, shape, role) => ({name, hue, shape, role});
+const alice = A('Alice', 268, 0, 'reviews the API');
+const bob   = A('Bob', 24, 2, 'writes the docs');
+const mara  = A('Mara', 152, 3, 'runs the tests');
+const finn  = A('Finn', 200, 1, 'keeps the build green');
+const iris  = A('Iris', 320, 4, 'watches the queue');
+const otto  = A('Otto', 45, 2, 'reads the logs');
+const many  = [alice,bob,mara,finn,iris,otto,A('Rae',100,1),A('Sol',10,3),A('Wren',180,0),A('Zed',290,4),A('Ada',60,2),A('Kit',210,1)];
+
+function agentRow(a, opts={}){
+  const two = opts.lines !== 1;
+  return `<button class="agentrow ${opts.sel?'sel':''}">
+    ${face(a, 34)}
+    <span class="who">
+      <span class="top"><b class="nm">${a.name}</b><span class="grow"></span>
+        ${opts.stat ? '' : `<span class="when">${opts.when ?? '2m'}</span>`}</span>
+      ${two ? `<span class="sub">
+        <span class="${opts.unread?'preview unread':'preview'}">${opts.last ?? a.role}</span>
+        <span class="grow"></span>
+        ${opts.stat ? `<span class="stat ${opts.stat==='waiting'?'wait':''}">${opts.stat}</span>` : ''}
+      </span>` : ''}
+    </span>
+    ${!two && opts.stat ? `<span class="stat ${opts.stat==='waiting'?'wait':''}">${opts.stat}</span>`:''}
+  </button>`;
+}
+function teamRow(t, opts={}){
+  const more = t.members.length > 3 ? t.members.length - 3 : 0;
+  return `<button class="agentrow ${opts.sel?'sel':''}">
+    ${teamMark(t, opts.box ?? 34)}
+    <span class="who">
+      <span class="top"><b class="nm">${t.name}</b><span class="grow"></span>
+        <span class="when">${t.when}</span></span>
+      <span class="sub">
+        <span class="preview">${t.last ?? ''}</span><span class="grow"></span>
+        ${more ? `<span class="stat">+${more}</span>` : ''}
+        ${t.stat ? `<span class="stat ${t.stat.includes('waiting')?'wait':''}">${t.stat}</span>` : ''}
+      </span>
+    </span>
+  </button>`;
+}
+
+
+// ---- the list, both kinds as one row shape ----------------------------------
+const T = (name, members, extra={}) => ({name, members, when:'1h', ...extra});
+const cols = [];
+function column(title, note, rows){
+  return `<div class="col"><div class="cap">${title}</div><div class="note">${note}</div>
+    <div class="rail">
+      <div class="railfind"><span>Search</span><span class="grow"></span><span class="when">CTRL K</span></div>
+      ${rows}
+    </div>
+    <div class="foot"><div class="raildoor">Agents</div><div class="raildoor">Routines</div><div class="raildoor">Settings</div></div>
+  </div>`;
+}
+const listRows = [
+  teamRow(T('Offsite crew',[mara,alice,bob],{icon:'B', when:'2:52 AM', last:"that leaves the pipeline. i'd spin up a second", stat:'alice waiting'})),
+  agentRow(alice,{last:'Pushed the branch, want a look?', when:'4m'}),
+  `<div class="sep"></div>`,
+  agentRow(mara,{stat:'thinking', last:'Running the suite now'}),
+  teamRow(T('api',[alice,finn],{icon:'A', when:'6m', last:'green on arm64 too', stat:'2 working'})),
+  agentRow(bob,{last:'Daily briefing: three PRs open', unread:true, when:'20m'}),
+  teamRow(T('docs',[bob,mara,finn,iris],{when:'1h', last:'the queue page is stale'})),
+  teamRow(T('platform', many.slice(0,9), {when:'2h', last:'rebased onto main'})),
+  agentRow(finn,{when:'3h', last:'No, that path is ignored'}),
+  agentRow(iris,{when:'yesterday'}),
+  agentRow(otto,{when:'hired'}),
+].join('');
+cols.push(column('THE COLUMN', 'One row shape for both kinds. A team is its members clustered, capped at three, with the project icon as a sticker and the rest counted in mono.', listRows));
+
+// the cluster, one to twelve
+let b = `<div class="lab">THE CLUSTER</div>`;
+for (const n of [1,2,3,4,6,9,12]) b += teamRow(T(`${n} member${n>1?'s':''}`, many.slice(0,n), {when:'', last:''}));
+b += `<div class="lab">WITH AN ICON</div>`;
+for (const n of [1,2,3,7]) b += teamRow(T(`${n} member${n>1?'s':''}`, many.slice(0,n), {when:'', last:'', icon:'A'}));
+cols.push(column('THE STACK', 'Cap at three. Past it, a count in mono rather than a fourth face.', b));
+
+// same roster, no icon
+const c = [
+  teamRow(T('api',[alice,bob,mara],{when:'2m', last:'merged'})),
+  teamRow(T('api-v2',[alice,bob,mara],{when:'1h', last:'still failing on node 20'})),
+  `<div class="lab">WITH ICONS</div>`,
+  teamRow(T('api',[alice,bob,mara],{when:'2m', last:'merged', icon:'A'})),
+  teamRow(T('api-v2',[alice,bob,mara],{when:'1h', last:'still failing on node 20', icon:'V'})),
+].join('');
+cols.push(column('SAME ROSTER', 'Accepted: the names and the last lines are what you read. The mark is not identifying alone.', c));
+
+document.body.innerHTML = cols.join('');
+</script>

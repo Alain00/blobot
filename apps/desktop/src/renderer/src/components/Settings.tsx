@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Check, X } from 'lucide-react';
+import { ArrowLeft, Check, Gauge, Mic, Server, Terminal, Volume2, X } from 'lucide-react';
 import type { UiRuntimeChoice } from '../../../shared/api.js';
 import { READINESS_WORD } from './readiness.js';
 import { RuntimeMark } from './RuntimeMark.js';
@@ -8,6 +8,7 @@ import { ContextCeilings } from './ContextCeilings.js';
 import { Dictation } from './Dictation.js';
 import { MachineSettings } from './MachineSettings.js';
 import { useSoundSettings } from '../sound/useSound.js';
+import { RAIL_DEFAULT_WIDTH } from '../useRailWidth.js';
 
 /**
  * Settings: the third door at the foot of the rail, and a screen with a column of its own.
@@ -32,12 +33,20 @@ import { useSoundSettings } from '../sound/useSound.js';
  */
 export type Section = 'runtimes' | 'context' | 'sound' | 'dictation' | 'machines';
 
-const SECTIONS: readonly { readonly id: Section; readonly label: string }[] = [
-  { id: 'runtimes', label: 'Runtimes' },
-  { id: 'machines', label: 'Machines' },
-  { id: 'context', label: 'Context' },
-  { id: 'sound', label: 'Sound' },
-  { id: 'dictation', label: 'Dictation' },
+/**
+ * A glyph before each name, the way the doors at the foot of the rail carry one. The column is
+ * the same shape as that group and reads as a list of places, so the row is the same row.
+ */
+const SECTIONS: readonly {
+  readonly id: Section;
+  readonly label: string;
+  readonly icon: React.ReactNode;
+}[] = [
+  { id: 'runtimes', label: 'Runtimes', icon: <Terminal size={13} aria-hidden /> },
+  { id: 'machines', label: 'Machines', icon: <Server size={13} aria-hidden /> },
+  { id: 'context', label: 'Context', icon: <Gauge size={13} aria-hidden /> },
+  { id: 'sound', label: 'Sound', icon: <Volume2 size={13} aria-hidden /> },
+  { id: 'dictation', label: 'Dictation', icon: <Mic size={13} aria-hidden /> },
 ];
 
 /** `--screen=settings:<section>`, for a screenshot, or nothing. */
@@ -85,17 +94,24 @@ export function Settings({
     <div className="setpage">
       {/* The screen's own column. It is not the rail and must not look like one: no marks, no
           status, no faces. A list of section names, one of them current. */}
-      <nav className="setrail">
-        <div className="railhead">
-          <span className="mono muted">SETTINGS</span>
-        </div>
+      {/* The rail's width, from the rail's own constant: this screen is drawn over that column
+          and must not appear to move it. */}
+      <nav className="setrail" style={{ flex: `0 0 ${RAIL_DEFAULT_WIDTH}px` }}>
+        {/* The screen's name, and the way out of it. The mono eyebrow that stood here said the
+            first and not the second, which left the only exit a glyph in the far corner of the
+            body — three columns away from the column the user is reading. */}
+        <button className="setrailback" onClick={onClose}>
+          <ArrowLeft size={15} aria-hidden />
+          <span>Settings</span>
+        </button>
         {SECTIONS.map((entry) => (
           <button
             key={entry.id}
             className={`setrailrow${section === entry.id ? ' sel' : ''}`}
             onClick={() => setSection(entry.id)}
           >
-            {entry.label}
+            {entry.icon}
+            <span>{entry.label}</span>
           </button>
         ))}
       </nav>
@@ -103,9 +119,8 @@ export function Settings({
       <div className="setbody">
         <div className="agentssheet">
           <header className="agentshead">
-            {/* No eyebrow. The column beside this one already says SETTINGS, and the section
-                it has selected is the word under it: an eyebrow here would be the same label
-                printed twice, eleven pixels apart. */}
+            {/* No eyebrow. The word it would carry is SETTINGS, which is the door that was
+                pressed to get here and not a fact about the section on screen. */}
             <div>
               <h1 className="subhead lg">
                 {SECTIONS.find((entry) => entry.id === section)?.label}
@@ -132,10 +147,8 @@ export function Settings({
                   and a user reading a column of the word `ready` deserves to know what it was
                   measured with. It is also the answer to why nothing here is a gate. */}
               <div className="note muted">
-                blobot asks each CLI whether it is installed and whether a credential is present.
-                It stores no credential of its own, and signing in runs the runtime's own command
-                on a terminal in this window. Nothing here decides what you can do: an agent can
-                be hired on a runtime that is not ready yet.
+                blobot asks each CLI whether it is installed and signed in. It stores no
+                credential of its own, and nothing here gates hiring.
               </div>
 
               <div className="roster">
@@ -150,13 +163,15 @@ export function Settings({
                           <span className="mono muted">no adapter yet</span>
                         )}
                       </span>
+                      {/* Two lines: the name, and what the machine answered. The adapter's
+                          sentence about what a local runtime's sandbox does was a third, on
+                          every row, in a list read to find out whether something is installed.
+                          It is still on the hire dialog, where the choice it bears on is
+                          being made. */}
                       <span className="sub mono muted">
                         {READINESS_WORD[entry.readiness]}
                         {entry.version === undefined ? '' : ` · ${entry.version}`} · {entry.detail}
                       </span>
-                      {entry.localProtection !== undefined && (
-                        <span className="sub muted">{entry.localProtection}</span>
-                      )}
                     </span>
                     <span style={{ flex: 1 }} />
                     {/* At most one, and often none: a door labelled *sign in* beside a runtime
@@ -236,10 +251,8 @@ function SoundSection(): React.JSX.Element {
       {/* The complete specification, in one sentence. That it fits in one is the test of whether
           the vocabulary stayed small enough. */}
       <div className="note muted">
-        blobot plays a short sound when you commit an action, and one when an agent is waiting on
-        you from a team you are not looking at. Nothing else makes a sound. With nobody listening
-        a permission request is cancelled rather than allowed, which is the one thing silence
-        costs here. It plays on this machine only: blobot sends nothing anywhere else.
+        A short sound when you act, and one when an agent on a team you are not looking at is
+        waiting on you. Nothing else, and never off this machine.
       </div>
 
       <div className="roster">
@@ -254,7 +267,6 @@ function SoundSection(): React.JSX.Element {
             </span>
             <span className="sub mono muted">remembered on this machine</span>
           </span>
-          <span style={{ flex: 1 }} />
           <span className={`tick${settings.on ? ' on' : ''}`}>
             {settings.on && <Check size={14} aria-hidden />}
           </span>
@@ -277,7 +289,6 @@ function SoundSection(): React.JSX.Element {
               </span>
               <span className="sub mono muted">{row.detail}</span>
             </span>
-            <span style={{ flex: 1 }} />
             <span className={`tick${settings[row.id] ? ' on' : ''}`}>
               {settings[row.id] && <Check size={14} aria-hidden />}
             </span>

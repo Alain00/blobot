@@ -145,6 +145,98 @@ describe('whose folder this is', () => {
     expect(back).toBe(1);
   });
 
+  it('heads the chooser with the team, and offers hiring onto it', async () => {
+    let adding = 0;
+    await draw(
+      <FileTree
+        teamId="t1"
+        pane={{ kind: 'team' }}
+        agents={AGENTS}
+        workspaces={[GIT]}
+        demoMode={false}
+        revision={0}
+        panel="tree"
+        teamName="Experiment"
+        onAddMember={() => { adding += 1; }}
+        onPanel={() => {}}
+        onSelectAgent={() => {}}
+        onSelectTeam={() => {}}
+      />,
+    );
+    expect(host?.querySelector('.fthead')?.textContent).toContain('Experiment');
+    act(() => (host?.querySelector('.ftadd') as HTMLElement | null)?.click());
+    // The roster editor, and not a cheaper version of it: adding a member restates the whole
+    // roster and restarts the team.
+    expect(adding).toBe(1);
+  });
+
+  it('draws no team head where there is no roster to add to', async () => {
+    // A thread and demo mode both arrive without the two props: a thread is one agent's own
+    // conversation whose name is the head said twice, and demo mode's team is a source file.
+    await draw(
+      <FileTree
+        teamId="t1"
+        pane={{ kind: 'team' }}
+        agents={AGENTS}
+        workspaces={[GIT]}
+        demoMode={false}
+        revision={0}
+        panel="tree"
+        onPanel={() => {}}
+        onSelectAgent={() => {}}
+        onSelectTeam={() => {}}
+      />,
+    );
+    expect(host?.querySelector('.fthead')).toBeNull();
+    expect(host?.querySelector('.ftadd')).toBeNull();
+  });
+
+  it('draws neither a head nor the chooser for a pane it cannot name', async () => {
+    // The failure this exists against: switching to a sleeping agent left the *previous* team's
+    // face at the top of the panel, because a pane about one person fell through to the team
+    // pane's empty state. The chooser is the team pane's and nothing else's.
+    await draw(
+      <FileTree
+        teamId="t1"
+        pane={{ kind: 'thread', profileId: 'p_mara' }}
+        agents={AGENTS}
+        workspaces={[GIT]}
+        demoMode={false}
+        revision={0}
+        panel="tree"
+        teamName="Experiment"
+        onAddMember={() => {}}
+        onPanel={() => {}}
+        onSelectAgent={() => {}}
+        onSelectTeam={() => {}}
+      />,
+    );
+    expect(host?.querySelector('.ftface')).toBeNull();
+    expect(host?.querySelector('.fthead')).toBeNull();
+    // A thread's Agent does not exist until the first message, so there is no folder yet — and
+    // that is a fact rather than a guess about a folder nobody has looked for.
+    expect(text()).toContain('no folder');
+
+    // And an agent whose team is still being swapped under this render: an Agent exists, it is
+    // simply not on the roster in hand yet.
+    await draw(
+      <FileTree
+        teamId="t1"
+        pane={{ kind: 'agent', agentId: 'somebody-else' }}
+        agents={AGENTS}
+        workspaces={[GIT]}
+        demoMode={false}
+        revision={0}
+        panel="tree"
+        onPanel={() => {}}
+        onSelectAgent={() => {}}
+        onSelectTeam={() => {}}
+      />,
+    );
+    expect(host?.querySelector('.ftface')).toBeNull();
+    expect(text()).toContain('opening');
+  });
+
   it('offers no panel switch in the chooser, where the question is whose folder', async () => {
     await draw(
       <FileTree

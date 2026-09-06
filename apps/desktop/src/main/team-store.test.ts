@@ -12,11 +12,13 @@ import {
   type RemovalOutcome,
   type WorkspaceInspection,
   type WorkspaceProvider,
+  WorkspaceError,
 } from '@blobot/core';
 import {
   TeamCreationError,
   createTeam,
-  individualTeamOf,
+  createThread,
+  threadOf,
   deleteTeam,
   editAgentProfile,
   editTeamRoster,
@@ -305,41 +307,100 @@ describe('creating a team', () => {
   });
 });
 
-describe('opening an individual team from a profile', () => {
-  async function solo() {
-    return createTeam({ ...spec, profileIds: [spec.profileIds[0]!] }, {
-      store, clock, workspaces, inspect: () => workspaces.inspect(),
-    });
+describe("an agent's thread", () => {
+  /**
+   * A folder maker that never touches disk. `createThread`'s real one runs `git init` under the
+   * home directory, which is not something a unit test may do — so the seam is the same one
+   * `inspect` already is, and the collision case below is exactly what it exists to exercise.
+   */
+  function folders(taken: readonly string[] = []) {
+    const made: string[] = [];
+    const prepare = async (name: string): Promise<WorkspaceInspection> => {
+      const slug = name.toLowerCase();
+      if (taken.includes(slug)) {
+        throw new WorkspaceError('already_there', `/home/x/blobot/${slug} already exists.`);
+      }
+      made.push(slug);
+      return { ...workspaces.inspection, path: `/home/x/blobot/${slug}` };
+    };
+    return { made, prepare };
   }
 
-  it('finds only the chosen membership identity and keeps its ordinary team history', async () => {
-    const team = await solo();
-    expect(individualTeamOf(store, spec.profileIds[0]!, team.id)?.id).toBe(team.id);
-    expect(individualTeamOf(store, spec.profileIds[1]!, team.id)).toBeUndefined();
-    expect(individualTeamOf(store, 'missing', team.id)).toBeUndefined();
-    expect(individualTeamOf(store, spec.profileIds[0]!, 'missing')).toBeUndefined();
+  it('is a Team carrying thread_for, told apart by that value and never by its roster', async () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    const { prepare } = folders();
+    const thread = await createThread(mara.id, { store, clock, workspaces, prepare });
+
+    expect(thread.threadFor).toBe(mara.id);
+    expect(store.threadOf(mara.id)?.id).toBe(thread.id);
+    expect(threadOf(store, mara.id)?.id).toBe(thread.id);
+    // The single member leads, because an unaddressed prompt has to route somewhere.
+    const members = store.agentsOfTeam(thread.id);
+    expect(members).toHaveLength(1);
+    expect(store.teamById(thread.id)?.leadAgentId).toBe(members[0]?.id);
+    // The one place the invented name surfaces. The provider slugs both halves, so in the app
+    // this reads `blobot/mara/mara`; the fake above does not slug, which is why the assertion
+    // is on what it was *asked* for rather than on the string it made up.
+    expect(workspaces.provisioned.at(-1)).toMatchObject({ teamName: 'Mara', agentName: 'Mara' });
+  });
+
+  it('is one per agent, so a second send finds the first rather than making another', async () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    const { prepare, made } = folders();
+    const first = await createThread(mara.id, { store, clock, workspaces, prepare });
+    const again = await createThread(mara.id, { store, clock, workspaces, prepare });
+    expect(again.id).toBe(first.id);
+    expect(made).toEqual(['mara']);
     expect(store.listTeams()).toHaveLength(1);
-    expect(workspaces.provisioned).toHaveLength(1);
   });
 
-  it('rejects a stale selection after somebody joins, but accepts the team after they leave', async () => {
-    const team = await solo();
-    const first = store.agentsOfTeam(team.id)[0]!;
-    store.createAgent({ ...first, id: 'joiner', profileId: spec.profileIds[1]!, name: 'Bob' });
-    expect(individualTeamOf(store, spec.profileIds[0]!, team.id)).toBeUndefined();
-    store.tombstoneAgent('joiner', clock.now());
-    expect(individualTeamOf(store, spec.profileIds[0]!, team.id)?.id).toBe(team.id);
-    store.tombstoneAgent(first.id, clock.now());
-    expect(individualTeamOf(store, spec.profileIds[0]!, team.id)).toBeUndefined();
+  it('disambiguates the folder rather than refusing, because the message is already typed', async () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    const { prepare, made } = folders(['mara']);
+    const thread = await createThread(mara.id, { store, clock, workspaces, prepare });
+    expect(made).toEqual(['mara-2']);
+    expect(thread.workspacePath).toBe('/home/x/blobot/mara-2');
   });
 
-  it.each(['team', 'profile'])('rejects a deleted %s without deleting its history', async (kind) => {
-    const team = await solo();
-    if (kind === 'profile') store.tombstoneProfile(spec.profileIds[0]!, clock.now());
-    else store.tombstoneTeam(team.id, clock.now());
-    expect(individualTeamOf(store, spec.profileIds[0]!, team.id)).toBeUndefined();
-    expect(store.listTeams({ includeDeleted: true }).map((entry) => entry.id)).toContain(team.id);
-    if (kind === 'profile') expect(store.teamById(team.id)?.id).toBe(team.id);
+  it('steps around a real team holding the name, because teams.name is half a branch', async () => {
+    const mara = hireAgent({ name: 'mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    await createTeam(
+      { name: 'mara', workspacePath: '/repo', turnBudget: 6, profileIds: [spec.profileIds[0]!] },
+      { store, clock, workspaces, inspect: () => workspaces.inspect() },
+    );
+    const { prepare } = folders();
+    const thread = await createThread(mara.id, { store, clock, workspaces, prepare });
+    expect(thread.name).toBe('mara-2');
+  });
+
+  it('writes nothing when the folder cannot be made, so the typed message survives', async () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    const prepare = async (): Promise<WorkspaceInspection> => {
+      throw new WorkspaceError('git_failed', '/home/x/blobot/mara was created, but git could not set it up.');
+    };
+    await expect(createThread(mara.id, { store, clock, workspaces, prepare })).rejects.toThrow(
+      'git could not set it up',
+    );
+    expect(store.listTeams()).toEqual([]);
+    expect(store.threadOf(mara.id)).toBeUndefined();
+  });
+
+  it('leaves an ordinary team of one alone: nothing is backfilled and nothing is inferred', async () => {
+    const solo = await createTeam(
+      { ...spec, profileIds: [spec.profileIds[0]!] },
+      { store, clock, workspaces, inspect: () => workspaces.inspect() },
+    );
+    expect(store.teamById(solo.id)?.threadFor).toBeUndefined();
+    expect(store.threadOf(spec.profileIds[0]!)).toBeUndefined();
+    expect(threadOf(store, spec.profileIds[0]!)).toBeUndefined();
+  });
+
+  it('is not found for an agent who has been retired', async () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    const { prepare } = folders();
+    await createThread(mara.id, { store, clock, workspaces, prepare });
+    store.tombstoneProfile(mara.id, clock.now());
+    expect(threadOf(store, mara.id)).toBeUndefined();
   });
 });
 
