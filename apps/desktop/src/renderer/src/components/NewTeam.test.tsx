@@ -223,6 +223,19 @@ describe('who is on the team', () => {
     expect(naming(host)).toBe(true);
   });
 
+  it('offers hiring as a row of the list, and still highlights an agent', async () => {
+    const host = await screen();
+    const rows = [...host.querySelectorAll('[cmdk-item]')];
+    // A row of the list and not a button beside it, so the pointer and the arrow keys reach it
+    // and it takes the one highlight when they do.
+    const hire = rows.find((row) => (row.textContent ?? '').includes('hire an agent'));
+    expect(hire).toBeDefined();
+    // Drawn first and rendered last: the highlight cmdk lands on, and the one Tab and Space act
+    // on, belongs to the agents. Exactly one row carries it.
+    expect(rows.filter((row) => row.getAttribute('data-selected') === 'true')).toEqual([rows[0]]);
+    expect(rows[0]?.textContent).toContain('Alice');
+  });
+
   it('refuses to go on with nobody chosen', async () => {
     const host = await screen();
     await key(host, 'Enter');

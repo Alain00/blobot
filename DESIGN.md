@@ -329,6 +329,18 @@ conversation and the reason it is not a generic chat app.
   rather than by captioning every prompt in the history.
 - **From the agent** — no container at all. It is the pane's default voice; boxing it would make
   the agent look like a guest in its own transcript.
+
+  **Somebody who has left the team keeps their name and their face, and the header says so
+  once**: `off the team`, mono, uppercase, `--muted`, beside the name — the register `typing`
+  already occupies, so this is not a badge and the column still refuses them. An Agent taken off
+  a team is tombstoned rather than deleted and its rows stay in the transcript, so the choice was
+  never whether a name was available. Unmarked, the column reads as a roster twice the size of
+  the one the rail is showing; marked on every row, it repeats a fact the reader learned on the
+  first. So it rides the name **where the name is introduced**, which for an agent's own rows is
+  exactly where the header draws — the grouping rule decides it and there is no second rule to
+  keep in step. A name is introduced in three places and it is drawn in all three: the header,
+  the line naming the far end of a peer message, and the fold's `messages with`.
+  `.scratch/team-addressing/issues/07`.
 - **From a peer** — inset and unfilled: one line, being a chevron, `message received from` or
   `message sent to`, the far end's blobatar and its name. **Shut, with no peek**, and it opens on
   a click into the message and the trust framing printed verbatim on the received side. The
@@ -785,12 +797,14 @@ Every control descends from the composer. If you are adding one, start there.
   trigger keeps the word alone. This is only for a pick whose options are blobot's own closed
   vocabulary: the runtime picker keeps its readiness line, because that line is a fact about the
   machine rather than a gloss on a word, and it can change while the dialog is open.
-- **A dialog is 560px unless it is holding a form.** `.modal.roomy` is 760, and only the hire and
-  edit dialogs wear it. Eight fields stacked one per row ran past the fold on a 1080-tall screen,
-  which put the standing instructions below the window on the dialog whose job is stating them.
-  The width buys rows: name and role, then the runtime and what it advertises, then blobot's
-  three words side by side. Everything else stays narrow, because a paragraph set to 760px is a
-  paragraph nobody reads to the end of.
+- **A dialog is 560px, and there is no longer a wider one.** `.modal.roomy` was 760 and only the
+  hire and edit dialogs wore it, because eight fields stacked one per row ran past the fold on a
+  1080-tall screen and put the standing instructions below the window on the dialog whose job is
+  stating them. *Retired 2026-09-07 with the dialog that needed it: an agent's definition is a
+  bar now, and the answer to "this form is too tall" turned out to be that seven of its eight
+  questions already had an answer and only needed stating.* See **The agent bar** below.
+  Everything else stays narrow, because a paragraph set to 760px is a paragraph nobody reads to
+  the end of.
 - Selection in a list is the raised ground alone. No left rule: a row that lifts and brightens
   is already saying it twice. The row is **inset and rounded** at `.field`'s 12px, like every
   other lifted surface here — a full-bleed square block is the one shape this app does not have,
@@ -886,8 +900,10 @@ anywhere is a design decision, and almost always the wrong one.
   itself down under `prefers-reduced-motion` and on any pointer that is not a fine one. Three
   faces have it and nothing else does. The rail's `waiting` agent follows the cursor until you
   answer it, which is the same sentence `surprised` already says and the reason that state is the
-  only one the fold reaches into. The 112px preview in the hire and edit dialogs follows it
-  always, because there the face is the subject and nothing on the screen competes. The
+  only one the fold reaches into. The face at the head of the agent bar follows it always,
+  because there the face is the subject and nothing on the screen competes. *It was a 112px
+  preview standing over the hire and edit dialogs until 2026-09-07 and is 34px in a field now;
+  the rule is unchanged, and what it cost dropped with the size.* The
   transcript's pending face turns toward the composer *while the user is in it*, and that gate is
   what keeps it out of the first budget — it acknowledges the person typing, and claims nothing
   about an agent noticing anything, which no runtime reports.
@@ -1136,7 +1152,8 @@ One flat file, one flat namespace, no build step between it and the DOM.
 
 - **Name classes for the thing they belong to, not for what they contain.** A `.preview` added
   for a modal silently restyled the rail's preview line and put a box around every agent's last
-  message. It is `.hirepreview` now. A generic class name in a new screen is a live grenade.
+  message. It became `.hirepreview`, and went with the dialog on 2026-09-07; the story is why
+  the rule exists. A generic class name in a new screen is a live grenade.
 - Rules carry the reason in a comment when the reason is not obvious from the rule. The
   stylesheet is where design decisions are enforced, so it is where they are explained.
 - Delete dead rules in the same change that orphans them.
@@ -1291,6 +1308,15 @@ One flat file, one flat namespace, no build step between it and the DOM.
   retiring — and the menu items are **named rows**, because a bin glyph says *delete* and a row
   says *delete hermes-agent*. An agent's row offers **delete this conversation**, and only once
   there is one: absent rather than disabled, because there is nothing to destroy.
+  *Amended 2026-09-07, at the author's direction:* an agent's row also offers **`Delete`**, the
+  agent itself, behind `RetireAgent`'s dialog, which prices the conversation it ends and takes an
+  explicit acknowledgement before anything happens. It is the one row here that is **not** a named
+  row and the one row drawn in **`--danger`**: one word, because the row the menu came off says
+  who and the dialog names them again; and coloured on the diff pair's own amended test, since the
+  word already carries the fact and the hue only reinforces it at the ramp's chroma. Nothing else
+  in the app may take that token. A row with no conversation carries it too — an agent you never
+  spoke to is the likeliest one to be deleted, and that row's whole menu used to be a single
+  `Pin`.
 - **The transcript** — the three voices above, in a centred column, under **one mono hairline
   row** carrying only what the rail does not: the agent's role, its runtime and where it is
   working, and on the team pane the folder every agent is cut from. **It is the only chrome above
@@ -1575,6 +1601,40 @@ One flat file, one flat namespace, no build step between it and the DOM.
   itself while you are reading it is worse than one that never folded. The gesture is the
   transcript's chevron, at the **end** of the head rather than in front of it, so the numerals of
   the steps that fold stay in line with the ones that do not.~~
+- **The agent bar** — hiring an agent, and restating one that exists. **One surface for both**,
+  because an AgentProfile is a definition and hiring is stating it for the first time; what
+  differs is where it lands afterwards, and only the edit has to say so (ADR-0002).
+  *Rewritten 2026-09-07, from a prototype the author picked out of four.* It was a modal read top
+  to bottom: a 112px face over 13 hues and 9 silhouettes laid out flat, then eight stacked
+  fields. Every one of those had a reason and the reasons still hold; what did not hold is the
+  sum. It asked eight questions where seven already had an answer nobody argues with, and it
+  spent its first third on the one part of an agent the name decides by itself.
+  **It is the creation bar's sibling** — the same sheet at the same height, the same field with
+  its hairline, the same addressed word and drawn colon, the same 28px arrow that inverts only
+  when it is armed. The two are opened by the same gesture from the same places, so a second bar
+  shape would be a second answer to a question already settled. Radix still owns the dialog
+  underneath, because the agent outlives the screen that opened it: the focus trap, Escape and
+  `aria-modal` are worth more here than the centred box ever was.
+  **The field is one line of writing**: the face, `Hire:`, a name, and the role in apposition
+  after it, both inputs sized to their own content so an empty role is a word of grey rather than
+  a second box at the far end of the bar. **The face is 34px at the head of that field**, where
+  the creation bar puts the team it is about, and its two rows hang off it in a popover — the
+  default costs nothing to skip, which is what it is.
+  **Under the field, the answers, as chips.** A chip states what this agent already is; pressing
+  one is for disagreeing. Two rows on purpose, with the break drawn rather than left to the
+  width: what it runs on, in the runtime's own vocabulary (the runtime, and the model and effort
+  it advertises), then how it works, in blobot's (`without asking`, `says`, `starts over`). The
+  chip is the badge the creation bar draws in its own field, because an agent's runtime sitting
+  in this row is the same kind of object as an agent sitting in that one: something the surface
+  is holding, not a control asking a question. **The one thing that opens a field rather than
+  carrying an answer is outlined and last** — the standing instructions, which are the only
+  optional thing here.
+  **Nothing was dropped.** Ticket 11's readiness line and its remedy are in the foot in mono,
+  never a gate; what an edit is about to reach is under it in prose; the model menu is the
+  runtime's own; the three words keep their sentences on the rows where they are chosen.
+  **Enter is the arrow**, and stays a newline in the standing instructions, because that field is
+  paragraphs. **On an edit the arrow is dead until something has changed**, which is
+  `.btn.primary`'s own rule wearing the creation bar's glyph.
 - **Your agents** — every AgentProfile the user has hired, over the working surface rather than
   in place of it: the team behind it keeps running, and nothing on this screen restarts one. A
   row is a face, a name, a role, the runtime and the teams it is on, with its standing

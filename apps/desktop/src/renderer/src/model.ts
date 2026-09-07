@@ -1986,6 +1986,8 @@ function liveRunIn(
   if (principal === undefined || !live(principal)) return [];
 
   const calls: number[] = [];
+  /** Whether this run is the tail of the transcript, which is where a turn in flight stands. */
+  const tail = end === items.length;
   const replies: number[] = [];
   let open = -1;
   let lastOwn = -1;
@@ -2032,6 +2034,20 @@ function liveRunIn(
    * renderer, so this hands over everything that has settled and `useDwell` decides how long a
    * reply stands.
    */
+  /*
+   * **Nothing is lifted out of a run that is neither open nor the tail**, however live its
+   * principal is. `live` is a fact about the agent *now* and a run is a place in the
+   * transcript, so a restored conversation full of an agent's earlier turns had every one of
+   * them lift its teammates' replies the moment that agent started a new turn -- a live block
+   * per historical run, all of them keyed `live:<agent>`, which is one key many times over.
+   * React leaves the duplicates behind: they survived the fold, the team switch, and the team.
+   *
+   * Observed 2026-09-07 on a cold start: opening a five-agent team and then an agent's own
+   * thread left six of that team's blocks standing in the thread, dated two days earlier.
+   * A settled reply in a finished run belongs in that run's fold, which is where it already is.
+   */
+  if (batch.length === 0 && !tail) return [];
+
   // In the order they happened: a reply that came back between two calls belongs between them,
   // because this is the turn as it is being lived rather than two lists stacked.
   //
@@ -2096,7 +2112,19 @@ export function rowsOf(
   live: LiveNow = NOBODY_LIVE,
   folded: ReadonlySet<string> = NOTHING_FOLDED,
 ): Row[] {
-  const rows: Row[] = [];
+  /*
+   * A slot per row, because a row can be taken back after it is written: {@link demoteLiveRow}
+   * empties one and folds what was in it into the run above. Flattened on the way out.
+   */
+  const rows: (Row | Row[])[] = [];
+  /**
+   * Where each agent's live block stands, and the fold of the run it was lifted out of.
+   *
+   * The block's id says `live:<agent>`, so **one per agent is a promise the rows have to keep**
+   * and not a hope about the transcript: two rows under one React key leaves the loser's DOM
+   * standing after the row is gone, and it outlives the fold, the switch and the team.
+   */
+  const standing = new Map<string, { block: number; fold?: number }>();
   let index = 0;
   let addressed: ReadonlySet<string> = new Set();
 
@@ -2129,7 +2157,10 @@ export function rowsOf(
        * Mail with no turn behind it is neither: one outbound line nobody has answered yet is
        * already one line, and it is the addressed agent's own act rather than somebody else's.
        */
+      /** Where this run's fold stands, for a block of this run's that is taken back later. */
+      let foldAt: number | undefined;
       if (run.length > 0 && (partnerSpoke(run, principal) || toolsIn(run) >= WORTH_FOLDING)) {
+        foldAt = rows.length;
         rows.push({
           kind: 'steps',
           id: `steps:${(run[0] as Item).id}`,
@@ -2168,6 +2199,14 @@ export function rowsOf(
        */
       const turning = open.length > 0 || (principal !== undefined && live(principal) && found.end === items.length);
       if (turning) {
+        // The same agent cannot hold two turns at once, so an earlier block of its own goes
+        // back into the run it was lifted out of rather than standing beside this one.
+        const held = standing.get(principal as string);
+        if (held !== undefined) demoteLiveRow(rows, held);
+        standing.set(principal as string, {
+          block: rows.length,
+          ...(foldAt === undefined ? {} : { fold: foldAt }),
+        });
         rows.push({
           kind: 'live',
           /*
@@ -2193,7 +2232,36 @@ export function rowsOf(
     index += 1;
   }
 
-  return oneRowPerTurnsPictures(rows);
+  return oneRowPerTurnsPictures(rows.flat());
+}
+
+/**
+ * Take a live block back, because the agent it belongs to has opened a later turn.
+ *
+ * A block is a *turn* in flight and an agent holds one at a time, which is what its
+ * `live:<agent>` id promises the renderer. Everything in it was lifted out of a run, so nothing
+ * is dropped here: it goes back into that run's fold, in the order it happened, and where the run
+ * had no fold to go back into it is drawn flat where the block stood.
+ *
+ * Nothing observed reaches this any more -- {@link liveRunIn} stops lifting out of a settled run,
+ * which is where the duplicates came from -- and it stays because the id is a promise, and the
+ * cost of breaking it is not a wrong row but a row that never goes away.
+ */
+function demoteLiveRow(rows: (Row | Row[])[], held: { block: number; fold?: number }): void {
+  const block = rows[held.block];
+  if (block === undefined || Array.isArray(block) || block.kind !== 'live') return;
+  const fold = held.fold === undefined ? undefined : rows[held.fold];
+  if (fold !== undefined && !Array.isArray(fold) && fold.kind === 'steps') {
+    const items = [...fold.items, ...block.items].sort((left, right) => left.at - right.at);
+    rows[held.fold as number] = {
+      ...fold,
+      items,
+      partnerIds: partnersOf(items, fold.agentId === '' ? undefined : fold.agentId),
+    };
+    rows[held.block] = [];
+    return;
+  }
+  rows[held.block] = block.items.map((item): Row => ({ kind: 'item', at: item.at, item }));
 }
 
 /**
@@ -2330,11 +2398,92 @@ export interface CommandMenu {
 }
 
 /**
- * Who a message is addressed to: the **leading run** of mentions.
+ * One `@mention` in the draft: where it starts, where it ends, and who it names.
+ *
+ * A mention is not a word. `Creative Designer` is one agent, and a tokenizer that stops at the
+ * first space drew half of that name as a dud and addressed nobody — the composer's own report,
+ * 2026-09-07. So the roster is what says where a mention ends, and this is the one place that
+ * decides it: the field's highlighting, the addressing rule and the menu all read it, because
+ * three answers to *where does this name stop* is three chances to disagree.
+ *
+ * Longest name first, so an `Alice` on a roster that also has an `Alice Smith` never eats the
+ * longer one's second word. Whitespace inside a name matches any run of it, because what the
+ * user typed between two words of a name is not a fact about who they meant. What resolves
+ * against nobody is still a mention — `@alic` is a dud the field has to be able to draw — and
+ * there the old word-shaped token is exactly right, since there is no name to measure against.
+ */
+export interface Mention {
+  readonly start: number;
+  readonly end: number;
+  /** The name as typed, without the `@`. */
+  readonly text: string;
+  /** Undefined when nobody answers to it. */
+  readonly agent?: Agent | undefined;
+}
+
+/** A name as it may have been typed: escaped, with any run of whitespace between its words. */
+function namePattern(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('\\s+');
+}
+
+export function mentionsIn(draft: string, roster: readonly Agent[]): Mention[] {
+  const byLength = [...roster].sort((a, b) => b.name.length - a.name.length);
+  const found: Mention[] = [];
+  for (let at = draft.indexOf('@'); at !== -1; at = draft.indexOf('@', at + 1)) {
+    // `bob@example.com` is an address and not a mention, which is the rule `namesMentioned`
+    // already keeps on the other side of this gesture.
+    const before = at === 0 ? '' : draft[at - 1];
+    if (before !== undefined && /[\w@]/.test(before)) continue;
+    const rest = draft.slice(at + 1);
+    const named = byLength.find((agent) =>
+      new RegExp(`^${namePattern(agent.name)}(?![\\w@])`, 'i').test(rest),
+    );
+    if (named !== undefined) {
+      const length = new RegExp(`^${namePattern(named.name)}`, 'i').exec(rest)?.[0].length ?? 0;
+      const text = rest.slice(0, length);
+      // Resolved through `findAgentByName` even though the match already found the candidate,
+      // so the composer and the orchestrator's `message_agent` keep the one answer to *who is
+      // this*. The pattern above decides where a name ends; this decides whose it is.
+      // Asked with its whitespace collapsed: `@Creative  Designer` is the same recipient as
+      // `@Creative Designer`, and the orchestrator's lookup compares a name exactly.
+      const asked = text.replace(/\s+/g, ' ');
+      found.push({ start: at, end: at + 1 + length, text, agent: findAgentByName(roster, asked) });
+      at = at + length;
+      continue;
+    }
+    const word = /^[\w-]+/.exec(rest)?.[0];
+    if (word === undefined) continue;
+    found.push({ start: at, end: at + 1 + word.length, text: word });
+    at = at + word.length;
+  }
+  return found;
+}
+
+/**
+ * Where the leading run of mentions ends: the To: line's length, in characters.
  *
  * Mentions before the first ordinary word are the recipients — the To: line, where the eye
  * already looks. A mention anywhere after that is a *reference*, so `ask @bob about @alice's
  * branch` reaches Bob alone, which is the misfire the rule exists to prevent.
+ *
+ * An unresolved mention inside the run does not end it: `@alic @bob hi` reaches Bob, and the
+ * field draws `@alic` as the dud it is.
+ */
+function leadingRunEnd(draft: string, roster: readonly Agent[]): number {
+  let end = /^\s*/.exec(draft)?.[0].length ?? 0;
+  for (const mention of mentionsIn(draft, roster)) {
+    if (mention.start !== end) break;
+    end = mention.end + (/^\s*/.exec(draft.slice(mention.end))?.[0].length ?? 0);
+  }
+  return end;
+}
+
+/**
+ * Who a message is addressed to: the **leading run** of mentions.
  *
  * This replaced ticket 12's **last valid mention wins**, and its second reopen records that.
  * `ship it @bob` no longer sends to Bob: keeping it would have meant two addressing rules, the
@@ -2344,17 +2493,13 @@ export interface CommandMenu {
  * tokens and all — splitting `@alice do the UI, @bob do the API` into clauses would be blobot
  * deciding which half is whose, which is inference, and Bob seeing what Alice was asked is what
  * stops him doing it twice.
- *
- * An unresolved mention inside the run does not end it: `@alic @bob hi` reaches Bob, and the
- * field draws `@alic` as the dud it is.
  */
 export function addressedBy(draft: string, roster: readonly Agent[]): Agent[] {
-  const leading = /^[\s]*((?:@[\w-]+\s*)+)/.exec(draft)?.[1];
-  if (leading === undefined) return [];
-  const named = [...leading.matchAll(/@([\w-]+)/g)].map((match) =>
-    findAgentByName(roster, match[1] ?? ''),
-  );
-  const found = named.filter((agent): agent is Agent => agent !== undefined);
+  const end = leadingRunEnd(draft, roster);
+  const found = mentionsIn(draft, roster)
+    .filter((mention) => mention.end <= end)
+    .map((mention) => mention.agent)
+    .filter((agent): agent is Agent => agent !== undefined);
   // The same agent twice is one recipient: two rows would be the same words delivered to one
   // session twice, and the second is not a second instruction.
   return found.filter((agent, index) => found.findIndex((it) => it.id === agent.id) === index);
@@ -2366,9 +2511,31 @@ export function addressedBy(draft: string, roster: readonly Agent[]): Agent[] {
  * The field draws the difference, because an underline that means "this is going to them" must
  * not appear over a name that is only being talked about.
  */
-export function isAddressing(draft: string, offset: number): boolean {
-  const leading = /^[\s]*((?:@[\w-]+\s*)+)/.exec(draft)?.[0];
-  return leading !== undefined && offset < leading.length;
+export function isAddressing(draft: string, offset: number, roster: readonly Agent[]): boolean {
+  return offset < leadingRunEnd(draft, roster);
+}
+
+/**
+ * The mention being typed at the very end of the draft, if there is one.
+ *
+ * A partial can hold spaces, for the same reason a mention can — but only as far as somebody's
+ * name goes. `@Creative D` is half of a name and keeps the menu open; `@Bob what do you` is a
+ * message that has started, and the menu closes on the word after the name rather than on the
+ * space, which no fixed pattern could tell apart.
+ */
+export function mentionPartial(
+  draft: string,
+  roster: readonly Agent[],
+): { readonly start: number; readonly text: string } | undefined {
+  const at = draft.lastIndexOf('@');
+  if (at === -1) return undefined;
+  const before = at === 0 ? '' : draft[at - 1];
+  if (before !== undefined && /[\w@]/.test(before)) return undefined;
+  const text = draft.slice(at + 1);
+  if (/^[\w-]*$/.test(text)) return { start: at, text };
+  const wanted = text.toLowerCase().replace(/\s+/g, ' ');
+  const held = roster.some((agent) => agent.name.toLowerCase().replace(/\s+/g, ' ').startsWith(wanted));
+  return held ? { start: at, text } : undefined;
 }
 
 /**

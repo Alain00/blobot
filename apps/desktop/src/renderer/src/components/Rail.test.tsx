@@ -120,7 +120,13 @@ function draw(
         onSelectTeam: () => {},
         onSelectAgent: () => {},
         ...(options.actions === true
-          ? { onEditTeam: () => {}, onDeleteTeam: () => {}, onDeleteThread: () => {}, onTogglePin: () => {} }
+          ? {
+              onEditTeam: () => {},
+              onDeleteTeam: () => {},
+              onDeleteThread: () => {},
+              onRetireAgent: () => {},
+              onTogglePin: () => {},
+            }
           : {}),
       }),
     );
@@ -379,6 +385,14 @@ describe('the actions on a row', () => {
     return (menu?.textContent ?? '').replace(/\s+/g, ' ');
   }
 
+  /** The menu's rows, one string each. `Delete` is a whole row, not a word inside another. */
+  function itemsOf(drawn: Drawn, name: string): string[] {
+    menuOf(drawn, name);
+    return [...document.querySelectorAll('.rowmenu .selectitem')].map((one) =>
+      (one.textContent ?? '').replace(/\s+/g, ' ').trim(),
+    );
+  }
+
   it('draws nothing at rest, and never the word delete', () => {
     const drawn = draw({ actions: true });
     for (const row of drawn.host.querySelectorAll('.railrowwrap')) {
@@ -399,20 +413,27 @@ describe('the actions on a row', () => {
     done(drawn);
   });
 
-  it('offers an agent with a conversation the deletion of that conversation, and nothing else', () => {
+  it('offers an agent with a conversation the deletion of that conversation, and of the agent', () => {
     const drawn = draw({ actions: true });
     const words = menuOf(drawn, 'Ida');
     expect(words).toContain('Delete this conversation');
+    // One word, last, and the only row in the danger colour: it ends the agent and the
+    // conversation both, behind the dialog that prices it.
+    expect(itemsOf(drawn, 'Ida')).toContain('Delete');
+    expect(document.querySelector('.rowmenu .selectitem.danger')?.textContent).toBe('Delete');
     // Never a roster and never a team's deletion: a thread is not a team in this vocabulary.
     expect(words).not.toContain('Who is on');
     done(drawn);
   });
 
-  it('offers an agent nobody has spoken to nothing to delete', () => {
+  it('offers an agent nobody has spoken to its own deletion, and no conversation to delete', () => {
     const drawn = draw({ actions: true });
     const words = menuOf(drawn, 'Omar');
     // Absent rather than disabled: there is no conversation, so there is nothing to destroy.
     expect(words).not.toContain('conversation');
+    // The agent is still there to delete, which is what this row used to be missing: with no
+    // conversation behind it the whole menu was a single `Pin`.
+    expect(itemsOf(drawn, 'Omar')).toContain('Delete');
     expect(words).toContain('Pin');
     done(drawn);
   });

@@ -29,6 +29,8 @@ globalThis.ResizeObserver ??= class {
 const AGENTS: readonly UiAgent[] = [
   { id: 'alice', name: 'Alice', role: 'builds', runtimeLabel: 'mock', workspacePath: '/w/a', accepts: { images: true, textFiles: true } },
   { id: 'bob', name: 'Bob', role: 'reviews', runtimeLabel: 'mock', workspacePath: '/w/b', accepts: { images: true, textFiles: true } },
+  // A name with a space in it, because agents are hired with the names people give them.
+  { id: 'designer', name: 'Creative Designer', role: 'draws', runtimeLabel: 'mock', workspacePath: '/w/c', accepts: { images: true, textFiles: true } },
 ];
 
 interface Drawn {
@@ -121,6 +123,19 @@ describe('the team pane addresses the lead', () => {
 
   // The fan-out issue 02 chose over a coordinator: the user's own words, the user's own
   // authority, one message row per named agent.
+  // The whole name, or half of it is a dud and the message reaches nobody.
+  it('takes a name with a space in it as one mention, and draws it as one', () => {
+    const drawn = draw({ kind: 'team' }, 'alice');
+    drawn.type('@Creative Designer hello');
+    expect(drawn.send().getAttribute('aria-label')).toBe('Send to Creative Designer');
+    const marks = [...drawn.host.querySelectorAll('.hl .m')].map((one) => one.textContent);
+    expect(marks).toEqual(['@Creative Designer']);
+    expect(drawn.host.querySelector('.hl .m.bad')).toBeNull();
+
+    act(() => drawn.send().click());
+    expect(drawn.sent).toEqual([[['designer'], '@Creative Designer hello']]);
+  });
+
   it('sends the whole message to everybody in the leading run', () => {
     const drawn = draw({ kind: 'team' }, 'alice');
     drawn.type('@Alice @Bob the page double-charges');

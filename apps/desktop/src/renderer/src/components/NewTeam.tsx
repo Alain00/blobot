@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, Folder, X } from 'lucide-react';
+import { ArrowRight, Folder, UserPlus, X } from 'lucide-react';
 import { Command } from 'cmdk';
 import type {
   NewTeamSpec,
@@ -96,8 +96,28 @@ export function NewTeam({
   /** The list, so Tab can take whatever the arrow keys have landed on. */
   const listed = useRef<HTMLDivElement>(null);
 
+  /**
+   * cmdk's highlighted row, held here rather than left to cmdk.
+   *
+   * One moment forces it: the roster arrives after the first paint, so for that tick the hire
+   * row is the only item in the list and cmdk highlights it — and cmdk keeps a highlight that is
+   * still valid, so it stayed there once the agents arrived, on the row Tab and Space take. The
+   * roster's first agent is claimed when the roster lands, and everything after that is cmdk's
+   * own: picking a row removes it and cmdk highlights the next, which is what `onValueChange`
+   * is reporting back.
+   */
+  const [highlighted, setHighlighted] = useState('');
+  /** Whether the roster has ever landed. cmdk highlights the hire row before it does. */
+  const claimed = useRef(false);
+
   const reloadRoster = useCallback(async (): Promise<void> => {
-    setRoster(await window.blobot.listAgents());
+    const list = await window.blobot.listAgents();
+    setRoster(list);
+    const first = list[0];
+    if (first !== undefined && !claimed.current) {
+      claimed.current = true;
+      setHighlighted(rowOf(first));
+    }
   }, []);
   const rescan = useCallback((): void => {
     void window.blobot.detectRuntimes().then(setRuntimes);
@@ -110,11 +130,14 @@ export function NewTeam({
   }, [reloadRoster, rescan]);
 
   // Escape leaves, once there is a team to go back to. Captured on the window rather than on
-  // the field, the way the navigator does it: a layer that ignores Escape reads as stuck.
+  // the field, the way the navigator does it: a layer that ignores Escape reads as stuck. Not
+  // while the hire bar is over it, which is `Agents`' own guard: a window listener answers a key
+  // aimed at the layer above it, so shutting that bar abandoned the whole flow behind it.
   useEffect(() => {
     if (onCancel === undefined) return;
     const onKey = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape') return;
+      if (document.querySelector('[role="dialog"]') !== null) return;
       event.preventDefault();
       onCancel();
     };
@@ -257,208 +280,247 @@ export function NewTeam({
   };
 
   return (
-    <div
-      className="navscrim"
-      onMouseDown={onCancel === undefined ? undefined : () => onCancel()}
-    >
-      <div className="navsheet pickbar" onMouseDown={(event) => event.stopPropagation()}>
-        {stage === 'who' ? (
-          <div onKeyDownCapture={keys}>
-            <Command label="Who is on this team" loop>
-              <div className="pickfield">
-                {/* The badges and the caret wrap together and the arrow does not wrap with
-                    them: it is the way out of this step, so it holds the right edge however
-                    many rows of agents are above it. */}
-                <div className="pickitems">
-                {/* Pressing a badge makes that agent the lead; the × takes them off, and is
-                    revealed on hover and `:focus-within` the way *your agents* reveals retiring,
-                    for the same reason. It was the whole badge that removed, on the argument
-                    that a target inside a small target is a mis-click on the destructive half —
-                    which is the argument for this arrangement, not against it, now that there
-                    are two things to do here: the press that is easy to hit is the one that
-                    changes nothing you cannot see. */}
-                {picked.map((agent) => (
-                  <span
-                    key={agent.id}
-                    className={`pickchip${agent.id === leading ? ' lead' : ''}`}
-                  >
-                    <button
-                      className="who"
-                      onClick={() => setLead(agent.id)}
-                      title={
-                        agent.id === leading
-                          ? `${agent.name} leads this team`
-                          : `Make ${agent.name} the lead`
-                      }
-                    >
-                      <Blob
-                        name={agent.name}
-                        size={17}
-                        {...(agent.hue === undefined ? {} : { hue: agent.hue })}
-                        {...(agent.shape === undefined ? {} : { shape: agent.shape })}
-                      />
-                      <span className="nm">{agent.name}</span>
-                      {agent.id === leading && <span className="mono">LEAD</span>}
-                    </button>
-                    <button
-                      className="off"
-                      onClick={() => drop(agent.id)}
-                      title={`Take ${agent.name} off`}
-                      aria-label={`Take ${agent.name} off`}
-                    >
-                      <X size={11} aria-hidden />
-                    </button>
-                  </span>
-                ))}
-                <Command.Input
-                  autoFocus
-                  value={query}
-                  onValueChange={setQuery}
-                  placeholder={picked.length === 0 ? 'Who is on this team?' : ''}
-                />
-                </div>
-                <button
-                  className="pickgo"
-                  disabled={chosen.length === 0}
-                  onClick={() => setStage('where')}
-                  title="Next"
-                  aria-label="Next"
-                >
-                  <ArrowRight size={15} aria-hidden />
-                </button>
-              </div>
-              <Command.List ref={listed}>
-                {/* Two different facts. An empty roster is not a failed search, and telling
-                    somebody who has never hired anybody that nobody answers to that name is
-                    the app blaming them for its own empty state. */}
-                <Command.Empty>
-                  {roster.length === 0 ? 'Nobody hired yet' : 'Nobody by that name'}
-                </Command.Empty>
-                {roster
-                  .filter((agent) => !chosen.includes(agent.id))
-                  .map((agent) => (
-                    <Command.Item
+    /* The hire bar is a sibling of the scrim and never a child of it. It portals to the
+       body, but a React event travels the *tree* and not the DOM, so a click on its own
+       text bubbled into the scrim's `onMouseDown` below and shut this bar, and the hire bar
+       with it. `AddMember` carries the same fix for the same reason. */
+    <>
+      <div
+        className="navscrim"
+        onMouseDown={onCancel === undefined ? undefined : () => onCancel()}
+      >
+        <div className="navsheet pickbar" onMouseDown={(event) => event.stopPropagation()}>
+          {stage === 'who' ? (
+            <div onKeyDownCapture={keys}>
+              <Command label="Who is on this team" loop value={highlighted} onValueChange={setHighlighted}>
+                <div className="pickfield">
+                  {/* The badges and the caret wrap together and the arrow does not wrap with
+                      them: it is the way out of this step, so it holds the right edge however
+                      many rows of agents are above it. */}
+                  <div className="pickitems">
+                  {/* The field is addressed like a message, because that is what the next thing
+                      you do with it is. It says who this is for before it says anything else, and
+                      the badges after it are the recipients rather than a set of ticked boxes. */}
+                  <span className="pickto">To</span>
+                  {/* Pressing a badge makes that agent the lead; the × takes them off, and is
+                      revealed on hover and `:focus-within` the way *your agents* reveals retiring,
+                      for the same reason. It was the whole badge that removed, on the argument
+                      that a target inside a small target is a mis-click on the destructive half —
+                      which is the argument for this arrangement, not against it, now that there
+                      are two things to do here: the press that is easy to hit is the one that
+                      changes nothing you cannot see. */}
+                  {picked.map((agent) => (
+                    <span
                       key={agent.id}
-                      value={rowOf(agent)}
-                      keywords={[agent.name, agent.role, agent.runtimeLabel]}
-                      onSelect={() => pick(agent.id)}
+                      className={`pickchip${agent.id === leading ? ' lead' : ''}`}
                     >
+                      <button
+                        className="who"
+                        onClick={() => setLead(agent.id)}
+                        title={
+                          agent.id === leading
+                            ? `${agent.name} leads this team`
+                            : `Make ${agent.name} the lead`
+                        }
+                      >
+                        <Blob
+                          name={agent.name}
+                          size={17}
+                          {...(agent.hue === undefined ? {} : { hue: agent.hue })}
+                          {...(agent.shape === undefined ? {} : { shape: agent.shape })}
+                        />
+                        <span className="nm">{agent.name}</span>
+                        {agent.id === leading && <span className="mono">LEAD</span>}
+                      </button>
+                      <button
+                        className="off"
+                        onClick={() => drop(agent.id)}
+                        title={`Take ${agent.name} off`}
+                        aria-label={`Take ${agent.name} off`}
+                      >
+                        <X size={11} aria-hidden />
+                      </button>
+                    </span>
+                  ))}
+                  <Command.Input
+                    autoFocus
+                    value={query}
+                    onValueChange={setQuery}
+                    placeholder={picked.length === 0 ? 'a name' : ''}
+                  />
+                  </div>
+                  <button
+                    className="pickgo"
+                    disabled={chosen.length === 0}
+                    onClick={() => setStage('where')}
+                    title="Next"
+                    aria-label="Next"
+                  >
+                    <ArrowRight size={15} aria-hidden />
+                  </button>
+                </div>
+                <Command.List ref={listed}>
+                  {/* Two different facts. An empty roster is not a failed search, and telling
+                      somebody who has never hired anybody that nobody answers to that name is
+                      the app blaming them for its own empty state. */}
+                  <Command.Empty>
+                    {roster.length === 0 ? 'Nobody hired yet' : 'Nobody by that name'}
+                    {/* The door again, because the row above filters out with everything else
+                        and this is exactly when it is wanted. Never both at once. */}
+                    <button className="hirerow" onClick={() => setHiring(true)}>
+                      <span className="ico">
+                        <UserPlus size={17} aria-hidden />
+                      </span>
+                      <span>hire an agent</span>
+                    </button>
+                  </Command.Empty>
+                  {roster
+                    .filter((agent) => !chosen.includes(agent.id))
+                    .map((agent) => (
+                      <Command.Item
+                        key={agent.id}
+                        value={rowOf(agent)}
+                        keywords={[agent.name, agent.role, agent.runtimeLabel]}
+                        onSelect={() => pick(agent.id)}
+                      >
+                        <Blob
+                          name={agent.name}
+                          size={20}
+                          {...(agent.hue === undefined ? {} : { hue: agent.hue })}
+                          {...(agent.shape === undefined ? {} : { shape: agent.shape })}
+                        />
+                        <span>{agent.name}</span>
+                        <span className="r">{agent.role}</span>
+                      </Command.Item>
+                    ))}
+                  {/* The only other thing you can do from here, and the only way out of an empty
+                      roster. **A row of the list in full, 2026-09-07**: the pointer highlights
+                      it, the arrow keys reach it, Tab and Space take it. It was a plain button
+                      until then, to keep cmdk's standing highlight off a door, and what that cost
+                      was two fills lit at once — a button is not an item, so the list went on
+                      highlighting the first agent underneath the pointer's own row.
+
+                      **Last in the DOM and first on screen** (`order:-1` in the stylesheet),
+                      which is not decoration: cmdk highlights the first *item* and re-highlights
+                      it every time the list changes, so a hire row first in the DOM would take
+                      the highlight back after every pick, and Tab and Space — which take the
+                      highlighted row — would open a dialog instead of adding somebody. Last in
+                      the DOM leaves that default on the agents where it has always been, and the
+                      arrow keys still reach this row, because the list loops.
+
+                      It filters with the query now, which the button did not. The way out when a
+                      name has no answer is the button under `Command.Empty`, where a person who
+                      typed a name nobody answers to is already looking. */}
+                  <Command.Item
+                    className="hirerow"
+                    value="hire an agent"
+                    keywords={['hire', 'new', 'add']}
+                    onSelect={() => setHiring(true)}
+                  >
+                    <span className="ico">
+                      <UserPlus size={17} aria-hidden />
+                    </span>
+                    <span>hire an agent</span>
+                  </Command.Item>
+                </Command.List>
+              </Command>
+            </div>
+          ) : (
+            <>
+              <div className="pickfield">
+                {/* Who this is for, and the way back to changing it. The team being named is the
+                    answer to the question above, and a name is easier to choose while looking at
+                    it — so the faces are here rather than left behind on a step you can no longer
+                    see. Four, then a count: past four a row of faces stops identifying anybody and
+                    starts being a texture, and the number is the part that stays true. */}
+                <button
+                  className="pickback"
+                  onClick={() => setStage('who')}
+                  title="Who is on this team"
+                  aria-label="Who is on this team"
+                >
+                  <span className="stack">
+                    {picked.slice(0, FACES).map((agent) => (
                       <Blob
+                        key={agent.id}
                         name={agent.name}
                         size={20}
                         {...(agent.hue === undefined ? {} : { hue: agent.hue })}
                         {...(agent.shape === undefined ? {} : { shape: agent.shape })}
                       />
-                      <span>{agent.name}</span>
-                      <span className="r">{agent.role}</span>
-                    </Command.Item>
-                  ))}
-              </Command.List>
-            </Command>
-            {/* The only other thing you can do from here, and the only way out of an empty
-                roster. Outside the list on purpose: it is not somebody you can put on the team,
-                and while it was a row in there it was the row cmdk highlighted, because the
-                roster arrives a frame late and for that frame it was the only row there was.
-                With no agents to Tab to, an ordinary Tab lands on it. */}
-            <button className="pickhire" onClick={() => setHiring(true)}>
-              hire an agent
-            </button>
-          </div>
-        ) : (
-          <>
-            <div className="pickfield">
-              {/* Who this is for, and the way back to changing it. The team being named is the
-                  answer to the question above, and a name is easier to choose while looking at
-                  it — so the faces are here rather than left behind on a step you can no longer
-                  see. Four, then a count: past four a row of faces stops identifying anybody and
-                  starts being a texture, and the number is the part that stays true. */}
-              <button
-                className="pickback"
-                onClick={() => setStage('who')}
-                title="Who is on this team"
-                aria-label="Who is on this team"
-              >
-                <span className="stack">
-                  {picked.slice(0, FACES).map((agent) => (
-                    <Blob
-                      key={agent.id}
-                      name={agent.name}
-                      size={20}
-                      {...(agent.hue === undefined ? {} : { hue: agent.hue })}
-                      {...(agent.shape === undefined ? {} : { shape: agent.shape })}
-                    />
-                  ))}
-                </span>
-                {picked.length > FACES && (
-                  <span className="mono">+{picked.length - FACES}</span>
-                )}
-              </button>
-              <div className="pickitems">
-              <input
-                className="pickinput"
-                autoFocus
-                value={name}
-                placeholder="Name this team"
-                onChange={(event) => setName(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter') return;
-                  event.preventDefault();
-                  void create();
-                }}
-              />
+                    ))}
+                  </span>
+                  {picked.length > FACES && (
+                    <span className="mono">+{picked.length - FACES}</span>
+                  )}
+                </button>
+                <div className="pickitems">
+                <input
+                  className="pickinput"
+                  autoFocus
+                  value={name}
+                  placeholder="Name this team"
+                  onChange={(event) => setName(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter') return;
+                    event.preventDefault();
+                    void create();
+                  }}
+                />
+                </div>
+                <button
+                  className="pickact"
+                  onClick={() => void choose()}
+                  title="Choose a folder"
+                  aria-label="Choose a folder"
+                >
+                  <Folder size={15} aria-hidden />
+                </button>
+                <button
+                  className="pickgo"
+                  disabled={!ready}
+                  onClick={() => void create()}
+                  title="Create the team"
+                  aria-label="Create the team"
+                >
+                  <ArrowRight size={15} aria-hidden />
+                </button>
               </div>
-              <button
-                className="pickact"
-                onClick={() => void choose()}
-                title="Choose a folder"
-                aria-label="Choose a folder"
-              >
-                <Folder size={15} aria-hidden />
-              </button>
-              <button
-                className="pickgo"
-                disabled={!ready}
-                onClick={() => void create()}
-                title="Create the team"
-                aria-label="Create the team"
-              >
-                <ArrowRight size={15} aria-hidden />
-              </button>
-            </div>
-            <Where
-              path={path}
-              name={name.trim()}
-              inspection={inspection}
-              repos={repos}
-              reading={reading}
-              busy={busy}
-              {...(error === undefined ? {} : { error })}
-            />
-            <div className="pickmachines">
-              <span className="mono muted">WHERE THEY WORK</span>
-              <MachineCapacity host={hostCapacity} placements={picked.map((agent) => memberMachines[agent.id] ?? defaultMachine)} />
-              <MachinePick label="Where this team works" value={defaultMachine} onChange={setDefaultMachine} previewEnabled={previewEnabled} />
-              <details className="machinedisclosure">
-                <summary>Choose for each agent</summary>
-                {picked.map((agent) => <div className="machinemember" key={agent.id}>
-                  <span>{agent.name}</span>
-                  <MachinePick label={`Where ${agent.name} works`} value={memberMachines[agent.id] ?? defaultMachine} previewEnabled={previewEnabled}
-                    onChange={(value) => setMemberMachines((current) => ({ ...current, [agent.id]: value }))} />
-                  {memberMachines[agent.id] !== undefined && <button className="btn tiny" onClick={() => setMemberMachines((current) => {
-                    const next = { ...current }; delete next[agent.id]; return next;
-                  })}>use team default</button>}
-                </div>)}
-              </details>
-              {picked.some((agent) => (memberMachines[agent.id] ?? defaultMachine).kind === 'box') && <>
-                <p className="note muted">First use downloads about 600–800 MB per runtime, shared across agents, plus the sandbox engine.</p>
-                <p className="note muted">Each sandbox has an 8 GiB private home and 20 GiB for software it installs. CPU and memory limits stay fixed after creation.</p>
-                <p className="note muted">Working folders and shared Git history stay writable on this computer. Sandboxes can reach the Internet and your local network.
-                  The runtime keeps the approval settings selected for each agent.</p>
-                <details className="machinedisclosure"><summary>Set up sandboxes</summary><EngineSetupControls compact /></details>
-              </>}
-            </div>
-          </>
-        )}
+              <Where
+                path={path}
+                name={name.trim()}
+                inspection={inspection}
+                repos={repos}
+                reading={reading}
+                busy={busy}
+                {...(error === undefined ? {} : { error })}
+              />
+              <div className="pickmachines">
+                <span className="mono muted">WHERE THEY WORK</span>
+                <MachineCapacity host={hostCapacity} placements={picked.map((agent) => memberMachines[agent.id] ?? defaultMachine)} />
+                <MachinePick label="Where this team works" value={defaultMachine} onChange={setDefaultMachine} previewEnabled={previewEnabled} />
+                <details className="machinedisclosure">
+                  <summary>Choose for each agent</summary>
+                  {picked.map((agent) => <div className="machinemember" key={agent.id}>
+                    <span>{agent.name}</span>
+                    <MachinePick label={`Where ${agent.name} works`} value={memberMachines[agent.id] ?? defaultMachine} previewEnabled={previewEnabled}
+                      onChange={(value) => setMemberMachines((current) => ({ ...current, [agent.id]: value }))} />
+                    {memberMachines[agent.id] !== undefined && <button className="btn tiny" onClick={() => setMemberMachines((current) => {
+                      const next = { ...current }; delete next[agent.id]; return next;
+                    })}>use team default</button>}
+                  </div>)}
+                </details>
+                {picked.some((agent) => (memberMachines[agent.id] ?? defaultMachine).kind === 'box') && <>
+                  <p className="note muted">First use downloads about 600–800 MB per runtime, shared across agents, plus the sandbox engine.</p>
+                  <p className="note muted">Each sandbox has an 8 GiB private home and 20 GiB for software it installs. CPU and memory limits stay fixed after creation.</p>
+                  <p className="note muted">Working folders and shared Git history stay writable on this computer. Sandboxes can reach the Internet and your local network.
+                    The runtime keeps the approval settings selected for each agent.</p>
+                  <details className="machinedisclosure"><summary>Set up sandboxes</summary><EngineSetupControls compact /></details>
+                </>}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {hiring && (
@@ -473,7 +535,7 @@ export function NewTeam({
           }}
         />
       )}
-    </div>
+    </>
   );
 }
 

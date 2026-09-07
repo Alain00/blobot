@@ -202,6 +202,21 @@ export interface UiAgent {
 }
 
 /**
+ * Somebody who was on this team and is not now, as much of them as the transcript needs.
+ *
+ * The name and the face, and nothing else. A departed member has no status, no workspace, no
+ * runtime and no session -- there is nothing running to report any of them -- and offering the
+ * shape of a roster member for somebody who is not one is how a departed member ends up in an
+ * `@mention` list. `.scratch/team-addressing/issues/07`.
+ */
+export interface UiDepartedAgent {
+  readonly id: string;
+  readonly name: string;
+  readonly hue?: number;
+  readonly shape?: string;
+}
+
+/**
  * One entry in the composer's slash menu.
  *
  * Curated before it gets here: the adapter offers the workspace's own `.claude/` commands plus
@@ -571,6 +586,23 @@ export interface UiSnapshot {
    */
   readonly profiles?: readonly UiRailAgent[];
   readonly agents: readonly UiAgent[];
+  /**
+   * The people who wrote into this team's transcript and are no longer on it.
+   *
+   * Separate from `agents` on purpose, and it has to be. `agents` is the **roster**: the
+   * composer's `@mention` list, the file sidebar's chooser, the pending faces and the rail all
+   * iterate it, and every one of them would be wrong about a member who has been taken off.
+   * What a departed member is still owed is a *name* and a *face* on the rows they wrote, which
+   * is a lookup and not a membership -- so it is its own list, and the only thing that reads it
+   * is the transcript's name resolution.
+   *
+   * `.scratch/team-addressing/issues/07`. Without it every row a removed member ever wrote drew
+   * `mara_8f3545` with a hue derived from that id, which is a database key in the reading column.
+   *
+   * Optional because a team that has never lost anybody has nothing to say here, and demo mode
+   * has no store behind it.
+   */
+  readonly departed?: readonly UiDepartedAgent[];
   /**
    * Every agent on every *live* team, not just the one on screen. Several teams run at once,
    * and the rail draws a status on each of their rows, so a map keyed by team would only be

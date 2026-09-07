@@ -115,6 +115,7 @@ import type {
   UiRoutineRun,
   UiRoutineTarget,
   UiContextCeiling,
+  UiDepartedAgent,
   UiRuntimeChoice,
   UiRuntimeOptions,
   UiDictationState,
@@ -608,6 +609,7 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
     // them emptied the rail of every agent for the length of a cold start.
     profiles: railAgents(),
     unread: unreadAgents(),
+    departed: departedOf(store, team.id, records),
     agents: records.map((record) => ({
       id: record.id,
       name: record.name,
@@ -691,6 +693,37 @@ function transcript(
     // and the row carries a link — so the name is looked up beside the window it is about.
     routineOrigins: routineOrigins(store, window.messages),
   };
+}
+
+/**
+ * Who wrote into this team's transcript and is no longer on it.
+ *
+ * `.scratch/team-addressing/issues/07`. An Agent taken off a team is tombstoned rather than
+ * deleted, so its rows survive in the transcript with nothing on the live roster left to resolve
+ * them -- and the renderer's every fallback was `?? item.agentId`, which put a database key in
+ * the reading column under a hue derived from that key. The store already knew: the same
+ * `includeDeleted` read is what `transcriptOfTeam` uses to decide which rows belong to the team
+ * at all, so the name and the face were one flag away from every row they are owed to.
+ *
+ * The roster is subtracted rather than the deleted flag trusted, so this list and `agents`
+ * cannot both claim the same person however the two reads are ordered.
+ */
+function departedOf(
+  store: SqliteStore | undefined,
+  teamId: string,
+  roster: readonly { readonly id: string }[],
+): readonly UiDepartedAgent[] {
+  if (store === undefined) return [];
+  const here = new Set(roster.map((agent) => agent.id));
+  return store
+    .agentsOfTeam(teamId, { includeDeleted: true })
+    .filter((record) => !here.has(record.id))
+    .map((record) => ({
+      id: record.id,
+      name: record.name,
+      ...(record.hue === undefined ? {} : { hue: record.hue }),
+      ...(record.shape === undefined ? {} : { shape: record.shape }),
+    }));
 }
 
 /**
@@ -842,6 +875,7 @@ function snapshot(): UiSnapshot {
         ]
       : teamSummaries(),
     profiles: railAgents(),
+    departed: departedOf(team.store, team.team.id, team.agents),
     agents: team.agents.map((agent) => ({
       id: agent.id,
       name: agent.name,

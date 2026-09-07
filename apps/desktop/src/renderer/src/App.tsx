@@ -14,6 +14,7 @@ import { Rail } from './components/Rail.js';
 import { Routines } from './components/Routines.js';
 import { Settings } from './components/Settings.js';
 import { AddMember } from './components/AddMember.js';
+import { RetireAgent } from './components/AgentForm.js';
 import { DeleteTeam, EditTeam, RemoveMember } from './components/TeamEdits.js';
 import { initialState, itemsFor, paneAfterSnapshot, reduce, type Pane } from './model.js';
 import { useWorkspaces } from './useWorkspaces.js';
@@ -90,6 +91,12 @@ export function App(): React.JSX.Element {
    */
   const [removing, setRemoving] = useState<string | undefined>(undefined);
   const [deleting, setDeleting] = useState<string | undefined>(undefined);
+  /**
+   * The agent the rail's menu asked to retire, whole rather than by id: the dialog prices what
+   * it is about to end and names the teams that keep running, and the rail carries neither —
+   * its rows are `UiRailAgent`. So the definition is read when the menu is answered.
+   */
+  const [retiring, setRetiring] = useState<UiAgentProfile | undefined>(undefined);
   /** Why the last team the user clicked would not open. Cleared by the next click. */
   const [openError, setOpenError] = useState<string | undefined>(undefined);
   /**
@@ -163,8 +170,26 @@ export function App(): React.JSX.Element {
     });
   }, []);
 
+  /**
+   * How many snapshots have been asked for. An answer that has been overtaken is dropped.
+   *
+   * `.scratch/live-steps/issues/11`. Main pushes `blobot:team` from a dozen places and each push
+   * is a fresh `snapshot()`, so two are in flight across every switch — and the reducer replaces
+   * the pane wholesale, so whichever lands *last* is what the transcript is. An answer that
+   * describes the team the user has just left is not a stale detail to be corrected on the next
+   * push: it is the previous team's whole conversation, its live blocks included, put back into
+   * a pane that had moved on.
+   *
+   * The rule `loadEarlier` already applies, applied to the thing that replaces everything rather
+   * than only to the thing that prepends to it. A counter and not the team id, because two
+   * snapshots of the *same* team race the same way and the later one is still the true one.
+   */
+  const asked = useRef(0);
+
   const refresh = useCallback((resetPane = false) => {
+    const mine = (asked.current += 1);
     void window.blobot.snapshot().then((snapshot) => {
+      if (asked.current !== mine) return;
       const arrived = showing.current !== snapshot.team?.id;
       showing.current = snapshot.team?.id;
       setOpenError(snapshot.openError);
@@ -320,13 +345,29 @@ export function App(): React.JSX.Element {
         return result;
       }
       if (result.agentId !== undefined) {
+        // **The pane stays on the profile until that agent's team is the one in hand.**
+        //
+        // It used to move to `{kind: 'agent'}` here, the moment main answered, and the snapshot
+        // is still the team being left at that instant. An agent pane on a thread takes its
+        // selected row from `team.threadFor` — the *old* thread's profile — so pressing one
+        // thread lit the row you came from for a frame before the snapshot corrected it, and the
+        // transcript blanked with it, since the wanted agent is not on the old roster. A team
+        // with members never showed it: `openTeam` sets no pane at all, so its selection moves
+        // once, when the snapshot arrives.
+        //
+        // `wanted` and `paneAfterSnapshot` already do this properly for every other opening. The
+        // clearing of the unread mark is the one thing `openPane` was here for, so it is kept
+        // outright rather than deferred: the row was pressed now.
         wanted.current = result.agentId;
-        openPane({ kind: 'agent', agentId: result.agentId });
+        dispatch({ type: 'seen', agentId: result.agentId });
+        void window.blobot.seenRoutineRuns(result.agentId);
+        refresh(true);
+        return result;
       }
       refresh();
       return result;
     },
-    [openPane, refresh],
+    [refresh],
   );
 
   const items = useMemo(() => itemsFor(state.items, pane), [state.items, pane]);
@@ -512,6 +553,12 @@ export function App(): React.JSX.Element {
                 onSelectAgent: (profileId: string) => void openThread(profileId),
                 onTogglePin: pins.toggle,
                 onDeleteThread: (teamId: string) => setDeleting(teamId),
+                onRetireAgent: (profileId: string) => {
+                  void window.blobot.listAgents().then((list) => {
+                    const found = list.find((one) => one.id === profileId);
+                    if (found !== undefined) setRetiring(found);
+                  });
+                },
                 onNewTeam: () => setCreating(true),
                 onOpenAgents: () => setBrowsingAgents(true),
                 onOpenRoutines: () => setBrowsingRoutines(true),
@@ -525,6 +572,10 @@ export function App(): React.JSX.Element {
             pane={pane}
             place={place}
             agents={snapshot.agents}
+            /* The people who wrote into this transcript and have since been taken off the team.
+               Handed only here: every other surface in the window is about the roster, and a
+               departed member belongs in none of them. `.scratch/team-addressing/issues/07`. */
+            departed={snapshot.departed ?? []}
             statuses={state.statuses}
             items={items}
             opening={snapshot.opening === true}
@@ -813,6 +864,16 @@ export function App(): React.JSX.Element {
           <Settings
             onClose={() => setInSettings(false)}
             {...(settingsSection === undefined ? {} : { section: settingsSection })}
+          />
+        )}
+        {/* Retiring, from the rail's own menu. The same dialog *your agents* opens, because it
+            is the same act and a second wording of it would be a second answer to what retiring
+            costs. */}
+        {retiring !== undefined && (
+          <RetireAgent
+            agent={retiring}
+            onClose={() => setRetiring(undefined)}
+            onRetired={() => refresh(true)}
           />
         )}
         {deletingTeam !== undefined && (

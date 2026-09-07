@@ -1,7 +1,12 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ChevronDown, FileText, Pencil, SquareTerminal } from 'lucide-react';
 import type { AgentStatus, ToolKind } from '@blobot/core/domain';
-import type { PermissionChoice, UiAgent, UiPermissionOutcome } from '../../../shared/api.js';
+import type {
+  PermissionChoice,
+  UiAgent,
+  UiDepartedAgent,
+  UiPermissionOutcome,
+} from '../../../shared/api.js';
 import {
   compactionLine,
   continuesAgent,
@@ -29,10 +34,58 @@ import { Blob } from './Blob.js';
 import { Markdown } from './Markdown.js';
 
 
+/**
+ * Whoever a transcript row can name: a member of the roster, or somebody who has left it.
+ *
+ * The transcript needs a name and a face and nothing else, which is what lets a departed member
+ * be one of these without being offered anywhere a roster is what is wanted.
+ * `.scratch/team-addressing/issues/07`.
+ */
+export interface Speaker {
+  readonly id: string;
+  readonly name: string;
+  readonly hue?: number | undefined;
+  readonly shape?: string | undefined;
+  /** Taken off this team since. The rows they wrote are still theirs; the membership is not. */
+  readonly gone?: boolean;
+}
+
+/**
+ * The roster, plus the people who used to be on it.
+ *
+ * Departed last and never overwriting: `departedOf` in main subtracts the roster already, and if
+ * the two ever did disagree the live membership is the one that is true now.
+ */
+function speakersOf(
+  agents: readonly UiAgent[],
+  departed: readonly UiDepartedAgent[],
+): Map<string, Speaker> {
+  const byId = new Map<string, Speaker>(agents.map((agent) => [agent.id, agent]));
+  for (const one of departed) {
+    if (byId.has(one.id)) continue;
+    byId.set(one.id, { ...one, gone: true });
+  }
+  return byId;
+}
+
+/**
+ * The roster's own words for somebody who is not on it any more, in the header's register.
+ *
+ * Drawn where the name is *introduced* and nowhere else, which for an agent's own rows means
+ * exactly where the header draws -- so a run of six rows says it once, on the first, and the
+ * five continuations under it carry no name to mark. `.scratch/team-addressing/issues/07`: the
+ * cheap answer was to draw the name and say nothing, and it reads as a roster twice the size of
+ * the one the rail shows.
+ */
+function Gone(): React.JSX.Element {
+  return <span className="tag">off the team</span>;
+}
+
 export function Conversation({
   pane,
   agents,
   statuses,
+  departed = [],
   items,
   onAnswerPermission,
   routineArmed,
@@ -46,6 +99,12 @@ export function Conversation({
 }: {
   pane: Pane;
   agents: readonly UiAgent[];
+  /**
+   * Who wrote into this transcript and is no longer on the team. Kept out of `agents` on
+   * purpose: the roster is what the composer, the sidebar's chooser and the pending faces
+   * iterate, and a departed member belongs in none of them. See `UiSnapshot.departed`.
+   */
+  departed?: readonly UiDepartedAgent[];
   statuses: Record<string, AgentStatus>;
   items: readonly Item[];
   onAnswerPermission: (requestId: string, choice: PermissionChoice) => void;
@@ -81,7 +140,7 @@ export function Conversation({
    */
   place?: string;
 }): React.JSX.Element {
-  const byId = new Map(agents.map((agent) => [agent.id, agent]));
+  const byId = speakersOf(agents, departed);
   const stream = useStickToBottom(place);
   const answer = useLatest(onAnswerPermission);
   const disarm = useLatest(onDisarmRoutine);
@@ -249,9 +308,9 @@ function Live({
   grouped,
 }: {
   block: LiveBlock;
-  agent: UiAgent | undefined;
+  agent: Speaker | undefined;
   /** For the steps that are not this agent's: a teammate's reply carries its own face. */
-  byId: Map<string, UiAgent>;
+  byId: Map<string, Speaker>;
   composer: Element | null;
   status: AgentStatus;
   /**
@@ -412,7 +471,7 @@ function Reply({
   byId,
 }: {
   item: Extract<Item, { kind: 'agent' }>;
-  byId: Map<string, UiAgent>;
+  byId: Map<string, Speaker>;
 }): React.JSX.Element {
   const who = byId.get(item.agentId);
   return (
@@ -437,7 +496,7 @@ function Reply({
  */
 interface RowCast {
   pane: Pane;
-  byId: Map<string, UiAgent>;
+  byId: Map<string, Speaker>;
   statuses: Record<string, AgentStatus>;
   /** Where a live face looks, and null whenever the user is not in the composer. */
   composer: Element | null;
@@ -536,10 +595,17 @@ interface Cast {
   fromName?: string | undefined;
   fromHue?: number | undefined;
   fromShape?: string | undefined;
+  /**
+   * The voice has been taken off this team since it said this. Marked where the name is
+   * introduced and never on a continuation. `.scratch/team-addressing/issues/07`.
+   */
+  fromGone?: boolean | undefined;
   /** The addressed agent: who a message from you went to, or who a peer wrote to. */
   toName?: string | undefined;
   toHue?: number | undefined;
   toShape?: string | undefined;
+  /** The same, for the far end of a peer message. */
+  toGone?: boolean | undefined;
   /** This pane is the recipient of a peer message, so it reads as mail rather than as a copy. */
   received?: boolean | undefined;
   /**
@@ -561,7 +627,7 @@ interface Cast {
 function castOf(
   item: Item,
   pane: Pane,
-  byId: Map<string, UiAgent>,
+  byId: Map<string, Speaker>,
   statuses: Record<string, AgentStatus>,
   routineArmed: Record<string, boolean>,
 ): Cast {
@@ -585,6 +651,7 @@ function castOf(
         fromName: agent?.name ?? item.agentId,
         fromHue: agent?.hue,
         fromShape: agent?.shape,
+        fromGone: agent?.gone,
         ...(item.live ? { status: statuses[item.agentId] ?? 'idle' } : {}),
       };
     }
@@ -596,9 +663,11 @@ function castOf(
         fromName: from?.name ?? item.fromId,
         fromHue: from?.hue,
         fromShape: from?.shape,
+        fromGone: from?.gone,
         toName: to?.name ?? item.toId,
         toHue: to?.hue,
         toShape: to?.shape,
+        toGone: to?.gone,
         received,
       };
     }
@@ -890,6 +959,7 @@ function Steps({
               <React.Fragment key={id}>
                 <Blob name={agent?.name ?? id} size={20} hue={agent?.hue} shape={agent?.shape} />
                 <span className="nm">{agent?.name ?? id}</span>
+                {agent?.gone === true && <Gone />}
               </React.Fragment>
             ))
           ))}
@@ -1096,9 +1166,11 @@ const ItemView = React.memo(function ItemView({
   fromName,
   fromHue,
   fromShape,
+  fromGone = false,
   toName,
   toHue,
   toShape,
+  toGone = false,
   received = false,
   status,
   armed = false,
@@ -1155,6 +1227,7 @@ const ItemView = React.memo(function ItemView({
             {!grouped && (
               <div className="hdr">
                 <span className="nm">{fromName}</span>
+                {fromGone && <Gone />}
                 {item.live && <span className="tag">typing</span>}
               </div>
             )}
@@ -1182,6 +1255,7 @@ const ItemView = React.memo(function ItemView({
             name={(received ? fromName : toName) ?? ''}
             hue={received ? fromHue : toHue}
             shape={received ? fromShape : toShape}
+            gone={received ? fromGone : toGone}
           >
             {item.context !== undefined && <div className="ctx">{item.context}</div>}
             <Markdown text={item.text} />
@@ -1679,12 +1753,15 @@ function PeerNote({
   name,
   hue,
   shape,
+  gone = false,
   children,
 }: {
   received: boolean;
   name: string;
   hue?: number | undefined;
   shape?: string | undefined;
+  /** The far end has been taken off the team since. The mail still happened. */
+  gone?: boolean;
   children: React.ReactNode;
 }): React.JSX.Element {
   const [open, setOpen] = useState(false);
@@ -1696,6 +1773,7 @@ function PeerNote({
         <span className="lbl">{received ? 'message received from' : 'message sent to'}</span>
         <Blob name={name} size={20} hue={hue} shape={shape} />
         <span className="nm">{name}</span>
+        {gone && <Gone />}
       </button>
       {open && <div className="note">{children}</div>}
     </>

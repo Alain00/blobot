@@ -9,10 +9,10 @@
  */
 
 .machineavatar { position:relative; display:inline-flex; flex:none; }
-.machinepower { position:absolute; right:0; bottom:0; width:10px; height:10px; border:2px solid var(--raised); border-radius:50%; background:var(--muted); }
+.machinepower { position:absolute; right:0; bottom:0; width:10px; height:10px; border:2px solid var(--behind); border-radius:50%; background:var(--muted); }
 .machinepower.is-awake { background:#579769; }
-.machinepower.is-unknown { background:var(--raised); outline:1px dashed var(--muted); }
-.machinepower.is-waking, .machinepower.is-sleeping { background:linear-gradient(90deg,var(--muted) 50%,var(--raised) 50%); }
+.machinepower.is-unknown { background:var(--behind); outline:1px dashed var(--muted); }
+.machinepower.is-waking, .machinepower.is-sleeping { background:linear-gradient(90deg,var(--muted) 50%,var(--behind) 50%); }
 .machinesleep { max-width:560px; }
 .machinesleep .field { display:grid; gap:8px; max-width:280px; }
 .machinesleep input { padding:8px; color:var(--ink); background:var(--raised); border:1px solid var(--edge); }
@@ -87,6 +87,12 @@
      is the orange of the same ramp rather than its yellow, because `M` is the mark most rows
      carry and the commonest state must not be the brightest thing in the flank. */
   --added:#b5bd68; --removed:#cc6666; --modified:#de935f;
+  /* Destroying something, in the one menu that offers it. The diff pair's own amendment is what
+     admits it: hue reinforces a fact the word already carries — the row says *Delete* — and the
+     chroma is the ramp's, so a blobatar still wins the eye. It is `--removed`'s value under a
+     second name because the roles are not the same one: that token belongs to a count, and a
+     rename of either must not silently repaint the other. Nothing but a destructive row. */
+  --danger:#cc6666;
   /* The tray under the composer: tucked behind the pill, so it has to read as a shelf and not as
      a hole cut in the page, which is what the page's own black made of it.
      **On the ramp, not beside it.** It is the midpoint of `--ground` and `--raised` channel by
@@ -104,6 +110,19 @@
      the rail being darker than the page. The name is now wrong and is left alone: renaming it
      would touch every rule in this file for a word. */
   --recessed:#1d1f21;
+  /* **The plane immediately behind whatever is being drawn**, and the only token here whose
+     value is meant to be overridden further down the tree.
+     Four places cut a hole in their own ground rather than stroking a border — the two blobatar
+     stacks (`.ran .route .stack`, `.pickback .stack`), the team icon's sticker, and the Machine
+     power dot — because a blobatar is a silhouette and not a circle, so an outline that is a
+     *shape* cuts its edge while a hole in the ground follows it. Each of those had the plane it
+     sits on written into it as a literal, which is true until the plane moves. It moves on the
+     rail: a row is `--recessed` at rest and `--raised` when it is the open one, so the icon's
+     halo was drawn in the transcript's ground on a selected row and the power dot's was drawn in
+     the selected ground on every row that is not. Both were a visible ring around the thing they
+     exist to make invisible.
+     Not `--rowground`: the transcript's stack is not in a row. */
+  --behind:var(--ground);
   /* `Geist Sans` is what the bundled faces are called; `Geist` is what a machine with the
      typeface installed calls it. Both, so neither case falls through to the system stack. */
   --sans:"Geist Sans","Geist",ui-sans-serif,system-ui,sans-serif;
@@ -276,6 +295,10 @@ hr{border:0;border-top:1px solid var(--edge);margin:0}
    keeps the text on the 14px column the labels and headers already sit on. 12px is `.field`'s
    radius, the sheet's documented default. */
 .railrow{display:flex;gap:8px;align-items:center;padding:5px 8px;width:calc(100% - 12px);margin:0 6px;border-radius:12px;text-align:left}
+/* The rail is the one place the plane behind a mark changes, and `.sel` is the whole of the
+   change: hover is carried by ink here, not by ground, so it is deliberately not in this list. */
+.railrow{--behind:var(--recessed)}
+.railrow.sel,.railrowwrap[data-state='open'] .railrow{--behind:var(--raised)}
 /* Hover and selection answer different questions — "where is the pointer" and "which row am I
    in" — so they cannot both be the raised ground, which is what they were: two identical
    declarations, and no way to tell the row you are pointing at from the one you are already in.
@@ -379,7 +402,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:0}
    loudest thing in the rail on the chrome instead of on the faces. Grayscale rather than a
    silhouette mask, because luminance is most of what makes a logo recognisable at this size and
    a flat silhouette of one is usually a blob. `contain`, so a wordmark is letterboxed. */
-.mark .teamicon{position:absolute;right:-8%;bottom:-8%;width:46%;height:46%;object-fit:contain;border-radius:26%;background:var(--ground);box-shadow:0 0 0 1.5px var(--ground);opacity:.92;filter:grayscale(1)}
+.mark .teamicon{position:absolute;right:-8%;bottom:-8%;width:46%;height:46%;object-fit:contain;border-radius:26%;background:var(--behind);box-shadow:0 0 0 1.5px var(--behind);opacity:.92;filter:grayscale(1)}
 /* The navigator's door. A field's box — the raised ground and the 12px radius every lifted
    surface in this app uses — because that is the shape a person looks for when they want to
    type a name, even though this one opens a layer rather than taking the keystrokes itself.
@@ -573,7 +596,12 @@ hr{border:0;border-top:1px solid var(--edge);margin:0}
 .mentionwrap textarea{position:absolute;inset:0;display:block;width:100%;height:100%;resize:none;overflow:hidden;padding:0;background:transparent;border:none;outline:none;font:inherit;line-height:inherit;color:transparent;caret-color:var(--ink);white-space:pre-wrap;overflow-wrap:break-word}
 .hl{pointer-events:none;white-space:pre-wrap;overflow-wrap:break-word;font:inherit;color:var(--ink)}
 .hl .ph{color:var(--muted)}
-.hl .m{color:var(--ink);font-weight:500;box-shadow:inset 0 -1px 0 var(--ink)}
+/* Colour and an underline, and **never a weight**. The layer under the caret must set the
+   same glyphs at the same widths as the textarea over it, and the textarea has one weight for
+   the whole of its text: 500 on a mention pushed the drawn text wider than the text the caret
+   is measured against, and the drift showed up as a caret standing inside the next character.
+   Invisible over `@bob`, plain over `@Creative Designer`, which is how it was found. */
+.hl .m{color:var(--ink);box-shadow:inset 0 -1px 0 var(--ink)}
 .hl .m.ref{box-shadow:none}
 .hl .m.bad{color:var(--muted);box-shadow:inset 0 -1px 0 var(--line)}
 /* The same object as the select's menu — a floating list of rows over a control, with one
@@ -671,6 +699,13 @@ hr{border:0;border-top:1px solid var(--edge);margin:0}
 .msg .hdr{display:flex;align-items:baseline;gap:8px;margin-bottom:3px}
 .msg .hdr .nm{font-weight:500}
 .msg .hdr .tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+/* Somebody who is not on the team any more, said once where their name is introduced:
+   `.scratch/team-addressing/issues/07`. The header's own register, unchanged — a mono word at
+   `--muted` beside the name, exactly as `typing` is — rather than a badge, which is what this
+   column refuses. It rides three places because a name is introduced in three: an agent's own
+   header, the line naming the far end of a peer message, and the fold's `messages with`. */
+.peer .route .tag,
+.ran .route .tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);flex:0 0 auto}
 .msg .txt{white-space:pre-wrap}
 /* A continued turn is closer to the line above it than to the next speaker: the gap is the
    only thing left saying where one turn ends once the name is gone. */
@@ -726,7 +761,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:0}
    silhouette and not a circle, so a rounded outline would cut its edge, and `filter` follows the
    shape it is given. It is what keeps two overlapping faces from reading as one wide creature. */
 .ran .route .stack{display:inline-flex;align-items:center;flex:0 0 auto}
-.ran .route .stack>span{margin-left:-7px;filter:drop-shadow(1.5px 0 0 var(--ground)) drop-shadow(-1.5px 0 0 var(--ground)) drop-shadow(0 1.5px 0 var(--ground)) drop-shadow(0 -1.5px 0 var(--ground))}
+.ran .route .stack>span{margin-left:-7px;filter:drop-shadow(1.5px 0 0 var(--behind)) drop-shadow(-1.5px 0 0 var(--behind)) drop-shadow(0 1.5px 0 var(--behind)) drop-shadow(0 -1.5px 0 var(--behind))}
 .ran .route .stack>span:first-child{margin-left:0}
 /* Inside the fold, mail and a teammate's turn keep their own voices -- the dashed edge included,
    because that contrast is not this block's to flatten. What they lose is the 40px blobatar
@@ -1084,7 +1119,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:0}
 .navsheet.pickbar .pickback{display:flex;align-items:center;gap:5px;flex:0 0 auto;padding:4px 2px 4px 0;color:var(--muted)}
 .navsheet.pickbar .pickback:hover{color:var(--ink)}
 .navsheet.pickbar .pickback .stack{display:inline-flex;align-items:center}
-.navsheet.pickbar .pickback .stack>span{margin-left:-7px;filter:drop-shadow(1.5px 0 0 var(--raised)) drop-shadow(-1.5px 0 0 var(--raised)) drop-shadow(0 1.5px 0 var(--raised)) drop-shadow(0 -1.5px 0 var(--raised))}
+.navsheet.pickbar .pickback .stack>span{margin-left:-7px;filter:drop-shadow(1.5px 0 0 var(--behind)) drop-shadow(-1.5px 0 0 var(--behind)) drop-shadow(0 1.5px 0 var(--behind)) drop-shadow(0 -1.5px 0 var(--behind))}
 .navsheet.pickbar .pickback .stack>span:first-child{margin-left:0}
 .navsheet.pickbar .pickback .mono{font-size:10px;letter-spacing:.04em}
 /* Bottom aligned, not centred: the caret is always on the last row, and the arrow is what the
@@ -1092,6 +1127,11 @@ hr{border:0;border-top:1px solid var(--edge);margin:0}
    badges. The input is given the buttons' own height so the two sit exactly level whether the
    field has wrapped or not. */
 .navsheet.pickbar .pickfield{display:flex;align-items:flex-end;gap:6px;padding:9px 9px 9px 13px;border-bottom:1px solid var(--edge)}
+/* Addressed like a message. Muted and never a control: it is the field saying what the badges
+   after it are, so it takes the input's own line height and wraps with them rather than sitting
+   in a gutter of its own. The colon is drawn rather than written, so nothing selects it. */
+.navsheet.pickbar .pickto{flex:0 0 auto;align-self:center;font-size:13px;color:var(--muted)}
+.navsheet.pickbar .pickto::after{content:':'}
 /* What wraps. The arrow is the field's sibling rather than the last thing in the wrapping row,
    so a team of seven pushes the badges onto a second line and the way out stays on the right
    edge. */
@@ -1133,11 +1173,115 @@ hr{border:0;border-top:1px solid var(--edge);margin:0}
 .navsheet.pickbar .pickfoot{padding:9px 14px;font-size:12px;line-height:1.5;color:var(--muted)}
 .navsheet.pickbar .pickfoot + .pickfoot{padding-top:3px}
 .navsheet.pickbar .refusal{margin:10px 14px 0}
-/* Hiring, at the foot and outside the list, because it is not somebody you can put on the team.
-   Drawn like the doors at the foot of the rail, which is the other place in this app where a
-   row under a list is a way out of it rather than a member of it. */
-.navsheet.pickbar .pickhire{display:block;width:100%;text-align:left;padding:9px 14px;border-top:1px solid var(--edge);font-size:13px;color:var(--muted)}
-.navsheet.pickbar .pickhire:hover{color:var(--ink)}
+/* Hiring, at the head of the list and one of its rows — the same box, the same corner, the
+   blobatar's own 20px gutter so the names line up. Muted, because it is the way out of the list
+   rather than somebody in it, and it comes up to full ink when it is the highlighted row.
+   A `[cmdk-item]` in the list and a plain button under `Command.Empty`, which is why the fill
+   is written twice: cmdk highlights the first, the pointer highlights the second.
+
+   `order:-1` is what puts it at the head: it is rendered last so that cmdk's own highlight, which
+   lands on the first item and returns there every time the list changes, stays on the agents.
+   The list is the flex box that makes that possible, and it exists for this. */
+.navsheet.pickbar [cmdk-list-sizer]{display:flex;flex-direction:column}
+.navsheet.pickbar [cmdk-item].hirerow{order:-1}
+.navsheet.pickbar .hirerow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:7px 10px;border-radius:8px;font-size:13px;color:var(--muted);cursor:pointer}
+.navsheet.pickbar .hirerow .ico{display:flex;align-items:center;justify-content:center;width:20px;height:20px;flex:0 0 auto}
+.navsheet.pickbar .hirerow:hover,.navsheet.pickbar .hirerow:focus-visible,.navsheet.pickbar .hirerow[data-selected='true']{color:var(--ink);background:var(--ground)}
+
+/* ---------- the agent bar: hiring one, and restating one that exists ---------- */
+/* The creation bar's sibling, doing the other job. Every metric above is reused: the sheet, the
+   field with its hairline, the addressed word, the 28px arrow that inverts only when it is
+   armed. Radix still owns the dialog underneath, so this is `Dialog.Content` positioned where
+   `.navscrim` would have put it — the scrim is a flex box the overlay is not inside.
+   *2026-09-07, replacing `.modal.roomy` and the eight stacked fields it was built for.* */
+.navsheet.agentbar{position:fixed;top:14vh;left:50%;translate:-50% 0;max-width:560px;width:calc(100vw - 48px);z-index:61}
+/* Centred rather than bottom-aligned, unlike the creation bar: nothing here wraps into a stack
+   of badges, so there is no last row for the arrow to sit beside. */
+.navsheet.pickbar.agentbar > .pickfield{align-items:center;gap:9px}
+/* Every override in this block is written against `.navsheet.pickbar` and has to outrank it —
+   three classes, so these carry four. Two of them read as ordinary `.agentbar` rules for a day
+   and lost silently: the field kept `align-items:flex-end` and the name kept `flex:1`, which is
+   what put 40px of nothing between the name and the role that `field-sizing` was added to close.
+   *2026-09-07.* */
+/* `Hire:`, the name and the role are one line of writing, so they are one size and one baseline
+   and never three. The face and the arrow stay centred: that is what a mixed `align-self` is
+   for. Weight and colour carry the difference between the three, which is enough. */
+.navsheet.pickbar.agentbar .pickto{align-self:baseline;font-size:14px}
+/* The two inputs sit together and are both sized to their own content, so the field reads as one
+   line of writing rather than as two boxes at opposite ends of a bar. `field-sizing` is what
+   does it: the `size` attribute over-allocates in a proportional font, which left 40px of
+   nothing between the name and the role. Overriding `.pickinput`'s `flex:1`, which is right
+   where the field is a wrapping list of badges and wrong where it is a name. */
+.navsheet.pickbar.agentbar .pickitems{flex-wrap:nowrap;gap:7px;align-items:baseline;justify-content:flex-start;align-self:baseline}
+.navsheet.pickbar.agentbar .agentname{flex:0 1 auto;width:auto;min-width:4ch;max-width:22ch;font-size:14px;field-sizing:content}
+/* The role is apposition and not a second question, so it is the muted one until it is being
+   written in. */
+.navsheet.pickbar.agentbar .agentrole{flex:0 1 auto;width:auto;background:transparent;border:0;outline:none;padding:4px 0;font-size:14px;color:var(--muted);field-sizing:content;min-width:9ch;max-width:26ch}
+.navsheet.pickbar.agentbar .agentname::placeholder,.navsheet.pickbar.agentbar .agentrole::placeholder{color:var(--muted);opacity:.55}
+.navsheet.pickbar.agentbar .agentrole:focus{color:var(--ink)}
+/* No ring and no box around the face: a blobatar is a silhouette, so the pointer is answered by
+   the face lifting. It is the one pressable thing in the app that already has a body of its own,
+   which is also why this is the only place a `scale` hover lands on a blobatar rather than on
+   the control holding it. */
+.facetrigger{display:flex;align-items:center;flex:0 0 auto;background:none;border:0;padding:0;scale:1;transition:scale 160ms var(--ease-out)}
+.facetrigger:hover,.facetrigger[data-state='open']{scale:1.08}
+.facetrigger:active{scale:.96}
+.facepop{transform-origin:var(--radix-popper-transform-origin);animation:enterpop 140ms var(--ease-out);padding:10px;display:flex;flex-direction:column;gap:9px}
+.facepop > .fieldlabel{padding:0 2px}
+/* Two rows on purpose, and the break is drawn rather than left to the width: the first row is
+   what the agent runs on, in the runtime's own vocabulary, and the second is how it works, in
+   blobot's. A hairline between them said the same thing in a place a wrap could move. */
+.agentchips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 12px 11px}
+/* A chip states an answer. It is the badge the creation bar already draws in its field — the
+   same corner, the same ground, the same mono label — because an agent's runtime sitting in this
+   row is the same kind of object as an agent sitting in that one: something the surface is
+   holding, not a control asking a question. */
+.chip{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:7px;padding:4px 8px;background:var(--ground);color:var(--ink);font-size:12.5px;line-height:1.2;transition:background-color 120ms var(--ease-out)}
+/* The label and the answer sit on one baseline, which centring cannot give them: two font sizes
+   in two different families centred in one row leaves the mono word floating a pixel or two
+   above the words it labels. The mark and the chevron are pictures and stay centred. */
+.agentchips .chip{align-items:baseline}
+.agentchips .chip > svg,.agentchips .chip .runtimemark{align-self:center}
+.chip:hover,.chip[data-state='open']{background:var(--edge)}
+.chip .mono{font-size:9px;letter-spacing:.1em;color:var(--muted)}
+/* A runtime's own name, capped so a long one trims rather than stretching the row. `clip` and
+   not `hidden`: a scroll container hands the row its bottom edge instead of a baseline, and the
+   label beside it is aligned on that baseline. */
+.chip .selectvalue{min-width:0;overflow:clip;text-overflow:ellipsis;white-space:nowrap;max-width:22ch}
+.chip > svg{flex:0 0 auto;width:12px;height:12px;color:var(--muted)}
+/* The one thing in the row that opens a field rather than carrying an answer, so it is outlined
+   where the others are filled: the difference `.listrow.pick` already draws between a row and a
+   chosen one. Open, it takes the filled ground and its `+` becomes the way to shut it. */
+.chip.ghost{background:none;color:var(--muted);padding:3px 8px 3px 6px;box-shadow:inset 0 0 0 1px var(--edge)}
+.chip.ghost:hover{color:var(--ink);background:none;box-shadow:inset 0 0 0 1px var(--muted)}
+.chip.ghost.on{color:var(--ink);background:var(--ground);box-shadow:none}
+.chip.ghost > svg{transition:rotate 160ms var(--ease-out)}
+.chip.ghost.on > svg{rotate:45deg}
+/* Nothing to choose, or nobody to ask: `RuntimeOptions` says so in a mono note, which is a fact
+   and not a control, so it keeps neither the chip nor the label. `MODEL` welded to *asking what
+   it offers* is a label on a sentence. */
+.agentchips .note{padding:4px 6px;font-size:11px}
+/* The field sits on the sheet's inner ground rather than on `--raised`, which is the sheet's own
+   fill: a `.field` in here was a box with no edges. The grabber goes with it, since a corner
+   that resizes is a second thing to notice in a bar whose whole claim is one line. */
+.agentstanding{padding:0 12px 11px;animation:enterstanding 180ms var(--ease-out)}
+.agentstanding .field{width:100%;background:var(--ground);border-color:var(--edge);resize:none;font-size:13px;line-height:1.5;padding:8px 10px}
+.agentstanding .field:focus{border-color:var(--muted)}
+@keyframes enterstanding{from{opacity:0;translate:0 -6px}}
+@media (prefers-reduced-motion:reduce){.agentstanding{animation:none}.facetrigger{transition:none}}
+/* The foot, in the creation bar's two registers, divided from the chips above it. The second one
+   is prose and follows the first without a line of its own: two rules under a two-line sentence
+   read as three sections where there are two. */
+.navsheet.pickbar.agentbar .pickfoot{border-top:1px solid var(--edge)}
+.navsheet.pickbar.agentbar .pickfoot + .pickfoot{border-top:0;padding-top:0}
+.navsheet.pickbar.agentbar .pickfoot.mono{font-size:11px;display:flex;align-items:center;gap:8px}
+/* Three dots in the arrow while the main process answers: "occupied, no estimate" is the truth,
+   and it is the glyph this app already uses for it. Inverted with the arrow, so the dots are the
+   sheet's ground on ink. */
+.agentbar .pickgo .dots i{background:var(--ground)}
+/* What the save did, in the sheet the arrow was pressed in. */
+.agentsaid{padding:16px 14px 14px;display:flex;flex-direction:column;gap:14px;align-items:flex-start}
+.agentsaid .removals{gap:10px}
 /* Prose, not a row. It was a wrapping flex box, which made every inline `<span>` mid-sentence
    its own flex item on its own line — the note that names `~/blobot` broke after the path and
    started the next line on a comma. Buttons inside a note are inline-flex and still sit in the
@@ -1253,25 +1397,17 @@ textarea.field{resize:vertical;line-height:1.5}
    drawn a third time. */
 .modal{position:fixed;top:50%;left:50%;translate:-50% -50%;animation:entermodal 200ms var(--ease-out);width:min(560px,calc(100vw - 48px));max-height:calc(100vh - 48px);overflow:auto;background:var(--ground);border-radius:20px;padding:24px 26px 22px;display:flex;flex-direction:column;gap:22px;box-shadow:0 30px 90px rgba(0,0,0,.7);z-index:61}
 @keyframes entermodal{from{opacity:.3;scale:.97}}
-/* The agent form only. A dialog holding eight fields needs the room to put two or three on a
-   row; the ones holding a sentence and two buttons must not get it, because a paragraph set to
-   760px is a paragraph nobody reads to the end of. */
-.modal.roomy{width:min(760px,calc(100vw - 48px))}
 .modalhead{display:flex;align-items:flex-start;gap:16px}
 .modalhead > div{flex:1;min-width:0}
 .modalhead .display{margin-top:2px}
-/* The only moment the user meets this agent's face, so it is the subject: centred, on the page
-   rather than in a card, and with no name under it. The name is in the field below being typed,
-   and printing it twice makes the preview look like a record that already exists. */
-.hirepreview{display:flex;flex-direction:column;align-items:center;gap:20px}
 /* One colour out of a fixed set. The first cell is the default the name gives it, drawn as the
    dashed silhouette the rest of the app already uses for "not drawn, and that is fine". The
    selected cell takes an ink ring, which is the one emphasis this page spends. */
 /* Seven by two, exactly filled: a ragged wrap reads as a list that ran out of room, and a
    fixed block reads as a set that was chosen. */
-/* One row, not two. Fourteen swatches at 26px fit the roomy dialog, and a 7x2 block read as a
-   palette to be studied rather than as a strip to be picked from. Wraps on a narrow window
-   rather than overflowing. */
+/* One row, not two. A 7x2 block read as a palette to be studied rather than as a strip to be
+   picked from. Wraps on a narrow window rather than overflowing. Both rows live in the face
+   popover now, hanging off the blobatar in the agent bar's field. */
 .swatches{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
 .swatch{width:26px;height:26px;border-radius:50%;flex:0 0 auto;padding:0;border:1px solid transparent;scale:1;transition:scale 140ms var(--ease-out)}
 .swatch:hover{scale:1.08}
@@ -1292,22 +1428,6 @@ textarea.field{resize:vertical;line-height:1.5}
 @media (prefers-reduced-motion:reduce){.swatch:hover{scale:1}}
 .fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .fields > .labelled:nth-child(n+3){grid-column:1 / -1}
-/* An agent's definition is eight fields, and stacked one per row it ran past the fold on a
-   1080-tall screen: the standing instructions were below the window on the dialog whose whole
-   job is stating them. Six columns rather than two, so a row can hold two halves or three
-   thirds. Its own grid rather than a modifier on `.fields`, which the Routine form also wears
-   and which must keep its two-column rule. Positional like `.fields` above, for the same
-   reason: these eight are a fixed sequence, not a list. */
-.agentfields{display:grid;grid-template-columns:repeat(6,1fr);gap:14px 16px}
-/* Name and role, then the runtime and what it advertises: the machine question, twice. */
-.agentfields > .labelled{grid-column:span 3}
-/* blobot's own three words, side by side, because they are one row of questions about one
-   agent and reading them as a run is the point. Bottom-aligned: at a third of the width two
-   of these labels wrap to a second line, and without this the three selects sat at three
-   different heights. */
-.agentfields > .labelled:nth-child(n+5){grid-column:span 2;justify-content:flex-end}
-/* Standing instructions take the width they are written at. */
-.agentfields > .labelled:nth-child(8){grid-column:1 / -1}
 .modalfoot{display:flex;justify-content:flex-end;gap:10px}
 /* A note in a modal is a paragraph, not a row of labels: the flex line the creation flow's
    notes need would put a sentence and the button beside it on one baseline. */
@@ -1346,6 +1466,10 @@ textarea.field{resize:vertical;line-height:1.5}
    half of the pair the rest of the app draws in — they identify a row, they do not carry it. */
 .rowmenu .selectitem svg{color:var(--muted);flex:0 0 auto}
 .rowmenu .selectitem[data-highlighted] svg{color:var(--ink)}
+/* The rows that destroy something. The word is the channel and the hue is the reinforcement, so
+   the glyph comes up to it too: a muted bin beside red words would read as two rows. */
+.rowmenu .selectitem.danger,.rowmenu .selectitem.danger svg,
+.rowmenu .selectitem.danger[data-highlighted],.rowmenu .selectitem.danger[data-highlighted] svg{color:var(--danger)}
 .selecttick{margin-left:auto;display:flex;color:var(--muted)}
 /* The runtime's own mark, greyed. It is the team icon's rule in a second place: a vendor's logo
    is allowed on screen at `--muted` and never in colour, so it sits at the same value as the
@@ -1364,7 +1488,10 @@ textarea.field{resize:vertical;line-height:1.5}
    look right while every sentence was short. The fourth level's was not, and the menu grew past
    the dialog holding it. The cap is `.optionsmenu`'s answer to the same problem one rule below,
    and it makes the stated behaviour true rather than lucky: a sentence wraps, and a longer one
-   written later wraps further instead of widening the control. */
+   written later wraps further instead of widening the control.
+   Worn by all three of blobot's own picks and not by trust alone: the twins were built to read
+   as one control and only one of them was capped, so `COMPACTION`'s two sentences opened a menu
+   720px wide. *2026-09-07.* */
 .trustmenu{max-width:min(420px,calc(100vw - 32px))}
 .trustitem{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:2px 10px;padding:8px 10px}
 .trustitem .selecttick{grid-column:2;grid-row:1;margin-left:0}
@@ -1647,7 +1774,7 @@ button.listrow:not(.pick):hover{outline:1px solid var(--edge);outline-offset:-1p
    High in the stack on purpose: it is how you leave whatever layer you are on, including *your
    agents*. */
 .navscrim{position:absolute;inset:0;z-index:40;display:flex;justify-content:center;padding:14vh 24px 24px;background:rgba(0,0,0,.66);animation:enterscrim 150ms var(--ease-out)}
-.navsheet{width:100%;max-width:520px;align-self:flex-start;background:var(--raised);border:1px solid var(--edge);border-radius:12px;box-shadow:0 30px 90px rgba(0,0,0,.7);overflow:hidden;animation:entersheet 220ms var(--ease-out)}
+.navsheet{--behind:var(--raised);width:100%;max-width:520px;align-self:flex-start;background:var(--raised);border:1px solid var(--edge);border-radius:12px;box-shadow:0 30px 90px rgba(0,0,0,.7);overflow:hidden;animation:entersheet 220ms var(--ease-out)}
 /* cmdk's own DOM again, and the same rules the composer's menu uses, because this is the same
    object at a different size: a list where the pointer and the arrow keys highlight one row. */
 .navsheet [cmdk-input]{width:100%;background:transparent;border:0;outline:none;padding:13px 16px;font-size:14px;color:var(--ink);border-bottom:1px solid var(--edge)}

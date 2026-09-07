@@ -66,6 +66,7 @@ export function Rail({
   onEditTeam,
   onDeleteTeam,
   onDeleteThread,
+  onRetireAgent,
   onOpenAgents,
   onOpenRoutines,
   onOpenSettings,
@@ -101,6 +102,12 @@ export function Rail({
   onDeleteTeam?: (teamId: string) => void;
   /** Deletes one agent's conversation and leaves them hired. `.scratch/rail/issues/06`. */
   onDeleteThread?: (teamId: string) => void;
+  /**
+   * Retires an agent: they stop being somebody you can put on a team, and the conversation goes
+   * with them. The caller opens the dialog that says both and takes the answer — nothing here
+   * retires anybody, which is what keeps the app's most invisible control off its heaviest act.
+   */
+  onRetireAgent?: (profileId: string) => void;
   /** Opens *your agents*. Absent in demo mode, whose agents are a TypeScript file. */
   onOpenAgents?: () => void;
   /** Opens *routines*, the second door. Absent in demo mode. */
@@ -209,6 +216,7 @@ export function Rail({
               onEditTeam={onEditTeam}
               onDeleteTeam={onDeleteTeam}
               onDeleteThread={onDeleteThread}
+              onRetireAgent={onRetireAgent}
               onTogglePin={onTogglePin}
             >
               <Row
@@ -401,6 +409,7 @@ function RowMenu({
   onEditTeam,
   onDeleteTeam,
   onDeleteThread,
+  onRetireAgent,
   onTogglePin,
   children,
 }: {
@@ -408,6 +417,7 @@ function RowMenu({
   onEditTeam: ((teamId: string) => void) | undefined;
   onDeleteTeam: ((teamId: string) => void) | undefined;
   onDeleteThread: ((teamId: string) => void) | undefined;
+  onRetireAgent: ((profileId: string) => void) | undefined;
   onTogglePin: ((id: string) => void) | undefined;
   children: React.ReactNode;
 }): React.JSX.Element {
@@ -415,7 +425,7 @@ function RowMenu({
   const items =
     row.kind === 'team'
       ? [onEditTeam, onDeleteTeam].some((one) => one !== undefined)
-      : threadId !== undefined && onDeleteThread !== undefined;
+      : (threadId !== undefined && onDeleteThread !== undefined) || onRetireAgent !== undefined;
   if (!items && onTogglePin === undefined) return <>{children}</>;
   return (
     <Menu.Root>
@@ -453,6 +463,20 @@ function RowMenu({
             <Menu.Item className="selectitem" onSelect={() => onDeleteThread(threadId)}>
               <Trash2 size={13} aria-hidden />
               <span>Delete this conversation</span>
+            </Menu.Item>
+          )}
+          {/* The heaviest thing on this menu, so it is last, it is the only one that opens a
+              dialog, and it is the only one drawn in the danger colour: the agent stops being
+              somebody you can put on a team and the conversation is deleted with them, priced
+              and acknowledged in `RetireAgent` before anything happens. One word, because the
+              row it is on says who — the menu came off that row and the dialog names them again
+              before anything is destroyed. A row with no conversation still carries it: an agent
+              you never spoke to is exactly the one worth deleting, and until this the menu on
+              that row was a single `Pin`. */}
+          {row.kind === 'agent' && onRetireAgent !== undefined && (
+            <Menu.Item className="selectitem danger" onSelect={() => onRetireAgent(row.id)}>
+              <Trash2 size={13} aria-hidden />
+              <span>Delete</span>
             </Menu.Item>
           )}
         </Menu.Content>

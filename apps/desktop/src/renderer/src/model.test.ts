@@ -3,6 +3,8 @@ import type { AgentEvent, Message } from '@blobot/core/domain';
 import type { UiAgentMessage, UiLog, UiRailAgent, UiTeamSummary } from '../../shared/api.js';
 import {
   addressedBy,
+  mentionsIn,
+  mentionPartial,
   compactionLine,
   continuesSpeaker,
   failuresIn,
@@ -468,6 +470,8 @@ describe('the live half of a run', () => {
     agentIds,
     text: 'go',
   });
+  /** A second prompt to the same agent, which is what makes its earlier run a settled one. */
+  const prompt2: Item = { kind: 'user', id: 'u2', at: 2, agentIds: ['alice'], text: 'again' };
   const inFlight = (): boolean => true;
   const idle = (): boolean => false;
   const live = (rows: readonly Row[]): Extract<Row, { kind: 'live' }>[] =>
@@ -594,6 +598,55 @@ describe('the live half of a run', () => {
     const rows = rowsOf([caption, asking], inFlight);
     expect(live(rows)).toHaveLength(0);
     expect(rows.map((row) => row.kind)).toEqual(['item', 'item']);
+  });
+
+  /**
+   * The one that reproduced, 2026-09-07. `live` is a fact about the agent *now* and a run is a
+   * place in the transcript, so every one of an agent's earlier turns lifted its teammates'
+   * replies the moment that agent started a new one: a block per historical run, every one of
+   * them keyed `live:<agent>`. React leaves the duplicates' DOM behind, so they outlived the
+   * fold, the team switch and the team -- five agents' blocks, dated two days earlier, standing
+   * in a thread opened eleven minutes ago.
+   */
+  it('lifts nothing out of a settled run, however live its principal is', () => {
+    const rows = rowsOf(
+      [
+        prompt(['alice']),
+        call('a1', 'alice', 'completed'),
+        { kind: 'peer', id: 'm1', at: 1, fromId: 'alice', toId: 'bob', text: 'have a look' },
+        said('r1', 'bob', 'had a look'),
+        said('answer', 'alice', `Done. ${'and here is why '.repeat(20)}`),
+        prompt2,
+        call('a2', 'alice', 'running'),
+      ],
+      inFlight,
+    );
+    // Bob's reply is in the first run's fold, where it happened, and not in a block of its own.
+    expect(folds(rows)[0]?.items.map((item) => item.id)).toEqual(['a1', 'm1', 'r1']);
+    expect(live(rows)).toHaveLength(1);
+    expect(live(rows)[0]?.items.map((item) => item.id)).toEqual(['a2']);
+  });
+
+  /**
+   * And the promise itself, which is what the id claims: one block per agent, so no two rows in
+   * a transcript are ever drawn under one React key.
+   */
+  it('never draws two rows under one key', () => {
+    const rows = rowsOf(
+      [
+        prompt(['alice']),
+        call('a1', 'alice', 'running'),
+        said('answer', 'alice', `Done. ${'and here is why '.repeat(20)}`),
+        prompt2,
+        call('a2', 'alice', 'running'),
+      ],
+      inFlight,
+    );
+    const keys = rows.map((row) => (row.kind === 'item' ? row.item.id : row.id));
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(live(rows)).toHaveLength(1);
+    // Nothing is dropped to keep the promise: the earlier block's call is back in the column.
+    expect(keys).toContain('a1');
   });
 
   /** A caption with its own calls under it is the face said twice, one sentence apart. */
@@ -769,6 +822,42 @@ describe('who a message is addressed to', () => {
 
   it('addresses nobody when the message starts with prose', () => {
     expect(ids('the page double-charges')).toEqual([]);
+  });
+
+  // A name is not a word. `@Creative` used to be a dud followed by prose, so a message to the
+  // one agent whose name has a space in it reached nobody and the field said so in half a name.
+  describe('a name with a space in it', () => {
+    const wide = [
+      { id: 'alice', name: 'Alice' },
+      { id: 'designer', name: 'Creative Designer' },
+    ] as unknown as readonly import('@blobot/core/domain').Agent[];
+    const to = (draft: string): string[] => addressedBy(draft, wide).map((agent) => agent.id);
+
+    it('is one mention, and it addresses', () => {
+      expect(to('@Creative Designer hello')).toEqual(['designer']);
+      expect(mentionsIn('@Creative Designer hello', wide)).toMatchObject([
+        { start: 0, end: 18, text: 'Creative Designer' },
+      ]);
+    });
+
+    it('takes any run of whitespace between its words, since the user typed it', () => {
+      expect(to('@Creative  Designer hello')).toEqual(['designer']);
+    });
+
+    it('still ends the run at the first ordinary word', () => {
+      expect(to('@Creative Designer and @Alice')).toEqual(['designer']);
+    });
+
+    it('never eats a shorter name, and never widens onto a word that is not the name', () => {
+      expect(to('@Alice Designer hello')).toEqual(['alice']);
+      expect(mentionsIn('@Alice Designer hi', wide)).toHaveLength(1);
+    });
+
+    it('is half a name while it is being typed, and the menu can see that', () => {
+      expect(mentionPartial('@Creative D', wide)?.text).toBe('Creative D');
+      // A message that has started is not a partial: the word after a name closes the menu.
+      expect(mentionPartial('@Creative Designer hello', wide)).toBeUndefined();
+    });
   });
 });
 

@@ -69,10 +69,21 @@ export function RuntimeOptions({
   runtimeId,
   value,
   onChange,
+  chip,
 }: {
   runtimeId: string;
   value: Readonly<Record<string, string>>;
   onChange: (options: Readonly<Record<string, string>>) => void;
+  /**
+   * The label this control wears in the agent bar, where it is a chip in a row of them.
+   *
+   * The summary is the only string in that row a vendor wrote — `Opus (1M context) · Medium ·
+   * Off` is three groups joined — so the chip caps it and lets it truncate, and keeps the
+   * chevron the word chips do without: it is the affordance saying the rest is in the menu.
+   * The states that are not a control keep their bare mono note and lose the label with it,
+   * because `MODEL` welded to *asking what it offers* is a label on a sentence.
+   */
+  chip?: string;
 }): React.JSX.Element {
   const [state, setState] = useState<UiRuntimeOptions | undefined>();
   const [asking, setAsking] = useState(false);
@@ -141,7 +152,11 @@ export function RuntimeOptions({
         if (!next) setQuery('');
       }}
     >
-      <Menu.Trigger className="field selecttrigger" aria-label="Model and effort">
+      <Menu.Trigger
+        className={chip === undefined ? 'field selecttrigger' : 'chip'}
+        aria-label="Model and effort"
+      >
+        {chip !== undefined && <span className="mono">{chip}</span>}
         <span>{summaryOf(groups, value)}</span>
         <ChevronDown size={14} aria-hidden />
       </Menu.Trigger>

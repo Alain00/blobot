@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Command, useCommandState } from 'cmdk';
 import { ArrowUp, Mic, Plus, Square } from 'lucide-react';
-import { findAgentByName } from '@blobot/core/domain';
 import type { Agent } from '@blobot/core/domain';
 import type { UiAgent, UiAttachment, UiCommand, UiUsage } from '../../../shared/api.js';
-import { addressedBy, commandMenu, isAddressing } from '../model.js';
-import type { Pane } from '../model.js';
+import { addressedBy, commandMenu, isAddressing, mentionPartial, mentionsIn } from '../model.js';
+import type { Mention, Pane } from '../model.js';
 import { Blob } from './Blob.js';
 import { Attached, sizeOf } from './Attached.js';
 import { ContextRing } from './ContextRing.js';
@@ -29,9 +28,10 @@ import { ContextRing } from './ContextRing.js';
  * existed, or one whose lead has left the roster — is unchanged: send stays disabled until a
  * mention resolves, and nobody is promoted into the job unseen.
  *
- * Resolution goes through `findAgentByName`, the same function the orchestrator validates
- * `message_agent` with: the unresolved-mention state is the human-facing twin of its
- * "no such teammate" error.
+ * Resolution goes through `mentionsIn`, and under it `findAgentByName`, the same function the
+ * orchestrator validates `message_agent` with: the unresolved-mention state is the human-facing
+ * twin of its "no such teammate" error. Where a mention *ends* is the roster's answer too, so a
+ * name with a space in it is one mention.
  *
  * The send control says who it resolved to only where that is a live question. In an agent's
  * pane the pane *is* the recipient, so `send to Alice` under a transcript of Alice was the
@@ -237,11 +237,14 @@ export function Composer({
     .filter((agent): agent is UiAgent => agent !== undefined);
   const recipient = recipients[0];
 
-  const partial = /@([\w-]*)$/.exec(draft)?.[1];
+  // A name can hold a space, so where the partial ends is the roster's answer and not a
+  // pattern's. `mentionPartial` is the same reading the field's highlighting uses.
+  const partial = mentionPartial(draft, roster);
+  const wanted = partial?.text.toLowerCase().replace(/\s+/g, ' ');
   const suggestions =
-    partial === undefined || dismissed || thread !== undefined
+    wanted === undefined || dismissed || thread !== undefined
       ? []
-      : agents.filter((agent) => agent.name.toLowerCase().startsWith(partial.toLowerCase()));
+      : agents.filter((agent) => agent.name.toLowerCase().replace(/\s+/g, ' ').startsWith(wanted));
 
   // One menu, and it is the first recipient's. Two agents can offer different commands, and
   // there is no honest way to draw a list that is true of both — so the menu belongs to the
@@ -263,7 +266,8 @@ export function Composer({
 
   /** Accepting a suggestion leaves a trailing space, which is also what closes the menu. */
   const complete = (agent: UiAgent): void => {
-    setDraft(draft.replace(/@[\w-]*$/, `@${agent.name} `));
+    const at = partial?.start ?? draft.length;
+    setDraft(`${draft.slice(0, at)}@${agent.name} `);
     setDismissed(false);
   };
 
@@ -363,7 +367,7 @@ export function Composer({
   /** The ghost, if there is one: where it goes and what it says, spaced against its neighbours. */
   const ghost =
     dictation?.state === 'listening' && dictation.partial !== undefined
-      ? spacedGhost(draft, ghostPosition(draft, caret), dictation.partial)
+      ? spacedGhost(draft, ghostPosition(draft, caret, roster), dictation.partial)
       : undefined;
 
   /**
@@ -684,12 +688,10 @@ const SHORTCUT = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘⇧M' : 'ctrl+
  * Where the ghost goes: at the caret, except that a caret inside an `@mention` puts it after
  * the mention, because half a name underlined is not a thing.
  */
-function ghostPosition(draft: string, caret: number): number {
+function ghostPosition(draft: string, caret: number, roster: readonly Agent[]): number {
   const at = Math.min(caret, draft.length);
-  for (const match of draft.matchAll(/@[\w-]+/g)) {
-    const start = match.index;
-    const end = start + match[0].length;
-    if (at > start && at < end) return end;
+  for (const mention of mentionsIn(draft, roster)) {
+    if (at > mention.start && at < mention.end) return mention.end;
   }
   return at;
 }
@@ -812,15 +814,31 @@ function highlight(
   roster: readonly Agent[],
   ghost?: { readonly at: number; readonly text: string },
 ): React.JSX.Element[] {
-  const parts = draft.split(/(@[\w-]+)/g);
+  // Cut on the mentions the roster finds rather than on a word-shaped pattern, so a name with
+  // a space in it is one part and not a dud followed by prose.
+  const mentions = mentionsIn(draft, roster);
+  const parts: { readonly text: string; readonly mention?: Mention }[] = [];
+  let cut = 0;
+  for (const mention of mentions) {
+    if (mention.start > cut) parts.push({ text: draft.slice(cut, mention.start) });
+    parts.push({ text: draft.slice(mention.start, mention.end), mention });
+    cut = mention.end;
+  }
+  if (cut < draft.length || parts.length === 0) parts.push({ text: draft.slice(cut) });
+
   let offset = 0;
   let placed = false;
-  return parts.flatMap((part, index) => {
+  return parts.flatMap(({ text: part, mention }, index) => {
     const at = offset;
     offset += part.length;
-    const mention = part.startsWith('@');
-    const resolved = mention && findAgentByName(roster, part.slice(1)) !== undefined;
-    const className = !mention ? undefined : !resolved ? 'm bad' : isAddressing(draft, at) ? 'm' : 'm ref';
+    const className =
+      mention === undefined
+        ? undefined
+        : mention.agent === undefined
+          ? 'm bad'
+          : isAddressing(draft, at, roster)
+            ? 'm'
+            : 'm ref';
     // The ghost goes inside the first part that reaches its position, which `ghostPosition`
     // has already kept out of the middle of a mention.
     if (ghost !== undefined && !placed && ghost.at <= at + part.length) {

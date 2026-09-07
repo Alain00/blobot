@@ -3899,3 +3899,30 @@ option name and optional adapter-owned description survive request/snapshot deli
 three choices and selected option ids are unchanged. No common persistence or revocation
 behavior is claimed. This amends the earlier permission-card prose rule, not its design or
 approval behavior. Machine-specific placement stays with Machines' screen ticket.
+
+
+## 2026-09-07 — a known gap: `--screenshot` implies autoplay, and autoplay writes into a real team
+
+`autoplay` is `!--no-autoplay && (--autoplay || screenshotPath !== undefined)`, and the prompt it
+sends is `RunningTeam.autoplayPrompt` — a real `promptFromUser` against whatever team the launch
+opens, which is `store.listTeams()[0]`, the most recently created one.
+
+That is right for reviewing a demo and wrong for reviewing anything else. Found the hard way while
+debugging `live-steps/11`: six `--screenshot` runs put six identical `Ask a teammate, using your
+message_agent tool, …` prompts into the author's own newest team, each one a real turn against a
+real runtime, each one ending `turn stopped · cancelled` when the run quit under it. Nothing on
+the flag says it will do this, and the team it picks is by construction the one the user just made.
+
+Not fixed, and written down rather than fixed because the shape of the fix is a decision, not a
+patch. The candidates:
+
+- **Autoplay only in demo mode**, and make `--live-*` and a plain launch require `--autoplay`
+  explicitly. Cheapest, and it costs the one thing the coupling bought: a `--screenshot` review of
+  a real runtime mid-turn now needs a second flag.
+- **Autoplay only on a team with an empty transcript**, which is the case the scripted prompt was
+  written for and the case a screenshot review actually wants.
+- **Never on the launch team by default** — require `--autoplay` to name the team it prompts.
+
+Until one of them lands: pass `--no-autoplay` on every `--screenshot` run that is not a demo, and
+never point a debugging launch at the real `userData` (`--user-data-dir=<scratch>` with a copy of
+the database, which is what the rest of that session did).

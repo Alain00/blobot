@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, X } from 'lucide-react';
+import { ArrowRight, UserPlus, X } from 'lucide-react';
 import { Command } from 'cmdk';
 import type { UiAgentProfile, UiRuntimeChoice, UiTeamSummary } from '../../../shared/api.js';
 import { HireAgent } from './AgentForm.js';
@@ -51,9 +51,29 @@ export function AddMember({
   const [hiring, setHiring] = useState(false);
   const listed = useRef<HTMLDivElement | null>(null);
 
+  /**
+   * cmdk's highlighted row, held here rather than left to cmdk.
+   *
+   * One moment forces it: the roster arrives after the first paint, so for that tick the hire
+   * row is the only item in the list and cmdk highlights it — and cmdk keeps a highlight that is
+   * still valid, so it stayed there once the agents arrived, on the row Tab and Space take. The
+   * roster's first agent is claimed when the roster lands, and everything after that is cmdk's
+   * own: picking a row removes it and cmdk highlights the next, which is what `onValueChange`
+   * is reporting back.
+   */
+  const [highlighted, setHighlighted] = useState('');
+  /** Whether the roster has ever landed. cmdk highlights the hire row before it does. */
+  const claimed = useRef(false);
+
   const reloadRoster = useCallback(async (): Promise<void> => {
-    setRoster(await window.blobot.listAgents());
-  }, []);
+    const list = await window.blobot.listAgents();
+    setRoster(list);
+    const first = list.find((agent) => !agent.teams.includes(team.name));
+    if (first !== undefined && !claimed.current) {
+      claimed.current = true;
+      setHighlighted(`agent:${first.id}`);
+    }
+  }, [team.name]);
   const rescan = useCallback((): void => {
     void window.blobot.detectRuntimes().then(setRuntimes);
   }, []);
@@ -64,10 +84,13 @@ export function AddMember({
   }, [reloadRoster, rescan]);
 
   // Escape leaves, captured on the window the way the navigator and the creation bar do it: a
-  // layer that ignores Escape reads as stuck.
+  // layer that ignores Escape reads as stuck. Not while the hire bar is over it, which is
+  // `Agents`' own guard: a window listener answers a key that was aimed at the layer above it,
+  // so one press shut both and the roster went with the dialog it opened.
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape') return;
+      if (document.querySelector('[role="dialog"]') !== null) return;
       event.preventDefault();
       onClose();
     };
@@ -128,102 +151,133 @@ export function AddMember({
   };
 
   return (
-    <div className="navscrim" onMouseDown={() => onClose()}>
-      <div className="navsheet pickbar" onMouseDown={(event) => event.stopPropagation()}>
-        <div onKeyDownCapture={keys}>
-          <Command label={`Who is on ${team.name}`} loop>
-            <div className="pickfield">
-              <div className="pickitems">
-                {/* Already on the team: no ×, and said in the tooltip rather than by a control
-                    that is missing without explanation. */}
-                {members.map((agent) => (
-                  <span key={agent.id} className="pickchip on" title={`${agent.name} is on this team`}>
-                    <span className="who">
-                      <Blob
-                        name={agent.name}
-                        size={17}
-                        {...(agent.hue === undefined ? {} : { hue: agent.hue })}
-                        {...(agent.shape === undefined ? {} : { shape: agent.shape })}
-                      />
-                      <span className="nm">{agent.name}</span>
+    /* The hire bar is a sibling of the scrim and never a child of it. It portals to the body,
+       but a React event travels the *tree* and not the DOM, so a click on its own text bubbled
+       into the scrim's `onMouseDown` below and shut this bar, and the hire bar with it. */
+    <>
+      <div className="navscrim" onMouseDown={() => onClose()}>
+        <div className="navsheet pickbar" onMouseDown={(event) => event.stopPropagation()}>
+          <div onKeyDownCapture={keys}>
+            <Command
+              label={`Who is on ${team.name}`}
+              loop
+              value={highlighted}
+              onValueChange={setHighlighted}
+            >
+              <div className="pickfield">
+                <div className="pickitems">
+                  {/* Addressed like a message, as on the creation bar: who this is for, then the
+                      badges that are the recipients. */}
+                  <span className="pickto">To</span>
+                  {/* Already on the team: no ×, and said in the tooltip rather than by a control
+                      that is missing without explanation. */}
+                  {members.map((agent) => (
+                    <span key={agent.id} className="pickchip on" title={`${agent.name} is on this team`}>
+                      <span className="who">
+                        <Blob
+                          name={agent.name}
+                          size={17}
+                          {...(agent.hue === undefined ? {} : { hue: agent.hue })}
+                          {...(agent.shape === undefined ? {} : { shape: agent.shape })}
+                        />
+                        <span className="nm">{agent.name}</span>
+                      </span>
                     </span>
-                  </span>
-                ))}
-                {joining.map((agent) => (
-                  <span key={agent.id} className="pickchip">
-                    <span className="who">
-                      <Blob
-                        name={agent.name}
-                        size={17}
-                        {...(agent.hue === undefined ? {} : { hue: agent.hue })}
-                        {...(agent.shape === undefined ? {} : { shape: agent.shape })}
-                      />
-                      <span className="nm">{agent.name}</span>
+                  ))}
+                  {joining.map((agent) => (
+                    <span key={agent.id} className="pickchip">
+                      <span className="who">
+                        <Blob
+                          name={agent.name}
+                          size={17}
+                          {...(agent.hue === undefined ? {} : { hue: agent.hue })}
+                          {...(agent.shape === undefined ? {} : { shape: agent.shape })}
+                        />
+                        <span className="nm">{agent.name}</span>
+                      </span>
+                      <button
+                        className="off"
+                        onClick={() => drop(agent.id)}
+                        title={`Do not add ${agent.name}`}
+                        aria-label={`Do not add ${agent.name}`}
+                      >
+                        <X size={11} aria-hidden />
+                      </button>
                     </span>
-                    <button
-                      className="off"
-                      onClick={() => drop(agent.id)}
-                      title={`Do not add ${agent.name}`}
-                      aria-label={`Do not add ${agent.name}`}
-                    >
-                      <X size={11} aria-hidden />
-                    </button>
-                  </span>
-                ))}
-                <Command.Input
-                  autoFocus
-                  value={query}
-                  onValueChange={setQuery}
-                  placeholder={members.length === 0 && joining.length === 0 ? 'Who else is on this team?' : ''}
-                />
+                  ))}
+                  <Command.Input
+                    autoFocus
+                    value={query}
+                    onValueChange={setQuery}
+                    placeholder={members.length === 0 && joining.length === 0 ? 'a name' : ''}
+                  />
+                </div>
+                <button
+                  className="pickgo"
+                  disabled={adding.length === 0}
+                  onClick={save}
+                  title="Add to the team"
+                  aria-label="Add to the team"
+                >
+                  <ArrowRight size={15} aria-hidden />
+                </button>
               </div>
-              <button
-                className="pickgo"
-                disabled={adding.length === 0}
-                onClick={save}
-                title="Add to the team"
-                aria-label="Add to the team"
-              >
-                <ArrowRight size={15} aria-hidden />
-              </button>
-            </div>
-            <Command.List ref={listed}>
-              {/* Two different facts, as on the creation bar: an empty roster is not a failed
-                  search, and everybody already being on the team is neither. */}
-              <Command.Empty>
-                {roster.length === 0
-                  ? 'Nobody hired yet'
-                  : roster.every((agent) => members.includes(agent) || adding.includes(agent.id))
-                    ? 'Everybody is on this team'
-                    : 'Nobody by that name'}
-              </Command.Empty>
-              {roster
-                .filter((agent) => !adding.includes(agent.id) && !members.includes(agent))
-                .map((agent) => (
-                  <Command.Item
-                    key={agent.id}
-                    value={`agent:${agent.id}`}
-                    keywords={[agent.name, agent.role, agent.runtimeLabel]}
-                    onSelect={() => pick(agent.id)}
-                  >
-                    <Blob
-                      name={agent.name}
-                      size={20}
-                      {...(agent.hue === undefined ? {} : { hue: agent.hue })}
-                      {...(agent.shape === undefined ? {} : { shape: agent.shape })}
-                    />
-                    <span>{agent.name}</span>
-                    <span className="r">{agent.role}</span>
-                  </Command.Item>
-                ))}
-            </Command.List>
-          </Command>
-          {/* Outside the list for the creation bar's reason: it is not somebody you can put on
-              the team, and inside it, it is the row cmdk highlights while the roster is still
-              a frame away. */}
-          <button className="pickhire" onClick={() => setHiring(true)}>
-            hire an agent
-          </button>
+              <Command.List ref={listed}>
+                {/* Two different facts, as on the creation bar: an empty roster is not a failed
+                    search, and everybody already being on the team is neither. */}
+                <Command.Empty>
+                  {roster.length === 0
+                    ? 'Nobody hired yet'
+                    : roster.every((agent) => members.includes(agent) || adding.includes(agent.id))
+                      ? 'Everybody is on this team'
+                      : 'Nobody by that name'}
+                  {/* The door again, because the row above filters out with everything else and
+                      this is exactly when it is wanted. Never both at once. */}
+                  <button className="hirerow" onClick={() => setHiring(true)}>
+                    <span className="ico">
+                      <UserPlus size={17} aria-hidden />
+                    </span>
+                    <span>hire an agent</span>
+                  </button>
+                </Command.Empty>
+                {roster
+                  .filter((agent) => !adding.includes(agent.id) && !members.includes(agent))
+                  .map((agent) => (
+                    <Command.Item
+                      key={agent.id}
+                      value={`agent:${agent.id}`}
+                      keywords={[agent.name, agent.role, agent.runtimeLabel]}
+                      onSelect={() => pick(agent.id)}
+                    >
+                      <Blob
+                        name={agent.name}
+                        size={20}
+                        {...(agent.hue === undefined ? {} : { hue: agent.hue })}
+                        {...(agent.shape === undefined ? {} : { shape: agent.shape })}
+                      />
+                      <span>{agent.name}</span>
+                      <span className="r">{agent.role}</span>
+                    </Command.Item>
+                  ))}
+                {/* A row of the list in full, on the creation bar's own rule and for its reason:
+                    a button is not a `[cmdk-item]`, so the pointer resting on it lit it *and*
+                    left the list's own highlight lit on the first agent below. Last in the DOM
+                    and first on screen, so the highlight the keys act on stays on the agents.
+                    The reason in full is on `NewTeam`. */}
+                <Command.Item
+                  className="hirerow"
+                  value="hire an agent"
+                  keywords={['hire', 'new', 'add']}
+                  onSelect={() => setHiring(true)}
+                >
+                  <span className="ico">
+                    <UserPlus size={17} aria-hidden />
+                  </span>
+                  <span>hire an agent</span>
+                </Command.Item>
+              </Command.List>
+            </Command>
+          </div>
         </div>
       </div>
 
@@ -239,6 +293,6 @@ export function AddMember({
           }}
         />
       )}
-    </div>
+    </>
   );
 }

@@ -21,6 +21,9 @@ import { stubGazeHost } from '../test-dom.js';
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 // cmdk watches its list for resizes and the badges carry blobatars; jsdom has neither API.
 stubGazeHost();
+// cmdk scrolls its highlighted row into view, and the list has a highlighted row from the first
+// paint now that hiring is one of them. jsdom has no scrolling at all.
+Element.prototype.scrollIntoView ??= function scrollIntoView(): void {};
 
 const profile = (id: string, name: string, teams: string[]): UiAgentProfile =>
   ({ id, name, role: 'works', runtimeId: 'claude-code', runtimeLabel: 'claude code', teams, hiredAt: 0 }) as UiAgentProfile;
@@ -67,7 +70,9 @@ async function open(): Promise<{ handed: (readonly string[])[]; closed: number }
 }
 
 const chips = (): HTMLElement[] => [...(host?.querySelectorAll('.pickchip') ?? [])] as HTMLElement[];
-const rows = (): HTMLElement[] => [...(host?.querySelectorAll('[cmdk-item]') ?? [])] as HTMLElement[];
+// The agents, and not the hire row, which is a `[cmdk-item]` too now.
+const rows = (): HTMLElement[] =>
+  [...(host?.querySelectorAll('[cmdk-item]:not(.hirerow)') ?? [])] as HTMLElement[];
 const go = (): HTMLButtonElement | null => host?.querySelector('.pickgo') ?? null;
 
 describe('adding a member', () => {
@@ -90,6 +95,35 @@ describe('adding a member', () => {
     // The members plus the new one, because a persona names the roster and a team gains a member
     // by being restarted with them in it.
     expect(state.handed).toEqual([['alice', 'bob', 'mara']]);
+  });
+
+  it('does not shut when the hire bar it opened is clicked in', async () => {
+    // The hire bar portals to the body, but a React event travels the *tree*, so while it was a
+    // child of the scrim every click on its own prose reached the scrim's `onMouseDown` and shut
+    // both bars. Everything a person reads in there was doing it. *2026-09-07.*
+    const state = await open();
+    const door = host?.querySelector('.hirerow') as HTMLElement | null;
+    await act(async () => door?.click());
+    const bar = document.querySelector('.agentbar') as HTMLElement | null;
+    expect(bar).not.toBeNull();
+    await act(async () => {
+      bar?.querySelector('.pickto')?.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    });
+    expect(state.closed).toBe(0);
+    expect(document.querySelector('.agentbar')).not.toBeNull();
+  });
+
+  it('answers Escape to the hire bar over it and not to itself', async () => {
+    // The window listener that lets this bar leave answered a key aimed at the layer above it,
+    // so one press shut the dialog and took the roster behind it. *2026-09-07.*
+    const state = await open();
+    const door = host?.querySelector('.hirerow') as HTMLElement | null;
+    await act(async () => door?.click());
+    expect(document.querySelector('.agentbar')).not.toBeNull();
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+    expect(state.closed).toBe(0);
   });
 
   it('takes back somebody added by mistake, and never a member', async () => {
