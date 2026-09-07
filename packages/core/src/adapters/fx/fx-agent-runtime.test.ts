@@ -300,4 +300,18 @@ describe('fx behind AgentRuntime', () => {
     });
     expect(reply.result).toEqual({ outcome: { outcome: 'cancelled' } });
   });
+
+  it('explains a reusable approval as a live grant and sends the selected option unchanged', async () => {
+    const started = await start();
+    started.runtime.setPermissionHandler(async (request) => {
+      const option = request.options.find((option) => option.kind === 'allow_always');
+      expect(option?.description).toContain('not saved in settings or restored');
+      return option?.optionId ?? null;
+    });
+    const reply = await started.fx.requestPermission({
+      toolCall: { toolCallId: 'call_1', title: 'git push' },
+      options: [{ optionId: 'always', kind: 'allow_always', name: 'Yes, and do not ask again' }],
+    });
+    expect(reply.result).toEqual({ outcome: { outcome: 'selected', optionId: 'always' } });
+  });
 });

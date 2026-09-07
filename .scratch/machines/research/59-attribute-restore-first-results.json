@@ -1,0 +1,197 @@
+{
+  "date": "2026-09-06T00:26:14.651Z",
+  "uuid": "aa9cf7ef-e2f3-493e-97fb-67050065dcc9",
+  "name": "blobot-restore59-aa9cf7ef-e2f3-493e-97fb-67050065dcc9",
+  "candidate": "blobot-machine-probe:explicit-docker-20260905",
+  "manifest": "sha256:1cd3184fceaf6d60c0f364c81bdb26f3359bab91efc666cd172fb75c68ed974c",
+  "scope": "synthetic disposable guest only",
+  "commands": [
+    {
+      "label": "daemon-status",
+      "code": 0,
+      "ms": 342.1085
+    },
+    {
+      "label": "version",
+      "code": 0,
+      "ms": 163.983834
+    },
+    {
+      "label": "read-ssh-forwarding",
+      "code": 0,
+      "ms": 157.35904199999993
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 262.18954199999996
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 171.161792
+    },
+    {
+      "label": "load-local-archive",
+      "code": 0,
+      "ms": 1932.5134999999998
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 175.6983339999997
+    },
+    {
+      "label": "create-owned-box",
+      "code": 0,
+      "ms": 2751.5587090000004
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 246.51800000000003
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 166.2704590000012
+    },
+    {
+      "label": "remove-owned-box",
+      "code": 0,
+      "ms": 435.8264170000002
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 171.78254200000083
+    },
+    {
+      "label": "remove-owned-local-alias",
+      "code": 0,
+      "ms": 168.27066600000035
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 160.44487499999923
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 160.70395800000006
+    }
+  ],
+  "diskChecks": [
+    {
+      "label": "before-load",
+      "availableBytes": "21046505472"
+    },
+    {
+      "label": "before-create",
+      "availableBytes": "21046743040"
+    },
+    {
+      "label": "before-probe",
+      "availableBytes": "21030154240"
+    },
+    {
+      "label": "after-cleanup",
+      "availableBytes": "21045678080"
+    }
+  ],
+  "cleanup": {
+    "errors": [],
+    "remainingOwnedBoxes": [],
+    "remainingOwnedImages": [],
+    "tempRemoved": true
+  },
+  "scripts": {
+    "workerSha256": "d70be01ef818f4494a0ad61a2ab33fd82ae08d714be446cede8652b4fd042ea4",
+    "prepareSha256": "a08ffc6ad386bc04aa1fd7920a4115c5cd92f0c122f4dcefe5b217852436c68a",
+    "definitionsSha256": "9afa08ca1379ce458085adb26cd12183d03440ac65361ee7a4450dce188c454c"
+  },
+  "version": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "image": {
+    "id": "1cd3184fceaf",
+    "repository": "docker.io/library/blobot-machine-probe",
+    "tag": "explicit-docker-20260905",
+    "flavor": "shell-docker",
+    "created_at": "2026-09-06T00:26:17Z",
+    "size": 588690428
+  },
+  "kit": {
+    "schemaVersion": "2",
+    "kind": "sandbox",
+    "name": "blobot-synthetic-restore59",
+    "sandbox": {
+      "image": "blobot-machine-probe:explicit-docker-20260905",
+      "entrypoint": [
+        "/usr/bin/node"
+      ],
+      "command": {
+        "default": [
+          "--version"
+        ]
+      }
+    },
+    "security": {
+      "privileged": true
+    },
+    "credentials": [],
+    "permissions": {
+      "network": {
+        "allow": [],
+        "deny": []
+      }
+    },
+    "volumes": [
+      {
+        "path": "/home/agent",
+        "size": "8589934592",
+        "mode": "0700"
+      },
+      {
+        "path": "/var/lib/docker",
+        "size": "21474836480",
+        "mode": "0700"
+      }
+    ]
+  },
+  "box": {
+    "name": "blobot-restore59-aa9cf7ef-e2f3-493e-97fb-67050065dcc9",
+    "id": "002bfc9d-8a91-4040-8018-27f095ecf26a",
+    "agent": "blobot-synthetic-restore59",
+    "status": "running",
+    "workspaces": [
+      "/private/tmp/blobot-restore59-MMPnn5/synthetic-worktree"
+    ]
+  },
+  "guests": [
+    {
+      "role": "target",
+      "code": 1,
+      "stderr": "",
+      "guest": {
+        "role": "target",
+        "checks": {},
+        "completed": false,
+        "error": "Error: Command failed: /usr/bin/python3 -I -B -c \nimport sys,os,json,fcntl,struct,stat,subprocess\na,b,cases=json.loads(sys.argv[1]);stamp=1700000000123456789\ndef flags(p,bits):\n fd=os.open(p,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)\n try:fcntl.ioctl(fd,0x40086602,struct.pack('<I',0x80000|bits))\n finally:os.close(fd)\nfor root in [a,b]:\n for name,bits in cases:\n  p=root+'/'+name;os.mkdir(p)\n  open(p+'/file','w').write('source' if root==a else 'target')\n  os.setxattr(p,'user.shared',b'source' if root==a else b'target')\n  if root==b:os.setxattr(p,'user.extra',b'remove-me')\n  os.utime(p+'/file',ns=(stamp,stamp));os.utime(p,ns=(stamp,stamp))\n os.link(root+'/baseline/file',root+'/hardlink')\nos.mkdir(a+'/acl');os.mkdir(b+'/acl')\nsubprocess.run(['/usr/bin/setfacl','-m','u:1234:r-x,d:u:1234:rwx',a+'/acl'],check=True)\nsubprocess.run(['/usr/bin/setfacl','-m','u:2345:rwx,d:u:2345:rwx',b+'/acl'],check=True)\nopen(a+'/acl/file','w').write('source-acl');open(b+'/acl/file','w').write('old-acl')\nopen(b+'/protected-extra','w').write('remove-me');flags(b+'/protected-extra',16)\nfor name,bits in cases:\n flags(a+'/'+name,bits)\n if bits in [8,16,32,64,128]:flags(a+'/'+name+'/file',bits)\n flags(b+'/'+name,16|32)\nos.utime(a,ns=(stamp,stamp));os.utime(b,ns=(stamp,stamp))\n [\"/run/blobot-state-de115d77-1235-4d8d-8b3b-0adb372d896b/home\",\"/run/blobot-state-de115d77-1235-4d8d-8b3b-0adb372d896b/docker\",[[\"baseline\",0],[\"immutable\",16],[\"append\",32],[\"nodump\",64],[\"noatime\",128],[\"sync\",8],[\"dirsync\",65536],[\"topdir\",131072],[\"projinherit\",536870912],[\"combined\",537067768]]]\nTraceback (most recent call last):\n  File \"<string>\", line 17, in <module>\n    subprocess.run(['/usr/bin/setfacl','-m','u:1234:r-x,d:u:1234:rwx',a+'/acl'],check=True)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.14/subprocess.py\", line 555, in run\n    with Popen(*popenargs, **kwargs) as process:\n         ~~~~~^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.14/subprocess.py\", line 1039, in __init__\n    self._execute_child(args, executable, preexec_fn, close_fds,\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                        pass_fds, cwd, env,\n                        ^^^^^^^^^^^^^^^^^^^\n    ...<5 lines>...\n                        gid, gids, uid, umask,\n                        ^^^^^^^^^^^^^^^^^^^^^^\n                        start_new_session, process_group)\n                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.14/subprocess.py\", line 1875, in _execute_child\n    self._posix_spawn(args, executable, env, restore_signals, close_fds,\n    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                      p2cread, p2cwrite,\n                      ^^^^^^^^^^^^^^^^^^\n                      c2pread, c2pwrite,\n                      ^^^^^^^^^^^^^^^^^^\n                      errread, errwrite)\n                      ^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.14/subprocess.py\", line 1819, in _posix_spawn\n    self.pid = os.posix_spawn(executable, args, env, **kwargs)\n               ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/usr/bin/setfacl'\n\n    at genericNodeError (node:internal/errors:983:15)\n    at wrappedFn (node:internal/errors:537:14)\n    at checkExecSyncError (node:child_process:916:11)\n    at Object.execFileSync (node:child_process:952:15)\n    at [eval]:44:6"
+      }
+    }
+  ],
+  "passed": false,
+  "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 0\n\n    at file:///Users/guillermo/Work/blobot/.scratch/machines/research/59-attribute-restore-fixture.mjs:81:12"
+}

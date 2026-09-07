@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
+import { HOST_GIT_ENVIRONMENT, hostGitArguments } from './host-git.js';
 import type { NestedRepo, WorkspaceInspection } from './workspace.js';
 
 const run = promisify(execFile);
@@ -142,6 +143,8 @@ async function succeeds(path: string, args: string[]): Promise<boolean> {
 }
 
 async function git(path: string, args: string[]): Promise<string> {
-  const { stdout } = await run('git', ['-C', path, ...args], { maxBuffer: 8 * 1024 * 1024 });
+  const { stdout } = await run('git', ['-C', path, ...hostGitArguments(args)], {
+    env: { ...process.env, ...HOST_GIT_ENVIRONMENT }, maxBuffer: 8 * 1024 * 1024,
+  });
   return stdout;
 }

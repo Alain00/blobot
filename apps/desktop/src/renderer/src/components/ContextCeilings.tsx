@@ -35,11 +35,8 @@ export function ContextCeilings(): React.JSX.Element {
           what it does before they change it. The second sentence is the one that matters: this
           is not the window, and mistaking the two is the whole reason the concept exists. */}
       <div className="note muted">
-        The gauge is drawn against the window a runtime reports. This is the other number: where
-        a model stops being worth more context, which is what compaction measures against. blobot
-        asks an agent for a handoff at {percent}% of it, and never rewrites what the agent
-        remembers. Set one if you have watched a model hold up longer, or go wrong sooner, than
-        blobot assumes. It reaches teams that are already running.
+        Not the window the gauge draws: where a model stops being worth more context. blobot asks
+        an agent for a handoff at {percent}% of it, on teams already running.
       </div>
 
       <div className="roster">
@@ -55,9 +52,7 @@ export function ContextCeilings(): React.JSX.Element {
           />
         ))}
         {rows.length === 0 && (
-          <div className="note muted">
-            Nothing to set yet. A model appears here once an agent is hired on it.
-          </div>
+          <div className="note muted">A model appears here once an agent is hired on it.</div>
         )}
       </div>
     </>

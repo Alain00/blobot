@@ -40,7 +40,11 @@ import {
   createPlanRefusal,
 } from './extensions.js';
 import { offerableNames } from './palette.js';
-import { CURSOR_SESSION_MODE } from './permissions.js';
+import { LocalMachine } from '../../machines/local-machine.js';
+import { CURSOR_MACHINE_IMAGE } from './image.js';
+import type { Machine } from '../../machines/machine.js';
+import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
+import { CURSOR_SESSION_MODE, cursorCliConfig } from './permissions.js';
 import { cursorPersonaBlocks } from './persona.js';
 import { spawnCursor, VERIFIED_CURSOR_VERSION, type SpawnCursor } from './stdio.js';
 
@@ -97,6 +101,7 @@ export interface CursorAgentRuntimeOptions {
   /** Tests inject a directory; production uses `~/.local/share/blobot/cursor-config/<id>`. */
   readonly configDir?: string;
   readonly env?: Readonly<Record<string, string>>;
+  readonly machine?: Machine;
   /** Injected in tests: a transport that speaks the protocol without spawning anything. */
   readonly spawn?: SpawnCursor;
   readonly onStderr?: (line: string) => void;
@@ -128,6 +133,7 @@ export interface CursorAgentRuntimeOptions {
  *   blobot narrows nothing there. Per-agent restriction is a future cross-runtime effort.
  */
 export class CursorAgentRuntime implements AgentRuntime {
+  readonly machineImage = CURSOR_MACHINE_IMAGE;
   readonly agentId: string;
 
   readonly #options: CursorAgentRuntimeOptions;
@@ -156,11 +162,15 @@ export class CursorAgentRuntime implements AgentRuntime {
 
   constructor(options: CursorAgentRuntimeOptions) {
     this.agentId = options.agentId;
-    this.#options = options;
+    this.#options = {
+      ...options,
+      machine: options.machine ?? new LocalMachine({ agentId: options.agentId, workspacePath: options.cwd }),
+    };
     this.#pictures = new PictureWatch(options.pictures);
     this.#clock = options.clock ?? new SystemClock();
     this.#spawn = options.spawn ?? spawnCursor;
-    this.#configDir = options.configDir ?? defaultCursorConfigDir(options.agentId);
+    this.#configDir = options.machine?.kind === 'box' ? '/home/agent/.config/blobot/cursor'
+      : options.configDir ?? defaultCursorConfigDir(options.agentId);
   }
 
   get sessionId(): string {
@@ -208,7 +218,11 @@ export class CursorAgentRuntime implements AgentRuntime {
       // The posture goes to disk before the child exists, so there is no window in which the
       // process runs under somebody else's permissions. The file is in blobot's own data
       // directory and nothing is ever written into the AgentWorkspace, which is a checkout.
-      writeCursorConfig({ dir: this.#configDir, trust: this.trust });
+      if (this.#options.machine?.kind !== 'box') writeCursorConfig({
+        dir: this.#configDir,
+        trust: this.trust,
+        machineKind: this.#options.machine?.kind ?? 'local',
+      });
       await this.#connect();
       this.#setLifecycle('ready');
     } catch (error) {
@@ -220,8 +234,10 @@ export class CursorAgentRuntime implements AgentRuntime {
 
   async #connect(): Promise<void> {
     const transport = this.#spawn({
+      ...(this.#options.machine === undefined ? {} : { machine: this.#options.machine }),
       cwd: this.#options.cwd,
       configDir: this.#configDir,
+      config: { ...cursorCliConfig(this.trust, this.#options.machine?.kind ?? 'local') },
       ...(this.#options.cursorExecutable === undefined
         ? {}
         : { cursorExecutable: this.#options.cursorExecutable }),
@@ -251,7 +267,7 @@ export class CursorAgentRuntime implements AgentRuntime {
       protocolVersion: PROTOCOL_VERSION,
       // We own no terminals and serve no unsaved buffers, so Cursor's own tools are the right
       // ones — and a client that offers to write files is a way around the posture.
-      clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
+      clientCapabilities: MACHINE_CLIENT_CAPABILITIES,
     });
     this.#reportVersion(initialized);
     this.#accepts = acceptsOf(initialized.agentCapabilities);
@@ -382,7 +398,7 @@ export class CursorAgentRuntime implements AgentRuntime {
     }
   }
 
-  sendPrompt(prompt: Prompt): AsyncIterable<AgentEvent> {
+  sendPrompt(prompt: Prompt, onAdmitted?: () => void): AsyncIterable<AgentEvent> {
     if (this.#lifecycle !== 'ready') {
       throw new Error(`${this.agentId}: cannot prompt a runtime that is ${this.#lifecycle}`);
     }
@@ -391,6 +407,7 @@ export class CursorAgentRuntime implements AgentRuntime {
         `${this.agentId}: a turn is already in flight — the orchestrator's mailbox exists so this cannot happen`,
       );
     }
+    onAdmitted?.();
     const queue = new AsyncQueue<AgentEvent>();
     this.#turnIndex += 1;
     const turnId = `turn_${this.#turnIndex}`;
@@ -478,7 +495,7 @@ export class CursorAgentRuntime implements AgentRuntime {
   }
 
   async stop(): Promise<void> {
-    if (this.#lifecycle === 'stopped') return;
+    // A stopped lifecycle can precede OS process exit; repeated stop must still join cleanup.
     this.#setLifecycle('stopped');
     await this.#connection?.close();
     this.#turn?.queue.close();
@@ -525,7 +542,7 @@ export class CursorAgentRuntime implements AgentRuntime {
   }
 
   #offerableNames(): ReadonlySet<string> {
-    this.#offerable ??= offerableNames(this.#options.cwd);
+    this.#offerable ??= offerableNames(this.#options.cwd, this.#options.machine?.kind === 'box' ? this.#options.machine.location() : undefined);
     return this.#offerable;
   }
 

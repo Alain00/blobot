@@ -1,0 +1,1804 @@
+{
+  "date": "2026-09-06T00:09:39.242Z",
+  "uuid": "204c0308-1e4f-4623-8ce2-1d634d8e314a",
+  "candidate": "blobot-machine-probe:explicit-docker-20260905",
+  "manifest": "sha256:1cd3184fceaf6d60c0f364c81bdb26f3359bab91efc666cd172fb75c68ed974c",
+  "commands": [
+    {
+      "label": "daemon-status",
+      "code": 0,
+      "ms": 184.367709
+    },
+    {
+      "label": "version",
+      "code": 0,
+      "ms": 152.576167
+    },
+    {
+      "label": "read-ssh-forwarding",
+      "code": 0,
+      "ms": 158.280667
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 302.70233299999995
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 372.33054200000004
+    },
+    {
+      "label": "load-local",
+      "code": 0,
+      "ms": 2611.044583
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 177.4612500000003
+    },
+    {
+      "label": "create-source",
+      "code": 0,
+      "ms": 3168.787708
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 171.9715839999999
+    },
+    {
+      "label": "create-target",
+      "code": 0,
+      "ms": 2657.1019579999993
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 166.54970899999898
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 399.28349999999773
+    },
+    {
+      "label": "remove-owned-box",
+      "code": 0,
+      "ms": 452.2359580000011
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 168.74449999999706
+    },
+    {
+      "label": "remove-owned-box",
+      "code": 0,
+      "ms": 486.85412500000166
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 173.31487500000003
+    },
+    {
+      "label": "remove-owned-alias",
+      "code": 0,
+      "ms": 196.88462500000242
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 165.2144580000022
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 261.1820000000007
+    }
+  ],
+  "diskChecks": [
+    {
+      "label": "before-load",
+      "availableBytes": "20954042368"
+    },
+    {
+      "label": "before-create-source",
+      "availableBytes": "20953939968"
+    },
+    {
+      "label": "before-create-target",
+      "availableBytes": "20935036928"
+    },
+    {
+      "label": "after-comparison",
+      "availableBytes": "20914663424"
+    },
+    {
+      "label": "after-cleanup",
+      "availableBytes": "20950544384"
+    }
+  ],
+  "boxes": [
+    {
+      "role": "source",
+      "name": "blobot-compare56-204c0308-1e4f-4623-8ce2-1d634d8e314a-source",
+      "id": "8d7c31c0-5eaf-4c3c-b78b-d8658c590173",
+      "agent": "blobot-synthetic-compare56",
+      "status": "running",
+      "workspaces": [
+        "/private/tmp/blobot-compare56-bLAhpI/synthetic-worktree"
+      ]
+    },
+    {
+      "role": "target",
+      "name": "blobot-compare56-204c0308-1e4f-4623-8ce2-1d634d8e314a-target",
+      "id": "2f3c8b58-9622-4d7b-9c7d-4add1afce73f",
+      "agent": "blobot-synthetic-compare56",
+      "status": "running",
+      "workspaces": [
+        "/private/tmp/blobot-compare56-bLAhpI/synthetic-worktree"
+      ]
+    }
+  ],
+  "scripts": {
+    "worker": "d24bca954d09a778c2a52cbbc07e74b0adedd20b66de1ee63a91ca5e178c78fd",
+    "scanner": "ecd2c6c3b0f8a727eef7f0215d90ca62ad48d0909b1d1cebbc82fc205c53d969",
+    "seed": "52a7f2cabeecce19fa5e1e4ae924b0c434687db45435aef4ad74482f2e5083d8"
+  },
+  "functionHashes": {
+    "prepare": "a08ffc6ad386bc04aa1fd7920a4115c5cd92f0c122f4dcefe5b217852436c68a",
+    "read": "f8f69f92811304a79ff432e8ae3d41957e4fd817a5553ea6681a091e73808904",
+    "verify": "cb1d5f4808c3b87f29deb4b243662c1eb18c6f067947d4d47d903fc86d664913",
+    "index": "85ec340419df0b465592586f9ae3eea93f95d73a7360e02cf7d84bbbf2d9a144",
+    "select": "0742a1f1f4ca09a4597ecd55bdf1f7e39c810fa1f258e1db1da7a99c2641a7ec"
+  },
+  "relay": {
+    "bytes": 34548097,
+    "frames": 528,
+    "maxFrame": 65536,
+    "opaque": true,
+    "persisted": false,
+    "sha256": "3eb0a99aa04a2e024880d731d624e13f484facb618909b65bedf2b7da3f368b8"
+  },
+  "memory": {
+    "peakRss": 90357760,
+    "peakArrayBuffers": 19847866
+  },
+  "cleanup": {
+    "errors": [],
+    "remainingOwnedBoxes": [],
+    "remainingOwnedImages": [],
+    "tempRemoved": true
+  },
+  "version": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "image": {
+    "id": "1cd3184fceaf",
+    "repository": "docker.io/library/blobot-machine-probe",
+    "tag": "explicit-docker-20260905",
+    "flavor": "shell-docker",
+    "created_at": "2026-09-06T00:09:43Z",
+    "size": 588690428
+  },
+  "kit": {
+    "schemaVersion": "2",
+    "kind": "sandbox",
+    "name": "blobot-synthetic-compare56",
+    "sandbox": {
+      "image": "blobot-machine-probe:explicit-docker-20260905",
+      "entrypoint": [
+        "/usr/bin/node"
+      ],
+      "command": {
+        "default": [
+          "--version"
+        ]
+      }
+    },
+    "security": {
+      "privileged": true
+    },
+    "credentials": [],
+    "permissions": {
+      "network": {
+        "allow": [],
+        "deny": []
+      }
+    },
+    "volumes": [
+      {
+        "path": "/home/agent",
+        "size": "8589934592",
+        "mode": "0700"
+      },
+      {
+        "path": "/var/lib/docker",
+        "size": "21474836480",
+        "mode": "0700"
+      }
+    ]
+  },
+  "ready": [
+    {
+      "event": "ready",
+      "role": "source",
+      "digest": {
+        "bytes": 1597655040,
+        "sha256": "d9c098d63bd96cf46c08942e10440f1dc04c8bd66d5ec42e068f3ba4b6d3f308"
+      },
+      "members": 62742,
+      "attributeEntries": 62742,
+      "hostMountExcluded": true
+    },
+    {
+      "event": "ready",
+      "role": "target",
+      "digest": {
+        "bytes": 1597655040,
+        "sha256": "cb912f7b9f8727785ef1aee4cefefa2967465d1d0fa12042dca04626cbbc4f14"
+      },
+      "members": 62743,
+      "attributeEntries": 62743,
+      "hostMountExcluded": true
+    }
+  ],
+  "comparison": {
+    "completed": true,
+    "sourceDigest": {
+      "bytes": 1597655040,
+      "sha256": "d9c098d63bd96cf46c08942e10440f1dc04c8bd66d5ec42e068f3ba4b6d3f308"
+    },
+    "targetDigest": {
+      "bytes": 1597655040,
+      "sha256": "cb912f7b9f8727785ef1aee4cefefa2967465d1d0fa12042dca04626cbbc4f14"
+    },
+    "selectedMembers": 45,
+    "selectionIsNull": false,
+    "counts": {
+      "shared": 62742,
+      "sourceOnly": 0,
+      "targetOnly": 1,
+      "sourceBothENOTTY": 60946,
+      "sourceBothENOTTYSelected": 0,
+      "sourceBothENOTTYUnselected": 60946,
+      "sourceBothENOTTYSelectedWithSamePax": 0,
+      "samePaxDifferentAttributes": 7,
+      "samePaxDifferentAttributesSelected": 0,
+      "samePaxDifferentAttributesUnselected": 7,
+      "sharedApiDifferent": 8,
+      "sharedIdentityDifferent": 38
+    },
+    "types": {
+      "source": {
+        "directory": 7580,
+        "file": 53419,
+        "symlink": 1740,
+        "block": 1,
+        "char": 1,
+        "fifo": 1
+      },
+      "target": {
+        "directory": 7580,
+        "file": 53420,
+        "symlink": 1740,
+        "block": 1,
+        "char": 1,
+        "fifo": 1
+      },
+      "selected": {
+        "directory": 26,
+        "file": 16,
+        "symlink": 3
+      },
+      "targetOnly": {
+        "file": 1
+      }
+    },
+    "cases": {
+      "modifiedPublicFile": {
+        "presentBoth": true,
+        "samePax": false,
+        "selected": true,
+        "attributesDiffer": true,
+        "sourceClass": "getflags-queryable",
+        "targetClass": "both-ENOTTY-statx-immutable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "errno": 25
+          },
+          "fsgetxattr": {
+            "errno": 25
+          },
+          "statx": {
+            "attributes": "16",
+            "mask": "2109492"
+          }
+        }
+      },
+      "copyUpWithoutContentChange": {
+        "presentBoth": true,
+        "samePax": true,
+        "selected": false,
+        "attributesDiffer": true,
+        "sourceClass": "getflags-queryable",
+        "targetClass": "both-ENOTTY-statx-immutable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "errno": 25
+          },
+          "fsgetxattr": {
+            "errno": 25
+          },
+          "statx": {
+            "attributes": "16",
+            "mask": "2109492"
+          }
+        }
+      },
+      "deletedPublicFile": {
+        "sourceAbsent": true,
+        "targetPresent": true,
+        "parentSelected": true
+      },
+      "flags": {
+        "immutable-file": {
+          "presentBoth": true,
+          "samePax": true,
+          "selected": false,
+          "attributesDiffer": true,
+          "sourceClass": "getflags-queryable",
+          "targetClass": "getflags-queryable",
+          "sourceApi": {
+            "getflags": {
+              "flags": 524304
+            },
+            "fsgetxattr": {
+              "xflags": 8,
+              "extsize": 0,
+              "nextents": 0,
+              "projid": 0,
+              "cowextsize": 0
+            },
+            "statx": {
+              "attributes": "16",
+              "mask": "3160180"
+            }
+          },
+          "targetApi": {
+            "getflags": {
+              "flags": 524288
+            },
+            "fsgetxattr": {
+              "xflags": 0,
+              "extsize": 0,
+              "nextents": 0,
+              "projid": 0,
+              "cowextsize": 0
+            },
+            "statx": {
+              "attributes": "0",
+              "mask": "3160180"
+            }
+          }
+        },
+        "immutable-dir": {
+          "presentBoth": true,
+          "samePax": true,
+          "selected": false,
+          "attributesDiffer": true,
+          "sourceClass": "getflags-queryable",
+          "targetClass": "getflags-queryable",
+          "sourceApi": {
+            "getflags": {
+              "flags": 524304
+            },
+            "fsgetxattr": {
+              "xflags": 8,
+              "extsize": 0,
+              "nextents": 0,
+              "projid": 0,
+              "cowextsize": 0
+            },
+            "statx": {
+              "attributes": "16",
+              "mask": "3160180"
+            }
+          },
+          "targetApi": {
+            "getflags": {
+              "flags": 524288
+            },
+            "fsgetxattr": {
+              "xflags": 0,
+              "extsize": 0,
+              "nextents": 0,
+              "projid": 0,
+              "cowextsize": 0
+            },
+            "statx": {
+              "attributes": "0",
+              "mask": "3160180"
+            }
+          }
+        },
+        "nodump-file": {
+          "presentBoth": true,
+          "samePax": true,
+          "selected": false,
+          "attributesDiffer": true,
+          "sourceClass": "getflags-queryable",
+          "targetClass": "getflags-queryable",
+          "sourceApi": {
+            "getflags": {
+              "flags": 524352
+            },
+            "fsgetxattr": {
+              "xflags": 128,
+              "extsize": 0,
+              "nextents": 0,
+              "projid": 0,
+              "cowextsize": 0
+            },
+            "statx": {
+              "attributes": "64",
+              "mask": "3160180"
+            }
+          },
+          "targetApi": {
+            "getflags": {
+              "flags": 524288
+            },
+            "fsgetxattr": {
+              "xflags": 0,
+              "extsize": 0,
+              "nextents": 0,
+              "projid": 0,
+              "cowextsize": 0
+            },
+            "statx": {
+              "attributes": "0",
+              "mask": "3160180"
+            }
+          }
+        },
+        "nodump-dir": {
+          "presentBoth": true,
+          "samePax": true,
+          "selected": false,
+          "attributesDiffer": true,
+          "sourceClass": "getflags-queryable",
+          "targetClass": "getflags-queryable",
+          "sourceApi": {
+            "getflags": {
+              "flags": 524352
+            },
+            "fsgetxattr": {
+              "xflags": 128,
+              "extsize": 0,
+              "nextents": 0,
+              "projid": 0,
+              "cowextsize": 0
+            },
+            "statx": {
+              "attributes": "64",
+              "mask": "3160180"
+            }
+          },
+          "targetApi": {
+            "getflags": {
+              "flags": 524288
+            },
+            "fsgetxattr": {
+              "xflags": 0,
+              "extsize": 0,
+              "nextents": 0,
+              "projid": 0,
+              "cowextsize": 0
+            },
+            "statx": {
+              "attributes": "0",
+              "mask": "3160180"
+            }
+          }
+        },
+        "append-file": {
+          "presentBoth": true,
+          "samePax": true,
+          "selected": false,
+          "attributesDiffer": true,
+          "sourceClass": "getflags-queryable",
+          "targetClass": "getflags-queryable",
+          "sourceApi": {
+            "getflags": {
+              "flags": 524320
+            },
+            "fsgetxattr": {
+              "xflags": 16,
+              "extsize": 0,
+              "nextents": 0,
+              "projid": 0,
+              "cowextsize": 0
+            },
+            "statx": {
+              "attributes": "32",
+              "mask": "3160180"
+            }
+          },
+          "targetApi": {
+            "getflags": {
+              "flags": 524288
+            },
+            "fsgetxattr": {
+              "xflags": 0,
+              "extsize": 0,
+              "nextents": 0,
+              "projid": 0,
+              "cowextsize": 0
+            },
+            "statx": {
+              "attributes": "0",
+              "mask": "3160180"
+            }
+          }
+        },
+        "append-dir": {
+          "presentBoth": true,
+          "samePax": true,
+          "selected": false,
+          "attributesDiffer": true,
+          "sourceClass": "getflags-queryable",
+          "targetClass": "getflags-queryable",
+          "sourceApi": {
+            "getflags": {
+              "flags": 524320
+            },
+            "fsgetxattr": {
+              "xflags": 16,
+              "extsize": 0,
+              "nextents": 0,
+              "projid": 0,
+              "cowextsize": 0
+            },
+            "statx": {
+              "attributes": "32",
+              "mask": "3160180"
+            }
+          },
+          "targetApi": {
+            "getflags": {
+              "flags": 524288
+            },
+            "fsgetxattr": {
+              "xflags": 0,
+              "extsize": 0,
+              "nextents": 0,
+              "projid": 0,
+              "cowextsize": 0
+            },
+            "statx": {
+              "attributes": "0",
+              "mask": "3160180"
+            }
+          }
+        }
+      }
+    },
+    "special": {
+      "symlink": {
+        "count": 3480,
+        "allStatxSucceeded": true,
+        "allIoctlsSkipped": true,
+        "xattrQueryErrors": 0
+      },
+      "fifo": {
+        "count": 2,
+        "allStatxSucceeded": true,
+        "allIoctlsSkipped": true,
+        "xattrQueryErrors": 0
+      },
+      "char": {
+        "count": 2,
+        "allStatxSucceeded": true,
+        "allIoctlsSkipped": true,
+        "xattrQueryErrors": 0
+      },
+      "block": {
+        "count": 2,
+        "allStatxSucceeded": true,
+        "allIoctlsSkipped": true,
+        "xattrQueryErrors": 0
+      },
+      "socket": {
+        "count": 2,
+        "allStatxSucceeded": true,
+        "allIoctlsSkipped": true,
+        "xattrQueryErrors": 0,
+        "outsideCapturedTrees": true
+      }
+    },
+    "groups": [
+      {
+        "type": "directory",
+        "selected": true,
+        "samePax": false,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "8192",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "8192",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "directory",
+        "selected": false,
+        "samePax": true,
+        "source": "both-ENOTTY-statx-immutable",
+        "target": "both-ENOTTY-statx-immutable",
+        "sourceApi": {
+          "getflags": {
+            "errno": 25
+          },
+          "fsgetxattr": {
+            "errno": 25
+          },
+          "statx": {
+            "attributes": "16",
+            "mask": "2109492"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "errno": 25
+          },
+          "fsgetxattr": {
+            "errno": 25
+          },
+          "statx": {
+            "attributes": "16",
+            "mask": "2109492"
+          }
+        },
+        "count": 7550
+      },
+      {
+        "type": "file",
+        "selected": false,
+        "samePax": true,
+        "source": "both-ENOTTY-statx-immutable",
+        "target": "both-ENOTTY-statx-immutable",
+        "sourceApi": {
+          "getflags": {
+            "errno": 25
+          },
+          "fsgetxattr": {
+            "errno": 25
+          },
+          "statx": {
+            "attributes": "16",
+            "mask": "2109492"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "errno": 25
+          },
+          "fsgetxattr": {
+            "errno": 25
+          },
+          "statx": {
+            "attributes": "16",
+            "mask": "2109492"
+          }
+        },
+        "count": 53396
+      },
+      {
+        "type": "symlink",
+        "selected": false,
+        "samePax": true,
+        "source": "ioctl-not-opened",
+        "target": "ioctl-not-opened",
+        "sourceApi": {
+          "getflags": {
+            "skipped": "no data descriptor opened"
+          },
+          "fsgetxattr": {
+            "skipped": "no data descriptor opened"
+          },
+          "statx": {
+            "attributes": "16",
+            "mask": "2109492"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "skipped": "no data descriptor opened"
+          },
+          "fsgetxattr": {
+            "skipped": "no data descriptor opened"
+          },
+          "statx": {
+            "attributes": "16",
+            "mask": "2109492"
+          }
+        },
+        "count": 1736
+      },
+      {
+        "type": "directory",
+        "selected": true,
+        "samePax": false,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 19
+      },
+      {
+        "type": "file",
+        "selected": false,
+        "samePax": true,
+        "source": "getflags-queryable",
+        "target": "both-ENOTTY-statx-immutable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "errno": 25
+          },
+          "fsgetxattr": {
+            "errno": 25
+          },
+          "statx": {
+            "attributes": "16",
+            "mask": "2109492"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "file",
+        "selected": true,
+        "samePax": false,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 15
+      },
+      {
+        "type": "file",
+        "selected": true,
+        "samePax": false,
+        "source": "getflags-queryable",
+        "target": "both-ENOTTY-statx-immutable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "errno": 25
+          },
+          "fsgetxattr": {
+            "errno": 25
+          },
+          "statx": {
+            "attributes": "16",
+            "mask": "2109492"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "directory",
+        "selected": true,
+        "samePax": true,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 6
+      },
+      {
+        "type": "symlink",
+        "selected": true,
+        "samePax": false,
+        "source": "ioctl-not-opened",
+        "target": "ioctl-not-opened",
+        "sourceApi": {
+          "getflags": {
+            "skipped": "no data descriptor opened"
+          },
+          "fsgetxattr": {
+            "skipped": "no data descriptor opened"
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "skipped": "no data descriptor opened"
+          },
+          "fsgetxattr": {
+            "skipped": "no data descriptor opened"
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 3
+      },
+      {
+        "type": "directory",
+        "selected": false,
+        "samePax": true,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "directory",
+        "selected": false,
+        "samePax": true,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524320
+          },
+          "fsgetxattr": {
+            "xflags": 16,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "32",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "file",
+        "selected": false,
+        "samePax": true,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 3
+      },
+      {
+        "type": "file",
+        "selected": false,
+        "samePax": true,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524320
+          },
+          "fsgetxattr": {
+            "xflags": 16,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "32",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "block",
+        "selected": false,
+        "samePax": true,
+        "source": "ioctl-not-opened",
+        "target": "ioctl-not-opened",
+        "sourceApi": {
+          "getflags": {
+            "skipped": "no data descriptor opened"
+          },
+          "fsgetxattr": {
+            "skipped": "no data descriptor opened"
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "skipped": "no data descriptor opened"
+          },
+          "fsgetxattr": {
+            "skipped": "no data descriptor opened"
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "char",
+        "selected": false,
+        "samePax": true,
+        "source": "ioctl-not-opened",
+        "target": "ioctl-not-opened",
+        "sourceApi": {
+          "getflags": {
+            "skipped": "no data descriptor opened"
+          },
+          "fsgetxattr": {
+            "skipped": "no data descriptor opened"
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "skipped": "no data descriptor opened"
+          },
+          "fsgetxattr": {
+            "skipped": "no data descriptor opened"
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "fifo",
+        "selected": false,
+        "samePax": true,
+        "source": "ioctl-not-opened",
+        "target": "ioctl-not-opened",
+        "sourceApi": {
+          "getflags": {
+            "skipped": "no data descriptor opened"
+          },
+          "fsgetxattr": {
+            "skipped": "no data descriptor opened"
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "skipped": "no data descriptor opened"
+          },
+          "fsgetxattr": {
+            "skipped": "no data descriptor opened"
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "directory",
+        "selected": false,
+        "samePax": true,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524304
+          },
+          "fsgetxattr": {
+            "xflags": 8,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "16",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "file",
+        "selected": false,
+        "samePax": true,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524304
+          },
+          "fsgetxattr": {
+            "xflags": 8,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "16",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "directory",
+        "selected": false,
+        "samePax": true,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524352
+          },
+          "fsgetxattr": {
+            "xflags": 128,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "64",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "file",
+        "selected": false,
+        "samePax": true,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524352
+          },
+          "fsgetxattr": {
+            "xflags": 128,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "64",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "symlink",
+        "selected": false,
+        "samePax": true,
+        "source": "ioctl-not-opened",
+        "target": "ioctl-not-opened",
+        "sourceApi": {
+          "getflags": {
+            "skipped": "no data descriptor opened"
+          },
+          "fsgetxattr": {
+            "skipped": "no data descriptor opened"
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "skipped": "no data descriptor opened"
+          },
+          "fsgetxattr": {
+            "skipped": "no data descriptor opened"
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      }
+    ],
+    "samePaxDifferentAttributeGroups": [
+      {
+        "type": "file",
+        "selected": false,
+        "source": "getflags-queryable",
+        "target": "both-ENOTTY-statx-immutable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "errno": 25
+          },
+          "fsgetxattr": {
+            "errno": 25
+          },
+          "statx": {
+            "attributes": "16",
+            "mask": "2109492"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "directory",
+        "selected": false,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524320
+          },
+          "fsgetxattr": {
+            "xflags": 16,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "32",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "file",
+        "selected": false,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524320
+          },
+          "fsgetxattr": {
+            "xflags": 16,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "32",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "directory",
+        "selected": false,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524304
+          },
+          "fsgetxattr": {
+            "xflags": 8,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "16",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "file",
+        "selected": false,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524304
+          },
+          "fsgetxattr": {
+            "xflags": 8,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "16",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "directory",
+        "selected": false,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524352
+          },
+          "fsgetxattr": {
+            "xflags": 128,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "64",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      },
+      {
+        "type": "file",
+        "selected": false,
+        "source": "getflags-queryable",
+        "target": "getflags-queryable",
+        "sourceApi": {
+          "getflags": {
+            "flags": 524352
+          },
+          "fsgetxattr": {
+            "xflags": 128,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "64",
+            "mask": "3160180"
+          }
+        },
+        "targetApi": {
+          "getflags": {
+            "flags": 524288
+          },
+          "fsgetxattr": {
+            "xflags": 0,
+            "extsize": 0,
+            "nextents": 0,
+            "projid": 0,
+            "cowextsize": 0
+          },
+          "statx": {
+            "attributes": "0",
+            "mask": "3160180"
+          }
+        },
+        "count": 1
+      }
+    ],
+    "ioctlDescriptorOpens": {
+      "source": {
+        "directory": 7580,
+        "file": 53419
+      },
+      "target": {
+        "directory": 7580,
+        "file": 53420
+      }
+    },
+    "ioctlCalls": {
+      "source": {
+        "directory": 15160,
+        "file": 106838
+      },
+      "target": {
+        "directory": 15160,
+        "file": 106840
+      }
+    },
+    "privateInventoriesStayedInGuests": true,
+    "rootRestorationInvoked": false
+  },
+  "guestCleanup": [
+    {
+      "event": "finished",
+      "role": "source",
+      "cleanup": {
+        "ownedFlagsCleared": true,
+        "viewsRemoved": true
+      },
+      "remainsFrozenForOwnedVmStop": true
+    },
+    {
+      "event": "finished",
+      "role": "target",
+      "cleanup": {
+        "ownedFlagsCleared": true,
+        "viewsRemoved": true
+      },
+      "remainsFrozenForOwnedVmStop": true
+    }
+  ],
+  "guestExits": [
+    {
+      "code": 0,
+      "signal": null,
+      "stderrBytes": 0
+    },
+    {
+      "code": 0,
+      "signal": null,
+      "stderrBytes": 0
+    }
+  ],
+  "minimumObservedSpace": "20914765824",
+  "passed": true
+}

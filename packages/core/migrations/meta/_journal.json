@@ -162,6 +162,20 @@
       "when": 1788611825397,
       "tag": "0022_big_whirlwind",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1788655736252,
+      "tag": "0023_machine_placement",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1788700014465,
+      "tag": "0024_thread_for",
+      "breakpoints": true
     }
   ]
 }

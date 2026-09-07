@@ -1,0 +1,89 @@
+import { validateBoxWorkspaceMounts, type BoxWorkspaceMounts } from '../../workspace/box-mounts.js';
+import { prepareSharedSkillsCommand } from './skills.js';
+
+/** Initial ceilings accepted by the author; allocated host bytes are measured separately. */
+export const SBX_INITIAL_STORAGE = { homeBytes: 8 * 1024 ** 3, dockerBytes: 20 * 1024 ** 3 } as const;
+
+/** A root kit, never a mixin over a vendor's permissive agent kit. */
+export interface SbxKitOptions {
+  readonly image: string;
+  readonly guestNode: string;
+  readonly dataBytes: number;
+  /** Requires a verified image with start-docker=false, avoiding sbx's automatic volume. */
+  readonly dockerBytes?: number;
+  /** Legacy private workspace used only by the isolated lifecycle fixtures. */
+  readonly workspaceBytes?: number;
+  readonly workspace?: BoxWorkspaceMounts;
+  /** Native discovery locations supplied by the image contract, initialized after home mounts. */
+  readonly sharedSkillLocations?: readonly string[];
+}
+
+/** Reversible encoding: Agent ids exclude dots, while sbx accepts dots but not underscores. */
+export function sbxNameFor(agentId: string): string {
+  if (!/^[a-z0-9][a-z0-9_-]{0,95}$/.test(agentId)) throw new Error('Invalid Machine Agent id');
+  return `blobot-${agentId.replaceAll('_', '.')}`;
+}
+
+export function sbxKit(options: SbxKitOptions) {
+  if (options.image.trim() === '' || /[\s\0]/.test(options.image)) throw new Error('Invalid Machine image');
+  if (!options.guestNode.startsWith('/') || options.guestNode.includes('\0')) throw new Error('Invalid guest Node path');
+  if (options.workspace !== undefined) validateBoxWorkspaceMounts(options.workspace);
+  for (const size of [options.dataBytes, ...(options.workspace === undefined ? [options.workspaceBytes] : []),
+    ...(options.dockerBytes === undefined ? [] : [options.dockerBytes])]) {
+    if (size === undefined || !Number.isSafeInteger(size) || size < 512 * 1024 * 1024) throw new Error('Invalid Machine volume size');
+  }
+  return {
+    schemaVersion: '2',
+    kind: 'sandbox',
+    name: 'blobot',
+    sandbox: {
+      image: options.image,
+      // Creating/attaching the kit must not start a runtime outside our prepared exec path.
+      entrypoint: [options.guestNode],
+      command: { default: ['--version'] },
+    },
+    credentials: [],
+    // Required by the private daemon inside the microVM, never host Docker access.
+    ...(options.dockerBytes === undefined ? {} : { security: { privileged: true } }),
+    permissions: { network: { allow: [], deny: [] } },
+    // Block volumes arrive owned by root. This synchronous setup must finish before any
+    // user process writes a login or configuration; startup hooks do not gate exec.
+    setup: { install: [{ user: '0', command: options.workspace === undefined
+      ? 'chown 1000:1000 /home/agent /workspace && chmod 0700 /home/agent /workspace'
+      : 'chown 1000:1000 /home/agent && chmod 0700 /home/agent' },
+      ...(options.workspace?.sharedSkillsPath === undefined ? [] : [{ user: '1000',
+        command: prepareSharedSkillsCommand(options.guestNode, options.workspace.sharedSkillsPath, options.sharedSkillLocations ?? []),
+      }]) ] },
+    volumes: [
+      { path: '/home/agent', size: String(options.dataBytes), mode: '0700' },
+      ...(options.dockerBytes === undefined ? [] : [{ path: '/var/lib/docker', size: String(options.dockerBytes), mode: '0700' }]),
+      ...(options.workspace === undefined ? [{ path: '/workspace', size: String(options.workspaceBytes), mode: '0700' }] : []),
+    ],
+  } as const;
+}
+
+/** JSON is a YAML subset; values cannot inject extra kit fields through YAML syntax. */
+export function renderSbxKit(options: SbxKitOptions): string {
+  return `${JSON.stringify(sbxKit(options), null, 2)}\n`;
+}
+
+/** Explain a refused cold start without changing the recorded Machine or its private data. */
+export function sbxKitMismatch(recorded: SbxKitOptions, desired: SbxKitOptions): string | undefined {
+  if (recorded.image !== desired.image) {
+    return 'This sandbox uses an earlier software version. Updating existing sandboxes is not supported yet. Its data and sign-in were kept; use the matching app version or create another agent.';
+  }
+  if (recorded.workspace?.sharedSkillsPath !== desired.workspace?.sharedSkillsPath) {
+    return 'The shared skills folder for this sandbox changed. Restore its original folder before starting. Its data was kept.';
+  }
+  if (recorded.workspace?.path !== desired.workspace?.path ||
+      JSON.stringify(recorded.workspace?.commonGit ?? []) !== JSON.stringify(desired.workspace?.commonGit ?? [])) {
+    return 'The workspace or shared Git folders for this sandbox changed. Restore the original folders before starting. Its data was kept.';
+  }
+  if (recorded.dataBytes !== desired.dataBytes || recorded.dockerBytes !== desired.dockerBytes || recorded.workspaceBytes !== desired.workspaceBytes) {
+    return 'The saved storage configuration does not match this sandbox. Storage changes are not supported yet. Its data was kept.';
+  }
+  if (renderSbxKit(recorded) !== renderSbxKit(desired)) {
+    return 'The saved runtime configuration does not match this sandbox. Its data was kept; use the matching app version or create another agent.';
+  }
+  return undefined;
+}

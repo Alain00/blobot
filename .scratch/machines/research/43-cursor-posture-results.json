@@ -1,0 +1,362 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-09-05T21:40:48.492Z",
+  "pin": {
+    "schemaVersion": 1,
+    "runtime": "cursor",
+    "arch": "arm64",
+    "version": "2026.09.02-c22c1a3",
+    "recipe": "4f0b6aef7e16addc931d319e42d47a1ca34cc9d5a0cabbbc66e37d441da3717c",
+    "reference": "blobot-machine-cursor:430507b5ce1525f30aa19ade1b2064b3ab4ccbeba37c43f486a3f07d07bf2d41-arm64",
+    "imageId": "sha256:430507b5ce1525f30aa19ade1b2064b3ab4ccbeba37c43f486a3f07d07bf2d41",
+    "imageBytes": 772229699,
+    "versionOutput": "2026.09.02-c22c1a3",
+    "base": "docker/sandbox-templates@sha256:5fc81bc7a127e59d81b244a06831ae3212a0310b2e5a0349c54e29249e45e919",
+    "guestNode": "/usr/bin/node",
+    "moduleRoot": "/opt/blobot",
+    "executable": "/opt/blobot/bin/cursor-agent",
+    "previousReference": "blobot-machine-cursor:430507b5ce1525f30aa19ade1b2064b3ab4ccbeba37c43f486a3f07d07bf2d41-arm64"
+  },
+  "name": "blobot-cursor-posture-d3c2e692-6a1d-4ca0-8879-5b3620799cf7",
+  "owner": "d3c2e692-6a1d-4ca0-8879-5b3620799cf7",
+  "boundary": {
+    "network": "none",
+    "hostMounts": [],
+    "credentials": [],
+    "pulls": false,
+    "messages": [
+      "initialize"
+    ],
+    "prompts": 0
+  },
+  "cleanup": "owned container absent",
+  "status": 0,
+  "stderr": "",
+  "result": {
+    "uid": 1000,
+    "node": "v22.22.1",
+    "moduleSha256": "a1a8d95bad2391a7000568fd917c1db118aac67b27468cb98260205fc2b52d17",
+    "resolver": [
+      {
+        "mode": "disabled",
+        "override": null,
+        "defaultEnabled": true,
+        "supported": true,
+        "resolved": "disabled",
+        "approvalMode": "allowlist",
+        "sandboxAvailable": false,
+        "inputUnchanged": true
+      },
+      {
+        "mode": "enabled",
+        "override": null,
+        "defaultEnabled": false,
+        "supported": true,
+        "resolved": "enabled",
+        "approvalMode": "allowlist",
+        "sandboxAvailable": true,
+        "inputUnchanged": true
+      },
+      {
+        "mode": "disabled",
+        "override": "enabled",
+        "defaultEnabled": false,
+        "supported": true,
+        "resolved": "enabled",
+        "approvalMode": "allowlist",
+        "sandboxAvailable": true,
+        "inputUnchanged": true
+      },
+      {
+        "mode": "enabled",
+        "override": "disabled",
+        "defaultEnabled": true,
+        "supported": true,
+        "resolved": "disabled",
+        "approvalMode": "allowlist",
+        "sandboxAvailable": false,
+        "inputUnchanged": true
+      },
+      {
+        "mode": null,
+        "override": null,
+        "defaultEnabled": false,
+        "supported": true,
+        "resolved": "disabled",
+        "approvalMode": "allowlist",
+        "sandboxAvailable": false,
+        "inputUnchanged": true
+      },
+      {
+        "mode": null,
+        "override": null,
+        "defaultEnabled": true,
+        "supported": true,
+        "resolved": "enabled",
+        "approvalMode": "allowlist",
+        "sandboxAvailable": true,
+        "inputUnchanged": true
+      }
+    ],
+    "acpPermissionsAdapter": [
+      {
+        "mode": "enabled",
+        "actual": {
+          "allow": [
+            "Shell(echo)",
+            "Mcp(blobot:*)"
+          ],
+          "deny": [
+            "Shell(rm)"
+          ],
+          "approvalMode": "allowlist",
+          "userConfiguredPolicy": {
+            "type": "insecure_none"
+          }
+        }
+      },
+      {
+        "mode": "disabled",
+        "actual": {
+          "allow": [
+            "Shell(echo)",
+            "Mcp(blobot:*)"
+          ],
+          "deny": [
+            "Shell(rm)"
+          ],
+          "approvalMode": "allowlist",
+          "userConfiguredPolicy": {
+            "type": "insecure_none"
+          }
+        }
+      }
+    ],
+    "processes": [
+      {
+        "label": "disabled",
+        "mode": "disabled",
+        "project": null,
+        "response": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "protocolVersion": 1,
+            "agentCapabilities": {
+              "loadSession": true,
+              "mcpCapabilities": {
+                "http": true,
+                "sse": true
+              },
+              "promptCapabilities": {
+                "audio": false,
+                "embeddedContext": false,
+                "image": true
+              },
+              "sessionCapabilities": {
+                "list": {}
+              }
+            },
+            "authMethods": [
+              {
+                "id": "cursor_login",
+                "name": "Cursor Login",
+                "description": "Authenticate using existing Cursor login credentials. Run 'agent login' first if not logged in."
+              }
+            ]
+          }
+        },
+        "code": 143,
+        "signal": null,
+        "elapsedMs": 725,
+        "signals": [
+          "SIGTERM"
+        ],
+        "stdout": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":1,\"agentCapabilities\":{\"loadSession\":true,\"mcpCapabilities\":{\"http\":true,\"sse\":true},\"promptCapabilities\":{\"audio\":false,\"embeddedContext\":false,\"image\":true},\"sessionCapabilities\":{\"list\":{}}},\"authMethods\":[{\"id\":\"cursor_login\",\"name\":\"Cursor Login\",\"description\":\"Authenticate using existing Cursor login credentials. Run 'agent login' first if not logged in.\"}]}}\n",
+        "stderr": "",
+        "persistedPosture": {
+          "approvalMode": "allowlist",
+          "permissions": {
+            "allow": [
+              "Shell(echo)",
+              "Mcp(blobot:*)"
+            ],
+            "deny": [
+              "Shell(rm)"
+            ]
+          },
+          "sandbox": {
+            "mode": "disabled",
+            "networkAccess": "allow_all"
+          }
+        }
+      },
+      {
+        "label": "enabled",
+        "mode": "enabled",
+        "project": null,
+        "response": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "protocolVersion": 1,
+            "agentCapabilities": {
+              "loadSession": true,
+              "mcpCapabilities": {
+                "http": true,
+                "sse": true
+              },
+              "promptCapabilities": {
+                "audio": false,
+                "embeddedContext": false,
+                "image": true
+              },
+              "sessionCapabilities": {
+                "list": {}
+              }
+            },
+            "authMethods": [
+              {
+                "id": "cursor_login",
+                "name": "Cursor Login",
+                "description": "Authenticate using existing Cursor login credentials. Run 'agent login' first if not logged in."
+              }
+            ]
+          }
+        },
+        "code": 143,
+        "signal": null,
+        "elapsedMs": 732,
+        "signals": [
+          "SIGTERM"
+        ],
+        "stdout": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":1,\"agentCapabilities\":{\"loadSession\":true,\"mcpCapabilities\":{\"http\":true,\"sse\":true},\"promptCapabilities\":{\"audio\":false,\"embeddedContext\":false,\"image\":true},\"sessionCapabilities\":{\"list\":{}}},\"authMethods\":[{\"id\":\"cursor_login\",\"name\":\"Cursor Login\",\"description\":\"Authenticate using existing Cursor login credentials. Run 'agent login' first if not logged in.\"}]}}\n",
+        "stderr": "",
+        "persistedPosture": {
+          "approvalMode": "allowlist",
+          "permissions": {
+            "allow": [
+              "Shell(echo)",
+              "Mcp(blobot:*)"
+            ],
+            "deny": [
+              "Shell(rm)"
+            ]
+          },
+          "sandbox": {
+            "mode": "enabled",
+            "networkAccess": "allow_all"
+          }
+        }
+      },
+      {
+        "label": "project-permissions",
+        "mode": "disabled",
+        "project": {
+          "permissions": {
+            "allow": [
+              "Shell(pwd)"
+            ],
+            "deny": []
+          }
+        },
+        "response": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "result": {
+            "protocolVersion": 1,
+            "agentCapabilities": {
+              "loadSession": true,
+              "mcpCapabilities": {
+                "http": true,
+                "sse": true
+              },
+              "promptCapabilities": {
+                "audio": false,
+                "embeddedContext": false,
+                "image": true
+              },
+              "sessionCapabilities": {
+                "list": {}
+              }
+            },
+            "authMethods": [
+              {
+                "id": "cursor_login",
+                "name": "Cursor Login",
+                "description": "Authenticate using existing Cursor login credentials. Run 'agent login' first if not logged in."
+              }
+            ]
+          }
+        },
+        "code": 143,
+        "signal": null,
+        "elapsedMs": 742,
+        "signals": [
+          "SIGTERM"
+        ],
+        "stdout": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":1,\"agentCapabilities\":{\"loadSession\":true,\"mcpCapabilities\":{\"http\":true,\"sse\":true},\"promptCapabilities\":{\"audio\":false,\"embeddedContext\":false,\"image\":true},\"sessionCapabilities\":{\"list\":{}}},\"authMethods\":[{\"id\":\"cursor_login\",\"name\":\"Cursor Login\",\"description\":\"Authenticate using existing Cursor login credentials. Run 'agent login' first if not logged in.\"}]}}\n",
+        "stderr": "",
+        "persistedPosture": {
+          "approvalMode": "allowlist",
+          "permissions": {
+            "allow": [
+              "Shell(echo)",
+              "Mcp(blobot:*)"
+            ],
+            "deny": [
+              "Shell(rm)"
+            ]
+          },
+          "sandbox": {
+            "mode": "disabled",
+            "networkAccess": "allow_all"
+          }
+        }
+      },
+      {
+        "label": "project-sandbox",
+        "mode": "disabled",
+        "project": {
+          "permissions": {
+            "allow": [],
+            "deny": []
+          },
+          "sandbox": {
+            "mode": "enabled"
+          }
+        },
+        "response": null,
+        "code": 1,
+        "signal": null,
+        "elapsedMs": 318,
+        "signals": [],
+        "stdout": "",
+        "stderr": "Invalid project config at /home/agent/project-sandbox/workspace/.cursor/cli.json: schema validation failed. [\n  {\n    \"code\": \"unrecognized_keys\",\n    \"keys\": [\n      \"sandbox\"\n    ],\n    \"path\": [],\n    \"message\": \"Unrecognized key(s) in object: 'sandbox'\"\n  }\n]\n",
+        "persistedPosture": {
+          "approvalMode": "allowlist",
+          "permissions": {
+            "allow": [
+              "Shell(echo)",
+              "Mcp(blobot:*)"
+            ],
+            "deny": [
+              "Shell(rm)"
+            ]
+          },
+          "sandbox": {
+            "mode": "disabled",
+            "networkAccess": "allow_all"
+          }
+        }
+      }
+    ],
+    "unsupportedPlatform": {
+      "approvalMode": "allowlist",
+      "sandboxAvailable": false
+    },
+    "version": "2026.09.02-c22c1a3",
+    "help": "Usage: agent [options] [command] [prompt...]\n\nStart the Cursor Agent\n\nArguments:\n  prompt                       Initial prompt for the agent\n\nOptions:\n  -v, --version                Output the version number\n  --api-key <key>              API key for authentication (can also use\n                               CURSOR_API_KEY env var)\n  -H, --header <header>        Add custom header to agent requests (format:\n                               'Name: Value', can be used multiple times)\n  -e, --endpoint <url>         Target API endpoint URL (can also use\n                               CURSOR_API_ENDPOINT env var) (default:\n                               \"https://api2.cursor.sh\", env:\n                               CURSOR_API_ENDPOINT)\n  -p, --print                  Print responses to console (for scripts or\n                               non-interactive use). Has access to all tools,\n                               including write and shell. (default: false)\n  --output-format <format>     Output format (only works with --print): text |\n                               json | stream-json (default: \"text\")\n  --stream-partial-output      Stream partial output as individual text deltas\n                               (only works with --print and stream-json format)\n                               (default: false)\n  --mode <mode>                Start in the given execution mode. plan:\n                               read-only/planning (analyze, propose plans, no\n                               edits). ask: Q&A style for explanations and\n                               questions (read-only). (choices: \"plan\", \"ask\")\n  --plan                       Start in plan mode (shorthand for --mode=plan).\n                               (default: false)\n  --resume [chatId]            Select a session to resume (default: false)\n  --continue                   Continue previous session (default: false)\n  --model <model>              Model to use (e.g., gpt-5, sonnet-4-thinking).\n                               Parameterized models accept quoted bracket\n                               overrides, e.g.\n                               'claude-opus-4-8[context=1m,effort=high,fast=false]'\n  --list-models                List available models and exit (default: false)\n  -f, --force                  Force allow commands unless explicitly denied\n                               (default: false)\n  --yolo                       Alias for --force (Run Everything) (default:\n                               false)\n  --auto-review                Use Auto-review (Smart Auto): a server classifier\n                               auto-runs safe tool calls and prompts for the\n                               rest (default: false)\n  --sandbox <mode>             Explicitly enable or disable sandbox mode\n                               (overrides config) (choices: \"enabled\",\n                               \"disabled\")\n  --approve-mcps               Automatically approve all MCP servers (default:\n                               false)\n  --trust                      Trust the current workspace without prompting\n                               (default: false)\n  --workspace <path-or-name>   Workspace directory or saved workspace name to\n                               use (defaults to current working directory)\n  --add-dir <path>             Add an additional workspace root directory (can\n                               be specified multiple times)\n  --plugin-dir <path>          Load a local plugin directory (can be specified\n                               multiple times)\n  -w, --worktree [name]        Start in an isolated git worktree at\n                               ~/.cursor/worktrees/<reponame>/<name>. If\n                               omitted, a name is generated.\n  --worktree-base <branch>     Branch or ref to base the new worktree on\n                               (default: current HEAD)\n  --skip-worktree-setup        Skip running worktree setup scripts from\n                               .cursor/worktrees.json (default: false)\n  -h, --help                   Display help for command\n\nCommands:\n  persist                      Start or manage a session that survives terminal\n                               disconnects\n  install-shell-integration    Install shell integration to ~/.zshrc\n  uninstall-shell-integration  Remove shell integration from ~/.zshrc\n  login                        Authenticate with Cursor. Set NO_OPEN_BROWSER to\n                               disable browser opening.\n  logout                       Sign out and clear stored authentication\n  mcp                          Manage MCP servers\n  plugin                       Manage plugins and plugin marketplaces\n  worker [options]             Run a self-hosted Cloud Agent worker that\n                               connects to Cursor and executes agent tool calls\n                               on this machine. Without --pool it is a personal\n                               My Machines worker (no Enterprise plan needed);\n                               with --pool it joins a team Self-Hosted Pool\n                               (Enterprise plan + service account API key).\n  status|whoami [options]      View authentication status\n  models                       List available models for this account\n  bedrock                      Configure AWS Bedrock usage for CLI\n  about [options]              Display version, system, and account information\n  update                       Update Cursor Agent to the latest version\n  create-chat                  Create a new empty chat and return its ID\n  generate-rule|rule           Generate a new Cursor rule with interactive\n                               prompts\n  agent [prompt...]            Start the Cursor Agent\n  ls                           Resume a chat session\n  resume                       Resume the latest chat session\n  help [command]               Display help for command"
+  },
+  "finishedAt": "2026-09-05T21:40:51.918Z"
+}

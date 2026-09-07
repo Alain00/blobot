@@ -1,0 +1,2493 @@
+{
+  "date": "2026-09-06T00:20:19.473Z",
+  "uuid": "f5d1a869-7c64-415a-a201-2f56b12ba5c3",
+  "name": "blobot-maintenance58-f5d1a869-7c64-415a-a201-2f56b12ba5c3",
+  "candidate": "blobot-machine-probe:explicit-docker-20260905",
+  "manifest": "sha256:1cd3184fceaf6d60c0f364c81bdb26f3359bab91efc666cd172fb75c68ed974c",
+  "scope": "synthetic disposable guest only",
+  "commands": [
+    {
+      "label": "daemon-status",
+      "code": 0,
+      "ms": 247.96125
+    },
+    {
+      "label": "version",
+      "code": 0,
+      "ms": 313.769125
+    },
+    {
+      "label": "read-ssh-forwarding",
+      "code": 0,
+      "ms": 173.938042
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 197.23783400000002
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 213.77666699999986
+    },
+    {
+      "label": "load-local-archive",
+      "code": 0,
+      "ms": 2728.7597079999996
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 175.96408299999985
+    },
+    {
+      "label": "create-owned-box",
+      "code": 0,
+      "ms": 3128.7692079999997
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 255.80270800000017
+    },
+    {
+      "label": "stop-after-target",
+      "code": 0,
+      "ms": 5293.359415999999
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 162.1527499999993
+    },
+    {
+      "label": "remove-owned-box",
+      "code": 0,
+      "ms": 353.16970799999945
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 175.6554159999996
+    },
+    {
+      "label": "remove-owned-local-alias",
+      "code": 0,
+      "ms": 285.6357079999998
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 307.27599999999984
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 229.92333300000064
+    }
+  ],
+  "diskChecks": [
+    {
+      "label": "before-load",
+      "availableBytes": "21056806912"
+    },
+    {
+      "label": "before-create",
+      "availableBytes": "21056708608"
+    },
+    {
+      "label": "before-probe",
+      "availableBytes": "21040144384"
+    },
+    {
+      "label": "after-target",
+      "availableBytes": "21038411776"
+    },
+    {
+      "label": "after-probe",
+      "availableBytes": "21038411776"
+    },
+    {
+      "label": "after-cleanup",
+      "availableBytes": "21056466944"
+    }
+  ],
+  "cleanup": {
+    "errors": [],
+    "remainingOwnedBoxes": [],
+    "remainingOwnedImages": [],
+    "tempRemoved": true
+  },
+  "scripts": {
+    "workerSha256": "ac350ff693fb973cb972a2fc940539799246e4922f714e24f278979e2c99aede",
+    "prepareSha256": "a08ffc6ad386bc04aa1fd7920a4115c5cd92f0c122f4dcefe5b217852436c68a",
+    "probeSha256": "5e9c11f4a7bee2a006e9f93d902b55dba972f189506159c3a58665645f447e90"
+  },
+  "version": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "image": {
+    "id": "1cd3184fceaf",
+    "repository": "docker.io/library/blobot-machine-probe",
+    "tag": "explicit-docker-20260905",
+    "flavor": "shell-docker",
+    "created_at": "2026-09-06T00:20:23Z",
+    "size": 588690428
+  },
+  "kit": {
+    "schemaVersion": "2",
+    "kind": "sandbox",
+    "name": "blobot-synthetic-maintenance58",
+    "sandbox": {
+      "image": "blobot-machine-probe:explicit-docker-20260905",
+      "entrypoint": [
+        "/usr/bin/node"
+      ],
+      "command": {
+        "default": [
+          "--version"
+        ]
+      }
+    },
+    "security": {
+      "privileged": true
+    },
+    "credentials": [],
+    "permissions": {
+      "network": {
+        "allow": [],
+        "deny": []
+      }
+    },
+    "volumes": [
+      {
+        "path": "/home/agent",
+        "size": "8589934592",
+        "mode": "0700"
+      },
+      {
+        "path": "/var/lib/docker",
+        "size": "21474836480",
+        "mode": "0700"
+      }
+    ]
+  },
+  "box": {
+    "name": "blobot-maintenance58-f5d1a869-7c64-415a-a201-2f56b12ba5c3",
+    "id": "eaa5d59a-663d-4627-bb0d-4e3655247863",
+    "agent": "blobot-synthetic-maintenance58",
+    "status": "running",
+    "workspaces": [
+      "/private/tmp/blobot-maintenance58-0g08Ks/synthetic-worktree"
+    ]
+  },
+  "guests": [
+    {
+      "role": "target",
+      "code": 0,
+      "stderr": "",
+      "guest": {
+        "role": "target",
+        "checks": {
+          "preparedAndHeld": true,
+          "heldAfterProbe": true,
+          "viewsRemovedStillFrozen": true
+        },
+        "completed": true,
+        "probe": {
+          "completed": true,
+          "kernel": "7.0.12",
+          "descriptorPolicy": "data descriptors only for regular files/directories; specials use O_PATH only",
+          "cleanup": {
+            "errors": [],
+            "syntheticTreesRemoved": true
+          },
+          "tarVersion": "tar (GNU tar) 1.35",
+          "archive": {
+            "bytes": 20480,
+            "sha256": "3edf5094f01ef2ad4e04d80bd4e49ae1bdacafd06b6d043a3bf209c63aaddce6"
+          },
+          "source": {
+            ".": {
+              "mode": 16877,
+              "uid": 0,
+              "gid": 0,
+              "mtimeNs": "1700000000123456789",
+              "ctimeNs": "1788654028989053376",
+              "ino": "262188",
+              "xattrs": {},
+              "statx": {
+                "attributes": "0",
+                "mask": "3160180"
+              }
+            },
+            "plain": {
+              "mode": 16872,
+              "uid": 0,
+              "gid": 0,
+              "mtimeNs": "1700000000123456789",
+              "ctimeNs": "1788654028988962751",
+              "ino": "262189",
+              "xattrs": {
+                "user.shared": "736f757263652d76616c7565"
+              },
+              "statx": {
+                "attributes": "0",
+                "mask": "3160180"
+              }
+            },
+            "plain/file": {
+              "mode": 33184,
+              "uid": 0,
+              "gid": 0,
+              "mtimeNs": "1700000000123456789",
+              "ctimeNs": "1788654028988962751",
+              "ino": "262190",
+              "xattrs": {},
+              "statx": {
+                "attributes": "0",
+                "mask": "3160180"
+              },
+              "sha256": "d48ac52a68c796db226dccc9ed7319e6c0db15e86908836783637bc13586ba1a"
+            },
+            "acl": {
+              "mode": 16872,
+              "uid": 0,
+              "gid": 0,
+              "mtimeNs": "1700000000123456789",
+              "ctimeNs": "1788654028989053376",
+              "ino": "262191",
+              "xattrs": {
+                "system.posix_acl_access": "0200000001000700ffffffff020005003930000004000500ffffffff10000500ffffffff20000000ffffffff",
+                "system.posix_acl_default": "0200000001000700ffffffff020005003930000004000500ffffffff10000500ffffffff20000000ffffffff",
+                "user.shared": "736f757263652d76616c7565"
+              },
+              "statx": {
+                "attributes": "0",
+                "mask": "3160180"
+              }
+            },
+            "acl/file": {
+              "mode": 33184,
+              "uid": 0,
+              "gid": 0,
+              "mtimeNs": "1700000000123456789",
+              "ctimeNs": "1788654028989053376",
+              "ino": "262192",
+              "xattrs": {},
+              "statx": {
+                "attributes": "0",
+                "mask": "3160180"
+              },
+              "sha256": "d48ac52a68c796db226dccc9ed7319e6c0db15e86908836783637bc13586ba1a"
+            },
+            "fifo": {
+              "mode": 4480,
+              "uid": 0,
+              "gid": 0,
+              "mtimeNs": "1700000000123456789",
+              "ctimeNs": "1788654028989053376",
+              "ino": "262193",
+              "xattrs": {},
+              "statx": {
+                "attributes": "0",
+                "mask": "3160180"
+              }
+            },
+            "symlink": {
+              "mode": 41471,
+              "uid": 0,
+              "gid": 0,
+              "mtimeNs": "1700000000123456789",
+              "ctimeNs": "1788654028989053376",
+              "ino": "262194",
+              "xattrs": {},
+              "statx": {
+                "attributes": "0",
+                "mask": "3160180"
+              },
+              "link": "plain/file"
+            }
+          },
+          "restores": [
+            {
+              "strategy": "direct",
+              "tar": {
+                "code": 0,
+                "stderr": ""
+              },
+              "before": {
+                ".": {
+                  "mode": 16877,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992185751",
+                  "ino": "262195",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992123418",
+                  "ino": "262196",
+                  "xattrs": {
+                    "system.posix_acl_access": "0200000001000700ffffffff02000500a05b000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "system.posix_acl_default": "0200000001000700ffffffff02000500a05b000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "user.extra": "7461726765742d6f6e6c79",
+                    "user.shared": "7461726765742d6f6c64"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992123418",
+                  "ino": "262197",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "113f68e174077b1823998d24da596b38ab626c11b3ec8b7cb7e973049fc97e49"
+                },
+                "acl": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992185751",
+                  "ino": "262198",
+                  "xattrs": {
+                    "system.posix_acl_access": "0200000001000700ffffffff02000500a05b000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "system.posix_acl_default": "0200000001000700ffffffff02000500a05b000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "user.extra": "7461726765742d6f6e6c79",
+                    "user.shared": "7461726765742d6f6c64"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "acl/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992185751",
+                  "ino": "262199",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "113f68e174077b1823998d24da596b38ab626c11b3ec8b7cb7e973049fc97e49"
+                },
+                "fifo": {
+                  "mode": 4480,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992185751",
+                  "ino": "262200",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "symlink": {
+                  "mode": 41471,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992185751",
+                  "ino": "262201",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "link": "plain/file"
+                }
+              },
+              "afterTar": {
+                ".": {
+                  "mode": 16877,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992970001",
+                  "ino": "262195",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992804960",
+                  "ino": "262196",
+                  "xattrs": {
+                    "user.extra": "7461726765742d6f6e6c79",
+                    "user.shared": "736f757263652d76616c7565"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992804960",
+                  "ino": "262197",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "d48ac52a68c796db226dccc9ed7319e6c0db15e86908836783637bc13586ba1a"
+                },
+                "acl": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992804960",
+                  "ino": "262198",
+                  "xattrs": {
+                    "system.posix_acl_access": "0200000001000700ffffffff020005003930000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "system.posix_acl_default": "0200000001000700ffffffff020005003930000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "user.extra": "7461726765742d6f6e6c79",
+                    "user.shared": "736f757263652d76616c7565"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "acl/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992804960",
+                  "ino": "262199",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "d48ac52a68c796db226dccc9ed7319e6c0db15e86908836783637bc13586ba1a"
+                },
+                "fifo": {
+                  "mode": 4480,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992804960",
+                  "ino": "262200",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "symlink": {
+                  "mode": 41471,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992804960",
+                  "ino": "262201",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "link": "plain/file"
+                }
+              },
+              "final": {
+                ".": {
+                  "mode": 16877,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992970001",
+                  "ino": "262195",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992804960",
+                  "ino": "262196",
+                  "xattrs": {
+                    "user.extra": "7461726765742d6f6e6c79",
+                    "user.shared": "736f757263652d76616c7565"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992804960",
+                  "ino": "262197",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "d48ac52a68c796db226dccc9ed7319e6c0db15e86908836783637bc13586ba1a"
+                },
+                "acl": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992804960",
+                  "ino": "262198",
+                  "xattrs": {
+                    "system.posix_acl_access": "0200000001000700ffffffff020005003930000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "system.posix_acl_default": "0200000001000700ffffffff020005003930000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "user.extra": "7461726765742d6f6e6c79",
+                    "user.shared": "736f757263652d76616c7565"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "acl/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992804960",
+                  "ino": "262199",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "d48ac52a68c796db226dccc9ed7319e6c0db15e86908836783637bc13586ba1a"
+                },
+                "fifo": {
+                  "mode": 4480,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992804960",
+                  "ino": "262200",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "symlink": {
+                  "mode": 41471,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028992804960",
+                  "ino": "262201",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "link": "plain/file"
+                }
+              },
+              "prePruned": [],
+              "postPruned": [],
+              "mismatchedMembers": [
+                "plain",
+                "acl"
+              ],
+              "sourceUnchanged": true,
+              "rearchiveEqualsSource": false
+            },
+            {
+              "strategy": "prune-before",
+              "tar": {
+                "code": 0,
+                "stderr": ""
+              },
+              "before": {
+                ".": {
+                  "mode": 16877,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994019085",
+                  "ino": "262195",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028993967043",
+                  "ino": "262196",
+                  "xattrs": {
+                    "system.posix_acl_access": "0200000001000700ffffffff02000500a05b000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "system.posix_acl_default": "0200000001000700ffffffff02000500a05b000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "user.extra": "7461726765742d6f6e6c79",
+                    "user.shared": "7461726765742d6f6c64"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028993967043",
+                  "ino": "262197",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "113f68e174077b1823998d24da596b38ab626c11b3ec8b7cb7e973049fc97e49"
+                },
+                "acl": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994019085",
+                  "ino": "262198",
+                  "xattrs": {
+                    "system.posix_acl_access": "0200000001000700ffffffff02000500a05b000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "system.posix_acl_default": "0200000001000700ffffffff02000500a05b000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "user.extra": "7461726765742d6f6e6c79",
+                    "user.shared": "7461726765742d6f6c64"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "acl/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994019085",
+                  "ino": "262199",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "113f68e174077b1823998d24da596b38ab626c11b3ec8b7cb7e973049fc97e49"
+                },
+                "fifo": {
+                  "mode": 4480,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994019085",
+                  "ino": "262200",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "symlink": {
+                  "mode": 41471,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994019085",
+                  "ino": "262201",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "link": "plain/file"
+                }
+              },
+              "afterTar": {
+                ".": {
+                  "mode": 16877,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994757460",
+                  "ino": "262195",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994757460",
+                  "ino": "262196",
+                  "xattrs": {
+                    "user.shared": "736f757263652d76616c7565"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994757460",
+                  "ino": "262197",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "d48ac52a68c796db226dccc9ed7319e6c0db15e86908836783637bc13586ba1a"
+                },
+                "acl": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994757460",
+                  "ino": "262198",
+                  "xattrs": {
+                    "system.posix_acl_access": "0200000001000700ffffffff020005003930000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "system.posix_acl_default": "0200000001000700ffffffff020005003930000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "user.shared": "736f757263652d76616c7565"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "acl/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994757460",
+                  "ino": "262199",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "d48ac52a68c796db226dccc9ed7319e6c0db15e86908836783637bc13586ba1a"
+                },
+                "fifo": {
+                  "mode": 4480,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994225293",
+                  "ino": "262200",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "symlink": {
+                  "mode": 41471,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994225293",
+                  "ino": "262201",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "link": "plain/file"
+                }
+              },
+              "final": {
+                ".": {
+                  "mode": 16877,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994757460",
+                  "ino": "262195",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994757460",
+                  "ino": "262196",
+                  "xattrs": {
+                    "user.shared": "736f757263652d76616c7565"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994757460",
+                  "ino": "262197",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "d48ac52a68c796db226dccc9ed7319e6c0db15e86908836783637bc13586ba1a"
+                },
+                "acl": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994757460",
+                  "ino": "262198",
+                  "xattrs": {
+                    "system.posix_acl_access": "0200000001000700ffffffff020005003930000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "system.posix_acl_default": "0200000001000700ffffffff020005003930000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "user.shared": "736f757263652d76616c7565"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "acl/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994757460",
+                  "ino": "262199",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "d48ac52a68c796db226dccc9ed7319e6c0db15e86908836783637bc13586ba1a"
+                },
+                "fifo": {
+                  "mode": 4480,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994225293",
+                  "ino": "262200",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "symlink": {
+                  "mode": 41471,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028994225293",
+                  "ino": "262201",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "link": "plain/file"
+                }
+              },
+              "prePruned": [
+                {
+                  "member": "plain",
+                  "xattr": "system.posix_acl_access",
+                  "modePreserved": true,
+                  "mtimePreserved": true,
+                  "ctimeChanged": true
+                },
+                {
+                  "member": "plain",
+                  "xattr": "system.posix_acl_default",
+                  "modePreserved": true,
+                  "mtimePreserved": true,
+                  "ctimeChanged": true
+                },
+                {
+                  "member": "plain",
+                  "xattr": "user.extra",
+                  "modePreserved": true,
+                  "mtimePreserved": true,
+                  "ctimeChanged": true
+                },
+                {
+                  "member": "acl",
+                  "xattr": "user.extra",
+                  "modePreserved": true,
+                  "mtimePreserved": true,
+                  "ctimeChanged": true
+                }
+              ],
+              "postPruned": [],
+              "mismatchedMembers": [],
+              "sourceUnchanged": true,
+              "rearchiveEqualsSource": true
+            },
+            {
+              "strategy": "prune-after",
+              "tar": {
+                "code": 0,
+                "stderr": ""
+              },
+              "before": {
+                ".": {
+                  "mode": 16877,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028995787251",
+                  "ino": "262195",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028995737835",
+                  "ino": "262196",
+                  "xattrs": {
+                    "system.posix_acl_access": "0200000001000700ffffffff02000500a05b000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "system.posix_acl_default": "0200000001000700ffffffff02000500a05b000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "user.extra": "7461726765742d6f6e6c79",
+                    "user.shared": "7461726765742d6f6c64"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028995737835",
+                  "ino": "262197",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "113f68e174077b1823998d24da596b38ab626c11b3ec8b7cb7e973049fc97e49"
+                },
+                "acl": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028995787251",
+                  "ino": "262198",
+                  "xattrs": {
+                    "system.posix_acl_access": "0200000001000700ffffffff02000500a05b000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "system.posix_acl_default": "0200000001000700ffffffff02000500a05b000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "user.extra": "7461726765742d6f6e6c79",
+                    "user.shared": "7461726765742d6f6c64"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "acl/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028995787251",
+                  "ino": "262199",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "113f68e174077b1823998d24da596b38ab626c11b3ec8b7cb7e973049fc97e49"
+                },
+                "fifo": {
+                  "mode": 4480,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028995787251",
+                  "ino": "262200",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "symlink": {
+                  "mode": 41471,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028995787251",
+                  "ino": "262201",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "link": "plain/file"
+                }
+              },
+              "afterTar": {
+                ".": {
+                  "mode": 16877,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028996438168",
+                  "ino": "262195",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028996303043",
+                  "ino": "262196",
+                  "xattrs": {
+                    "user.extra": "7461726765742d6f6e6c79",
+                    "user.shared": "736f757263652d76616c7565"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028996303043",
+                  "ino": "262197",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "d48ac52a68c796db226dccc9ed7319e6c0db15e86908836783637bc13586ba1a"
+                },
+                "acl": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028996303043",
+                  "ino": "262198",
+                  "xattrs": {
+                    "system.posix_acl_access": "0200000001000700ffffffff020005003930000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "system.posix_acl_default": "0200000001000700ffffffff020005003930000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "user.extra": "7461726765742d6f6e6c79",
+                    "user.shared": "736f757263652d76616c7565"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "acl/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028996303043",
+                  "ino": "262199",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "d48ac52a68c796db226dccc9ed7319e6c0db15e86908836783637bc13586ba1a"
+                },
+                "fifo": {
+                  "mode": 4480,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028996303043",
+                  "ino": "262200",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "symlink": {
+                  "mode": 41471,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028996303043",
+                  "ino": "262201",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "link": "plain/file"
+                }
+              },
+              "final": {
+                ".": {
+                  "mode": 16877,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028996438168",
+                  "ino": "262195",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028996438168",
+                  "ino": "262196",
+                  "xattrs": {
+                    "user.shared": "736f757263652d76616c7565"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "plain/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028996303043",
+                  "ino": "262197",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "d48ac52a68c796db226dccc9ed7319e6c0db15e86908836783637bc13586ba1a"
+                },
+                "acl": {
+                  "mode": 16872,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028996438168",
+                  "ino": "262198",
+                  "xattrs": {
+                    "system.posix_acl_access": "0200000001000700ffffffff020005003930000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "system.posix_acl_default": "0200000001000700ffffffff020005003930000004000500ffffffff10000500ffffffff20000000ffffffff",
+                    "user.shared": "736f757263652d76616c7565"
+                  },
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "acl/file": {
+                  "mode": 33184,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028996303043",
+                  "ino": "262199",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "sha256": "d48ac52a68c796db226dccc9ed7319e6c0db15e86908836783637bc13586ba1a"
+                },
+                "fifo": {
+                  "mode": 4480,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028996303043",
+                  "ino": "262200",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  }
+                },
+                "symlink": {
+                  "mode": 41471,
+                  "uid": 0,
+                  "gid": 0,
+                  "mtimeNs": "1700000000123456789",
+                  "ctimeNs": "1788654028996303043",
+                  "ino": "262201",
+                  "xattrs": {},
+                  "statx": {
+                    "attributes": "0",
+                    "mask": "3160180"
+                  },
+                  "link": "plain/file"
+                }
+              },
+              "prePruned": [],
+              "postPruned": [
+                {
+                  "member": "plain",
+                  "xattr": "user.extra",
+                  "modePreserved": true,
+                  "mtimePreserved": true,
+                  "ctimeChanged": true
+                },
+                {
+                  "member": "acl",
+                  "xattr": "user.extra",
+                  "modePreserved": true,
+                  "mtimePreserved": true,
+                  "ctimeChanged": true
+                }
+              ],
+              "mismatchedMembers": [],
+              "sourceUnchanged": true,
+              "rearchiveEqualsSource": true
+            }
+          ],
+          "flags": [
+            {
+              "name": "baseline",
+              "requestedFlags": 524288,
+              "initial": [
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                },
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              ],
+              "sourceSet": {
+                "ok": true,
+                "value": {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "targetSet": {
+                "ok": true,
+                "value": {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "source": {
+                "flags": 524288,
+                "fsx": {
+                  "xflags": 0,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "target": {
+                "flags": 524288,
+                "fsx": {
+                  "xflags": 0,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "sourceRequestedFlagsExact": true,
+              "targetBothApisEqual": true,
+              "singleTargetSetflagsCall": true,
+              "modeMtimeUnchanged": true,
+              "statxSource": {
+                "attributes": "0",
+                "mask": "3160180"
+              },
+              "statxTarget": {
+                "attributes": "0",
+                "mask": "3160180"
+              }
+            },
+            {
+              "name": "immutable",
+              "requestedFlags": 524304,
+              "initial": [
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                },
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              ],
+              "sourceSet": {
+                "ok": true,
+                "value": {
+                  "flags": 524304,
+                  "fsx": {
+                    "xflags": 8,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "targetSet": {
+                "ok": true,
+                "value": {
+                  "flags": 524304,
+                  "fsx": {
+                    "xflags": 8,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "source": {
+                "flags": 524304,
+                "fsx": {
+                  "xflags": 8,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "target": {
+                "flags": 524304,
+                "fsx": {
+                  "xflags": 8,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "sourceRequestedFlagsExact": true,
+              "targetBothApisEqual": true,
+              "singleTargetSetflagsCall": true,
+              "modeMtimeUnchanged": true,
+              "statxSource": {
+                "attributes": "16",
+                "mask": "3160180"
+              },
+              "statxTarget": {
+                "attributes": "16",
+                "mask": "3160180"
+              }
+            },
+            {
+              "name": "append",
+              "requestedFlags": 524320,
+              "initial": [
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                },
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              ],
+              "sourceSet": {
+                "ok": true,
+                "value": {
+                  "flags": 524320,
+                  "fsx": {
+                    "xflags": 16,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "targetSet": {
+                "ok": true,
+                "value": {
+                  "flags": 524320,
+                  "fsx": {
+                    "xflags": 16,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "source": {
+                "flags": 524320,
+                "fsx": {
+                  "xflags": 16,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "target": {
+                "flags": 524320,
+                "fsx": {
+                  "xflags": 16,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "sourceRequestedFlagsExact": true,
+              "targetBothApisEqual": true,
+              "singleTargetSetflagsCall": true,
+              "modeMtimeUnchanged": true,
+              "statxSource": {
+                "attributes": "32",
+                "mask": "3160180"
+              },
+              "statxTarget": {
+                "attributes": "32",
+                "mask": "3160180"
+              }
+            },
+            {
+              "name": "nodump",
+              "requestedFlags": 524352,
+              "initial": [
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                },
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              ],
+              "sourceSet": {
+                "ok": true,
+                "value": {
+                  "flags": 524352,
+                  "fsx": {
+                    "xflags": 128,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "targetSet": {
+                "ok": true,
+                "value": {
+                  "flags": 524352,
+                  "fsx": {
+                    "xflags": 128,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "source": {
+                "flags": 524352,
+                "fsx": {
+                  "xflags": 128,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "target": {
+                "flags": 524352,
+                "fsx": {
+                  "xflags": 128,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "sourceRequestedFlagsExact": true,
+              "targetBothApisEqual": true,
+              "singleTargetSetflagsCall": true,
+              "modeMtimeUnchanged": true,
+              "statxSource": {
+                "attributes": "64",
+                "mask": "3160180"
+              },
+              "statxTarget": {
+                "attributes": "64",
+                "mask": "3160180"
+              }
+            },
+            {
+              "name": "noatime",
+              "requestedFlags": 524416,
+              "initial": [
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                },
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              ],
+              "sourceSet": {
+                "ok": true,
+                "value": {
+                  "flags": 524416,
+                  "fsx": {
+                    "xflags": 64,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "targetSet": {
+                "ok": true,
+                "value": {
+                  "flags": 524416,
+                  "fsx": {
+                    "xflags": 64,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "source": {
+                "flags": 524416,
+                "fsx": {
+                  "xflags": 64,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "target": {
+                "flags": 524416,
+                "fsx": {
+                  "xflags": 64,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "sourceRequestedFlagsExact": true,
+              "targetBothApisEqual": true,
+              "singleTargetSetflagsCall": true,
+              "modeMtimeUnchanged": true,
+              "statxSource": {
+                "attributes": "0",
+                "mask": "3160180"
+              },
+              "statxTarget": {
+                "attributes": "0",
+                "mask": "3160180"
+              }
+            },
+            {
+              "name": "sync",
+              "requestedFlags": 524296,
+              "initial": [
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                },
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              ],
+              "sourceSet": {
+                "ok": true,
+                "value": {
+                  "flags": 524296,
+                  "fsx": {
+                    "xflags": 32,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "targetSet": {
+                "ok": true,
+                "value": {
+                  "flags": 524296,
+                  "fsx": {
+                    "xflags": 32,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "source": {
+                "flags": 524296,
+                "fsx": {
+                  "xflags": 32,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "target": {
+                "flags": 524296,
+                "fsx": {
+                  "xflags": 32,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "sourceRequestedFlagsExact": true,
+              "targetBothApisEqual": true,
+              "singleTargetSetflagsCall": true,
+              "modeMtimeUnchanged": true,
+              "statxSource": {
+                "attributes": "0",
+                "mask": "3160180"
+              },
+              "statxTarget": {
+                "attributes": "0",
+                "mask": "3160180"
+              }
+            },
+            {
+              "name": "dirsync",
+              "requestedFlags": 589824,
+              "initial": [
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                },
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              ],
+              "sourceSet": {
+                "ok": true,
+                "value": {
+                  "flags": 589824,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "targetSet": {
+                "ok": true,
+                "value": {
+                  "flags": 589824,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "source": {
+                "flags": 589824,
+                "fsx": {
+                  "xflags": 0,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "target": {
+                "flags": 589824,
+                "fsx": {
+                  "xflags": 0,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "sourceRequestedFlagsExact": true,
+              "targetBothApisEqual": true,
+              "singleTargetSetflagsCall": true,
+              "modeMtimeUnchanged": true,
+              "statxSource": {
+                "attributes": "0",
+                "mask": "3160180"
+              },
+              "statxTarget": {
+                "attributes": "0",
+                "mask": "3160180"
+              }
+            },
+            {
+              "name": "topdir",
+              "requestedFlags": 655360,
+              "initial": [
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                },
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              ],
+              "sourceSet": {
+                "ok": true,
+                "value": {
+                  "flags": 655360,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "targetSet": {
+                "ok": true,
+                "value": {
+                  "flags": 655360,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "source": {
+                "flags": 655360,
+                "fsx": {
+                  "xflags": 0,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "target": {
+                "flags": 655360,
+                "fsx": {
+                  "xflags": 0,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "sourceRequestedFlagsExact": true,
+              "targetBothApisEqual": true,
+              "singleTargetSetflagsCall": true,
+              "modeMtimeUnchanged": true,
+              "statxSource": {
+                "attributes": "0",
+                "mask": "3160180"
+              },
+              "statxTarget": {
+                "attributes": "0",
+                "mask": "3160180"
+              }
+            },
+            {
+              "name": "projinherit",
+              "requestedFlags": 537395200,
+              "initial": [
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                },
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              ],
+              "sourceSet": {
+                "ok": true,
+                "value": {
+                  "flags": 537395200,
+                  "fsx": {
+                    "xflags": 512,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "targetSet": {
+                "ok": true,
+                "value": {
+                  "flags": 537395200,
+                  "fsx": {
+                    "xflags": 512,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "source": {
+                "flags": 537395200,
+                "fsx": {
+                  "xflags": 512,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "target": {
+                "flags": 537395200,
+                "fsx": {
+                  "xflags": 512,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "sourceRequestedFlagsExact": true,
+              "targetBothApisEqual": true,
+              "singleTargetSetflagsCall": true,
+              "modeMtimeUnchanged": true,
+              "statxSource": {
+                "attributes": "0",
+                "mask": "3160180"
+              },
+              "statxTarget": {
+                "attributes": "0",
+                "mask": "3160180"
+              }
+            },
+            {
+              "name": "combined",
+              "requestedFlags": 537592056,
+              "initial": [
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                },
+                {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              ],
+              "sourceSet": {
+                "ok": true,
+                "value": {
+                  "flags": 537592056,
+                  "fsx": {
+                    "xflags": 760,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "targetSet": {
+                "ok": true,
+                "value": {
+                  "flags": 537592056,
+                  "fsx": {
+                    "xflags": 760,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              },
+              "source": {
+                "flags": 537592056,
+                "fsx": {
+                  "xflags": 760,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "target": {
+                "flags": 537592056,
+                "fsx": {
+                  "xflags": 760,
+                  "extsize": 0,
+                  "nextents": 0,
+                  "projid": 0,
+                  "cowextsize": 0
+                }
+              },
+              "sourceRequestedFlagsExact": true,
+              "targetBothApisEqual": true,
+              "singleTargetSetflagsCall": true,
+              "modeMtimeUnchanged": true,
+              "statxSource": {
+                "attributes": "112",
+                "mask": "3160180"
+              },
+              "statxTarget": {
+                "attributes": "112",
+                "mask": "3160180"
+              }
+            }
+          ],
+          "fileAttrReadControls": [
+            {
+              "label": "base-file",
+              "mode": 33188,
+              "statx": {
+                "attributes": "16",
+                "mask": "2109492"
+              },
+              "fileGetattr": {
+                "ok": false,
+                "errno": 95
+              },
+              "ioctls": {
+                "ok": false,
+                "errno": 25
+              }
+            },
+            {
+              "label": "base-dir",
+              "mode": 16877,
+              "statx": {
+                "attributes": "16",
+                "mask": "2109492"
+              },
+              "fileGetattr": {
+                "ok": false,
+                "errno": 95
+              },
+              "ioctls": {
+                "ok": false,
+                "errno": 25
+              }
+            },
+            {
+              "label": "base-symlink",
+              "mode": 41471,
+              "statx": {
+                "attributes": "16",
+                "mask": "2109492"
+              },
+              "fileGetattr": {
+                "ok": false,
+                "errno": 95
+              },
+              "ioctls": {
+                "skipped": "nonregular; no data descriptor"
+              }
+            },
+            {
+              "label": "new-file",
+              "mode": 33184,
+              "statx": {
+                "attributes": "0",
+                "mask": "3160180"
+              },
+              "fileGetattr": {
+                "ok": true,
+                "value": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              },
+              "ioctls": {
+                "ok": true,
+                "value": {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              }
+            },
+            {
+              "label": "new-dir",
+              "mode": 16872,
+              "statx": {
+                "attributes": "0",
+                "mask": "3160180"
+              },
+              "fileGetattr": {
+                "ok": true,
+                "value": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              },
+              "ioctls": {
+                "ok": true,
+                "value": {
+                  "flags": 524288,
+                  "fsx": {
+                    "xflags": 0,
+                    "extsize": 0,
+                    "nextents": 0,
+                    "projid": 0,
+                    "cowextsize": 0
+                  }
+                }
+              }
+            },
+            {
+              "label": "new-symlink",
+              "mode": 41471,
+              "statx": {
+                "attributes": "0",
+                "mask": "3160180"
+              },
+              "fileGetattr": {
+                "ok": false,
+                "errno": 95
+              },
+              "ioctls": {
+                "skipped": "nonregular; no data descriptor"
+              }
+            },
+            {
+              "label": "new-fifo",
+              "mode": 4480,
+              "statx": {
+                "attributes": "0",
+                "mask": "3160180"
+              },
+              "fileGetattr": {
+                "ok": false,
+                "errno": 95
+              },
+              "ioctls": {
+                "skipped": "nonregular; no data descriptor"
+              }
+            }
+          ],
+          "specials": [
+            {
+              "type": "fifo",
+              "before": {
+                "mode": 4480,
+                "uid": 0,
+                "gid": 0,
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788654028989053376",
+                "ino": "262193",
+                "xattrs": {},
+                "statx": {
+                  "attributes": "0",
+                  "mask": "3160180"
+                }
+              },
+              "after": {
+                "mode": 4480,
+                "uid": 0,
+                "gid": 0,
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788654028999079460",
+                "ino": "262193",
+                "xattrs": {},
+                "statx": {
+                  "attributes": "0",
+                  "mask": "3160180"
+                }
+              },
+              "opathIoctls": {
+                "getflags": {
+                  "ok": false,
+                  "errno": 9
+                },
+                "fsgetxattr": {
+                  "ok": false,
+                  "errno": 9
+                },
+                "setflagsZero": {
+                  "ok": false,
+                  "errno": 9
+                }
+              },
+              "fileGetattr": {
+                "ok": false,
+                "errno": 95
+              },
+              "fileSetattrNodump": {
+                "skipped": "getter unavailable"
+              },
+              "fileGetattrAfterSet": null,
+              "fileSetattrRevert": null,
+              "xattrMutations": [
+                {
+                  "namespace": "user",
+                  "set": {
+                    "ok": false,
+                    "errno": 1
+                  },
+                  "readHex": null,
+                  "remove": null
+                },
+                {
+                  "namespace": "trusted",
+                  "set": {
+                    "ok": true,
+                    "value": null
+                  },
+                  "readHex": "6f776e2d73796e746865746963",
+                  "remove": {
+                    "ok": true,
+                    "value": null
+                  }
+                }
+              ],
+              "referentUnchanged": true,
+              "dataDescriptorsOpened": 0
+            },
+            {
+              "type": "symlink",
+              "before": {
+                "mode": 41471,
+                "uid": 0,
+                "gid": 0,
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788654028989053376",
+                "ino": "262194",
+                "xattrs": {},
+                "statx": {
+                  "attributes": "0",
+                  "mask": "3160180"
+                },
+                "link": "plain/file"
+              },
+              "after": {
+                "mode": 41471,
+                "uid": 0,
+                "gid": 0,
+                "mtimeNs": "1700000000123456789",
+                "ctimeNs": "1788654028999079460",
+                "ino": "262194",
+                "xattrs": {},
+                "statx": {
+                  "attributes": "0",
+                  "mask": "3160180"
+                },
+                "link": "plain/file"
+              },
+              "opathIoctls": {
+                "getflags": {
+                  "ok": false,
+                  "errno": 9
+                },
+                "fsgetxattr": {
+                  "ok": false,
+                  "errno": 9
+                },
+                "setflagsZero": {
+                  "ok": false,
+                  "errno": 9
+                }
+              },
+              "fileGetattr": {
+                "ok": false,
+                "errno": 95
+              },
+              "fileSetattrNodump": {
+                "skipped": "getter unavailable"
+              },
+              "fileGetattrAfterSet": null,
+              "fileSetattrRevert": null,
+              "xattrMutations": [
+                {
+                  "namespace": "user",
+                  "set": {
+                    "ok": false,
+                    "errno": 1
+                  },
+                  "readHex": null,
+                  "remove": null
+                },
+                {
+                  "namespace": "trusted",
+                  "set": {
+                    "ok": true,
+                    "value": null
+                  },
+                  "readHex": "6f776e2d73796e746865746963",
+                  "remove": {
+                    "ok": true,
+                    "value": null
+                  }
+                }
+              ],
+              "referentUnchanged": true,
+              "dataDescriptorsOpened": 0
+            }
+          ]
+        },
+        "probeExit": 0,
+        "probeStderr": ""
+      }
+    }
+  ],
+  "minimumObservedSpace": "21038342144",
+  "passed": true
+}

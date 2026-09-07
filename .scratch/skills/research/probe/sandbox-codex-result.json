@@ -1,0 +1,33 @@
+{
+  "root": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-box-skill-AWXO4v",
+  "names": {
+    "operator": "operator-13b9c952",
+    "personal": "personal-13b9c952",
+    "project": "project-13b9c952"
+  },
+  "image": "blobot-machine-codex:475f185a738767edbd26a87ad2e6141c473f4698a3acadafcbd3b0740e88125c-arm64",
+  "errors": [],
+  "skills": [
+    {
+      "name": "project-13b9c952",
+      "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-box-skill-AWXO4v/workspace/.agents/skills/project-13b9c952/SKILL.md",
+      "enabled": true,
+      "scope": "repo"
+    },
+    {
+      "name": "operator-13b9c952",
+      "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-box-skill-AWXO4v/synthetic-operator-skills/operator-13b9c952/SKILL.md",
+      "enabled": true,
+      "scope": "user"
+    },
+    {
+      "name": "personal-13b9c952",
+      "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-box-skill-AWXO4v/profiles/ana/files/.agents/skills/personal-13b9c952/SKILL.md",
+      "enabled": true,
+      "scope": "user"
+    }
+  ],
+  "aliasResourceRead": true,
+  "allScopesDiscovered": true,
+  "registryRemoved": true
+}

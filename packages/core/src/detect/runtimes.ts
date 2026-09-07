@@ -1,7 +1,7 @@
 import { execFile, type ExecFileException } from 'node:child_process';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { childEnvironment } from '../adapters/acp/child-env.js';
+import { childEnvironment } from '../process/child-env.js';
 
 /**
  * Ticket 11: what the user already has, observed rather than asked for.

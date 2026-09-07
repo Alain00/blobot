@@ -27,6 +27,7 @@ import {
   WorkspaceError,
   refSlug,
   uuidv7,
+  machinePlacement,
   type CommitOutcome,
   type SwitchOutcome,
   type AgentProfileRecord,
@@ -37,6 +38,8 @@ import {
   type VerbosityLevel,
   type WorkspaceInspection,
   type WorkspaceProvider,
+  type Machine,
+  type MachinePlacement,
   type WorkspaceTree,
 } from '@blobot/core';
 
@@ -76,6 +79,8 @@ export interface NewAgentSpec {
 
 /** Forming a team out of agents that already exist. */
 export interface NewTeamSpec {
+  readonly defaultMachine?: MachinePlacement;
+  readonly memberMachines?: Readonly<Record<string, MachinePlacement>>;
   readonly name: string;
   readonly workspacePath: string;
   readonly turnBudget: number;
@@ -109,11 +114,18 @@ export interface CreateTeamDeps {
    * kind of Workspace decides it, which is the point of `workspaceProviderFor`.
    */
   readonly workspaces?: WorkspaceProvider;
+  /** Persisted per-Agent Machines; absent for local execution. */
+  readonly machines?: ReadonlyMap<string, Machine>;
   /**
    * Injected separately from the provider because inspection is what *chooses* the provider —
    * asking one of the three what a folder is would mean having already picked one.
    */
   readonly inspect?: (path: string) => Promise<WorkspaceInspection>;
+  /**
+   * Makes a thread's folder under `~/blobot`. Injected by tests, for the same reason `inspect`
+   * is: a `git init` on the real home directory is not something a unit test may do.
+   */
+  readonly prepare?: (name: string) => Promise<WorkspaceInspection>;
 }
 
 /** Refusals the flows are expected to render, rather than crash on. */
@@ -286,13 +298,18 @@ export function editAgentProfile(
  */
 export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promise<Team> {
   const name = spec.name.trim();
+  const defaultMachine = machinePlacement(spec.defaultMachine);
+  const memberMachines = new Map(Object.entries(spec.memberMachines ?? {}).map(([id, value]) => {
+    if (!spec.profileIds.includes(id)) throw new Error('Machine placement belongs to an unselected agent.');
+    return [id, machinePlacement(value)] as const;
+  }));
 
   if (spec.profileIds.length === 0) {
     throw new TeamCreationError('no_agents', 'A team needs at least one agent.');
   }
   const profiles = spec.profileIds.map((profileId) => {
     const profile = deps.store.profileById(profileId);
-    if (profile === undefined) {
+    if (profile === undefined || profile.deletedAt !== undefined) {
       throw new TeamCreationError('unknown_agent', 'One of the chosen agents no longer exists.');
     }
     return profile;
@@ -340,6 +357,7 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
     ...(repoPaths.length === 0 ? {} : { workspaceRepos: repoPaths }),
     ...(spec.icon === undefined ? {} : { icon: spec.icon }),
     turnBudget: spec.turnBudget,
+    ...(defaultMachine.kind === 'local' ? {} : { defaultMachine }),
   };
   deps.store.createTeam({ ...team, createdAt: now });
 
@@ -356,6 +374,7 @@ export async function createTeam(spec: NewTeamSpec, deps: CreateTeamDeps): Promi
     });
     deps.store.createAgent({
       id,
+      machine: memberMachines.get(profile.id) ?? defaultMachine,
       teamId: team.id,
       profileId: profile.id,
       name: profile.name,
@@ -394,6 +413,142 @@ export async function prepareWorkspace(name: string): Promise<WorkspaceInspectio
   return preparePath(join(homedir(), 'blobot'), name);
 }
 
+/**
+ * An agent's **thread**: the Team behind their own conversation, made by their first message.
+ *
+ * `.scratch/rail/issues/04-the-first-message-makes-the-folder.md`. It is created **on send** and
+ * never on press, so twenty idle clicks on twenty rail rows leave twenty nothings rather than
+ * twenty repositories under a directory the user is meant to open in an editor.
+ *
+ * Four things happen here and the order matters: the folder, the Team row, the Agent, and the
+ * lead. The folder first, because a `git init` that fails must leave no row behind; the lead
+ * last, because it is an agent id and the agent row is what the line above made.
+ *
+ * The name is the agent's, disambiguated when an ordinary team already holds it. It is never
+ * drawn: the one place the string surfaces is the branch, which for the ordinary case reads
+ * `blobot/alice/alice`.
+ */
+export async function createThread(profileId: string, deps: CreateTeamDeps): Promise<Team> {
+  const existing = deps.store.threadOf(profileId);
+  if (existing !== undefined) return existing;
+  const profile = deps.store.profileById(profileId);
+  if (profile === undefined || profile.deletedAt !== undefined) {
+    throw new TeamCreationError('unknown_agent', 'That agent no longer exists.');
+  }
+
+  const inspection = await prepareThreadWorkspace(profile.name, deps.prepare ?? prepareWorkspace);
+  const now = deps.clock.now();
+  const team: Team = {
+    id: `team_${uuidv7(now)}`,
+    name: freeTeamName(deps.store, profile.name),
+    threadFor: profileId,
+    workspacePath: inspection.path,
+    workspaceKind: inspection.kind,
+    turnBudget: DEFAULT_TURN_BUDGET,
+  };
+  deps.store.createTeam({ ...team, createdAt: now });
+
+  const id = `${refSlug(profile.name)}_${randomBytes(3).toString('hex')}`;
+  const workspaces = deps.workspaces ?? workspaceProviderFor(inspection.kind);
+  const workspace = await workspaces.provision({
+    workspacePath: team.workspacePath,
+    teamName: team.name,
+    agentId: id,
+    agentName: profile.name,
+  });
+  deps.store.createAgent({
+    id,
+    // A thread always runs on this computer. Placement is chosen per member at creation and a
+    // thread has no creation screen, so it takes the app's default rather than provisioning a
+    // sandbox nobody asked for. A box-placed one-member team is still made through ordinary
+    // team creation, and that Team is not a thread.
+    machine: machinePlacement(undefined),
+    teamId: team.id,
+    profileId: profile.id,
+    name: profile.name,
+    role: profile.role,
+    runtimeId: profile.runtimeId,
+    ...(profile.instructions === undefined ? {} : { instructions: profile.instructions }),
+    ...(profile.hue === undefined ? {} : { hue: profile.hue }),
+    ...(profile.shape === undefined ? {} : { shape: profile.shape }),
+    ...(profile.executablePath === undefined ? {} : { executablePath: profile.executablePath }),
+    ...(profile.runtimeOptions === undefined ? {} : { runtimeOptions: profile.runtimeOptions }),
+    ...(profile.trust === undefined ? {} : { trust: profile.trust }),
+    ...(profile.compaction === undefined ? {} : { compaction: profile.compaction }),
+    ...(profile.verbosity === undefined ? {} : { verbosity: profile.verbosity }),
+    workspacePath: workspace.path,
+    ...(workspace.branch === undefined ? {} : { branch: workspace.branch }),
+    createdAt: deps.clock.now(),
+  });
+  // The single member leads, because an unaddressed prompt has to route and a NULL lead
+  // disables send until an `@mention` resolves — which here would be a composer that never
+  // enables. Everything the word *lead* implies is suppressed in `composePersona` and
+  // `#leadBrief` instead; see `.scratch/rail/issues/02`.
+  deps.store.setTeamLead(team.id, id);
+  return { ...team, leadAgentId: id };
+}
+
+/** What a thread is given when nobody chose. The same figure ordinary team creation offers. */
+const DEFAULT_TURN_BUDGET = 10;
+
+/**
+ * The folder a thread gets, under `~/blobot`, and what happens when the name is taken.
+ *
+ * **A collision disambiguates silently**: `alice`, then `alice-2`. `prepareWorkspace`'s own
+ * `already_there` refusal advises *"Choose it yourself if it is the one you mean"*, which
+ * assumes a folder picker this flow has not got, with the user's message already typed. One
+ * thread per agent is what makes the suffix safe: it never means two folders for one agent, it
+ * means something unrelated already owns that name. Adopting whatever is there on a name match
+ * was refused outright — that is a checkout an agent could commit home.
+ *
+ * A genuine failure is not a collision and is not silent: `git init` failing, or `~/blobot` not
+ * being writable, comes back as the error it is, and the caller keeps the typed message.
+ */
+async function prepareThreadWorkspace(
+  agentName: string,
+  prepare: (name: string) => Promise<WorkspaceInspection>,
+): Promise<WorkspaceInspection> {
+  for (let attempt = 1; attempt <= 50; attempt += 1) {
+    const candidate = attempt === 1 ? agentName : `${agentName}-${attempt}`;
+    try {
+      return await prepare(candidate);
+    } catch (error) {
+      if (error instanceof WorkspaceError && error.code === 'already_there') continue;
+      throw error;
+    }
+  }
+  throw new WorkspaceError(
+    'already_there',
+    `Fifty folders under ${join(homedir(), 'blobot')} are already called ${refSlug(agentName)}. Tidy one up and try again.`,
+  );
+}
+
+/**
+ * A Team name nobody is using. `teams.name` is unique because it is half of a branch name, and
+ * a thread's name is the agent's — so an ordinary team called *alice* has to be stepped around.
+ * The string is never drawn; the branch is where it surfaces.
+ */
+function freeTeamName(store: SqliteStore, agentName: string): string {
+  for (let attempt = 1; ; attempt += 1) {
+    const candidate = attempt === 1 ? agentName : `${agentName}-${attempt}`;
+    if (store.teamByName(candidate) === undefined) return candidate;
+  }
+}
+
+/**
+ * Recheck the audience when opening an agent's thread from a profile.
+ *
+ * A stored value, never the `members.length === 1 && members[0].profileId === agent.id`
+ * inference this and `IndividualTeam.tsx` each used to make separately. That predicate was wrong
+ * in both directions: a real team of one vanished into a person's row, and a thread somebody
+ * joined silently became a team. `.scratch/rail/issues/01-what-a-thread-is.md`.
+ */
+export function threadOf(store: SqliteStore, profileId: string): Team | undefined {
+  const profile = store.profileById(profileId);
+  if (profile === undefined || profile.deletedAt !== undefined) return undefined;
+  return store.threadOf(profileId);
+}
+
 /** The creation flow's first screen: what is at the path the user picked. */
 export async function inspectWorkspace(path: string): Promise<WorkspaceInspection> {
   return inspectPath(path);
@@ -422,6 +577,7 @@ export { WorkspaceError };
 export interface AgentRemoval {
   readonly agentName: string;
   readonly work: 'discarded' | 'kept' | 'unknown';
+  readonly state?: 'discarded' | 'unknown';
   /** Present whenever there is something the user has to know or do. */
   readonly detail?: string;
 }
@@ -442,32 +598,30 @@ export interface TeamDeletion {
  * blobot kept would be a stale one.
  */
 export interface TeamDiskUsage {
-  readonly bytes: number;
-  readonly agents: readonly { readonly agentName: string; readonly bytes: number }[];
+  readonly bytes: number | null;
+  readonly workBytes: number | null;
+  readonly stateBytes: number | null;
+  readonly agents: readonly { readonly agentName: string; readonly bytes: number | null; readonly workBytes: number | null; readonly stateBytes: number | null }[];
 }
 
-/** How much disk this team's AgentWorkspaces are holding right now. */
+function sumKnown(values: readonly (number | null)[]): number | null {
+  return values.some((value) => value === null) ? null : values.reduce<number>((total, value) => total + (value ?? 0), 0);
+}
+
+/** Work on the host and private Machine state are priced separately; unknown is never zero. */
 export async function measureTeam(teamId: string, deps: CreateTeamDeps): Promise<TeamDiskUsage> {
   const team = deps.store.teamById(teamId);
   if (team === undefined) throw new TeamCreationError('unknown_agent', 'That team is already gone.');
   const workspaces = deps.workspaces ?? workspaceProviderFor(team.workspaceKind);
-
-  const agents: { agentName: string; bytes: number }[] = [];
+  const agents: TeamDiskUsage['agents'][number][] = [];
   for (const record of deps.store.agentsOfTeam(team.id)) {
-    // Never a refusal, at any level: this number is drawn beside a button, and a team whose
-    // folder has been deleted is the ordinary team to be deleting.
-    const bytes = await workspaces
-      .measure({
-        workspacePath: team.workspacePath,
-        teamName: team.name,
-        agentId: record.id,
-        agentName: record.name,
-        ...(team.workspaceRepos === undefined ? {} : { repos: team.workspaceRepos }),
-      })
-      .catch(() => 0);
-    agents.push({ agentName: record.name, bytes });
+    const workBytes = await measureWorkspaceOf(record, team, workspaces);
+    const machine = deps.machines?.get(record.id);
+    const stateBytes = machine === undefined ? 0 : await machine.measure().catch(() => null);
+    agents.push({ agentName: record.name, workBytes, stateBytes, bytes: sumKnown([workBytes, stateBytes]) });
   }
-  return { bytes: agents.reduce((total, agent) => total + agent.bytes, 0), agents };
+  return { bytes: sumKnown(agents.map((agent) => agent.bytes)), agents,
+    workBytes: sumKnown(agents.map((agent) => agent.workBytes)), stateBytes: sumKnown(agents.map((agent) => agent.stateBytes)) };
 }
 
 /**
@@ -609,6 +763,7 @@ function branchTarget(
 ):
   | {
       path: string;
+      agentName: string;
       holders: Map<string, BranchHolder>;
     }
   | { error: string } {
@@ -631,7 +786,7 @@ function branchTarget(
       ...(member.shape === undefined || member.shape === null ? {} : { agentShape: member.shape }),
     });
   }
-  return { path: workspaces.workspaceFor(requestFor(team, record.id, record.name)).path, holders };
+  return { path: workspaces.workspaceFor(requestFor(team, record.id, record.name)).path, agentName: record.name, holders };
 }
 
 /**
@@ -699,7 +854,7 @@ export function commitPlanFor(
 ): readonly string[] {
   const found = commitTarget(teamId, agentId, selection.repo, deps);
   if ('error' in found) return [];
-  return commitPlan({ path: found.path, message, ...pathspec(selection) });
+  return commitPlan({ path: found.path, message, agentName: found.agentName, ...pathspec(selection) });
 }
 
 /**
@@ -715,16 +870,16 @@ function commitTarget(
   agentId: string,
   repo: string | undefined,
   deps: CreateTeamDeps,
-): { path: string } | { error: string } {
+): { path: string; agentName: string } | { error: string } {
   const found = treeTarget(teamId, agentId, deps);
   if (found === undefined) return { error: 'That agent is not on this team.' };
   if (found.kind === 'plain') return { error: 'this workspace is a copy, so there is no git in it' };
-  if (found.kind !== 'nested') return { path: found.path };
+  if (found.kind !== 'nested') return { path: found.path, agentName: found.agentName };
   if (repo === undefined || repo === '') return { error: 'pick a repository first' };
   const root = resolve(found.path);
   const target = resolve(root, repo);
   if (target !== root && !target.startsWith(`${root}${sep}`)) return { error: 'that is not in this workspace' };
-  return { path: target };
+  return { path: target, agentName: found.agentName };
 }
 
 /** The selection, as `commitWorktree` takes it. Absent throughout is *everything here*. */
@@ -742,8 +897,7 @@ function pathspec(
  * Commit what is in this agent's workspace, at the user's click.
  *
  * The user's own git, on the user's own say-so, with the commands shown first. No runtime is
- * told, nothing enters a session, and `git commit` is on no trust level's allowlist, so an agent
- * cannot do this for itself. The message is the user's and is never generated: blobot provides
+ * told and nothing enters a session. Authorship names the Agent whose work is committed. The message is the user's and is never generated: blobot provides
  * no inference, and asking the agent that wrote the code to name what it did is a different
  * feature with a different way of being wrong.
  */
@@ -756,7 +910,7 @@ export async function commitAgentWork(
 ): Promise<CommitOutcome> {
   const found = commitTarget(teamId, agentId, selection.repo, deps);
   if ('error' in found) return { ok: false, error: found.error };
-  return commitWorktree({ path: found.path, message, ...pathspec(selection) }, spawnCommand);
+  return commitWorktree({ path: found.path, message, agentName: found.agentName, ...pathspec(selection) }, spawnCommand);
 }
 
 /** What a pull request from this agent would merge into, and what `ahead` counts against. */
@@ -832,7 +986,7 @@ function treeTarget(
   teamId: string,
   agentId: string,
   deps: CreateTeamDeps,
-): { path: string; kind: Team['workspaceKind'] } | undefined {
+): { path: string; agentName: string; kind: Team['workspaceKind'] } | undefined {
   const team = deps.store.teamById(teamId);
   if (team === undefined) return undefined;
   const record = deps.store.agentsOfTeam(team.id).find((agent) => agent.id === agentId);
@@ -841,6 +995,7 @@ function treeTarget(
   return {
     path: workspaces.workspaceFor(requestFor(team, record.id, record.name)).path,
     kind: team.workspaceKind,
+    agentName: record.name,
   };
 }
 
@@ -928,14 +1083,21 @@ export async function deleteTeam(
   const workspaces = deps.workspaces ?? workspaceProviderFor(team.workspaceKind);
   const records = deps.store.agentsOfTeam(team.id);
   const clean = options.clean === true;
+  const usage = clean ? await measureTeam(teamId, deps) : undefined;
+  if (usage?.workBytes === null) throw new Error('The working-folder size is unavailable. Delete the team without full clean, or try measuring again.');
 
   const removals: AgentRemoval[] = [];
   let freedBytes = 0;
   for (const record of records) {
     // Measured first, while it is still there. The whole point of the option is the number, and
     // a number reported after the fact would have to be the estimate rather than the result.
-    if (clean) freedBytes += await measureWorkspaceOf(record, team, workspaces);
-    removals.push(await removeWorkspaceOf(record, team, workspaces, clean));
+    const removal = await removeWorkspaceOf(record, team, workspaces, clean, deps.machines?.get(record.id));
+    removals.push(removal);
+    if (clean) {
+      const measured = usage?.agents.find((agent) => agent.agentName === record.name);
+      if (removal.work === 'discarded') freedBytes += measured?.workBytes ?? 0;
+      if (removal.state === 'discarded') freedBytes += measured?.stateBytes ?? 0;
+    }
     // The one case where a Routine's record is not kept. Everywhere else a Routine that cannot
     // run is disarmed and left saying who it belonged to; here it would be a pointer to nothing.
     for (const routine of deps.store.routinesOfAgent(record.id)) {
@@ -962,6 +1124,7 @@ export async function editTeamRoster(
   profileIds: readonly string[],
   deps: CreateTeamDeps,
   leadProfileId?: string,
+  memberMachines: Readonly<Record<string, MachinePlacement>> = {},
 ): Promise<readonly AgentRemoval[]> {
   const team = deps.store.teamById(teamId);
   if (team === undefined) throw new TeamCreationError('unknown_agent', 'That team is already gone.');
@@ -986,9 +1149,16 @@ export async function editTeamRoster(
     });
 
   const slugs = [...staying.map((member) => refSlug(member.name)), ...joining.map((profile) => refSlug(profile.name))];
+  const placements = new Map(Object.entries(memberMachines).map(([id, value]) => {
+    if (!joining.some((profile) => profile.id === id)) throw new Error('Machine placement can only be chosen for a new team member.');
+    return [id, machinePlacement(value)] as const;
+  }));
   if (new Set(slugs).size !== slugs.length) {
     throw new TeamCreationError('duplicate_agent', 'Two of those agents would share one branch name.');
   }
+
+  // Validate every saved/overridden choice before any workspace or membership is created.
+  for (const profile of joining) placements.set(profile.id, placements.get(profile.id) ?? machinePlacement(team.defaultMachine));
 
   // Provisioning first: an agent whose workspace cannot be made must not leave the team
   // half-edited, with somebody already removed for them.
@@ -1004,6 +1174,7 @@ export async function editTeamRoster(
     });
     deps.store.createAgent({
       id,
+      machine: placements.get(profile.id)!,
       teamId: team.id,
       profileId: profile.id,
       name: profile.name,
@@ -1039,7 +1210,7 @@ export async function editTeamRoster(
 
   const removals: AgentRemoval[] = [];
   for (const member of leaving) {
-    removals.push(await removeWorkspaceOf(member, team, workspaces));
+    removals.push(await removeWorkspaceOf(member, team, workspaces, false, deps.machines?.get(member.id)));
     // The agent's Routines are **disarmed and kept**, not tombstoned: unlike a deleted team,
     // this is a roster the user is still looking at, and a Routine that says who it belonged to
     // is how they find out their nightly typecheck stopped. Never reassigned to whoever is
@@ -1058,7 +1229,7 @@ async function measureWorkspaceOf(
   record: { readonly id: string; readonly name: string },
   team: Team,
   workspaces: WorkspaceProvider,
-): Promise<number> {
+): Promise<number | null> {
   return workspaces
     .measure({
       workspacePath: team.workspacePath,
@@ -1067,7 +1238,7 @@ async function measureWorkspaceOf(
       agentName: record.name,
       ...(team.workspaceRepos === undefined ? {} : { repos: team.workspaceRepos }),
     })
-    .catch(() => 0);
+    .catch(() => null);
 }
 
 async function removeWorkspaceOf(
@@ -1075,6 +1246,7 @@ async function removeWorkspaceOf(
   team: Team,
   workspaces: WorkspaceProvider,
   clean = false,
+  machine?: Machine,
 ): Promise<AgentRemoval> {
   const request = {
     workspacePath: team.workspacePath,
@@ -1083,22 +1255,28 @@ async function removeWorkspaceOf(
     agentName: record.name,
     ...(team.workspaceRepos === undefined ? {} : { repos: team.workspaceRepos }),
   };
-  try {
-    const outcome = clean
-      ? await workspaces.purge(request)
-      : await workspaces.remove(request);
-    return {
-      agentName: record.name,
-      work: outcome.work,
-      ...(outcome.work === 'kept' ? { detail: outcome.detail } : {}),
-    };
-  } catch (error) {
-    // The folder is gone, or git will not answer for it. Saying so is the whole job: whatever
-    // is left is somewhere the user can find it, and blobot is about to stop pointing at it.
-    return {
-      agentName: record.name,
-      work: 'unknown',
-      detail: error instanceof Error ? error.message : String(error),
-    };
+  const details: string[] = [];
+  let stopped = machine === undefined;
+  try { await machine?.stop(); stopped = true; }
+  catch { details.push('The sandbox could not be stopped.'); }
+  let work: AgentRemoval['work'] = 'unknown';
+  // Never touch a working folder while its runtime might still be using it.
+  if (stopped) {
+    try {
+      const outcome = clean ? await workspaces.purge(request) : await workspaces.remove(request);
+      work = outcome.work;
+      if (outcome.work === 'kept') details.push(outcome.detail);
+    } catch (error) { details.push(error instanceof Error ? error.message : String(error)); }
+  } else details.push('Its working folder was kept because execution may still be running.');
+  let state: AgentRemoval['state'];
+  if (machine !== undefined) {
+    // Private state is independent of a missing or unremovable working folder.
+    try { await machine.destroy(); state = 'discarded'; }
+    catch (error) {
+      state = 'unknown';
+      details.push(`Private sandbox state could not be removed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
+  return { agentName: record.name, work, ...(state === undefined ? {} : { state }),
+    ...(details.length === 0 ? {} : { detail: details.join(' ') }) };
 }

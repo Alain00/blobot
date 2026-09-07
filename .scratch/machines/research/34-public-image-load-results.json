@@ -1,0 +1,22 @@
+{
+  "startedAt": "2026-09-05T19:40:18.790Z",
+  "build": {
+    "arch": "arm64",
+    "reference": "blobot-machine-fx:fa5a6e736d1664474b3b4e3d7ee673732b4664457527b5f6dcdcac318cfe0a40-arm64",
+    "imageId": "sha256:fa5a6e736d1664474b3b4e3d7ee673732b4664457527b5f6dcdcac318cfe0a40",
+    "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-fx-arm64-fa5a6e736d1664474b3b4e3d7ee673732b4664457527b5f6dcdcac318cfe0a40.tar",
+    "sha256": "9989ecf9f1faa8ea70d43e35ed8c87936a7df733f437cd63c3d659662b097cdf",
+    "bytes": 594126848
+  },
+  "scope": "Actual public fx arm64 bytes through current image-store validation, sbx load and readiness. No box or inference.",
+  "cleanup": {
+    "readiness": {
+      "state": "not_installed",
+      "detail": "Runtime is not installed in the sandbox engine."
+    },
+    "boxes": []
+  },
+  "installMs": 2950.4403329999996,
+  "passed": true,
+  "finishedAt": "2026-09-05T19:40:22.893Z"
+}

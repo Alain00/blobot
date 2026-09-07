@@ -187,8 +187,7 @@ export class MockAgentRuntime implements AgentRuntime {
     return this.#accepts;
   }
 
-  sendPrompt(prompt: Prompt): AsyncIterable<AgentEvent> {
-    this.prompts.push(prompt);
+  sendPrompt(prompt: Prompt, onAdmitted?: () => void): AsyncIterable<AgentEvent> {
     if (this.#lifecycle !== 'ready') {
       throw new Error(`${this.agentId}: cannot prompt a runtime that is ${this.#lifecycle}`);
     }
@@ -197,6 +196,8 @@ export class MockAgentRuntime implements AgentRuntime {
         `${this.agentId}: a turn is already in flight — the orchestrator's mailbox exists so this cannot happen`,
       );
     }
+    onAdmitted?.();
+    this.prompts.push(prompt);
     const queue = new AsyncQueue<AgentEvent>();
     const abort = new AbortController();
     this.#turn = { queue, abort };

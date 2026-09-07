@@ -11,6 +11,10 @@
  *
  * `EditAgent` rather than `HireAgent`, because the edit is the one that opens on a stored face
  * and therefore the one where a dropped field shows up as the wrong cell being ringed.
+ *
+ * *2026-09-07: the rows moved into a popover hanging off the face, so the test presses the face
+ * first. The claims are unchanged — what changed is that the palette is no longer a third of the
+ * surface, which is the whole reason the bar replaced the dialog.*
  */
 import React from 'react';
 import { act } from 'react';
@@ -73,6 +77,12 @@ function draw(agent: UiAgentProfile): void {
   drawn.push({ unmount: () => root.unmount(), host });
 }
 
+/** The palette is behind the face now, so every claim below starts by opening it. */
+function openFace(): void {
+  const face = document.querySelector('[aria-label="Change this face"]');
+  act(() => (face as HTMLElement | null)?.click());
+}
+
 /** Radix portals the dialog, so the cells are on the document rather than under the host. */
 const cells = (label: string): HTMLElement[] => {
   const group = document.querySelector(`[role="radiogroup"][aria-label="${label}"]`);
@@ -85,6 +95,7 @@ const chosen = (label: string): string | undefined =>
 describe('the face in an agent’s dialog', () => {
   it('offers every silhouette, and one cell meaning the name decides', () => {
     draw(MARA);
+    openFace();
     expect(cells('Shape')).toHaveLength(SHAPE_NAMES.length + 1);
     expect(chosen('Shape')).toBe('the shape its name gives it');
     expect(chosen('Colour')).toBe('the colour its name gives it');
@@ -92,12 +103,14 @@ describe('the face in an agent’s dialog', () => {
 
   it('opens on the shape the agent is stored with', () => {
     draw({ ...MARA, shape: 'hexagon', hue: 215 });
+    openFace();
     expect(chosen('Shape')).toBe('hexagon');
     expect(chosen('Colour')).toBe('colour 215');
   });
 
   it('takes a shape, and gives it back to the name', () => {
     draw(MARA);
+    openFace();
     const cloud = cells('Shape').find((cell) => cell.getAttribute('aria-label') === 'cloud');
     act(() => cloud?.click());
     expect(chosen('Shape')).toBe('cloud');

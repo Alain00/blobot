@@ -476,6 +476,26 @@ describe('the voices, after the roster stopped being passed down', () => {
     );
   });
 
+  it('explains the selected reusable approval without inventing a common settings file', () => {
+    const asking: Item = {
+      kind: 'permission', id: 'q', at, agentId: 'a', toolCallId: 'c', title: 'git push',
+      canAllow: true, canAllowAlways: true,
+      allowAlways: { name: 'Allow for this session', description: 'This grant ends with the session.' },
+    };
+    const open = (host: HTMLElement): void => host.querySelector<HTMLButtonElement>('.perm .route')?.click();
+    expect(draw([asking], { kind: 'team' })).not.toContain('This grant ends');
+    const explained = draw([asking], { kind: 'team' }, undefined, open);
+    expect(explained).toContain('This option: Allow for this session.');
+    expect(explained).toContain('This grant ends with the session.');
+    expect(explained).not.toContain('.claude/settings.local.json');
+    const unknown = draw([{ ...asking, allowAlways: undefined }], { kind: 'team' }, undefined, open);
+    expect(unknown).toContain('The runtime determines its scope and lifetime.');
+    expect(unknown).not.toContain('this one thing');
+    const onceOnly = draw([{ ...asking, canAllowAlways: false }], { kind: 'team' }, undefined, open);
+    expect(onceOnly).not.toContain('This option:');
+    expect(onceOnly).not.toContain('This grant ends');
+  });
+
   it('attributes a system line in the team pane and leaves it bare in an agent pane', () => {
     const items: Item[] = [
       { kind: 'system', id: 's', at, agentId: 'a', text: 'turn stopped · max tokens' },
@@ -804,6 +824,142 @@ describe('a session blobot replaced', () => {
     });
     expect(host.querySelector('.handoff')).toBeNull();
     expect(host.textContent).toContain('session kept');
+    act(() => root.unmount());
+    host.remove();
+  });
+});
+
+/**
+ * The pane, told it is somewhere else.
+ *
+ * `.scratch/live-steps/issues/11`. The suites above all mount once and never change teams, so
+ * nothing in them could see a row belonging to a team that had gone away. This is the same
+ * root, re-rendered with the other team's roster and nothing to say — the shape a switch has
+ * from the pane's side, whatever pushed it there.
+ */
+describe('the same pane, on another team', () => {
+  it('keeps nothing of the team that went away, not even a turn in flight', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const render = (
+      agents: readonly UiAgent[],
+      statuses: Record<string, AgentStatus>,
+      items: readonly Item[],
+      place: string,
+    ): void => {
+      act(() => {
+        root.render(
+          React.createElement(Conversation, {
+            pane: { kind: 'team' },
+            place,
+            agents,
+            statuses,
+            items,
+            onAnswerPermission: () => {},
+            routineArmed: {},
+            onDisarmRoutine: () => {},
+            onRemoveHandbookEntry: () => {},
+          }),
+        );
+      });
+    };
+
+    render(
+      AGENTS,
+      { a: 'working', b: 'idle' },
+      [
+        { kind: 'user', id: 'u', at: 1_000, agentIds: ['a'], text: 'go' },
+        { kind: 'tool', id: 't1', at: 2_000, agentId: 'a', title: 'edit one', toolKind: 'edit', status: 'running' },
+        { kind: 'tool', id: 't2', at: 3_000, agentId: 'a', title: 'edit two', toolKind: 'edit', status: 'running' },
+      ],
+      'one:',
+    );
+    expect(host.querySelectorAll('.col .msg.live').length).toBe(1);
+
+    // Another team, another roster, nothing said on it yet. `a` is deliberately still `working`
+    // in the status map: `onStatus` is not filtered to the open team, so a backgrounded team's
+    // agents go on reporting, and anything deciding "is somebody mid-turn" from statuses alone
+    // will answer for people who are not in this pane.
+    const elsewhere: readonly UiAgent[] = [
+      { id: 'm', name: 'Mara', role: 'builds', runtimeLabel: 'mock', workspacePath: '/w/m', accepts: { images: true, textFiles: true } },
+    ];
+    render(elsewhere, { a: 'working', m: 'idle' }, [], 'two:');
+
+    expect(host.querySelectorAll('.col .msg, .col .tool').length).toBe(0);
+
+    act(() => root.unmount());
+    host.remove();
+  });
+
+  /**
+   * The one that reproduced, 2026-09-07, and the reason the case above could not see it: it
+   * needs the team being left to hold **two turns by one agent**, which every suite's fixture
+   * was too short to have.
+   *
+   * A block is keyed `live:<agent>`, so two of them in one column is one React key twice, and
+   * what React does with that is leave the loser's DOM standing. Nothing above notices — the
+   * rows are gone from the model, the reducer is right, the props are right — and the nodes
+   * outlive the fold, the switch and the team. Measured in the real app: opening a five-agent
+   * team from a cold start and then an agent's own thread left six of that team's blocks in the
+   * thread, dated two days earlier.
+   *
+   * So the assertion is the column's, not the model's: after the switch there is nothing of the
+   * other team on screen, however many turns it had.
+   */
+  it('keeps nothing of a team whose agent held more than one turn', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    const render = (
+      agents: readonly UiAgent[],
+      items: readonly Item[],
+      place: string,
+    ): void => {
+      act(() => {
+        root.render(
+          React.createElement(Conversation, {
+            pane: { kind: 'team' },
+            place,
+            agents,
+            // `a` stays mid-turn throughout, which is what makes every one of its runs a
+            // candidate for a block of its own.
+            statuses: { a: 'working', b: 'idle', m: 'idle' },
+            items,
+            onAnswerPermission: () => {},
+            routineArmed: {},
+            onDisarmRoutine: () => {},
+            onRemoveHandbookEntry: () => {},
+          }),
+        );
+      });
+    };
+
+    const answer = `Done. ${'and here is why '.repeat(20)}`;
+    render(
+      AGENTS,
+      [
+        { kind: 'user', id: 'u1', at: 1_000, agentIds: ['a'], text: 'go' },
+        { kind: 'tool', id: 't1', at: 2_000, agentId: 'a', title: 'edit one', toolKind: 'edit', status: 'completed' },
+        { kind: 'peer', id: 'm1', at: 2_500, fromId: 'a', toId: 'b', text: 'have a look' },
+        { kind: 'agent', id: 'r1', at: 3_000, agentId: 'b', text: 'had a look', live: false },
+        { kind: 'agent', id: 's1', at: 3_500, agentId: 'a', text: answer, live: false },
+        { kind: 'user', id: 'u2', at: 4_000, agentIds: ['a'], text: 'again' },
+        { kind: 'tool', id: 't2', at: 5_000, agentId: 'a', title: 'edit two', toolKind: 'edit', status: 'running' },
+      ],
+      'one:',
+    );
+    // One turn is in flight, so one block: the earlier run is history and its teammate's reply
+    // stays in the fold where it happened.
+    expect(host.querySelectorAll('.col .msg.live').length).toBe(1);
+
+    const elsewhere: readonly UiAgent[] = [
+      { id: 'm', name: 'Mara', role: 'builds', runtimeLabel: 'mock', workspacePath: '/w/m', accepts: { images: true, textFiles: true } },
+    ];
+    render(elsewhere, [], 'two:');
+
+    expect(host.querySelectorAll('.col .msg, .col .tool').length).toBe(0);
+
     act(() => root.unmount());
     host.remove();
   });

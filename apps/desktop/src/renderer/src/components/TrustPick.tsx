@@ -85,24 +85,38 @@ export function levelsFor(available: readonly TrustLevel[]): readonly Level[] {
  * text is unchanged and one keystroke away, on the row it belongs to, where it is read while the
  * choice is being made rather than after it has been.
  */
+/**
+ * `chip` is the label this control wears in the agent bar, where it is a chip in a row of them
+ * rather than a field in a column. The menu is untouched: the word and the sentence under it are
+ * the same, read in the same place. Only the closed shape differs, because the bar states an
+ * answer where the column asked a question.
+ */
 export function TrustPick({
   value,
   available,
   onChange,
+  chip,
 }: {
   value: TrustLevel;
   /** What this agent's runtime can express. Weakest first, and never empty. */
   available: readonly TrustLevel[];
   onChange: (value: TrustLevel) => void;
+  chip?: string;
 }): React.JSX.Element {
   const levels = levelsFor(available);
   return (
     <Select.Root value={value} onValueChange={(next) => onChange(next as TrustLevel)}>
-      <Select.Trigger className="field selecttrigger" aria-label="What it can do without asking">
+      <Select.Trigger
+        className={chip === undefined ? 'field selecttrigger' : 'chip'}
+        aria-label="What it can do without asking"
+      >
+        {chip !== undefined && <span className="mono">{chip}</span>}
         <Select.Value className="selectvalue" />
-        <Select.Icon>
-          <ChevronDown size={14} aria-hidden />
-        </Select.Icon>
+        {chip === undefined && (
+          <Select.Icon>
+            <ChevronDown size={14} aria-hidden />
+          </Select.Icon>
+        )}
       </Select.Trigger>
       <Select.Portal>
         <Select.Content className="selectmenu trustmenu" position="popper" sideOffset={6}>

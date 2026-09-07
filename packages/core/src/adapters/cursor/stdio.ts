@@ -1,9 +1,12 @@
-import { spawn } from 'node:child_process';
+import { CURSOR_MACHINE_IMAGE } from './image.js';
+import { LocalMachine } from '../../machines/local-machine.js';
+import type { Machine } from '../../machines/machine.js';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { childEnvironment } from '../acp/child-env.js';
-import { childTransport, isExecutable, searchPath } from '../acp/child-transport.js';
+import { childEnvironment } from '../../process/child-env.js';
+import { isExecutable, searchPath } from '../../process/child-transport.js';
 import type { LineTransport } from '../acp/jsonrpc.js';
+import { cursorCliConfig } from './permissions.js';
 
 /**
  * The version this adapter was measured against (`.scratch/cursor-runtime/issues/01`,
@@ -35,11 +38,13 @@ export const FORBIDDEN_CURSOR_ARGS = [
 ] as const;
 
 export interface SpawnCursorOptions {
+  readonly machine?: Machine;
   /** The AgentWorkspace. Passed as `--workspace` as well as `cwd`, because an implicit cwd is
    *  a worse contract — and it is the pair ticket 01's measurement rig ran with. */
   readonly cwd: string;
   /** The per-agent config directory. Becomes `CURSOR_CONFIG_DIR` on the child. */
   readonly configDir: string;
+  readonly config?: Readonly<Record<string, unknown>>;
   /** The user's own `cursor-agent`, from detection. */
   readonly cursorExecutable?: string;
   readonly env?: Readonly<Record<string, string>>;
@@ -63,12 +68,15 @@ export type SpawnCursor = (options: SpawnCursorOptions) => LineTransport;
  * between a file and an argv, and the file is the half ticket 01 measured as enforced.
  */
 export const spawnCursor: SpawnCursor = (options) => {
-  const child = spawn(resolveCursorExecutable(options.cursorExecutable), cursorArgv(options.cwd), {
+  const machine = options.machine ?? new LocalMachine({ agentId: 'standalone', workspacePath: options.cwd });
+  return machine.spawn({
+    command: { kind: 'exec', executable: machine.kind === 'box' ? CURSOR_MACHINE_IMAGE.executable : resolveCursorExecutable(options.cursorExecutable), args: cursorArgv(options.cwd) },
     cwd: options.cwd,
-    env: childEnv(options),
-    stdio: ['pipe', 'pipe', 'pipe'],
+    env: cursorEnvironmentLayer(options),
+    ...(machine.kind === 'box' ? { configs: [{ root: '/home/agent', relativePath: '.config/blobot/cursor/cli-config.json',
+      patch: options.config ?? { ...cursorCliConfig('normal', 'box') } }] } : {}),
+    ...(options.onStderr === undefined ? {} : { onStderr: options.onStderr }),
   });
-  return childTransport(child, options.onStderr);
 };
 
 /** The whole of the command line, built in one place so the refusals are testable. */
@@ -88,14 +96,19 @@ export function cursorArgv(cwd: string): readonly string[] {
 export function childEnv(options: SpawnCursorOptions): NodeJS.ProcessEnv {
   // `childEnvironment` strips blobot's own speech-key doors (ADR-0005) before this strips
   // Cursor's: two credentials that must not travel, two places that say so.
-  const env: NodeJS.ProcessEnv = childEnvironment(options.env, {
+  return childEnvironment(cursorEnvironmentLayer(options));
+}
+
+/** Undefined explicitly removes inherited values when LocalMachine composes the environment. */
+function cursorEnvironmentLayer(options: SpawnCursorOptions): NodeJS.ProcessEnv {
+  return {
+    ...options.env,
     // stderr is diagnostics and the only channel that would carry colour; stdout is protocol.
     NO_COLOR: '1',
-  });
-  delete env['CURSOR_API_KEY'];
-  delete env['CURSOR_AUTH_TOKEN'];
-  env['CURSOR_CONFIG_DIR'] = options.configDir;
-  return env;
+    CURSOR_API_KEY: undefined,
+    CURSOR_AUTH_TOKEN: undefined,
+    CURSOR_CONFIG_DIR: options.machine?.kind === 'box' ? '/home/agent/.config/blobot/cursor' : options.configDir,
+  };
 }
 
 /**

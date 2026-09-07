@@ -49,6 +49,140 @@ function pool(limit: number): {
 }
 
 describe('the live teams', () => {
+  it('takes a new limit while it is running, and collects the excess at once', async () => {
+    // How many teams this computer can hold is the user's setting, not a constant: at three,
+    // opening a fourth team stopped an agent that was still awake with nothing on screen
+    // saying why.
+    const { pool: teams, evicted } = pool(3);
+    for (const id of ['a', 'b', 'c', 'd', 'e']) await teams.select(team(id));
+    expect(evicted).toEqual(['a', 'b']);
+
+    teams.limit = 5;
+    for (const id of ['f', 'g']) await teams.select(team(id));
+    expect(evicted).toEqual(['a', 'b']);
+    expect(teams.live).toHaveLength(5);
+
+    // Lowering it does not wait for the next selection.
+    teams.limit = 2;
+    await expect.poll(() => teams.live.length).toBe(2);
+    expect(evicted).toEqual(['a', 'b', 'c', 'd', 'e']);
+    expect(teams.limit).toBe(2);
+
+    // A count nobody could honour is refused rather than rounded into one.
+    for (const bad of [0, -1, 1.5, 101]) expect(() => { teams.limit = bad; }).toThrow();
+    expect(teams.limit).toBe(2);
+    await teams.closeAll();
+  });
+
+
+  it('waits for an evicted execution to stop before starting the same team again', async () => {
+    let finishClose!: () => void;
+    let starts = 0;
+    const teams = new TeamPool<Fake>({ limit: 1, isWorking: () => false,
+      start: async (row) => {
+        starts += 1;
+        const slow = row.id === 'alpha' && starts === 1;
+        const live: Fake = { team: row, working: false, closed: false,
+          close: () => slow ? new Promise<void>((resolve) => {
+            finishClose = () => { live.closed = true; resolve(); };
+          }) : void (live.closed = true) };
+        return live;
+      } });
+    const original = await teams.select(team('alpha'));
+    const switching = teams.select(team('beta'));
+    await expect.poll(() => typeof finishClose).toBe('function');
+    const returning = teams.select(team('alpha'));
+    await Promise.resolve();
+    expect(starts).toBe(2);
+    finishClose();
+    await switching;
+    const replacement = await returning;
+    expect(original.closed).toBe(true);
+    expect(replacement).not.toBe(original);
+    expect(starts).toBe(3);
+    await teams.closeAll();
+  });
+
+  it('rejects stale starts and keeps admission closed throughout a roster change', async () => {
+    let finishStart!: (live: Fake) => void;
+    let finishClose!: () => void;
+    let finishChange!: () => void;
+    let changed = false;
+    const starts: string[] = [];
+    const teams = new TeamPool<Fake>({ limit: 3, isWorking: () => false,
+      start: (row) => {
+        starts.push(row.name);
+        if (starts.length === 1) return new Promise((resolve) => { finishStart = resolve; });
+        const live: Fake = { team: row, working: false, closed: false, close() { this.closed = true; } };
+        return Promise.resolve(live);
+      } });
+    const opening = teams.select(team('alpha'));
+    const refused = expect(opening).rejects.toThrow('changing');
+    const original: Fake = { team: team('alpha'), working: false, closed: false,
+      close: () => new Promise<void>((resolve) => { finishClose = () => { original.closed = true; resolve(); }; }) };
+    const editing = teams.withReleased('alpha', async () => {
+      changed = true;
+      await new Promise<void>((resolve) => { finishChange = resolve; });
+    });
+    await expect(teams.select(team('alpha'))).rejects.toThrow('changing');
+    finishStart(original);
+    await refused;
+    await expect.poll(() => typeof finishClose).toBe('function');
+    expect(changed).toBe(false);
+    expect(teams.find('alpha')).toBeUndefined();
+    finishClose();
+    await expect.poll(() => changed).toBe(true);
+    await expect(teams.select(team('alpha'))).rejects.toThrow('changing');
+    finishChange();
+    await editing;
+    await teams.select({ ...team('alpha'), name: 'Updated roster' });
+    expect(starts).toEqual(['alpha', 'Updated roster']);
+    await teams.closeAll();
+  });
+
+  it('drains an admitted durable change on shutdown and closes its execution only once', async () => {
+    let finishChange!: () => void;
+    let closes = 0;
+    const teams = new TeamPool<Fake>({ limit: 3, isWorking: () => false,
+      start: async (row) => ({ team: row, working: false, closed: false, close() { closes += 1; } }) });
+    await teams.select(team('alpha'));
+    const changing = teams.withReleased('alpha', () => new Promise<void>((resolve) => { finishChange = resolve; }));
+    await expect.poll(() => typeof finishChange).toBe('function');
+    let closed = false;
+    const closing = teams.closeAll().then(() => { closed = true; });
+    await Promise.resolve();
+    expect(closed).toBe(false);
+    await expect(teams.withReleased('beta', async () => {})).rejects.toThrow('closing');
+    finishChange();
+    await Promise.all([changing, closing]);
+    expect(closes).toBe(1);
+  });
+
+  it('drains an in-flight start on shutdown and refuses to publish or start another team', async () => {
+    let finish!: (live: Fake) => void;
+    let finishClose!: () => void;
+    let closeCalls = 0;
+    const live: Fake = { team: { id: 'late' }, working: false, closed: false,
+      close: () => { closeCalls += 1; return new Promise<void>((resolve) => { finishClose = () => { live.closed = true; resolve(); }; }); } };
+    const teams = new TeamPool<Fake>({ limit: 3, isWorking: () => false,
+      start: () => new Promise((resolve) => { finish = resolve; }) });
+    const selecting = teams.select(team('late'));
+    const joining = teams.select(team('late'));
+    const refused = Promise.all([expect(selecting).rejects.toThrow('closing'), expect(joining).rejects.toThrow('closing')]);
+    let closed = false;
+    const closing = teams.closeAll().then(() => { closed = true; });
+    finish(live);
+    await refused;
+    expect(closed).toBe(false);
+    expect(teams.live).toEqual([]);
+    expect(closeCalls).toBe(1);
+    finishClose();
+    await closing;
+    expect(live.closed).toBe(true);
+    await expect(teams.select(team('next'))).rejects.toThrow('closing');
+    await teams.closeAll();
+    expect(closeCalls).toBe(1);
+  });
   it('starts a team the first time it is selected', async () => {
     const { pool: teams, started } = pool(3);
     const alpha = await teams.select(team('alpha'));

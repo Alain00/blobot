@@ -214,3 +214,65 @@ sent, and the emptiness is what it is saying.
   case the stay-folded rule was written to make harmless, and the two rules answer the same
   question from different sides.
 - **Still nothing has met a real batch.** Unchanged since round one.
+
+### Found after, 2026-09-07
+
+**A live block outlives the team it belongs to** —
+[ticket 11](issues/11-a-live-block-outlives-its-team.md). Switching teams, or creating one while
+another is open, leaves the previous team's live blocks on screen: the reducer's `items` go to
+zero and the committed DOM keeps forty rows that React still owns. It is the block-stands-for-the-
+turn amendment's blind side — the unmount that used to sweep this state up is gone — and every
+suite here mounts once and never changes teams, which is the hole it fell through.
+
+### Worked, 2026-09-07
+
+**Ticket 11, one cause fixed and the ticket left open.** The switch path had a real defect and it
+is not obviously the reported one, so both facts are on the ticket rather than one of them.
+
+- **What the switch was missing.** `refresh()` dispatched whatever `snapshot()` answered with.
+  Two are in flight across every switch, the reducer replaces the pane wholesale, and so the
+  *last* answer is the transcript — an overtaken one puts the previous team's whole conversation
+  back, live blocks and all. `asked` is a counter now and a superseded answer is dropped, which
+  is the discipline `loadEarlier` already had for the call that only prepends.
+- **`AppSwitch.test.tsx`** is the first suite here that changes teams, which is the hole the
+  ticket named. Two snapshot requests, answered in the order main would not have chosen.
+- **`Conversation.test.tsx` gained *the same pane, on another team*** — the test the ticket's
+  *Done when* specifies. It passed the day it was written, which is itself the finding: the pane
+  is not what keeps the rows, so `useDwell`, `useSwallowed` and the `folded` ref are all cleared
+  as suspects. They live inside `Live`, and an empty row list unmounts it.
+- **The reported disagreement between reducer state and committed DOM did not reproduce.** In
+  the failure that did, the rail would name the old team too, and the author's screenshot has it
+  naming the new one. The visible-window step is still owed.
+
+
+### Worked again, 2026-09-07, and ticket 11 is closed
+
+**Two rows under one React key.** The disagreement between the reducer's state and the committed
+DOM is not a starved commit and not the pane: `rowsOf` was returning two live rows with the same
+`live:<agent>` id, and React leaves the loser's DOM standing when a key repeats. Those nodes then
+outlive the fold, the switch and the team, because nothing that follows can address a row React
+no longer has a fiber for in its child list.
+
+Reproduced in the author's own database, in an isolated `--user-data-dir` over the DevTools
+protocol, on a **visible** window — which is the step the ticket was left open for. Opening the
+five-agent `blobatar` team from a cold start and then Antonio's own thread left six of
+`blobatar`'s blocks in the thread, dated two days earlier. Probed at that moment: `Conversation`'s
+props held **2 items**, the `Rows` fiber held **2 rows**, and `.col` had **9 children**, seven of
+them the other team's, each with a fiber whose parent chain runs back through that same `Rows`.
+
+- **Where the duplicates came from.** `liveRunIn` lifts a teammate's settled reply into the live
+  block, gated on `live(principal)` — a fact about the agent *now* — with nothing said about
+  *where the run is*. So on a restored transcript, the moment an agent starts a turn, every one
+  of its earlier runs lifts its teammates' replies and becomes a block. Five agents with a
+  fortnight of history is a dozen blocks and half a dozen repeated keys. Nothing is lifted out of
+  a run that is neither open nor the tail now, and a settled reply stays in the fold where it
+  happened.
+- **And the id is a promise now.** `rowsOf` tracks each agent's standing block, and an agent that
+  opens a later turn has the earlier one taken back — folded into the run it was lifted out of,
+  or drawn flat where the block stood if that run had no fold. Nothing observed reaches it after
+  the first fix; it is there because the cost of breaking that promise is not a wrong row, it is
+  a row that never goes away.
+- **Two tests, at both altitudes.** `model.test.ts` asserts that a settled run lifts nothing and
+  that no two rows in a transcript share a key. `Conversation.test.tsx` gained *keeps nothing of
+  a team whose agent held more than one turn*, which is the DOM assertion — the existing switch
+  case could not see this because its fixture was one turn long.

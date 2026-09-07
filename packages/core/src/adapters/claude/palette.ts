@@ -1,3 +1,5 @@
+import type { SkillDiscovery } from '../../skills/inventory.js';
+import { boxPaletteNames, personalPaletteNames, type BoxPaletteScope } from '../acp/box-palette.js';
 import { readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -84,7 +86,12 @@ export function personalSkillNames(): Set<string> {
 }
 
 /** Everything blobot is willing to offer in this workspace, by name. */
-export function offerableNames(cwd: string): Set<string> {
+export function offerableNames(cwd: string, box?: BoxPaletteScope, personalPath?: string): Set<string> {
+  return new Set([...personalPaletteNames(personalPath), ...contextNames(cwd, box)]);
+}
+
+function contextNames(cwd: string, box?: BoxPaletteScope): Set<string> {
+  if (box !== undefined) return new Set([...boxPaletteNames(cwd, [{ path: join(cwd, '.claude', 'skills'), kind: 'skills' }, { path: join(cwd, '.claude', 'commands'), kind: 'commands' }], box), ...VOUCHED_BUILT_INS]);
   const names = projectCommandNames(cwd);
   for (const name of personalSkillNames()) names.add(name);
   for (const name of VOUCHED_BUILT_INS) names.add(name);
@@ -159,3 +166,11 @@ export function paletteOf(
 ): AvailableCommand[] {
   return advertised.filter((command) => allowed.has(command.name));
 }
+export const CLAUDE_SKILL_DISCOVERY: SkillDiscovery = {
+  personal: true,
+  locations: (cwd, box, shared) => [
+    { path: join(cwd, '.claude/skills'), scope: 'project', ...(box ? { boundary: cwd } : {}) },
+    ...(box ? (shared ? [{ path: shared, scope: 'computer' as const, boundary: shared }] : [])
+      : [{ path: join(process.env['CLAUDE_CONFIG_DIR'] ?? join(homedir(), '.claude'), 'skills'), scope: 'computer' as const }]),
+  ],
+};

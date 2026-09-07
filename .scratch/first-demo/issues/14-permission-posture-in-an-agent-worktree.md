@@ -3,6 +3,16 @@ Status: resolved
 
 # The permission posture in an agent worktree
 
+## Current disclosure amendment, 2026-09-06
+
+[What a sandbox lets blobot say](../../machines/issues/09-what-a-machine-lets-blobot-say.md#answer--2026-09-06)
+amends this ticket's universal disclosure by name. The observed Claude MCP approval remains
+valid evidence of that case; it is not the storage or lifetime of every runtime's `allow_always`.
+The UI keeps the existing choices and carries the selected option's own name plus adapter-owned
+scope/storage text when known. It makes no common file, permanence or per-Agent-only guarantee.
+The creation footer describes the selected approval settings instead of promising that every
+unvouched action prompts. Machines does not change the user's selected approval authority.
+
 ## Question
 
 Surfaced by the OpenCode research: **default permissions auto-allow everything**, including

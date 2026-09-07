@@ -13,10 +13,10 @@ import { WorkspaceLine } from './Workspaces.js';
  * same identity the AgentWorkspace branch is named for. *Your agents* is the AgentProfile
  * screen, and a Handbook drawn there would re-break the boundary ADR-0001 and ADR-0002 drew.
  *
- * Two shapes, and which one you get is a fact about the agent rather than a preference:
- * **unbriefed** draws a notice card above the composer carrying the invitation, and **briefed**
- * draws a door on the tray with the panel behind it. They are never both present. See
- * `.scratch/handbooks/issues/06`.
+ * One shape: a door on the tray with the panel behind it, at every count. The unbriefed notice
+ * card that used to stand above the composer is gone (2026-09-06) — briefing happens in the
+ * conversation, in the agent's own words, and an announcement above the field was a second party
+ * saying it first. See `.scratch/handbooks/issues/06`.
  */
 
 /**
@@ -64,23 +64,23 @@ export function ComposerFooter({
       <WorkspaceLine
         {...workspace}
         door={
-          // Absent while the Handbook is empty. The notice card above the composer is carrying
-          // the invitation then, and the tray's rule is against a door to an empty room.
-          entries.length === 0 ? undefined : (
-            <button
-              type="button"
-              className={`wsflat${open ? ' on' : ''}`}
-              // `aria-haspopup` and not `aria-expanded`/`aria-controls`: what opens is a dialog
-              // in a portal, announced by its own role, and not a region this button contains.
-              aria-haspopup="dialog"
-              onClick={() => setOpen(!open)}
-            >
-              handbook · {entries.length}
-            </button>
-          )
+          // Drawn at every count, empty included. It used to be absent at zero because the
+          // notice card above the composer carried the invitation; that card is gone, so this
+          // is the only way into a Handbook nobody has written in yet, and `0` is a fact about
+          // this agent rather than a door to an empty room.
+          <button
+            type="button"
+            className={`wsflat${open ? ' on' : ''}`}
+            // `aria-haspopup` and not `aria-expanded`/`aria-controls`: what opens is a dialog
+            // in a portal, announced by its own role, and not a region this button contains.
+            aria-haspopup="dialog"
+            onClick={() => setOpen(!open)}
+          >
+            handbook · {entries.length}
+          </button>
         }
       />
-      {open && entries.length > 0 && (
+      {open && (
         <Panel
           entries={entries}
           agentName={agentName}
@@ -234,49 +234,6 @@ function Entry({
       >
         ×
       </button>
-    </div>
-  );
-}
-
-/**
- * An agent nobody has told anything, above its composer.
- *
- * It **persists** while the Handbook is empty, because it states a fact about the agent rather
- * than announcing an event: an agent given one task on Monday is not an agent somebody decided
- * never to brief. There is no dismiss, which would invent a third state — unbriefed and hidden —
- * that nothing could then draw.
- *
- * No icon. The reference this came from leads with a blue check; blobot has no blue, and every
- * icon at rest is `--muted`, so a muted glyph in that slot would have to mean something. The
- * card's presence is already the signal, and not yet briefed is the ordinary condition of a new
- * hire rather than a kind of thing.
- */
-export function HandbookNotice({
-  agentName,
-  teamName,
-  busy,
-  onBrief,
-}: {
-  agentName: string;
-  teamName: string;
-  /** Mid-turn. The invitation is a turn, and two at once is a queue nobody asked for. */
-  busy: boolean;
-  onBrief: () => void;
-}): React.JSX.Element {
-  return (
-    <div className="hbnotice">
-      <div className="hbnbody">
-        <div className="hbnt">{agentName} has not been briefed</div>
-        <div className="hbnd">
-          {agentName} knows nothing about this team's work yet. What you say here stays with{' '}
-          {teamName}.
-        </div>
-      </div>
-      <div className="hbnact">
-        <button type="button" className="hbnbtn" disabled={busy} onClick={onBrief}>
-          brief them
-        </button>
-      </div>
     </div>
   );
 }

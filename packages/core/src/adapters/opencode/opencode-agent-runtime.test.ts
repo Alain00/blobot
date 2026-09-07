@@ -367,6 +367,9 @@ describe('permissions', () => {
     const { runtime, agent } = await started();
     runtime.setPermissionHandler(async (request) => {
       expect(request.title).toBe('echo PERMTEST');
+      const reusable = request.options.find((option) => option.kind === 'allow_always');
+      expect(reusable?.name).toBe('Always allow');
+      expect(reusable?.description).toContain('suggested patterns for the rest of the session');
       return request.options.find((option) => option.kind === 'allow_once')?.optionId ?? null;
     });
 

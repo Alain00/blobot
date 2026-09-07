@@ -1,0 +1,1442 @@
+{
+  "started": "2026-09-06T01:05:41.774Z",
+  "uuid": "3553379e-4a00-4e64-8794-242d9c30406e",
+  "commands": [
+    {
+      "label": "sandbox-inventory",
+      "code": 0,
+      "ms": 349
+    },
+    {
+      "label": "engine-version",
+      "code": 0,
+      "ms": 179
+    },
+    {
+      "label": "template-inventory",
+      "code": 0,
+      "ms": 162
+    },
+    {
+      "label": "daemon-path-observation",
+      "code": 0,
+      "ms": 36
+    },
+    {
+      "label": "check-ssh-forwarding-disabled",
+      "code": 0,
+      "ms": 232
+    },
+    {
+      "label": "read-public-archive-manifest",
+      "code": 0,
+      "ms": 556
+    },
+    {
+      "label": "native-tar-extraction",
+      "code": 0,
+      "ms": 437
+    },
+    {
+      "label": "verify-signature-bin/sbx",
+      "code": 0,
+      "ms": 70
+    },
+    {
+      "label": "display-signature-bin/sbx",
+      "code": 0,
+      "ms": 12
+    },
+    {
+      "label": "verify-signature-bin/llmman",
+      "code": 0,
+      "ms": 19
+    },
+    {
+      "label": "display-signature-bin/llmman",
+      "code": 0,
+      "ms": 11
+    },
+    {
+      "label": "verify-signature-libexec/containerd-shim-nerdbox-v1",
+      "code": 0,
+      "ms": 17
+    },
+    {
+      "label": "display-signature-libexec/containerd-shim-nerdbox-v1",
+      "code": 0,
+      "ms": 11
+    },
+    {
+      "label": "verify-signature-libexec/lib/libsailor.dylib",
+      "code": 0,
+      "ms": 45
+    },
+    {
+      "label": "display-signature-libexec/lib/libsailor.dylib",
+      "code": 0,
+      "ms": 11
+    },
+    {
+      "label": "verify-signature-libexec/mkfs.ext4",
+      "code": 0,
+      "ms": 9
+    },
+    {
+      "label": "display-signature-libexec/mkfs.ext4",
+      "code": 0,
+      "ms": 10
+    },
+    {
+      "label": "verify-signature-libexec/mkfs.erofs",
+      "code": 0,
+      "ms": 9
+    },
+    {
+      "label": "display-signature-libexec/mkfs.erofs",
+      "code": 0,
+      "ms": 10
+    },
+    {
+      "label": "verify-signature-libexec/nerdbox-rootfs-arm64.erofs",
+      "code": 0,
+      "ms": 13
+    },
+    {
+      "label": "display-signature-libexec/nerdbox-rootfs-arm64.erofs",
+      "code": 0,
+      "ms": 10
+    },
+    {
+      "label": "shim-entitlement",
+      "code": 0,
+      "ms": 9
+    },
+    {
+      "label": "rootfs-signature-xattr-names",
+      "code": 0,
+      "ms": 3
+    },
+    {
+      "label": "diagnose-sanitized",
+      "code": 0,
+      "ms": 302
+    },
+    {
+      "label": "sandbox-inventory",
+      "code": 0,
+      "ms": 159
+    },
+    {
+      "label": "stop-empty-previous-daemon",
+      "code": 0,
+      "ms": 328
+    },
+    {
+      "label": "stopped-daemon-status",
+      "code": 0,
+      "ms": 170
+    },
+    {
+      "label": "daemon-path-observation",
+      "code": 0,
+      "ms": 37
+    },
+    {
+      "label": "start-private-daemon",
+      "code": 0,
+      "ms": 4737
+    },
+    {
+      "label": "engine-version",
+      "code": 0,
+      "ms": 212
+    },
+    {
+      "label": "daemon-path-observation",
+      "code": 0,
+      "ms": 39
+    },
+    {
+      "label": "diagnose-sanitized",
+      "code": 0,
+      "ms": 238
+    },
+    {
+      "label": "template-inventory",
+      "code": 0,
+      "ms": 236
+    },
+    {
+      "label": "create-single-owned-shell",
+      "code": 0,
+      "ms": 4128
+    },
+    {
+      "label": "sandbox-inventory",
+      "code": 0,
+      "ms": 153
+    },
+    {
+      "label": "guest-shell-probe",
+      "code": 0,
+      "ms": 214
+    },
+    {
+      "label": "private-shim-process",
+      "code": 0,
+      "ms": 32
+    },
+    {
+      "label": "private-helper-open-files",
+      "code": 0,
+      "ms": 19
+    },
+    {
+      "label": "sandbox-inventory",
+      "code": 0,
+      "ms": 170
+    },
+    {
+      "label": "remove-owned-box",
+      "code": 0,
+      "ms": 345
+    },
+    {
+      "label": "sandbox-inventory",
+      "code": 0,
+      "ms": 181
+    },
+    {
+      "label": "stop-empty-private-daemon",
+      "code": 0,
+      "ms": 245
+    },
+    {
+      "label": "restore-previous-daemon",
+      "code": 0,
+      "ms": 979
+    },
+    {
+      "label": "engine-version",
+      "code": 0,
+      "ms": 279
+    },
+    {
+      "label": "daemon-path-observation",
+      "code": 0,
+      "ms": 32
+    },
+    {
+      "label": "diagnose-sanitized",
+      "code": 0,
+      "ms": 230
+    },
+    {
+      "label": "sandbox-inventory",
+      "code": 0,
+      "ms": 147
+    },
+    {
+      "label": "template-inventory",
+      "code": 0,
+      "ms": 190
+    },
+    {
+      "label": "daemon-path-observation",
+      "code": 0,
+      "ms": 37
+    }
+  ],
+  "diskChecks": [
+    {
+      "label": "before-extraction",
+      "availableBytes": "24112496640"
+    },
+    {
+      "label": "before-daemon-handoff",
+      "availableBytes": "23752450048"
+    },
+    {
+      "label": "before-owned-box",
+      "availableBytes": "23757602816"
+    },
+    {
+      "label": "after-owned-box",
+      "availableBytes": "23728558080"
+    },
+    {
+      "label": "after-cleanup",
+      "availableBytes": "23761158144"
+    }
+  ],
+  "cleanup": {
+    "restoredVersion": {
+      "client": {
+        "version": "v0.42.0-rc5",
+        "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+        "build_tags": "cloud"
+      },
+      "server": {
+        "state": "running",
+        "version": "v0.42.0-rc5",
+        "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+        "api_version": "0.28.0"
+      }
+    },
+    "previousDaemonExecutableRestored": true,
+    "diagnose": {
+      "version": "1.0",
+      "checks": [
+        {
+          "name": "CLI binary",
+          "status": "pass"
+        },
+        {
+          "name": "Binary version",
+          "status": "pass"
+        },
+        {
+          "name": "Daemon",
+          "status": "pass"
+        },
+        {
+          "name": "Daemon diagnostics",
+          "status": "pass"
+        },
+        {
+          "name": "Virtualization",
+          "status": "pass"
+        },
+        {
+          "name": "Storage directories",
+          "status": "pass"
+        },
+        {
+          "name": "Directory permissions",
+          "status": "pass"
+        },
+        {
+          "name": "Disk space",
+          "status": "pass"
+        },
+        {
+          "name": "Version match",
+          "status": "pass"
+        },
+        {
+          "name": "Socket",
+          "status": "pass"
+        },
+        {
+          "name": "SSH client config",
+          "status": "pass"
+        },
+        {
+          "name": "Authentication",
+          "status": "pass"
+        }
+      ],
+      "summary": {
+        "pass": 12,
+        "warn": 0,
+        "fail": 0,
+        "skip": 0
+      }
+    },
+    "remainingSandboxCount": 0,
+    "templatesUnchanged": true,
+    "privatePrefixRemoved": true,
+    "errors": []
+  },
+  "before": {
+    "sandboxCount": 0,
+    "version": {
+      "client": {
+        "version": "v0.42.0-rc5",
+        "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+        "build_tags": "cloud"
+      },
+      "server": {
+        "state": "running",
+        "version": "v0.42.0-rc5",
+        "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+        "api_version": "0.28.0"
+      }
+    },
+    "templates": [
+      {
+        "id": "94670d5b2a24",
+        "repository": "docker.io/docker/sandbox-templates",
+        "tag": "claude-code-docker"
+      },
+      {
+        "id": "5fc81bc7a127",
+        "repository": "docker.io/docker/sandbox-templates",
+        "tag": "shell-docker"
+      }
+    ],
+    "previousExecutable": "/opt/homebrew/bin/sbx",
+    "previousResolvedExecutable": "/opt/homebrew/Caskroom/sbx@rc/0.42.0-rc5/bin/sbx",
+    "daemonMatchesPreviousExecutable": true,
+    "diagnose": {
+      "version": "1.0",
+      "checks": [
+        {
+          "name": "CLI binary",
+          "status": "pass"
+        },
+        {
+          "name": "Binary version",
+          "status": "pass"
+        },
+        {
+          "name": "Daemon",
+          "status": "pass"
+        },
+        {
+          "name": "Daemon diagnostics",
+          "status": "pass"
+        },
+        {
+          "name": "Virtualization",
+          "status": "pass"
+        },
+        {
+          "name": "Storage directories",
+          "status": "pass"
+        },
+        {
+          "name": "Directory permissions",
+          "status": "pass"
+        },
+        {
+          "name": "Disk space",
+          "status": "pass"
+        },
+        {
+          "name": "Version match",
+          "status": "pass"
+        },
+        {
+          "name": "Socket",
+          "status": "pass"
+        },
+        {
+          "name": "SSH client config",
+          "status": "pass"
+        },
+        {
+          "name": "Authentication",
+          "status": "pass"
+        }
+      ],
+      "summary": {
+        "pass": 12,
+        "warn": 0,
+        "fail": 0,
+        "skip": 0
+      }
+    }
+  },
+  "archive": {
+    "bytes": 136590091,
+    "sha256": "670ce2f469fe2a9d36046e448eb69769c0ebf77ac8ad9215b657dfd4c073916a",
+    "members": [
+      {
+        "name": "bin",
+        "type": "5",
+        "mode": "755",
+        "size": 0,
+        "paxKeys": []
+      },
+      {
+        "name": "bin/llmman",
+        "type": "0",
+        "mode": "755",
+        "size": 24203424,
+        "paxKeys": []
+      },
+      {
+        "name": "bin/sbx",
+        "type": "0",
+        "mode": "755",
+        "size": 134853424,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec",
+        "type": "5",
+        "mode": "755",
+        "size": 0,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/._nerdbox-rootfs-arm64.erofs",
+        "type": "0",
+        "mode": "755",
+        "size": 9573,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/nerdbox-rootfs-arm64.erofs",
+        "type": "0",
+        "mode": "755",
+        "size": 11984896,
+        "paxKeys": [
+          "LIBARCHIVE.xattr.com.apple.cs.CodeDirectory",
+          "LIBARCHIVE.xattr.com.apple.cs.CodeRequirements",
+          "LIBARCHIVE.xattr.com.apple.cs.CodeSignature",
+          "SCHILY.xattr.com.apple.cs.CodeDirectory",
+          "SCHILY.xattr.com.apple.cs.CodeRequirements",
+          "SCHILY.xattr.com.apple.cs.CodeSignature",
+          "mtime"
+        ]
+      },
+      {
+        "name": "libexec/nerdbox-kernel-arm64",
+        "type": "0",
+        "mode": "755",
+        "size": 18516480,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/containerd-shim-nerdbox-v1",
+        "type": "0",
+        "mode": "755",
+        "size": 19277296,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/mkfs.ext4",
+        "type": "0",
+        "mode": "755",
+        "size": 619520,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/mkfs.erofs",
+        "type": "0",
+        "mode": "755",
+        "size": 330512,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/lib",
+        "type": "5",
+        "mode": "755",
+        "size": 0,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama",
+        "type": "5",
+        "mode": "755",
+        "size": 0,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml-base.0.15.3.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 724368,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml-rpc.0.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 150896,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libllama.0.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 2646032,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libmtmd.0.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 1042448,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/LICENSE",
+        "type": "0",
+        "mode": "644",
+        "size": 1078,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 77776,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libmtmd.0.0.9950.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 1042448,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml.0.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 77792,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libmtmd.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 1042432,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libllama-server-impl.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 9086752,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libllama.0.0.9950.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 2646032,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml-base.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 724368,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml-blas.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 76688,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml-metal.0.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 846208,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libllama-completion-impl.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 122544,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libllama-bench-impl.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 337344,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libllama-common.0.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 7778176,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libllama-common.0.0.9950.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 7778176,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libllama.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 2646016,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libllama-perplexity-impl.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 173152,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml-cpu.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 914240,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml-metal.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 846208,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libllama-quantize-impl.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 114064,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libllama-cli-impl.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 411376,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml-metal.0.15.3.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 846208,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/llama-server",
+        "type": "0",
+        "mode": "644",
+        "size": 51552,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libllama-batched-bench-impl.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 74240,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libllama-common.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 7778160,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml.0.15.3.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 77792,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml-cpu.0.15.3.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 914240,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml-base.0.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 724368,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libllama-fit-params-impl.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 73216,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml-blas.0.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 76688,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml-rpc.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 150896,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml-blas.0.15.3.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 76688,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml-rpc.0.15.3.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 150896,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/llama/libggml-cpu.0.dylib",
+        "type": "0",
+        "mode": "644",
+        "size": 914240,
+        "paxKeys": []
+      },
+      {
+        "name": "libexec/lib/libsailor.dylib",
+        "type": "0",
+        "mode": "755",
+        "size": 88017184,
+        "paxKeys": []
+      },
+      {
+        "name": "completions",
+        "type": "5",
+        "mode": "755",
+        "size": 0,
+        "paxKeys": []
+      },
+      {
+        "name": "completions/bash",
+        "type": "5",
+        "mode": "755",
+        "size": 0,
+        "paxKeys": []
+      },
+      {
+        "name": "completions/zsh",
+        "type": "5",
+        "mode": "755",
+        "size": 0,
+        "paxKeys": []
+      },
+      {
+        "name": "completions/fish",
+        "type": "5",
+        "mode": "755",
+        "size": 0,
+        "paxKeys": []
+      },
+      {
+        "name": "completions/fish/sbx.fish",
+        "type": "0",
+        "mode": "644",
+        "size": 9417,
+        "paxKeys": []
+      },
+      {
+        "name": "completions/zsh/_sbx",
+        "type": "0",
+        "mode": "644",
+        "size": 7640,
+        "paxKeys": []
+      },
+      {
+        "name": "completions/bash/sbx",
+        "type": "0",
+        "mode": "644",
+        "size": 15973,
+        "paxKeys": []
+      },
+      {
+        "name": "LICENSE",
+        "type": "0",
+        "mode": "644",
+        "size": 405,
+        "paxKeys": []
+      },
+      {
+        "name": "THIRD-PARTY-NOTICES",
+        "type": "0",
+        "mode": "644",
+        "size": 7689995,
+        "paxKeys": []
+      }
+    ]
+  },
+  "extracted": {
+    "paths": [
+      {
+        "name": "bin",
+        "type": "directory",
+        "mode": "755",
+        "size": 0
+      },
+      {
+        "name": "bin/llmman",
+        "type": "regular",
+        "mode": "755",
+        "size": 24203424
+      },
+      {
+        "name": "bin/sbx",
+        "type": "regular",
+        "mode": "755",
+        "size": 134853424
+      },
+      {
+        "name": "completions",
+        "type": "directory",
+        "mode": "755",
+        "size": 0
+      },
+      {
+        "name": "completions/bash",
+        "type": "directory",
+        "mode": "755",
+        "size": 0
+      },
+      {
+        "name": "completions/bash/sbx",
+        "type": "regular",
+        "mode": "644",
+        "size": 15973
+      },
+      {
+        "name": "completions/fish",
+        "type": "directory",
+        "mode": "755",
+        "size": 0
+      },
+      {
+        "name": "completions/fish/sbx.fish",
+        "type": "regular",
+        "mode": "644",
+        "size": 9417
+      },
+      {
+        "name": "completions/zsh",
+        "type": "directory",
+        "mode": "755",
+        "size": 0
+      },
+      {
+        "name": "completions/zsh/_sbx",
+        "type": "regular",
+        "mode": "644",
+        "size": 7640
+      },
+      {
+        "name": "libexec",
+        "type": "directory",
+        "mode": "755",
+        "size": 0
+      },
+      {
+        "name": "libexec/containerd-shim-nerdbox-v1",
+        "type": "regular",
+        "mode": "755",
+        "size": 19277296
+      },
+      {
+        "name": "libexec/lib",
+        "type": "directory",
+        "mode": "755",
+        "size": 0
+      },
+      {
+        "name": "libexec/lib/libsailor.dylib",
+        "type": "regular",
+        "mode": "755",
+        "size": 88017184
+      },
+      {
+        "name": "libexec/llama",
+        "type": "directory",
+        "mode": "755",
+        "size": 0
+      },
+      {
+        "name": "libexec/llama/libggml-base.0.15.3.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 724368
+      },
+      {
+        "name": "libexec/llama/libggml-base.0.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 724368
+      },
+      {
+        "name": "libexec/llama/libggml-base.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 724368
+      },
+      {
+        "name": "libexec/llama/libggml-blas.0.15.3.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 76688
+      },
+      {
+        "name": "libexec/llama/libggml-blas.0.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 76688
+      },
+      {
+        "name": "libexec/llama/libggml-blas.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 76688
+      },
+      {
+        "name": "libexec/llama/libggml-cpu.0.15.3.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 914240
+      },
+      {
+        "name": "libexec/llama/libggml-cpu.0.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 914240
+      },
+      {
+        "name": "libexec/llama/libggml-cpu.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 914240
+      },
+      {
+        "name": "libexec/llama/libggml-metal.0.15.3.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 846208
+      },
+      {
+        "name": "libexec/llama/libggml-metal.0.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 846208
+      },
+      {
+        "name": "libexec/llama/libggml-metal.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 846208
+      },
+      {
+        "name": "libexec/llama/libggml-rpc.0.15.3.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 150896
+      },
+      {
+        "name": "libexec/llama/libggml-rpc.0.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 150896
+      },
+      {
+        "name": "libexec/llama/libggml-rpc.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 150896
+      },
+      {
+        "name": "libexec/llama/libggml.0.15.3.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 77792
+      },
+      {
+        "name": "libexec/llama/libggml.0.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 77792
+      },
+      {
+        "name": "libexec/llama/libggml.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 77776
+      },
+      {
+        "name": "libexec/llama/libllama-batched-bench-impl.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 74240
+      },
+      {
+        "name": "libexec/llama/libllama-bench-impl.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 337344
+      },
+      {
+        "name": "libexec/llama/libllama-cli-impl.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 411376
+      },
+      {
+        "name": "libexec/llama/libllama-common.0.0.9950.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 7778176
+      },
+      {
+        "name": "libexec/llama/libllama-common.0.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 7778176
+      },
+      {
+        "name": "libexec/llama/libllama-common.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 7778160
+      },
+      {
+        "name": "libexec/llama/libllama-completion-impl.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 122544
+      },
+      {
+        "name": "libexec/llama/libllama-fit-params-impl.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 73216
+      },
+      {
+        "name": "libexec/llama/libllama-perplexity-impl.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 173152
+      },
+      {
+        "name": "libexec/llama/libllama-quantize-impl.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 114064
+      },
+      {
+        "name": "libexec/llama/libllama-server-impl.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 9086752
+      },
+      {
+        "name": "libexec/llama/libllama.0.0.9950.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 2646032
+      },
+      {
+        "name": "libexec/llama/libllama.0.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 2646032
+      },
+      {
+        "name": "libexec/llama/libllama.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 2646016
+      },
+      {
+        "name": "libexec/llama/libmtmd.0.0.9950.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 1042448
+      },
+      {
+        "name": "libexec/llama/libmtmd.0.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 1042448
+      },
+      {
+        "name": "libexec/llama/libmtmd.dylib",
+        "type": "regular",
+        "mode": "644",
+        "size": 1042432
+      },
+      {
+        "name": "libexec/llama/LICENSE",
+        "type": "regular",
+        "mode": "644",
+        "size": 1078
+      },
+      {
+        "name": "libexec/llama/llama-server",
+        "type": "regular",
+        "mode": "644",
+        "size": 51552
+      },
+      {
+        "name": "libexec/mkfs.erofs",
+        "type": "regular",
+        "mode": "755",
+        "size": 330512
+      },
+      {
+        "name": "libexec/mkfs.ext4",
+        "type": "regular",
+        "mode": "755",
+        "size": 619520
+      },
+      {
+        "name": "libexec/nerdbox-kernel-arm64",
+        "type": "regular",
+        "mode": "755",
+        "size": 18516480
+      },
+      {
+        "name": "libexec/nerdbox-rootfs-arm64.erofs",
+        "type": "regular",
+        "mode": "755",
+        "size": 11984896
+      },
+      {
+        "name": "LICENSE",
+        "type": "regular",
+        "mode": "644",
+        "size": 405
+      },
+      {
+        "name": "THIRD-PARTY-NOTICES",
+        "type": "regular",
+        "mode": "644",
+        "size": 7689995
+      }
+    ],
+    "cliSha256": "e0bc95e6d4b80cb9a6b84ae8b2f2f540d5289fec9347be40b01f7af5317f007a",
+    "previousCliSha256": "e0bc95e6d4b80cb9a6b84ae8b2f2f540d5289fec9347be40b01f7af5317f007a",
+    "appleDoubleMaterializedAsFile": false
+  },
+  "signatures": [
+    {
+      "path": "bin/sbx",
+      "strictValid": true,
+      "team": "9BNSXJN65R",
+      "authorities": [
+        "Developer ID Application: Docker Inc (9BNSXJN65R)",
+        "Developer ID Certification Authority",
+        "Apple Root CA"
+      ]
+    },
+    {
+      "path": "bin/llmman",
+      "strictValid": true,
+      "team": "9BNSXJN65R",
+      "authorities": [
+        "Developer ID Application: Docker Inc (9BNSXJN65R)",
+        "Developer ID Certification Authority",
+        "Apple Root CA"
+      ]
+    },
+    {
+      "path": "libexec/containerd-shim-nerdbox-v1",
+      "strictValid": true,
+      "team": "9BNSXJN65R",
+      "authorities": [
+        "Developer ID Application: Docker Inc (9BNSXJN65R)",
+        "Developer ID Certification Authority",
+        "Apple Root CA"
+      ]
+    },
+    {
+      "path": "libexec/lib/libsailor.dylib",
+      "strictValid": true,
+      "team": "9BNSXJN65R",
+      "authorities": [
+        "Developer ID Application: Docker Inc (9BNSXJN65R)",
+        "Developer ID Certification Authority",
+        "Apple Root CA"
+      ]
+    },
+    {
+      "path": "libexec/mkfs.ext4",
+      "strictValid": true,
+      "team": "9BNSXJN65R",
+      "authorities": [
+        "Developer ID Application: Docker Inc (9BNSXJN65R)",
+        "Developer ID Certification Authority",
+        "Apple Root CA"
+      ]
+    },
+    {
+      "path": "libexec/mkfs.erofs",
+      "strictValid": true,
+      "team": "9BNSXJN65R",
+      "authorities": [
+        "Developer ID Application: Docker Inc (9BNSXJN65R)",
+        "Developer ID Certification Authority",
+        "Apple Root CA"
+      ]
+    },
+    {
+      "path": "libexec/nerdbox-rootfs-arm64.erofs",
+      "strictValid": true,
+      "team": "9BNSXJN65R",
+      "authorities": [
+        "Developer ID Application: Docker Inc (9BNSXJN65R)",
+        "Developer ID Certification Authority",
+        "Apple Root CA"
+      ]
+    }
+  ],
+  "hypervisorEntitlement": true,
+  "rootfsXattrNames": [
+    "com.apple.cs.CodeDirectory",
+    "com.apple.cs.CodeRequirements",
+    "com.apple.cs.CodeSignature",
+    "com.apple.provenance"
+  ],
+  "stoppedStatus": "stopped",
+  "private": {
+    "version": {
+      "client": {
+        "version": "v0.42.0-rc5",
+        "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+        "build_tags": "cloud"
+      },
+      "server": {
+        "state": "running",
+        "version": "v0.42.0-rc5",
+        "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+        "api_version": "0.28.0"
+      }
+    },
+    "actualDaemonExecutableWithinPrefix": true,
+    "diagnose": {
+      "version": "1.0",
+      "checks": [
+        {
+          "name": "CLI binary",
+          "status": "pass"
+        },
+        {
+          "name": "Binary version",
+          "status": "pass"
+        },
+        {
+          "name": "Daemon",
+          "status": "pass"
+        },
+        {
+          "name": "Daemon diagnostics",
+          "status": "pass"
+        },
+        {
+          "name": "Virtualization",
+          "status": "pass"
+        },
+        {
+          "name": "Storage directories",
+          "status": "pass"
+        },
+        {
+          "name": "Directory permissions",
+          "status": "pass"
+        },
+        {
+          "name": "Disk space",
+          "status": "pass"
+        },
+        {
+          "name": "Version match",
+          "status": "pass"
+        },
+        {
+          "name": "Socket",
+          "status": "pass"
+        },
+        {
+          "name": "SSH client config",
+          "status": "pass"
+        },
+        {
+          "name": "Authentication",
+          "status": "pass"
+        }
+      ],
+      "summary": {
+        "pass": 12,
+        "warn": 0,
+        "fail": 0,
+        "skip": 0
+      }
+    },
+    "kit": {
+      "schemaVersion": "2",
+      "kind": "sandbox",
+      "name": "wayfinder-prefix65",
+      "sandbox": {
+        "image": "docker.io/docker/sandbox-templates:shell-docker",
+        "entrypoint": [
+          "/bin/sh"
+        ],
+        "command": {
+          "default": [
+            "-c",
+            "printf prefix65"
+          ]
+        }
+      },
+      "security": {
+        "privileged": true
+      },
+      "credentials": [],
+      "permissions": {
+        "network": {
+          "allow": [],
+          "deny": []
+        }
+      },
+      "volumes": [
+        {
+          "path": "/home/agent",
+          "size": "536870912",
+          "mode": "0700"
+        },
+        {
+          "path": "/var/lib/docker",
+          "size": "536870912",
+          "mode": "0700"
+        }
+      ]
+    },
+    "box": {
+      "id": "113b5fed-26cf-4ba0-90e7-7c03ccf68903",
+      "name": "wayfinder-prefix65-3553379e-4a00-4e64-8794-242d9c30406e",
+      "sourceImageId": "5fc81bc7a127",
+      "cpus": 2,
+      "memoryGiB": 2
+    },
+    "guestShellProbe": "prefix65-ok",
+    "shimExecutableWithinPrefix": true,
+    "openPrefixPaths": [
+      "libexec/containerd-shim-nerdbox-v1",
+      "libexec/lib/libsailor.dylib",
+      "libexec/nerdbox-rootfs-arm64.erofs"
+    ]
+  },
+  "passed": true,
+  "finished": "2026-09-06T01:05:58.047Z",
+  "productionValidatorComparison": {
+    "source": "packages/core/src/machines/sbx/installation.ts",
+    "sourceSha256": "366507bac4da09c282c67de21fa84fd86d9116009587ffcb4de75de5ac77decb",
+    "call": "validateSbxArchiveMembers(nativeTarNames,nativeTarDetails)",
+    "passed": true,
+    "names": 58,
+    "detailRows": 58
+  }
+}

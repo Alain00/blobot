@@ -1,0 +1,1310 @@
+{
+  "fixture": "42-claude-sandbox",
+  "uuid": "0affb5b4-d29a-4e4b-ac0c-301bf8993c23",
+  "createdAt": "2026-09-05T21:41:20.462Z",
+  "pins": {
+    "cli": "2.1.260",
+    "bridge": "0.70.0",
+    "sdk": "0.3.232",
+    "cliSha256": "3c269f66801028823e24a63ced9fdd3988cb86cf85fccd9f03f87e463b9d3e3c",
+    "sdkSha256": "cae60ea6827d5f9b113c88b911388983fe96e7d565a382bf25904df78ab9d0fc"
+  },
+  "profile": "(version 1)\n(allow default)\n(deny network*)\n(deny file-read*\n  (subpath \"/Users/guillermo/.claude\")\n  (literal \"/Users/guillermo/.claude.json\")\n  (subpath \"/Users/guillermo/Library/Keychains\")\n  (subpath \"/Library/Keychains\")\n  (subpath \"/Library/Application Support/ClaudeCode\")\n  (subpath \"/Library/Managed Preferences\"))\n(deny mach-lookup (global-name \"com.apple.securityd\"))",
+  "inputTiers": {
+    "user": {
+      "sandbox": {
+        "enabled": false,
+        "autoAllowBashIfSandboxed": true,
+        "excludedCommands": [
+          "user-synthetic *",
+          "shared-synthetic *"
+        ],
+        "network": {
+          "allowedDomains": [
+            "user.invalid"
+          ]
+        },
+        "filesystem": {
+          "allowRead": [
+            "/synthetic/user"
+          ]
+        }
+      },
+      "permissions": {
+        "defaultMode": "default",
+        "allow": [
+          "Bash(user-synthetic:*)"
+        ]
+      }
+    },
+    "project": {
+      "sandbox": {
+        "enabled": true,
+        "failIfUnavailable": false,
+        "autoAllowBashIfSandboxed": true,
+        "allowUnsandboxedCommands": true,
+        "excludedCommands": [
+          "project-synthetic *",
+          "shared-synthetic *"
+        ],
+        "network": {
+          "allowedDomains": [
+            "project.invalid"
+          ]
+        },
+        "filesystem": {
+          "allowRead": [
+            "/synthetic/project"
+          ]
+        }
+      },
+      "permissions": {
+        "allow": [
+          "Bash(project-synthetic:*)"
+        ],
+        "ask": [
+          "Bash(*)"
+        ]
+      }
+    },
+    "local": {
+      "sandbox": {
+        "enabled": true,
+        "excludedCommands": [
+          "local-synthetic *"
+        ],
+        "network": {
+          "allowedDomains": [
+            "local.invalid"
+          ]
+        },
+        "filesystem": {
+          "allowRead": [
+            "/synthetic/local"
+          ]
+        }
+      },
+      "permissions": {
+        "allow": [
+          "Bash(local-synthetic:*)"
+        ]
+      }
+    }
+  },
+  "cases": [
+    {
+      "name": "capture-local-explicit",
+      "processStatus": 0,
+      "processStderr": "",
+      "observation": {
+        "mode": "capture",
+        "args": [
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--input-format",
+          "stream-json",
+          "--debug-file",
+          "/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/debug-capture.log",
+          "--permission-prompt-tool",
+          "stdio",
+          "--allowedTools",
+          "Bash(adapter-synthetic:*)",
+          "--tools",
+          "",
+          "--setting-sources=user,project,local",
+          "--strict-mcp-config",
+          "--permission-mode",
+          "default",
+          "--no-session-persistence",
+          "--settings",
+          "{\"sandbox\":{\"enabled\":true,\"failIfUnavailable\":true,\"autoAllowBashIfSandboxed\":false,\"allowUnsandboxedCommands\":false,\"network\":{\"allowLocalBinding\":true}}}"
+        ],
+        "argumentSettings": {
+          "sandbox": {
+            "enabled": true,
+            "failIfUnavailable": true,
+            "autoAllowBashIfSandboxed": false,
+            "allowUnsandboxedCommands": false,
+            "network": {
+              "allowLocalBinding": true
+            }
+          }
+        },
+        "error": "SYNTHETIC_CAPTURE_COMPLETE",
+        "frames": [],
+        "outputTypes": [],
+        "stderr": "",
+        "sandboxDebug": [],
+        "forcedCleanup": false
+      }
+    },
+    {
+      "name": "capture-local-default-fail",
+      "processStatus": 0,
+      "processStderr": "",
+      "observation": {
+        "mode": "capture",
+        "args": [
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--input-format",
+          "stream-json",
+          "--debug-file",
+          "/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/debug-capture.log",
+          "--permission-prompt-tool",
+          "stdio",
+          "--allowedTools",
+          "Bash(adapter-synthetic:*)",
+          "--tools",
+          "",
+          "--setting-sources=user,project,local",
+          "--strict-mcp-config",
+          "--permission-mode",
+          "default",
+          "--no-session-persistence",
+          "--settings",
+          "{\"sandbox\":{\"enabled\":true,\"failIfUnavailable\":true}}"
+        ],
+        "argumentSettings": {
+          "sandbox": {
+            "enabled": true,
+            "failIfUnavailable": true
+          }
+        },
+        "error": "SYNTHETIC_CAPTURE_COMPLETE",
+        "frames": [],
+        "outputTypes": [],
+        "stderr": "",
+        "sandboxDebug": [],
+        "forcedCleanup": false
+      }
+    },
+    {
+      "name": "capture-box-disabled",
+      "processStatus": 0,
+      "processStderr": "",
+      "observation": {
+        "mode": "capture",
+        "args": [
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--input-format",
+          "stream-json",
+          "--debug-file",
+          "/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/debug-capture.log",
+          "--permission-prompt-tool",
+          "stdio",
+          "--allowedTools",
+          "Bash(adapter-synthetic:*)",
+          "--tools",
+          "",
+          "--setting-sources=user,project,local",
+          "--strict-mcp-config",
+          "--permission-mode",
+          "default",
+          "--no-session-persistence",
+          "--settings",
+          "{\"sandbox\":{\"enabled\":false}}"
+        ],
+        "argumentSettings": {
+          "sandbox": {
+            "enabled": false
+          }
+        },
+        "error": "SYNTHETIC_CAPTURE_COMPLETE",
+        "frames": [],
+        "outputTypes": [],
+        "stderr": "",
+        "sandboxDebug": [],
+        "forcedCleanup": false
+      }
+    },
+    {
+      "name": "capture-object-replacement",
+      "processStatus": 0,
+      "processStderr": "",
+      "observation": {
+        "mode": "capture",
+        "args": [
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--input-format",
+          "stream-json",
+          "--debug-file",
+          "/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/debug-capture.log",
+          "--permission-prompt-tool",
+          "stdio",
+          "--allowedTools",
+          "Bash(adapter-synthetic:*)",
+          "--tools",
+          "",
+          "--setting-sources=user,project,local",
+          "--strict-mcp-config",
+          "--permission-mode",
+          "default",
+          "--no-session-persistence",
+          "--settings",
+          "{\"env\":{\"SYNTHETIC_KEEP\":\"yes\"},\"sandbox\":{\"enabled\":true,\"failIfUnavailable\":true,\"autoAllowBashIfSandboxed\":false,\"allowUnsandboxedCommands\":false,\"network\":{\"allowLocalBinding\":true}}}"
+        ],
+        "argumentSettings": {
+          "env": {
+            "SYNTHETIC_KEEP": "yes"
+          },
+          "sandbox": {
+            "enabled": true,
+            "failIfUnavailable": true,
+            "autoAllowBashIfSandboxed": false,
+            "allowUnsandboxedCommands": false,
+            "network": {
+              "allowLocalBinding": true
+            }
+          }
+        },
+        "error": "SYNTHETIC_CAPTURE_COMPLETE",
+        "frames": [],
+        "outputTypes": [],
+        "stderr": "",
+        "sandboxDebug": [],
+        "forcedCleanup": false
+      }
+    },
+    {
+      "name": "capture-settings-path-rejected",
+      "processStatus": 0,
+      "processStderr": "",
+      "observation": {
+        "mode": "capture",
+        "argumentSettings": null,
+        "error": "Cannot use both a settings file path and the sandbox option. Include the sandbox configuration in your settings file instead.",
+        "frames": [],
+        "outputTypes": [],
+        "stderr": "",
+        "sandboxDebug": [],
+        "forcedCleanup": false
+      }
+    },
+    {
+      "name": "resolve-synthetic-tiers",
+      "processStatus": 0,
+      "processStderr": "",
+      "observation": {
+        "effective": {
+          "permissions": {
+            "allow": [
+              "Bash(user-synthetic:*)",
+              "Bash(project-synthetic:*)",
+              "Bash(local-synthetic:*)"
+            ],
+            "defaultMode": "default",
+            "ask": [
+              "Bash(*)"
+            ]
+          },
+          "sandbox": {
+            "enabled": true,
+            "autoAllowBashIfSandboxed": true,
+            "network": {
+              "allowedDomains": [
+                "user.invalid",
+                "project.invalid",
+                "local.invalid"
+              ]
+            },
+            "filesystem": {
+              "allowRead": [
+                "/synthetic/user",
+                "/synthetic/project",
+                "/synthetic/local"
+              ]
+            },
+            "excludedCommands": [
+              "user-synthetic *",
+              "shared-synthetic *",
+              "project-synthetic *",
+              "local-synthetic *"
+            ],
+            "failIfUnavailable": false,
+            "allowUnsandboxedCommands": true
+          }
+        },
+        "sources": [
+          {
+            "source": "user",
+            "settings": {
+              "permissions": {
+                "allow": [
+                  "Bash(user-synthetic:*)"
+                ],
+                "defaultMode": "default"
+              },
+              "sandbox": {
+                "enabled": false,
+                "autoAllowBashIfSandboxed": true,
+                "network": {
+                  "allowedDomains": [
+                    "user.invalid"
+                  ]
+                },
+                "filesystem": {
+                  "allowRead": [
+                    "/synthetic/user"
+                  ]
+                },
+                "excludedCommands": [
+                  "user-synthetic *",
+                  "shared-synthetic *"
+                ]
+              }
+            }
+          },
+          {
+            "source": "project",
+            "settings": {
+              "permissions": {
+                "allow": [
+                  "Bash(project-synthetic:*)"
+                ],
+                "ask": [
+                  "Bash(*)"
+                ]
+              },
+              "sandbox": {
+                "enabled": true,
+                "failIfUnavailable": false,
+                "autoAllowBashIfSandboxed": true,
+                "allowUnsandboxedCommands": true,
+                "network": {
+                  "allowedDomains": [
+                    "project.invalid"
+                  ]
+                },
+                "filesystem": {
+                  "allowRead": [
+                    "/synthetic/project"
+                  ]
+                },
+                "excludedCommands": [
+                  "project-synthetic *",
+                  "shared-synthetic *"
+                ]
+              }
+            }
+          },
+          {
+            "source": "local",
+            "settings": {
+              "permissions": {
+                "allow": [
+                  "Bash(local-synthetic:*)"
+                ]
+              },
+              "sandbox": {
+                "enabled": true,
+                "network": {
+                  "allowedDomains": [
+                    "local.invalid"
+                  ]
+                },
+                "filesystem": {
+                  "allowRead": [
+                    "/synthetic/local"
+                  ]
+                },
+                "excludedCommands": [
+                  "local-synthetic *"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "cli-box-disabled",
+      "processStatus": 0,
+      "processStderr": "",
+      "observation": {
+        "mode": "cli",
+        "args": [
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--input-format",
+          "stream-json",
+          "--debug-file",
+          "/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/debug-cli.log",
+          "--permission-prompt-tool",
+          "stdio",
+          "--allowedTools",
+          "Bash(adapter-synthetic:*)",
+          "--tools",
+          "",
+          "--setting-sources=user,project,local",
+          "--strict-mcp-config",
+          "--permission-mode",
+          "default",
+          "--no-session-persistence",
+          "--settings",
+          "{\"sandbox\":{\"enabled\":false}}"
+        ],
+        "argumentSettings": {
+          "sandbox": {
+            "enabled": false
+          }
+        },
+        "settings": {
+          "effective": {
+            "permissions": {
+              "allow": [
+                "Bash(user-synthetic:*)",
+                "Bash(project-synthetic:*)",
+                "Bash(local-synthetic:*)"
+              ],
+              "defaultMode": "default",
+              "ask": [
+                "Bash(*)"
+              ]
+            },
+            "sandbox": {
+              "enabled": false,
+              "autoAllowBashIfSandboxed": true,
+              "network": {
+                "allowedDomains": [
+                  "user.invalid",
+                  "project.invalid",
+                  "local.invalid"
+                ]
+              },
+              "filesystem": {
+                "allowRead": [
+                  "/synthetic/user",
+                  "/synthetic/project",
+                  "/synthetic/local"
+                ]
+              },
+              "excludedCommands": [
+                "user-synthetic *",
+                "shared-synthetic *",
+                "project-synthetic *",
+                "local-synthetic *"
+              ],
+              "failIfUnavailable": false,
+              "allowUnsandboxedCommands": true
+            }
+          },
+          "sources": [
+            {
+              "source": "userSettings",
+              "settings": {
+                "permissions": {
+                  "allow": [
+                    "Bash(user-synthetic:*)"
+                  ],
+                  "defaultMode": "default"
+                },
+                "sandbox": {
+                  "enabled": false,
+                  "autoAllowBashIfSandboxed": true,
+                  "network": {
+                    "allowedDomains": [
+                      "user.invalid"
+                    ]
+                  },
+                  "filesystem": {
+                    "allowRead": [
+                      "/synthetic/user"
+                    ]
+                  },
+                  "excludedCommands": [
+                    "user-synthetic *",
+                    "shared-synthetic *"
+                  ]
+                }
+              }
+            },
+            {
+              "source": "projectSettings",
+              "settings": {
+                "permissions": {
+                  "allow": [
+                    "Bash(project-synthetic:*)"
+                  ],
+                  "ask": [
+                    "Bash(*)"
+                  ]
+                },
+                "sandbox": {
+                  "enabled": true,
+                  "failIfUnavailable": false,
+                  "autoAllowBashIfSandboxed": true,
+                  "allowUnsandboxedCommands": true,
+                  "network": {
+                    "allowedDomains": [
+                      "project.invalid"
+                    ]
+                  },
+                  "filesystem": {
+                    "allowRead": [
+                      "/synthetic/project"
+                    ]
+                  },
+                  "excludedCommands": [
+                    "project-synthetic *",
+                    "shared-synthetic *"
+                  ]
+                }
+              }
+            },
+            {
+              "source": "localSettings",
+              "settings": {
+                "permissions": {
+                  "allow": [
+                    "Bash(local-synthetic:*)"
+                  ]
+                },
+                "sandbox": {
+                  "enabled": true,
+                  "network": {
+                    "allowedDomains": [
+                      "local.invalid"
+                    ]
+                  },
+                  "filesystem": {
+                    "allowRead": [
+                      "/synthetic/local"
+                    ]
+                  },
+                  "excludedCommands": [
+                    "local-synthetic *"
+                  ]
+                }
+              }
+            },
+            {
+              "source": "flagSettings",
+              "settings": {
+                "sandbox": {
+                  "enabled": false
+                }
+              }
+            }
+          ],
+          "applied": {
+            "model": "claude-opus-5[1m]",
+            "effort": "high",
+            "advisor": null,
+            "ultracode": false
+          }
+        },
+        "frames": [
+          {
+            "type": "control_request",
+            "subtype": "initialize"
+          },
+          {
+            "type": "control_request",
+            "subtype": "get_settings"
+          }
+        ],
+        "outputTypes": [
+          "control_response",
+          "control_response"
+        ],
+        "stderr": "Ignoring 1 permissions.allow entry from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects[\"/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/project\"].hasTrustDialogAccepted: true in /var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/config/.claude.json.\n",
+        "sandboxDebug": [],
+        "forcedCleanup": false,
+        "nativeExitCode": 0,
+        "nativeExitSignal": null
+      }
+    },
+    {
+      "name": "cli-local-explicit",
+      "processStatus": 0,
+      "processStderr": "",
+      "observation": {
+        "mode": "cli",
+        "args": [
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--input-format",
+          "stream-json",
+          "--debug-file",
+          "/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/debug-cli.log",
+          "--permission-prompt-tool",
+          "stdio",
+          "--allowedTools",
+          "Bash(adapter-synthetic:*)",
+          "--tools",
+          "",
+          "--setting-sources=user,project,local",
+          "--strict-mcp-config",
+          "--permission-mode",
+          "default",
+          "--no-session-persistence",
+          "--settings",
+          "{\"sandbox\":{\"enabled\":true,\"failIfUnavailable\":true,\"autoAllowBashIfSandboxed\":false,\"allowUnsandboxedCommands\":false,\"network\":{\"allowLocalBinding\":true,\"allowedDomains\":[\"flag.invalid\"]},\"excludedCommands\":[],\"filesystem\":{\"allowRead\":[\"/synthetic/flag\"]}}}"
+        ],
+        "argumentSettings": {
+          "sandbox": {
+            "enabled": true,
+            "failIfUnavailable": true,
+            "autoAllowBashIfSandboxed": false,
+            "allowUnsandboxedCommands": false,
+            "network": {
+              "allowLocalBinding": true,
+              "allowedDomains": [
+                "flag.invalid"
+              ]
+            },
+            "excludedCommands": [],
+            "filesystem": {
+              "allowRead": [
+                "/synthetic/flag"
+              ]
+            }
+          }
+        },
+        "settings": {
+          "effective": {
+            "permissions": {
+              "allow": [
+                "Bash(user-synthetic:*)",
+                "Bash(project-synthetic:*)",
+                "Bash(local-synthetic:*)"
+              ],
+              "defaultMode": "default",
+              "ask": [
+                "Bash(*)"
+              ]
+            },
+            "sandbox": {
+              "enabled": true,
+              "autoAllowBashIfSandboxed": false,
+              "network": {
+                "allowedDomains": [
+                  "user.invalid",
+                  "project.invalid",
+                  "local.invalid",
+                  "flag.invalid"
+                ],
+                "allowLocalBinding": true
+              },
+              "filesystem": {
+                "allowRead": [
+                  "/synthetic/user",
+                  "/synthetic/project",
+                  "/synthetic/local",
+                  "/synthetic/flag"
+                ]
+              },
+              "excludedCommands": [
+                "user-synthetic *",
+                "shared-synthetic *",
+                "project-synthetic *",
+                "local-synthetic *"
+              ],
+              "failIfUnavailable": true,
+              "allowUnsandboxedCommands": false
+            }
+          },
+          "sources": [
+            {
+              "source": "userSettings",
+              "settings": {
+                "permissions": {
+                  "allow": [
+                    "Bash(user-synthetic:*)"
+                  ],
+                  "defaultMode": "default"
+                },
+                "sandbox": {
+                  "enabled": false,
+                  "autoAllowBashIfSandboxed": true,
+                  "network": {
+                    "allowedDomains": [
+                      "user.invalid"
+                    ]
+                  },
+                  "filesystem": {
+                    "allowRead": [
+                      "/synthetic/user"
+                    ]
+                  },
+                  "excludedCommands": [
+                    "user-synthetic *",
+                    "shared-synthetic *"
+                  ]
+                }
+              }
+            },
+            {
+              "source": "projectSettings",
+              "settings": {
+                "permissions": {
+                  "allow": [
+                    "Bash(project-synthetic:*)"
+                  ],
+                  "ask": [
+                    "Bash(*)"
+                  ]
+                },
+                "sandbox": {
+                  "enabled": true,
+                  "failIfUnavailable": false,
+                  "autoAllowBashIfSandboxed": true,
+                  "allowUnsandboxedCommands": true,
+                  "network": {
+                    "allowedDomains": [
+                      "project.invalid"
+                    ]
+                  },
+                  "filesystem": {
+                    "allowRead": [
+                      "/synthetic/project"
+                    ]
+                  },
+                  "excludedCommands": [
+                    "project-synthetic *",
+                    "shared-synthetic *"
+                  ]
+                }
+              }
+            },
+            {
+              "source": "localSettings",
+              "settings": {
+                "permissions": {
+                  "allow": [
+                    "Bash(local-synthetic:*)"
+                  ]
+                },
+                "sandbox": {
+                  "enabled": true,
+                  "network": {
+                    "allowedDomains": [
+                      "local.invalid"
+                    ]
+                  },
+                  "filesystem": {
+                    "allowRead": [
+                      "/synthetic/local"
+                    ]
+                  },
+                  "excludedCommands": [
+                    "local-synthetic *"
+                  ]
+                }
+              }
+            },
+            {
+              "source": "flagSettings",
+              "settings": {
+                "sandbox": {
+                  "enabled": true,
+                  "failIfUnavailable": true,
+                  "autoAllowBashIfSandboxed": false,
+                  "allowUnsandboxedCommands": false,
+                  "network": {
+                    "allowedDomains": [
+                      "flag.invalid"
+                    ],
+                    "allowLocalBinding": true
+                  },
+                  "filesystem": {
+                    "allowRead": [
+                      "/synthetic/flag"
+                    ]
+                  },
+                  "excludedCommands": []
+                }
+              }
+            }
+          ],
+          "applied": {
+            "model": "claude-opus-5[1m]",
+            "effort": "high",
+            "advisor": null,
+            "ultracode": false
+          }
+        },
+        "frames": [
+          {
+            "type": "control_request",
+            "subtype": "initialize"
+          },
+          {
+            "type": "control_request",
+            "subtype": "get_settings"
+          }
+        ],
+        "outputTypes": [
+          "control_response",
+          "control_response"
+        ],
+        "stderr": "Ignoring 1 permissions.allow entry from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects[\"/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/project\"].hasTrustDialogAccepted: true in /var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/config/.claude.json.\n",
+        "sandboxDebug": [
+          "2026-09-05T21:41:31.940Z [DEBUG] Failed to initialize sandbox: EPERM: operation not permitted, listen '/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/tmp/srt-mux-89448-0.sock'"
+        ],
+        "forcedCleanup": false,
+        "nativeExitCode": 0,
+        "nativeExitSignal": null
+      }
+    },
+    {
+      "name": "cli-wrapper-denied-required",
+      "processStatus": 0,
+      "processStderr": "",
+      "observation": {
+        "mode": "cli-wrapper-denied",
+        "args": [
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--input-format",
+          "stream-json",
+          "--debug-file",
+          "/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/debug-cli-wrapper-denied.log",
+          "--permission-prompt-tool",
+          "stdio",
+          "--allowedTools",
+          "Bash(adapter-synthetic:*)",
+          "--tools",
+          "",
+          "--setting-sources=user,project,local",
+          "--strict-mcp-config",
+          "--permission-mode",
+          "default",
+          "--no-session-persistence",
+          "--settings",
+          "{\"sandbox\":{\"enabled\":true,\"failIfUnavailable\":true,\"autoAllowBashIfSandboxed\":false,\"allowUnsandboxedCommands\":false,\"network\":{\"allowLocalBinding\":true}}}"
+        ],
+        "argumentSettings": {
+          "sandbox": {
+            "enabled": true,
+            "failIfUnavailable": true,
+            "autoAllowBashIfSandboxed": false,
+            "allowUnsandboxedCommands": false,
+            "network": {
+              "allowLocalBinding": true
+            }
+          }
+        },
+        "settings": {
+          "effective": {
+            "permissions": {
+              "allow": [
+                "Bash(user-synthetic:*)",
+                "Bash(project-synthetic:*)",
+                "Bash(local-synthetic:*)"
+              ],
+              "defaultMode": "default",
+              "ask": [
+                "Bash(*)"
+              ]
+            },
+            "sandbox": {
+              "enabled": true,
+              "autoAllowBashIfSandboxed": false,
+              "network": {
+                "allowedDomains": [
+                  "user.invalid",
+                  "project.invalid",
+                  "local.invalid"
+                ],
+                "allowLocalBinding": true
+              },
+              "filesystem": {
+                "allowRead": [
+                  "/synthetic/user",
+                  "/synthetic/project",
+                  "/synthetic/local"
+                ]
+              },
+              "excludedCommands": [
+                "user-synthetic *",
+                "shared-synthetic *",
+                "project-synthetic *",
+                "local-synthetic *"
+              ],
+              "failIfUnavailable": true,
+              "allowUnsandboxedCommands": false
+            }
+          },
+          "sources": [
+            {
+              "source": "userSettings",
+              "settings": {
+                "permissions": {
+                  "allow": [
+                    "Bash(user-synthetic:*)"
+                  ],
+                  "defaultMode": "default"
+                },
+                "sandbox": {
+                  "enabled": false,
+                  "autoAllowBashIfSandboxed": true,
+                  "network": {
+                    "allowedDomains": [
+                      "user.invalid"
+                    ]
+                  },
+                  "filesystem": {
+                    "allowRead": [
+                      "/synthetic/user"
+                    ]
+                  },
+                  "excludedCommands": [
+                    "user-synthetic *",
+                    "shared-synthetic *"
+                  ]
+                }
+              }
+            },
+            {
+              "source": "projectSettings",
+              "settings": {
+                "permissions": {
+                  "allow": [
+                    "Bash(project-synthetic:*)"
+                  ],
+                  "ask": [
+                    "Bash(*)"
+                  ]
+                },
+                "sandbox": {
+                  "enabled": true,
+                  "failIfUnavailable": false,
+                  "autoAllowBashIfSandboxed": true,
+                  "allowUnsandboxedCommands": true,
+                  "network": {
+                    "allowedDomains": [
+                      "project.invalid"
+                    ]
+                  },
+                  "filesystem": {
+                    "allowRead": [
+                      "/synthetic/project"
+                    ]
+                  },
+                  "excludedCommands": [
+                    "project-synthetic *",
+                    "shared-synthetic *"
+                  ]
+                }
+              }
+            },
+            {
+              "source": "localSettings",
+              "settings": {
+                "permissions": {
+                  "allow": [
+                    "Bash(local-synthetic:*)"
+                  ]
+                },
+                "sandbox": {
+                  "enabled": true,
+                  "network": {
+                    "allowedDomains": [
+                      "local.invalid"
+                    ]
+                  },
+                  "filesystem": {
+                    "allowRead": [
+                      "/synthetic/local"
+                    ]
+                  },
+                  "excludedCommands": [
+                    "local-synthetic *"
+                  ]
+                }
+              }
+            },
+            {
+              "source": "flagSettings",
+              "settings": {
+                "sandbox": {
+                  "enabled": true,
+                  "failIfUnavailable": true,
+                  "autoAllowBashIfSandboxed": false,
+                  "allowUnsandboxedCommands": false,
+                  "network": {
+                    "allowLocalBinding": true
+                  }
+                }
+              }
+            }
+          ],
+          "applied": {
+            "model": "claude-opus-5[1m]",
+            "effort": "high",
+            "advisor": null,
+            "ultracode": false
+          }
+        },
+        "frames": [
+          {
+            "type": "control_request",
+            "subtype": "initialize"
+          },
+          {
+            "type": "control_request",
+            "subtype": "get_settings"
+          }
+        ],
+        "outputTypes": [
+          "control_response",
+          "control_response"
+        ],
+        "stderr": "Ignoring 1 permissions.allow entry from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects[\"/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/project\"].hasTrustDialogAccepted: true in /var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/config/.claude.json.\n",
+        "sandboxDebug": [
+          "2026-09-05T21:41:37.290Z [DEBUG] Failed to initialize sandbox: EPERM: operation not permitted, listen '/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/tmp/srt-mux-89475-0.sock'"
+        ],
+        "forcedCleanup": false,
+        "nativeExitCode": 0,
+        "nativeExitSignal": null
+      }
+    },
+    {
+      "name": "cli-wrapper-denied-optional",
+      "processStatus": 0,
+      "processStderr": "",
+      "observation": {
+        "mode": "cli-wrapper-denied",
+        "args": [
+          "--output-format",
+          "stream-json",
+          "--verbose",
+          "--input-format",
+          "stream-json",
+          "--debug-file",
+          "/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/debug-cli-wrapper-denied.log",
+          "--permission-prompt-tool",
+          "stdio",
+          "--allowedTools",
+          "Bash(adapter-synthetic:*)",
+          "--tools",
+          "",
+          "--setting-sources=user,project,local",
+          "--strict-mcp-config",
+          "--permission-mode",
+          "default",
+          "--no-session-persistence",
+          "--settings",
+          "{\"sandbox\":{\"enabled\":true,\"failIfUnavailable\":false,\"autoAllowBashIfSandboxed\":false,\"allowUnsandboxedCommands\":false,\"network\":{\"allowLocalBinding\":true}}}"
+        ],
+        "argumentSettings": {
+          "sandbox": {
+            "enabled": true,
+            "failIfUnavailable": false,
+            "autoAllowBashIfSandboxed": false,
+            "allowUnsandboxedCommands": false,
+            "network": {
+              "allowLocalBinding": true
+            }
+          }
+        },
+        "settings": {
+          "effective": {
+            "permissions": {
+              "allow": [
+                "Bash(user-synthetic:*)",
+                "Bash(project-synthetic:*)",
+                "Bash(local-synthetic:*)"
+              ],
+              "defaultMode": "default",
+              "ask": [
+                "Bash(*)"
+              ]
+            },
+            "sandbox": {
+              "enabled": true,
+              "autoAllowBashIfSandboxed": false,
+              "network": {
+                "allowedDomains": [
+                  "user.invalid",
+                  "project.invalid",
+                  "local.invalid"
+                ],
+                "allowLocalBinding": true
+              },
+              "filesystem": {
+                "allowRead": [
+                  "/synthetic/user",
+                  "/synthetic/project",
+                  "/synthetic/local"
+                ]
+              },
+              "excludedCommands": [
+                "user-synthetic *",
+                "shared-synthetic *",
+                "project-synthetic *",
+                "local-synthetic *"
+              ],
+              "failIfUnavailable": false,
+              "allowUnsandboxedCommands": false
+            }
+          },
+          "sources": [
+            {
+              "source": "userSettings",
+              "settings": {
+                "permissions": {
+                  "allow": [
+                    "Bash(user-synthetic:*)"
+                  ],
+                  "defaultMode": "default"
+                },
+                "sandbox": {
+                  "enabled": false,
+                  "autoAllowBashIfSandboxed": true,
+                  "network": {
+                    "allowedDomains": [
+                      "user.invalid"
+                    ]
+                  },
+                  "filesystem": {
+                    "allowRead": [
+                      "/synthetic/user"
+                    ]
+                  },
+                  "excludedCommands": [
+                    "user-synthetic *",
+                    "shared-synthetic *"
+                  ]
+                }
+              }
+            },
+            {
+              "source": "projectSettings",
+              "settings": {
+                "permissions": {
+                  "allow": [
+                    "Bash(project-synthetic:*)"
+                  ],
+                  "ask": [
+                    "Bash(*)"
+                  ]
+                },
+                "sandbox": {
+                  "enabled": true,
+                  "failIfUnavailable": false,
+                  "autoAllowBashIfSandboxed": true,
+                  "allowUnsandboxedCommands": true,
+                  "network": {
+                    "allowedDomains": [
+                      "project.invalid"
+                    ]
+                  },
+                  "filesystem": {
+                    "allowRead": [
+                      "/synthetic/project"
+                    ]
+                  },
+                  "excludedCommands": [
+                    "project-synthetic *",
+                    "shared-synthetic *"
+                  ]
+                }
+              }
+            },
+            {
+              "source": "localSettings",
+              "settings": {
+                "permissions": {
+                  "allow": [
+                    "Bash(local-synthetic:*)"
+                  ]
+                },
+                "sandbox": {
+                  "enabled": true,
+                  "network": {
+                    "allowedDomains": [
+                      "local.invalid"
+                    ]
+                  },
+                  "filesystem": {
+                    "allowRead": [
+                      "/synthetic/local"
+                    ]
+                  },
+                  "excludedCommands": [
+                    "local-synthetic *"
+                  ]
+                }
+              }
+            },
+            {
+              "source": "flagSettings",
+              "settings": {
+                "sandbox": {
+                  "enabled": true,
+                  "failIfUnavailable": false,
+                  "autoAllowBashIfSandboxed": false,
+                  "allowUnsandboxedCommands": false,
+                  "network": {
+                    "allowLocalBinding": true
+                  }
+                }
+              }
+            }
+          ],
+          "applied": {
+            "model": "claude-opus-5[1m]",
+            "effort": "high",
+            "advisor": null,
+            "ultracode": false
+          }
+        },
+        "frames": [
+          {
+            "type": "control_request",
+            "subtype": "initialize"
+          },
+          {
+            "type": "control_request",
+            "subtype": "get_settings"
+          }
+        ],
+        "outputTypes": [
+          "control_response",
+          "control_response"
+        ],
+        "stderr": "Ignoring 1 permissions.allow entry from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects[\"/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/project\"].hasTrustDialogAccepted: true in /var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/config/.claude.json.\n",
+        "sandboxDebug": [
+          "2026-09-05T21:41:37.290Z [DEBUG] Failed to initialize sandbox: EPERM: operation not permitted, listen '/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/tmp/srt-mux-89475-0.sock'",
+          "2026-09-05T21:41:42.600Z [DEBUG] Failed to initialize sandbox: EPERM: operation not permitted, listen '/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-claude42-wgtjLw/tmp/srt-mux-89493-0.sock'"
+        ],
+        "forcedCleanup": false,
+        "nativeExitCode": 0,
+        "nativeExitSignal": null
+      }
+    }
+  ],
+  "noUserMessage": true,
+  "assertions": {
+    "allChildProcessesCompleted": true,
+    "sdkExplicitPolicy": true,
+    "sdkDefaultFailClosed": true,
+    "sdkDisabledUnchanged": true,
+    "sdkObjectSandboxReplaced": true,
+    "sdkNonSandboxSettingsPreserved": true,
+    "sdkSettingsPathRejected": true,
+    "cliFlagFalseWins": true,
+    "cliRequiredScalarsWin": true,
+    "cliLoopbackOptionArrives": true,
+    "cliDomainArraysMerge": true,
+    "cliReadArraysMerge": true,
+    "cliEmptyExclusionsDoNotClear": true,
+    "cliPermissionsCascadeUnaffected": true,
+    "onlyControlRequests": true,
+    "noUserMessage": true
+  },
+  "fixturePassed": true,
+  "temporaryTreeRemoved": true
+}

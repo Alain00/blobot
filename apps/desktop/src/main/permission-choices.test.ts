@@ -23,11 +23,12 @@ describe('the answers blobot offers', () => {
     expect(choices).toEqual({
       allowOptionId: 'allow',
       allowAlwaysOptionId: 'allow_always',
+      allowAlways: { name: 'Always Allow' },
       rejectOptionId: 'reject',
     });
   });
 
-  it('offers no standing rule on a runtime that does not have one', () => {
+  it('offers no reusable approval on a runtime that does not have one', () => {
     const choices = choicesOf(
       asking([
         { optionId: 'once', kind: 'allow_once', name: 'Allow once' },
@@ -35,7 +36,19 @@ describe('the answers blobot offers', () => {
       ]),
     );
     expect(choices.allowAlwaysOptionId).toBeUndefined();
+    expect(choices.allowAlways).toBeUndefined();
     expect(choices.allowOptionId).toBe('once');
+  });
+
+  it('describes the same option it will send when a runtime offers several reusable approvals', () => {
+    const choices = choicesOf(asking([
+      { optionId: 'session', kind: 'allow_always', name: 'Allow for this session', description: 'Lasts until the session ends.' },
+      { optionId: 'rule', kind: 'allow_always', name: 'Save a command rule', description: 'Applies to later sessions.' },
+    ]));
+    expect(choices).toEqual({
+      allowAlwaysOptionId: 'session',
+      allowAlways: { name: 'Allow for this session', description: 'Lasts until the session ends.' },
+    });
   });
 
   it('falls back to refusing forever when that is the only refusal there is', () => {

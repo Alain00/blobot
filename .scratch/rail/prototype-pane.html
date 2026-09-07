@@ -1,0 +1,92 @@
+<!doctype html>
+<meta charset="utf-8"><title>member switcher</title>
+<!-- Ticket 07. Two placements for the one deliberate door into a member's pane, now that the
+     rail's roster is gone. Rough: the transcript is stand-in text, the faces are the same
+     approximations as prototype.html. -->
+<style>
+:root{--recessed:#1d1f21;--ground:#1a1c1e;--tray:#212326;--raised:#282a2e;--ink:#c5c8c6;
+      --muted:#969896;--edge:#2b2e33;--line:#373b41;--mono:'Geist Mono',ui-monospace,monospace;
+      color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font:13px/1.5 'Geist',system-ui,sans-serif;
+     display:flex;gap:18px;padding:18px}
+.pane{flex:1;max-width:560px;display:flex;flex-direction:column;height:calc(100vh - 36px);
+      border:1px solid var(--edge);border-radius:10px;overflow:hidden;background:var(--ground)}
+.cap{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.06em;padding:0 0 6px}
+.wrap{display:flex;flex-direction:column;gap:0}
+.chrome{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--edge);
+        color:var(--muted);font-size:12px}
+.glyph{width:16px;height:16px;border:1px solid var(--line);border-radius:3px}
+.mono{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.06em}
+.script{flex:1;overflow:auto;padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+.turn{display:flex;gap:10px}
+.turn .body{flex:1;min-width:0}
+.who{font-size:12px;font-weight:500;margin-bottom:2px}
+.p{color:var(--ink);font-size:13px}
+.fold{color:var(--muted);font-family:var(--mono);font-size:11px;border-left:1px solid var(--edge);
+      padding-left:8px;margin-top:6px}
+.bubble{margin-left:auto;background:var(--raised);border-radius:12px;padding:8px 11px;max-width:70%}
+.composer{border-top:1px solid var(--edge);background:var(--ground);padding:10px 12px 0}
+.field{background:var(--raised);border-radius:12px;padding:10px 12px;color:var(--muted)}
+.tray{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--tray);
+      margin:0 -12px;border-top:1px solid var(--edge)}
+.strip{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid var(--edge)}
+.chip{display:flex;align-items:center;gap:6px;padding:3px 8px 3px 3px;border-radius:20px;color:var(--muted);font-size:12px}
+.chip.sel{background:var(--raised);color:var(--ink)}
+.chip:hover{color:var(--ink)}
+.bare{display:flex;gap:6px;align-items:center}
+.bare span{opacity:.85}
+.bare .sel{outline:1.5px solid var(--ink);outline-offset:2px;border-radius:50%;opacity:1}
+.grow{flex:1}
+.wspr{font-family:var(--mono);font-size:10px;color:var(--muted)}
+</style>
+<body></body>
+<script>
+const BLOBS=['M50 6c26 0 44 18 44 44s-18 44-44 44S6 76 6 50 24 6 50 6z',
+'M50 5c28 0 45 15 45 43 0 30-16 47-45 47S5 78 5 48C5 20 22 5 50 5z',
+'M52 4c30 2 43 21 41 49-2 27-19 43-45 43C22 96 6 78 7 49 8 21 24 2 52 4z',
+'M55 5c29 4 40 25 37 52-3 26-22 39-47 38C21 94 4 74 8 45 12 18 27 1 55 5z'];
+const face=(a,px)=>`<svg width="${px}" height="${px}" viewBox="0 0 100 100" style="display:block">
+  <path d="${BLOBS[a.s%4]}" fill="hsl(${a.h} 62% 58%)"/>
+  <circle cx="38" cy="46" r="6" fill="#141517"/><circle cx="64" cy="46" r="6" fill="#141517"/></svg>`;
+const M=[{n:'Alice',h:268,s:0},{n:'Bob',h:24,s:2},{n:'Mara',h:152,s:3},{n:'Finn',h:200,s:1}];
+
+const script = `
+  <div class="turn"><div class="bubble">can we get the arm64 build green today?</div></div>
+  <div class="turn">${face(M[0],28)}<div class="body"><div class="who">Alice</div>
+    <div class="p">Looking. The failing step is the cache restore, not the compile.</div>
+    <div class="fold">ran 3 tools · 1 message with Finn</div></div></div>
+  <div class="turn">${face(M[3],28)}<div class="body"><div class="who">Finn</div>
+    <div class="p">Rebuilt the cache key off the lockfile hash. Running it now.</div></div></div>`;
+
+const bar = `<div class="chrome"><span class="grow"></span>
+  <span class="glyph"></span><span class="glyph"></span>
+  <span class="mono">TURNS</span></div>`;
+
+function chips(sel){ return M.map((m,i)=>`<span class="chip ${i===sel?'sel':''}">${face(m,20)}${m.n}</span>`).join(''); }
+function bare(sel){ return `<span class="bare">${M.map((m,i)=>`<span class="${i===sel?'sel':''}">${face(m,26)}</span>`).join('')}</span>`; }
+
+const A = `<div class="wrap">
+  <div class="cap">A · IN THE TRAY, UNDER THE COMPOSER</div>
+  <div class="pane">${bar}<div class="script">${script}</div>
+  <div class="composer"><div class="field">Message the team</div>
+    <div class="tray">${chips(-1)}<span class="grow"></span></div></div></div></div>`;
+
+const B = `<div class="wrap">
+  <div class="cap">B · A STRIP AT THE HEAD OF THE TRANSCRIPT</div>
+  <div class="pane">${bar}
+  <div class="strip">${bare(-1)}<span class="grow"></span><span class="wspr">4 on this team</span></div>
+  <div class="script">${script}</div>
+  <div class="composer"><div class="field">Message the team</div>
+    <div class="tray"><span class="wspr">handbook · 4</span><span class="grow"></span><span class="wspr">+412 −7 · 9 files</span></div></div></div></div>`;
+
+const C = `<div class="wrap">
+  <div class="cap">C · IN THE TRAY, SELECTED (INSIDE ALICE'S PANE)</div>
+  <div class="pane">${bar}<div class="script">
+    <div class="turn">${face(M[0],28)}<div class="body"><div class="who">Alice</div>
+    <div class="p">The cache key was stale. Pushed the fix to blobot/api/alice.</div></div></div></div>
+  <div class="composer"><div class="field">Message Alice</div>
+    <div class="tray">${chips(0)}<span class="grow"></span><span class="wspr">handbook · 2</span></div></div></div></div>`;
+
+document.body.innerHTML = A + B + C;
+</script>

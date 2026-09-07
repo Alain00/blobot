@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, session, shell } from 'electron';
+import { registerSkillsIpc } from './skills-ipc.js';
 import { writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
@@ -45,6 +46,8 @@ import { encodeTeamIcon, suggestTeamIcon } from './team-icon.js';
 import {
   TeamCreationError,
   createTeam,
+  createThread,
+  threadOf,
   deleteTeam,
   measureTeam,
   publishAgentBranch,
@@ -75,6 +78,11 @@ import { knownRuntime, knownRuntimes, refreshKnownRuntimes } from './known-runti
 import { resizeStep, startStep, stopStep, writeStep } from './runtime-step.js';
 import { isWorking, type RunningTeam } from './running-team.js';
 import { TeamPool } from './team-pool.js';
+import { DEFAULT_LIVE_TEAM_LIMIT, MachinePreferences } from './machine-preferences.js';
+import { DesktopMachines } from './machines.js';
+import { MachineInventory } from './machine-inventory.js';
+import { EngineSetup } from './engine-setup.js';
+import { MachineLogins, type MachineLoginAccess } from './machine-login.js';
 import { DictationHost, TRYOUT_TEAM } from './dictation.js';
 import { DictationSettingsHost } from './dictation-settings.js';
 import { SpeechFiles, type SpeechTarget } from './speech-files.js';
@@ -88,7 +96,7 @@ import {
   scheduledRoutines,
   toRunRow,
 } from './routine-rows.js';
-import { CEILING_TABLES, trustLevelsFor } from './runtime-for.js';
+import { CEILING_TABLES, localProtectionFor, trustLevelsFor } from './runtime-for.js';
 import { ceilingIsSane, ceilingRows, resolveCeiling } from './context-ceilings.js';
 import type {
   EditAgentResult,
@@ -107,6 +115,7 @@ import type {
   UiRoutineRun,
   UiRoutineTarget,
   UiContextCeiling,
+  UiDepartedAgent,
   UiRuntimeChoice,
   UiRuntimeOptions,
   UiDictationState,
@@ -125,6 +134,7 @@ import type {
   UiWorkspaceChanges,
   UiPublishResult,
   UiSwitchResult,
+  UiRailAgent,
   UiTeamSummary,
   UiWorkspaceInspection,
 } from '../shared/api.js';
@@ -232,26 +242,31 @@ let demo: RunningTeam | undefined;
 let openError: string | undefined;
 
 /**
- * How many teams stay loaded. Three is the smallest number that makes the common shape — a
- * team you are working in, one you are waiting on, one you keep glancing at — cost nothing to
- * move between. Every extra live team is a bridge process per agent, so this is a real cost
- * and not a free cache.
+ * How many teams stay loaded before the saved preference is read.
+ *
+ * It was three and it was final, which made a real cost invisible: a fourth team's agents were
+ * stopped the moment a fifth was opened, so their Machines went out on the rail with nothing
+ * saying why. Every extra live team is still a bridge process per agent — the cost is real —
+ * but how many of them this computer can hold is the user's to say. `DEFAULT_LIVE_TEAM_LIMIT`
+ * and Settings' Machines section.
  */
-const LIVE_TEAM_LIMIT = 3;
+const LIVE_TEAM_LIMIT = DEFAULT_LIVE_TEAM_LIMIT;
 
 /** Outstanding permission requests, so an answer can find the team that is blocked on it. */
 const permissions = new Map<string, { teamId: string; orchestrator: RunningTeam['orchestrator'] }>();
 
-/** A pending request in the words the transcript uses. The option ids never leave the main
- *  process: the renderer answers `allow` or `reject`, which is all ticket 14 offers. */
+/** A pending request in the words the transcript uses. Option ids stay in main; the renderer
+ *  returns one of blobot's three choices and receives the selected option's explanation. */
 function asUiPermission(pending: PendingPermission): UiPermissionRequest {
+  const choices = choicesOf(pending);
   return {
     id: pending.id,
     agentId: pending.agentId,
     toolCallId: pending.toolCallId,
     title: pending.title,
-    canAllow: choicesOf(pending).allowOptionId !== undefined,
-    canAllowAlways: choicesOf(pending).allowAlwaysOptionId !== undefined,
+    canAllow: choices.allowOptionId !== undefined,
+    canAllowAlways: choices.allowAlwaysOptionId !== undefined,
+    ...(choices.allowAlways === undefined ? {} : { allowAlways: choices.allowAlways }),
   };
 }
 
@@ -263,6 +278,7 @@ function asUiPermission(pending: PendingPermission): UiPermissionRequest {
  * login where the binary was found and nothing at all where it was not.
  */
 function asUiRuntime(detection: RuntimeDetection): UiRuntimeChoice {
+  const localProtection = localProtectionFor(detection.runtimeId);
   return {
     runtimeId: detection.runtimeId,
     label: detection.label,
@@ -278,6 +294,7 @@ function asUiRuntime(detection: RuntimeDetection): UiRuntimeChoice {
     // Static per runtime, unlike the remedies above, and looked up in the one module allowed to
     // know what a `runtime_id` means. Three levels or four, and the renderer is not told why.
     trustLevels: trustLevelsFor(detection.runtimeId),
+    ...(localProtection === undefined ? {} : { localProtection }),
   };
 }
 
@@ -312,32 +329,82 @@ function asStepRequest(
  * nobody could keep. Only ever started once a window exists.
  */
 let routines: RoutineRunner | undefined;
+let machinePreferences: MachinePreferences | undefined;
+let machines: DesktopMachines | undefined;
+let engineSetup: EngineSetup | undefined;
+let machineLogins: MachineLogins | undefined;
+let machineInventory: MachineInventory | undefined;
+const startingTeams = new Map<string, RunningTeam>();
+
+function agentAccess(teamId: string, agentId: string) {
+  const live = pool.find(teamId) ?? startingTeams.get(teamId), record = store?.agentById(agentId);
+  const machine = live?.machines?.get(agentId), execution = live?.executions?.get(agentId);
+  if (live === undefined || record?.teamId !== teamId) {
+    throw new Error('Open this agent’s team to manage its execution.');
+  }
+  return { record, machine, execution, failure: live.orchestrator.failureOf(agentId), retry: async () => {
+    if (machine?.kind === 'local') await refreshKnownRuntimes();
+    await live.orchestrator.retryAgent(agentId);
+  },
+    pendingMessages: () => live.orchestrator.mailbox(agentId).length };
+}
+
+function boxAccess(teamId: string, agentId: string): MachineLoginAccess {
+  const access = agentAccess(teamId, agentId);
+  if (access.machine?.runtimeAccess === undefined || access.execution === undefined) throw new Error('This agent does not have a sandbox runtime to sign in.');
+  return { ...access, execution: access.execution, machine: access.machine as MachineLoginAccess['machine'] };
+}
+
+function machinesOf(teamId: string) {
+  const team = store?.teamById(teamId);
+  return team === undefined || machines === undefined || store === undefined ? undefined
+    : machines.forTeam(store.agentsOfTeam(teamId), team);
+}
 
 const pool = new TeamPool<RunningTeam>({
   limit: LIVE_TEAM_LIMIT,
   start: async (team) => {
     if (store === undefined || opened === undefined) throw new Error('No database is open.');
-    const live = await startTeam({
-      team,
-      store,
-      db: opened.db,
-      clock,
-      // Each agent reports itself up, and the rail redraws that one row. A cold start is a
-      // workspace reconcile and a process per agent, and reporting only at the end would make
-      // a four-agent team look frozen for as long as its slowest member takes.
-      onAgentReady: (agentId) => {
-        if (opening?.team.id !== team.id) return;
-        opening.ready.add(agentId);
-        send('blobot:team');
-      },
-    });
-    attach(live);
-    return live;
+    try {
+      const live = await startTeam({
+        team,
+        store,
+        db: opened.db,
+        clock,
+        onStarting: (starting) => {
+          startingTeams.set(team.id, starting);
+          if (closing !== undefined) for (const execution of starting.executions?.values() ?? []) void execution.stop().catch(() => {});
+          send('blobot:team');
+        },
+        ...(machines === undefined ? {} : { createMachine: (record: import('@blobot/core').AgentRecord) => machines!.forAgent(record, team) }),
+        acquireResources: async (record) => record.profileId && machines ? machines.skills.acquire(record.profileId) : async () => {},
+        beforeRuntimeStart: async (machine, record) => {
+          if (machine.runtimeAccess !== undefined) await machine.runtimeAccess.beforeStart();
+          else if (machine.kind === 'local') {
+            const detection = await knownRuntime(record.runtimeId);
+            if (detection?.readiness === 'not_installed') throw new Error(`${record.name} needs ${detection.label} installed on this computer. Open Settings → Runtimes, then try again.`);
+          }
+        },
+        ...(machinePreferences === undefined ? {} : { idleAfterMs: machinePreferences.idleAfterMs }),
+        canSleep: () => !pool.isHeld(team.id),
+        onMachinePowerChange: () => send('blobot:team'),
+        // Each agent reports itself up, and the rail redraws that one row. A cold start is a
+        // workspace reconcile and a process per agent, and reporting only at the end would make
+        // a four-agent team look frozen for as long as its slowest member takes.
+        onAgentReady: (agentId) => {
+          if (opening?.team.id !== team.id) return;
+          opening.ready.add(agentId);
+          send('blobot:team');
+        },
+      });
+      attach(live);
+      return live;
+    } finally { startingTeams.delete(team.id); }
   },
   isWorking,
   onEvict: (live, reason) => {
     if (reason === 'over_limit') {
-      process.stderr.write(`[teams] ${live.team.name} stopped: ${LIVE_TEAM_LIMIT} teams stay live\n`);
+      process.stderr.write(`[teams] ${live.team.name} stopped: ${pool.limit} teams stay live\n`);
     }
   },
 });
@@ -378,7 +445,14 @@ const OWN_TOOL_CHARS =
 function teamSummaries(): UiTeamSummary[] {
   if (store === undefined) return [];
   return store.listTeams().map((team) => {
-    const lastActiveAt = store?.lastActiveAt(team.id);
+    // Every live team's own reading, and never only the open one's. A backgrounded team is
+    // still running — that is what the pool is for — so a dot drawn from the open roster alone
+    // was going out on rows whose agents were awake.
+    const live = pool.find(team.id);
+    const starting = startingTeams.get(team.id);
+    const powerOf = (agentId: string) => live?.powerOf?.(agentId) ?? starting?.powerOf?.(agentId);
+    const said = store?.lastSaidIn(team.id);
+    const lastActiveAt = said?.at ?? store?.lastActiveAt(team.id);
     const lead = (store?.agentsOfTeam(team.id) ?? []).find(
       (agent) => agent.id === team.leadAgentId,
     );
@@ -387,23 +461,63 @@ function teamSummaries(): UiTeamSummary[] {
       name: team.name,
       workspacePath: team.workspacePath,
       workspaceKind: team.workspaceKind,
+      ...(team.defaultMachine === undefined ? {} : { defaultMachine: team.defaultMachine }),
       ...(team.icon === undefined ? {} : { icon: team.icon }),
       // The members rather than a count of them: the rail draws every team as its faces, and
       // a face is seeded by the agent's name. Same query the count came from.
-      members: (store?.agentsOfTeam(team.id) ?? []).map((agent) => ({
-        id: agent.id,
-        name: agent.name,
-        ...(agent.profileId === undefined ? {} : { profileId: agent.profileId }),
-        ...(agent.hue === undefined ? {} : { hue: agent.hue }),
-        ...(agent.shape === undefined ? {} : { shape: agent.shape }),
-      })),
+      members: (store?.agentsOfTeam(team.id) ?? []).map((agent) => {
+        const power = powerOf(agent.id);
+        return {
+          id: agent.id,
+          name: agent.name,
+          ...(agent.profileId === undefined ? {} : { profileId: agent.profileId }),
+          ...(agent.hue === undefined ? {} : { hue: agent.hue }),
+          ...(agent.shape === undefined ? {} : { shape: agent.shape }),
+          ...(power === undefined ? {} : { machinePower: power }),
+        };
+      }),
       // The lead as a *profile* id, because the roster dialog is a set of ticks on profiles and
       // this is the tick it has to draw marked. Absent on a team formed before there were
       // leads, and on one whose lead has left.
       ...(lead?.profileId === undefined ? {} : { leadProfileId: lead.profileId }),
       ...(lastActiveAt === undefined ? {} : { lastActiveAt }),
+      ...(said === undefined ? {} : { lastLine: said.text.slice(0, RAIL_LINE_LIMIT) }),
+      ...(team.threadFor === undefined ? {} : { threadFor: team.threadFor }),
     };
   });
+}
+
+/**
+ * How much of the last thing said travels for a rail row. One line at rail width is well under
+ * this; the bound is what stops a 4,000-character answer crossing IPC to be clipped by CSS.
+ */
+const RAIL_LINE_LIMIT = 200;
+
+/**
+ * Every hired agent, for the rail's second kind of row.
+ *
+ * `.scratch/rail/`. A row is the **person** and never the seat, so this is the profile list and
+ * not a flattening of memberships: Alice on four teams is one row here, exactly as she is one
+ * row on *your agents*. Their thread is looked up by the stored `thread_for` value, and is
+ * absent until their first message makes one.
+ */
+function railAgents(): UiRailAgent[] {
+  if (store === undefined) return [];
+  const threads = new Map(
+    store
+      .listTeams()
+      .filter((team) => team.threadFor !== undefined)
+      .map((team) => [team.threadFor as string, team.id]),
+  );
+  return store.listProfiles().map((profile) => ({
+    id: profile.id,
+    name: profile.name,
+    role: profile.role,
+    ...(profile.hue === undefined ? {} : { hue: profile.hue }),
+    ...(profile.shape === undefined ? {} : { shape: profile.shape }),
+    hiredAt: profile.createdAt,
+    ...(threads.get(profile.id) === undefined ? {} : { threadId: threads.get(profile.id) as string }),
+  }));
 }
 
 /**
@@ -428,13 +542,26 @@ function liveStatuses(): Record<string, AgentStatus> {
 /** Every hired agent, and which teams it is on — a membership query, never a stored count. */
 function agentProfiles(): UiAgentProfile[] {
   if (store === undefined) return [];
-  const teamNames = new Map(store.listTeams().map((team) => [team.id, team.name]));
+  // Threads excluded: a thread's Team name is the agent's own, invented in the store and drawn
+  // nowhere, so listing it here would read as *Alice is on a team called Alice*.
+  const teamNames = new Map(
+    store
+      .listTeams()
+      .filter((team) => team.threadFor === undefined)
+      .map((team) => [team.id, team.name]),
+  );
+  const threads = new Map(
+    (store.listTeams() ?? [])
+      .filter((team) => team.threadFor !== undefined)
+      .map((team) => [team.threadFor as string, team.id]),
+  );
   return store.listProfiles().map((profile) => ({
     id: profile.id,
     name: profile.name,
     role: profile.role,
     runtimeId: profile.runtimeId,
     runtimeLabel: runtimeLabel(profile.runtimeId),
+    ...(threads.get(profile.id) === undefined ? {} : { threadId: threads.get(profile.id) as string }),
     ...(profile.instructions === undefined ? {} : { instructions: profile.instructions }),
     ...(profile.hue === undefined ? {} : { hue: profile.hue }),
     ...(profile.shape === undefined ? {} : { shape: profile.shape }),
@@ -465,20 +592,30 @@ function agentProfiles(): UiAgentProfile[] {
 function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<string> }): UiSnapshot {
   const { team, ready } = pending;
   const records = store?.agentsOfTeam(team.id) ?? [];
+  const starting = startingTeams.get(team.id);
   return {
     team: {
       id: team.id,
       name: team.name,
       workspacePath: team.workspacePath,
       ...(team.icon === undefined ? {} : { icon: team.icon }),
+      ...(team.threadFor === undefined ? {} : { threadFor: team.threadFor }),
       turnBudget: team.turnBudget,
       ...(team.leadAgentId === undefined ? {} : { leadAgentId: team.leadAgentId }),
     },
     teams: teamSummaries(),
+    // The rail's agent rows and their unread marks are store reads, like the roster and the
+    // transcript below: a hired agent exists whether or not any team is coming up. Omitting
+    // them emptied the rail of every agent for the length of a cold start.
+    profiles: railAgents(),
+    unread: unreadAgents(),
+    departed: departedOf(store, team.id, records),
     agents: records.map((record) => ({
       id: record.id,
       name: record.name,
       role: record.role,
+      ...(record.machine === undefined ? {} : { machine: record.machine }),
+      machinePower: starting?.powerOf?.(record.id) ?? 'unknown',
       runtimeLabel: runtimeLabel(record.runtimeId),
       // The Workspace it will be cut from. Its own AgentWorkspace does not exist yet on a first
       // launch, and naming a path that has not been provisioned would be a claim, not a fact.
@@ -495,7 +632,7 @@ function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<str
     statuses: {
       ...liveStatuses(),
       ...Object.fromEntries(
-        records.map((record) => [record.id, ready.has(record.id) ? 'idle' : 'starting']),
+        records.map((record) => [record.id, starting?.orchestrator.statusOf(record.id) ?? (ready.has(record.id) ? 'idle' : 'starting')]),
       ),
     },
     // Nothing has a session yet, so there is no menu to offer and no block to answer.
@@ -556,6 +693,37 @@ function transcript(
     // and the row carries a link — so the name is looked up beside the window it is about.
     routineOrigins: routineOrigins(store, window.messages),
   };
+}
+
+/**
+ * Who wrote into this team's transcript and is no longer on it.
+ *
+ * `.scratch/team-addressing/issues/07`. An Agent taken off a team is tombstoned rather than
+ * deleted, so its rows survive in the transcript with nothing on the live roster left to resolve
+ * them -- and the renderer's every fallback was `?? item.agentId`, which put a database key in
+ * the reading column under a hue derived from that key. The store already knew: the same
+ * `includeDeleted` read is what `transcriptOfTeam` uses to decide which rows belong to the team
+ * at all, so the name and the face were one flag away from every row they are owed to.
+ *
+ * The roster is subtracted rather than the deleted flag trusted, so this list and `agents`
+ * cannot both claim the same person however the two reads are ordered.
+ */
+function departedOf(
+  store: SqliteStore | undefined,
+  teamId: string,
+  roster: readonly { readonly id: string }[],
+): readonly UiDepartedAgent[] {
+  if (store === undefined) return [];
+  const here = new Set(roster.map((agent) => agent.id));
+  return store
+    .agentsOfTeam(teamId, { includeDeleted: true })
+    .filter((record) => !here.has(record.id))
+    .map((record) => ({
+      id: record.id,
+      name: record.name,
+      ...(record.hue === undefined ? {} : { hue: record.hue }),
+      ...(record.shape === undefined ? {} : { shape: record.shape }),
+    }));
 }
 
 /**
@@ -637,6 +805,7 @@ function snapshot(): UiSnapshot {
   if (team === undefined) {
     return {
       teams: teamSummaries(),
+      profiles: railAgents(),
       agents: [],
       statuses: {},
       commands: {},
@@ -686,6 +855,7 @@ function snapshot(): UiSnapshot {
       name: team.team.name,
       workspacePath: team.team.workspacePath,
       ...(team.team.icon === undefined ? {} : { icon: team.team.icon }),
+      ...(team.team.threadFor === undefined ? {} : { threadFor: team.team.threadFor }),
       turnBudget: team.team.turnBudget,
       ...(team.team.leadAgentId === undefined ? {} : { leadAgentId: team.team.leadAgentId }),
     },
@@ -704,11 +874,15 @@ function snapshot(): UiSnapshot {
           },
         ]
       : teamSummaries(),
+    profiles: railAgents(),
+    departed: departedOf(team.store, team.team.id, team.agents),
     agents: team.agents.map((agent) => ({
       id: agent.id,
       name: agent.name,
       role: agent.role,
       runtimeLabel: team.runtimeLabels[agent.id] ?? 'unknown',
+      ...(team.powerOf === undefined ? {} : { machinePower: team.powerOf(agent.id) }),
+      ...(agent.machine === undefined ? {} : { machine: agent.machine }),
       workspacePath: agent.workspacePath,
       ...faceOf(agent.id),
       ...(team.branches[agent.id] === undefined ? {} : { branch: team.branches[agent.id] }),
@@ -1090,6 +1264,24 @@ async function createWindow(): Promise<void> {
 }
 
 void app.whenReady().then(async () => {
+  machinePreferences = new MachinePreferences(join(app.getPath('userData'), 'machine-preferences.json'));
+  machines = new DesktopMachines(join(app.getPath('userData'), 'machines'), undefined, () => send('blobot:machines'));
+  const configuredMachines = () => (store?.listTeams() ?? []).flatMap((team) =>
+      (store?.agentsOfTeam(team.id) ?? []).flatMap((agent) => agent.machine?.kind === 'box' ? [{
+        teamId: team.id, agentId: agent.id, teamName: team.name, agentName: agent.name, limits: agent.machine.limits,
+      }] : []));
+  machineInventory = new MachineInventory(machines, configuredMachines, (agentId) =>
+    [...startingTeams.values(), ...pool.live].some((live) => live.agents.some((agent) => agent.id === agentId)) ||
+    (store?.listTeams() ?? []).some((team) => store?.agentsOfTeam(team.id).some((agent) => agent.id === agentId) === true));
+  engineSetup = new EngineSetup(machines, { changed: () => send('blobot:machines'), openPackage: (path) => shell.openPath(path),
+    sleepError: () => machinePreferences?.readError, configuredMachines, inventory: () => machineInventory!.view(),
+  });
+  machineLogins = new MachineLogins(boxAccess, () => send('blobot:machines'), (url) => shell.openExternal(url));
+  await machinePreferences.load().catch(() => {
+    process.stderr.write('[machines] Saved sleep settings could not be read; automatic sleep is disabled. The file was kept.\n');
+  });
+  // Before the first team is opened, so nothing is started under the wrong number.
+  pool.limit = machinePreferences.liveTeamLimit;
   // No native menubar. Every command blobot has is on the surface it belongs to, so the
   // default File/Edit/View/Window strip was four menus of things this app does not do,
   // drawn above a window whose own chrome is the interface.
@@ -1137,7 +1329,7 @@ void app.whenReady().then(async () => {
         },
         // Held rather than selected: a firing runs a team, it does not switch to it. The pool's
         // own rule protects the team the user is working in, because it never evicts one
-        // mid-turn, and `startTeam` refuses by name when a runtime is not installed.
+        // mid-turn. A missing local runtime fails that Agent by name while peers start.
         open: async (team) => (await pool.hold(team)).orchestrator,
         finished: (team) => pool.letGo(team.id),
         onLog: (line) => process.stderr.write(`${line}\n`),
@@ -1183,19 +1375,6 @@ void app.whenReady().then(async () => {
       await current()?.orchestrator.promptFromUser(agentIds, text, attachmentIds);
     },
   );
-
-  /**
-   * *brief them*, from the notice card above an unbriefed agent's composer.
-   *
-   * Its own channel and not `blobot:prompt` with a canned string, because the string is not the
-   * renderer's: what goes on the wire is core's `BRIEFING_KNOCK` and the renderer must not be
-   * able to say it. That is `detect/remedies.ts`'s rule about argv drawn again — two ids travel
-   * and the words are looked up on the far side.
-   */
-  ipcMain.handle('blobot:brief', async (_event, agentId: string) => {
-    if (opening !== undefined) return;
-    await current()?.orchestrator.promptForBriefing(agentId);
-  });
 
   /**
    * Picking a file up. Three doors, one place that reads bytes, and the checks before the
@@ -1441,6 +1620,7 @@ void app.whenReady().then(async () => {
     stopStep(stepId);
   });
   ipcMain.handle('blobot:listAgents', (): UiAgentProfile[] => agentProfiles());
+  registerSkillsIpc({ store: () => store, machines: () => machines, teams: () => [...new Map([...pool.live, ...startingTeams.values()].map((team) => [team.team.id, team])).values()] });
   /**
    * Ask a runtime what it lets an agent be set to.
    *
@@ -1523,8 +1703,28 @@ void app.whenReady().then(async () => {
       }
     },
   );
-  ipcMain.handle('blobot:retireAgent', (_event, profileId: string) => {
-    store?.tombstoneProfile(profileId, clock.now());
+  /**
+   * Retire an agent, and delete its thread with it.
+   *
+   * The thread goes **first** and by the ordinary team-delete path, which removes every
+   * AgentWorkspace before the tombstone because the branch is `blobot/<team>/<agent>` and the
+   * name has to still be true. Teams the agent is on are untouched: they keep running with their
+   * workspaces and their conversations, and *ending a team is a separate decision* stays true of
+   * every team the user made. `.scratch/rail/issues/06-retiring-an-agent.md`.
+   *
+   * A workspace blobot cannot reach is not a refusal here either. The ordinary reason to retire
+   * somebody whose folder is gone is that the folder is gone.
+   */
+  ipcMain.handle('blobot:retireAgent', async (
+    _event, profileId: string, clean = false,
+  ): Promise<TeamDeletionResult> => {
+    if (store === undefined) return { ok: false, error: 'No database is open.' };
+    const thread = threadOf(store, profileId);
+    let result: TeamDeletionResult = { ok: true, removals: [] };
+    if (thread !== undefined) result = await removeTeam(thread.id, clean === true);
+    store.tombstoneProfile(profileId, clock.now());
+    send('blobot:team');
+    return result;
   });
   // ---------------------------------------------------------------- Routines
   //
@@ -1645,12 +1845,18 @@ void app.whenReady().then(async () => {
       teamId: string,
       profileIds: readonly string[],
       leadProfileId?: string,
+      memberMachines?: Readonly<Record<string, import('@blobot/core').MachinePlacement>>,
     ): Promise<TeamDeletionResult> => {
       if (store === undefined) return { ok: false, error: 'No database is open.' };
       const wasLive = pool.find(teamId) !== undefined;
-      await pool.release(teamId);
       try {
-        const removals = await editTeamRoster(teamId, profileIds, { store, clock }, leadProfileId);
+        const activeStore = store;
+        const removals = await pool.withReleased(teamId, async () => {
+          const agentMachines = machinesOf(teamId);
+          return editTeamRoster(teamId, profileIds, {
+            store: activeStore, clock, ...(agentMachines === undefined ? {} : { machines: agentMachines }),
+          }, leadProfileId, memberMachines);
+        });
         return { ok: true, removals: removals.map(asUiRemoval) };
       } catch (error) {
         return { ok: false, error: describe(error) };
@@ -1680,12 +1886,13 @@ void app.whenReady().then(async () => {
    * makes the option answerable: nobody can decide about "delete the workspaces too" without it.
    */
   ipcMain.handle('blobot:teamDiskUsage', async (_event, teamId: string): Promise<UiTeamDiskUsage> => {
-    if (store === undefined) return { bytes: 0, agents: [] };
+    if (store === undefined) return { bytes: null, workBytes: null, stateBytes: null, agents: [] };
     try {
-      return await measureTeam(teamId, { store, clock });
+      const agentMachines = machinesOf(teamId);
+      return await measureTeam(teamId, { store, clock, ...(agentMachines === undefined ? {} : { machines: agentMachines }) });
     } catch {
       // A team blobot cannot measure is offered nothing rather than a wrong figure.
-      return { bytes: 0, agents: [] };
+      return { bytes: null, workBytes: null, stateBytes: null, agents: [] };
     }
   });
 
@@ -1890,14 +2097,30 @@ void app.whenReady().then(async () => {
     },
   );
 
-  ipcMain.handle('blobot:deleteTeam', async (_event, teamId: string, clean = false): Promise<TeamDeletionResult> => {
+  /**
+   * Deleting a team, and the one path that does it.
+   *
+   * Extracted because retiring an agent deletes that agent's thread, and a thread is a Team: the
+   * ordering bought in the Machines review — every AgentWorkspace removed *before* the rows are
+   * tombstoned, because the branch is `blobot/<team>/<agent>` and the name has to still be true —
+   * must not have a second implementation that could disagree with this one.
+   */
+  const removeTeam = async (teamId: string, clean: boolean): Promise<TeamDeletionResult> => {
     if (store === undefined) return { ok: false, error: 'No database is open.' };
     const wasActive = pool.active?.team.id === teamId;
-    await pool.release(teamId);
     try {
-      const deletion = await deleteTeam(teamId, { store, clock }, { clean: clean === true });
+      const activeStore = store;
+      const deletion = await pool.withReleased(teamId, async () => {
+        const agentMachines = machinesOf(teamId);
+        return deleteTeam(teamId, { store: activeStore, clock,
+          ...(agentMachines === undefined ? {} : { machines: agentMachines }),
+        }, { clean });
+      });
       if (wasActive) {
         openError = undefined;
+        // The most recent surviving row, thread or team. A thread is a legitimate place to
+        // land — it resolves to its one agent's pane and never to a team view — and excluding
+        // them would put a user whose only conversations are threads back in the creation flow.
         const next = store.listTeams()[0];
         if (next !== undefined) {
           const opened = await switchTo(next);
@@ -1914,7 +2137,11 @@ void app.whenReady().then(async () => {
     } finally {
       send('blobot:team');
     }
-  });
+  };
+
+  ipcMain.handle('blobot:deleteTeam', (_event, teamId: string, clean = false) =>
+    removeTeam(teamId, clean === true),
+  );
 
   /**
    * The answer to one permission block. Three choices reach here as blobot's own words, and the
@@ -1953,6 +2180,48 @@ void app.whenReady().then(async () => {
 
   // The Dictation section (ticket 10). Every action answers with the whole section.
   ipcMain.handle('blobot:dictationSettings', () => dictationSettings.view());
+  ipcMain.handle('blobot:machineIdleAfterMs', () => machinePreferences?.idleAfterMs);
+  ipcMain.handle('blobot:liveTeamLimit', () => pool.limit);
+  ipcMain.handle('blobot:setLiveTeamLimit', async (_event, value: number) => {
+    if (machinePreferences === undefined) throw new Error('Machine preferences are not available.');
+    const saved = await machinePreferences.setLiveTeamLimit(value);
+    // Applied to the running pool, not only stored: lowering it collects the excess now, under
+    // the eviction rule that never takes the active team or one mid-turn.
+    pool.limit = saved;
+    send('blobot:team');
+    return saved;
+  });
+  ipcMain.handle('blobot:engineSetup', () => engineSetup?.view());
+  ipcMain.handle('blobot:startEngineSetup', (_event, kind: 'install' | 'sign_in' | 'check') => engineSetup?.start(kind));
+  ipcMain.handle('blobot:cancelEngineSetup', (_event, id: string) => engineSetup?.cancel(id));
+  ipcMain.handle('blobot:removeRetainedMachine', async (_event, agentId: string) => {
+    if (machineInventory === undefined) throw new Error('Sandbox storage is unavailable.');
+    await machineInventory.remove(agentId);
+    send('blobot:machines');
+  });
+  ipcMain.handle('blobot:agentMachine', (_event, teamId: string, agentId: string) => {
+    const access = agentAccess(teamId, agentId);
+    const view = access.machine?.runtimeAccess === undefined ? {
+      placement: access.record.machine ?? { kind: 'local' as const }, power: access.execution?.power ?? 'unknown',
+      pendingMessages: access.pendingMessages(), methods: [],
+    } : machineLogins!.view(teamId, agentId);
+    const preparation = access.machine !== undefined && 'preparation' in access.machine ? access.machine.preparation : undefined;
+    const storage = access.machine !== undefined && 'storage' in access.machine ? access.machine.storage : undefined;
+    return { ...view, ...(access.failure === undefined ? {} : { failure: access.failure }),
+      ...(preparation === undefined ? {} : { preparation }), ...(storage === undefined ? {} : { storage }) };
+  });
+  ipcMain.handle('blobot:startMachineLogin', (_event, teamId: string, agentId: string, method: string) => machineLogins?.start(teamId, agentId, method));
+  ipcMain.handle('blobot:openMachineLogin', (_event, teamId: string, agentId: string, id: string) => machineLogins?.open(teamId, agentId, id));
+  ipcMain.handle('blobot:answerMachineLogin', (_event, teamId: string, agentId: string, id: string, value: string) => machineLogins?.respond(teamId, agentId, id, value));
+  ipcMain.handle('blobot:cancelMachineLogin', (_event, teamId: string, agentId: string, id: string) => machineLogins?.cancel(teamId, agentId, id));
+  ipcMain.handle('blobot:retryMachine', (_event, teamId: string, agentId: string) => agentAccess(teamId, agentId).retry());
+  ipcMain.handle('blobot:cancelMachineStart', (_event, teamId: string, agentId: string) => agentAccess(teamId, agentId).execution?.cancelStart());
+  ipcMain.handle('blobot:setMachineIdleAfterMs', async (_event, value: number) => {
+    if (machinePreferences === undefined) throw new Error('Machine preferences are not available.');
+    const saved = await machinePreferences.setIdleAfterMs(value);
+    for (const live of pool.live) live.setIdleAfterMs?.(saved);
+    return saved;
+  });
   ipcMain.handle('blobot:setDictation', (_event, patch: DictationPatch) => dictationSettings.set(patch));
   ipcMain.handle('blobot:checkSpeechReadiness', () => dictationSettings.checkReadiness());
   ipcMain.handle('blobot:downloadSpeech', (_event, target: SpeechTarget) => dictationSettings.download(target));
@@ -1973,6 +2242,59 @@ void app.whenReady().then(async () => {
     if (team === undefined) return { ok: false, error: 'That team is no longer in the database.' };
     if (team.id === current()?.team.id) return { ok: true };
     return switchTo(team);
+  });
+
+  /**
+   * Open an agent's **thread**, if they have one.
+   *
+   * Answering `{ok: true}` with no team is not a failure and is the ordinary case: a freshly
+   * hired agent has no thread until their first message makes one, and the pane draws an empty
+   * conversation until then. `.scratch/rail/issues/04`.
+   */
+  ipcMain.handle('blobot:openThread', async (
+    _event, profileId: string,
+  ): Promise<TeamOpenResult & { agentId?: string }> => {
+    const team = store === undefined ? undefined : threadOf(store, profileId);
+    if (team === undefined) return { ok: true };
+    const agentId = store?.agentsOfTeam(team.id)[0]?.id;
+    if (team.id === current()?.team.id) {
+      return { ok: true, ...(agentId === undefined ? {} : { agentId }) };
+    }
+    const opened = await switchTo(team);
+    return { ...opened, ...(agentId === undefined ? {} : { agentId }) };
+  });
+
+  /**
+   * The first message in a thread, which is what makes the thread.
+   *
+   * Four things happen before a turn starts — the folder, the Team, the Agent, the launch — and
+   * they happen here rather than on the press of a rail row, so curiosity costs nothing. A
+   * failure comes back as one, and the renderer keeps the typed message: `git init` failing or
+   * `~/blobot` not being writable is something the user can fix and send again.
+   */
+  ipcMain.handle('blobot:promptThread', async (
+    _event, profileId: string, text: string, attachmentIds: readonly string[] = [],
+  ): Promise<TeamOpenResult & { agentId?: string }> => {
+    if (store === undefined) return { ok: false, error: 'No database is open.' };
+    let team = threadOf(store, profileId);
+    if (team === undefined) {
+      try {
+        team = await createThread(profileId, { store, clock });
+      } catch (error) {
+        return { ok: false, error: describe(error) };
+      }
+    }
+    if (team.id !== current()?.team.id) {
+      const opened = await switchTo(team);
+      if (!opened.ok) return opened;
+    }
+    const live = current();
+    const agentId = live?.agents[0]?.id;
+    if (live === undefined || agentId === undefined) {
+      return { ok: false, error: 'That conversation could not be opened.' };
+    }
+    await live.orchestrator.promptFromUser([agentId], text, attachmentIds);
+    return { ok: true, agentId };
   });
 
   // What is on disk for dictation, read once so the first snapshot's word is right.
@@ -2082,14 +2404,30 @@ function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+let closing: Promise<void> | undefined;
+let closed = false;
+function closeApplication(): Promise<void> {
+  return closing ??= (async () => {
+    stopStep();
+    routines?.stop();
+    // Stop readers/writers and guest sign-in before closing their durable state.
+    const results = await Promise.allSettled([
+      engineSetup?.close(), machineLogins?.close(), machines?.close(), pool.closeAll(), dictation.stop(), demo?.close(),
+      ...[...startingTeams.values()].flatMap((live) => [...live.executions?.values() ?? []].map((execution) => execution.stop())),
+    ]);
+    if (results.some((result) => result.status === 'rejected')) console.warn('Some application services could not close cleanly.');
+    opened?.close();
+    opened = undefined;
+    store = undefined;
+    closed = true;
+  })();
+}
+
+app.on('before-quit', (event) => {
+  if (closed) return;
+  event.preventDefault();
+  void closeApplication().then(() => app.quit());
+});
 app.on('window-all-closed', () => {
-  // A login nobody is watching any more is a process holding a terminal open forever.
-  stopStep();
-  // And a tick with no window to fire into is the background daemon issue 02 refused.
-  routines?.stop();
-  void pool.closeAll();
-  void dictation.stop();
-  void demo?.close();
-  opened?.close();
-  if (process.platform !== 'darwin') app.quit();
+  void closeApplication().then(() => { if (process.platform !== 'darwin') app.quit(); });
 });

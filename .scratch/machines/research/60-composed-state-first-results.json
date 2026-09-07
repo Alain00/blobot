@@ -1,0 +1,271 @@
+{
+  "date": "2026-09-06T00:29:58.336Z",
+  "uuid": "f239ac04-91fa-4a5b-80c5-b755452cecf5",
+  "candidate": "blobot-machine-probe:explicit-docker-20260905",
+  "manifest": "sha256:1cd3184fceaf6d60c0f364c81bdb26f3359bab91efc666cd172fb75c68ed974c",
+  "scope": "two fresh disposable same-image Machines; no user Agent",
+  "commands": [
+    {
+      "label": "daemon-status",
+      "code": 0,
+      "ms": 261.8915
+    },
+    {
+      "label": "version",
+      "code": 0,
+      "ms": 290.93433300000004
+    },
+    {
+      "label": "read-ssh-forwarding",
+      "code": 0,
+      "ms": 337.8905
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 292.114916
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 245.8190000000002
+    },
+    {
+      "label": "load-local-archive",
+      "code": 0,
+      "ms": 1993.450583
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 266.596
+    },
+    {
+      "label": "create-source",
+      "code": 0,
+      "ms": 2921.95175
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 367.9157920000007
+    },
+    {
+      "label": "create-target",
+      "code": 0,
+      "ms": 2860.5369169999994
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 220.05204100000083
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 435.27220800000214
+    },
+    {
+      "label": "remove-source",
+      "code": 0,
+      "ms": 540.2099589999998
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 341.45895900000323
+    },
+    {
+      "label": "remove-target",
+      "code": 0,
+      "ms": 422.9954579999976
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 286.49333299999853
+    },
+    {
+      "label": "remove-owned-local-alias",
+      "code": 0,
+      "ms": 354.8574579999986
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 234.96045800000138
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 349.6248329999944
+    }
+  ],
+  "diskChecks": [
+    {
+      "label": "before-load",
+      "availableBytes": "21025431552"
+    },
+    {
+      "label": "before-create-source",
+      "availableBytes": "21025558528"
+    },
+    {
+      "label": "before-create-target",
+      "availableBytes": "21006667776"
+    },
+    {
+      "label": "after-cleanup",
+      "availableBytes": "21020184576"
+    }
+  ],
+  "cleanup": {
+    "errors": [],
+    "remainingOwnedBoxes": [],
+    "remainingOwnedImages": [],
+    "tempRemoved": true
+  },
+  "sourceSha256": "37e6243623c066f7255ce67f09a1540822467756db36aa23bd7c0cc277daa1a8",
+  "progress": [
+    {
+      "role": "source",
+      "operation": "prepare",
+      "started": "2026-09-06T00:30:09.017Z",
+      "completed": "2026-09-06T00:30:10.463Z"
+    },
+    {
+      "role": "target",
+      "operation": "prepare",
+      "started": "2026-09-06T00:30:10.463Z",
+      "completed": "2026-09-06T00:30:11.627Z"
+    },
+    {
+      "role": "source",
+      "operation": "digest",
+      "tree": "rootfs",
+      "started": "2026-09-06T00:30:11.627Z",
+      "completed": "2026-09-06T00:30:22.922Z"
+    },
+    {
+      "role": "source",
+      "operation": "digest",
+      "tree": "home",
+      "started": "2026-09-06T00:30:22.922Z",
+      "completed": "2026-09-06T00:30:22.942Z"
+    },
+    {
+      "role": "source",
+      "operation": "digest",
+      "tree": "docker",
+      "started": "2026-09-06T00:30:22.943Z",
+      "completed": "2026-09-06T00:30:22.967Z"
+    },
+    {
+      "role": "target",
+      "operation": "receive",
+      "tree": "rootfs",
+      "started": "2026-09-06T00:30:22.967Z",
+      "completed": "2026-09-06T00:30:31.228Z"
+    },
+    {
+      "role": "source",
+      "operation": "archive",
+      "tree": "rootfs",
+      "started": "2026-09-06T00:30:31.229Z"
+    }
+  ],
+  "boxes": [
+    {
+      "name": "blobot-state60-source-f239ac04-91fa-4a5b-80c5-b755452cecf5",
+      "id": "9f4c04db-d34e-4c06-aeff-4219cfd46b10",
+      "agent": "blobot-synthetic-state60",
+      "status": "running",
+      "workspaces": [
+        "/private/tmp/blobot-state60-phfwCv/source-worktree"
+      ]
+    },
+    {
+      "name": "blobot-state60-target-f239ac04-91fa-4a5b-80c5-b755452cecf5",
+      "id": "4114cc29-b482-4ca8-b8b1-1671a6b3e383",
+      "agent": "blobot-synthetic-state60",
+      "status": "running",
+      "workspaces": [
+        "/private/tmp/blobot-state60-phfwCv/target-worktree"
+      ]
+    }
+  ],
+  "version": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "image": {
+    "id": "1cd3184fceaf",
+    "repository": "docker.io/library/blobot-machine-probe",
+    "tag": "explicit-docker-20260905",
+    "flavor": "shell-docker",
+    "created_at": "2026-09-06T00:30:01Z",
+    "size": 588690428
+  },
+  "kit": {
+    "schemaVersion": "2",
+    "kind": "sandbox",
+    "name": "blobot-synthetic-state60",
+    "sandbox": {
+      "image": "blobot-machine-probe:explicit-docker-20260905",
+      "entrypoint": [
+        "/usr/bin/node"
+      ],
+      "command": {
+        "default": [
+          "--version"
+        ]
+      }
+    },
+    "security": {
+      "privileged": true
+    },
+    "credentials": [],
+    "permissions": {
+      "network": {
+        "allow": [],
+        "deny": []
+      }
+    },
+    "volumes": [
+      {
+        "path": "/home/agent",
+        "size": "8589934592",
+        "mode": "0700"
+      },
+      {
+        "path": "/var/lib/docker",
+        "size": "21474836480",
+        "mode": "0700"
+      }
+    ]
+  },
+  "passed": false,
+  "error": "Error: Machine state transfer could not be verified.\n    at copySbxState (file:///Users/guillermo/Work/blobot/packages/core/dist/machines/sbx/state-transfer.js:93:15)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file:///Users/guillermo/Work/blobot/.scratch/machines/research/60-composed-state-fixture.mjs:94:22",
+  "children": [
+    {
+      "role": "source",
+      "code": null,
+      "stderrBytes": 0
+    },
+    {
+      "role": "target",
+      "code": 0,
+      "stderrBytes": 0
+    }
+  ],
+  "minimumObservedSpace": "20977156096"
+}

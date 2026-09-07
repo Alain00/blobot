@@ -1,0 +1,3197 @@
+{
+  "date": "2026-09-05T19:32:11.457Z",
+  "uuid": "0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+  "candidate": "blobot-machine-probe:explicit-docker-20260905",
+  "expectedManifest": "sha256:1cd3184fceaf6d60c0f364c81bdb26f3359bab91efc666cd172fb75c68ed974c",
+  "scope": "synthetic-only",
+  "commands": [
+    {
+      "label": "load-candidate",
+      "ms": 1996.0256250000002,
+      "code": 0
+    },
+    {
+      "label": "create-source",
+      "ms": 2383.345708,
+      "code": 0
+    },
+    {
+      "label": "stop-source",
+      "ms": 5305.992624999999,
+      "code": 0
+    },
+    {
+      "label": "save-stopped-source-rootfs",
+      "ms": 827.8948329999985,
+      "code": 0
+    },
+    {
+      "label": "create-target",
+      "ms": 2539.4929999999986,
+      "code": 0
+    },
+    {
+      "label": "stop-target",
+      "ms": 5378.562957999999,
+      "code": 0
+    },
+    {
+      "label": "remove-owned-box",
+      "ms": 405.70254099999875,
+      "code": 0
+    },
+    {
+      "label": "remove-owned-box",
+      "ms": 381.3687920000011,
+      "code": 0
+    },
+    {
+      "label": "remove-owned-template",
+      "ms": 209.38187499999913,
+      "code": 0
+    },
+    {
+      "label": "remove-owned-template",
+      "ms": 204.18424999999843,
+      "code": 0
+    }
+  ],
+  "heldCommands": [
+    {
+      "phase": "seed",
+      "op": "inventory",
+      "ms": 54.06141600000046
+    },
+    {
+      "phase": "seed",
+      "op": "seed",
+      "ms": 2656.5835829999987
+    },
+    {
+      "phase": "seed",
+      "op": "seedRootfs",
+      "ms": 41.13349999999991
+    },
+    {
+      "phase": "seed",
+      "op": "state",
+      "ms": 35.63100000000122
+    },
+    {
+      "phase": "seed",
+      "op": "quiesce",
+      "ms": 1093.1361670000006
+    },
+    {
+      "phase": "seed",
+      "op": "close",
+      "ms": 1.809583999998722
+    },
+    {
+      "phase": "sourceMaintenance",
+      "op": "inventory",
+      "ms": 46.21891699999833
+    },
+    {
+      "phase": "sourceMaintenance",
+      "op": "state",
+      "ms": 44.17279100000087
+    },
+    {
+      "phase": "sourceMaintenance",
+      "op": "quiesce",
+      "ms": 1067.3090420000008
+    },
+    {
+      "phase": "sourceMaintenance",
+      "op": "digest",
+      "ms": 191.92929200000071
+    },
+    {
+      "phase": "targetMaintenance",
+      "op": "inventory",
+      "ms": 53.470916999998735
+    },
+    {
+      "phase": "targetMaintenance",
+      "op": "quiesce",
+      "ms": 1059.0099999999984
+    },
+    {
+      "phase": "targetMaintenance",
+      "op": "quiet",
+      "ms": 24.8193339999998
+    },
+    {
+      "phase": "targetMaintenance",
+      "op": "rootfsState",
+      "ms": 96.59020900000178
+    },
+    {
+      "phase": "sourceMaintenance",
+      "op": "rootfsState",
+      "ms": 33.16112499999872
+    },
+    {
+      "phase": "targetMaintenance",
+      "op": "driftTargetRootfs",
+      "ms": 1.162625000000844
+    },
+    {
+      "phase": "targetMaintenance",
+      "op": "restoreStart",
+      "ms": 32.10929100000067
+    },
+    {
+      "phase": "sourceMaintenance",
+      "op": "archive",
+      "ms": 260.6367089999985
+    },
+    {
+      "phase": "targetMaintenance",
+      "op": "restoreEnd",
+      "ms": 22.25774999999703
+    },
+    {
+      "phase": "sourceMaintenance",
+      "op": "digest",
+      "ms": 104.34312499999942
+    },
+    {
+      "phase": "targetMaintenance",
+      "op": "digest",
+      "ms": 101.80441699999938
+    },
+    {
+      "phase": "sourceMaintenance",
+      "op": "quiet",
+      "ms": 14.12749999999869
+    },
+    {
+      "phase": "targetMaintenance",
+      "op": "quiet",
+      "ms": 14.678667000000132
+    },
+    {
+      "phase": "targetMaintenance",
+      "op": "rootfsState",
+      "ms": 29.261208000003535
+    },
+    {
+      "phase": "targetMaintenance",
+      "op": "resume",
+      "ms": 746.4983750000029
+    },
+    {
+      "phase": "targetMaintenance",
+      "op": "state",
+      "ms": 40.40520800000013
+    },
+    {
+      "phase": "targetMaintenance",
+      "op": "close",
+      "ms": 0.6159169999991718
+    },
+    {
+      "phase": "targetReopened",
+      "op": "inventory",
+      "ms": 47.90295799999876
+    },
+    {
+      "phase": "targetReopened",
+      "op": "state",
+      "ms": 50.08183399999689
+    },
+    {
+      "phase": "targetReopened",
+      "op": "rootfsState",
+      "ms": 34.331334000002244
+    },
+    {
+      "phase": "targetReopened",
+      "op": "runRestored",
+      "ms": 1172.2699579999971
+    },
+    {
+      "phase": "targetReopened",
+      "op": "mutateTarget",
+      "ms": 15.495583000003535
+    },
+    {
+      "phase": "sourceMaintenance",
+      "op": "digest",
+      "ms": 106.39883399999962
+    },
+    {
+      "phase": "sourceMaintenance",
+      "op": "quiet",
+      "ms": 11.220500000003085
+    },
+    {
+      "phase": "sourceMaintenance",
+      "op": "resume",
+      "ms": 693.9830839999995
+    },
+    {
+      "phase": "sourceMaintenance",
+      "op": "state",
+      "ms": 41.414083999996365
+    },
+    {
+      "phase": "sourceMaintenance",
+      "op": "rootfsState",
+      "ms": 29.72775000000547
+    },
+    {
+      "phase": "targetReopened",
+      "op": "close",
+      "ms": 0.8781250000029104
+    },
+    {
+      "phase": "sourceMaintenance",
+      "op": "close",
+      "ms": 0.6529169999994338
+    }
+  ],
+  "checks": {
+    "saveLeavesStoppedSourceStopped": true,
+    "source2Cpu2GiBTarget3Cpu3GiB": true,
+    "privateVolumesExact": true,
+    "realContainerdRootMeasured": true,
+    "rootfsPackageAndConffileContentModeOwnerPreserved": true,
+    "measuredRootfsMetadataExact": true,
+    "candidateStopReopenPreserved": true,
+    "opaquePrivateArchiveExactBeforeAfter": true,
+    "sameHeldExecDuringCopy": true,
+    "homeUidGidModesHardlinkSymlinkXattrAndSparsePreserved": true,
+    "DockerImageStoppedContainerNamedVolumePreserved": true,
+    "restoredContainerRuns": true,
+    "originalIndependentAndRecoverable": true
+  },
+  "cleanup": {
+    "errors": [],
+    "remainingBoxes": [],
+    "remainingSnapshot": [],
+    "remainingOwnedCandidate": []
+  },
+  "memory": {
+    "baseline": {
+      "rss": 53100544,
+      "heapTotal": 8273920,
+      "heapUsed": 4900088,
+      "external": 2323848,
+      "arrayBuffers": 38961
+    },
+    "peakRss": 90996736,
+    "peakArrayBuffers": 16249452,
+    "maxRelayFrame": 65536,
+    "final": {
+      "rss": 91029504,
+      "heapTotal": 8273920,
+      "heapUsed": 6405200,
+      "external": 2616936,
+      "arrayBuffers": 280036
+    }
+  },
+  "version": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "diskChecks": [
+    {
+      "label": "candidate-load-and-source-create",
+      "availableBytes": "7670874112",
+      "minimumBytes": "2147483648"
+    },
+    {
+      "label": "second-VM-create",
+      "availableBytes": "7579082752",
+      "minimumBytes": "2147483648"
+    }
+  ],
+  "loaded": {
+    "id": "1cd3184fceaf",
+    "repository": "docker.io/library/blobot-machine-probe",
+    "tag": "explicit-docker-20260905",
+    "flavor": "shell-docker",
+    "created_at": "2026-09-05T19:32:14Z",
+    "size": 588690428
+  },
+  "boxes": [
+    {
+      "name": "blobot-rootfs35-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3-source",
+      "id": "c89b1364-45f4-4267-9eed-30840b1b8002",
+      "cpus": 2,
+      "memory": "2g",
+      "kit": {
+        "schemaVersion": "2",
+        "kind": "sandbox",
+        "name": "blobot-synthetic",
+        "sandbox": {
+          "image": "blobot-machine-probe:explicit-docker-20260905",
+          "entrypoint": [
+            "/usr/bin/node"
+          ],
+          "command": {
+            "default": [
+              "--version"
+            ]
+          }
+        },
+        "security": {
+          "privileged": true
+        },
+        "credentials": [],
+        "permissions": {
+          "network": {
+            "allow": [],
+            "deny": []
+          }
+        },
+        "setup": {
+          "install": [
+            {
+              "user": "0",
+              "command": "chown 1000:1000 /home/agent /workspace && chmod 0700 /home/agent /workspace"
+            }
+          ]
+        },
+        "volumes": [
+          {
+            "path": "/home/agent",
+            "size": "8589934592",
+            "mode": "0700"
+          },
+          {
+            "path": "/workspace",
+            "size": "536870912",
+            "mode": "0700"
+          },
+          {
+            "path": "/var/lib/docker",
+            "size": "21474836480",
+            "mode": "0700"
+          }
+        ]
+      }
+    },
+    {
+      "name": "blobot-rootfs35-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3-target",
+      "id": "277fc041-9748-4a0c-a345-8c22b4c53270",
+      "cpus": 3,
+      "memory": "3g",
+      "kit": {
+        "schemaVersion": "2",
+        "kind": "sandbox",
+        "name": "blobot-synthetic",
+        "sandbox": {
+          "image": "blobot-rootfs35-fixture:0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+          "entrypoint": [
+            "/usr/bin/node"
+          ],
+          "command": {
+            "default": [
+              "--version"
+            ]
+          }
+        },
+        "security": {
+          "privileged": true
+        },
+        "credentials": [],
+        "permissions": {
+          "network": {
+            "allow": [],
+            "deny": []
+          }
+        },
+        "setup": {
+          "install": [
+            {
+              "user": "0",
+              "command": "chown 1000:1000 /home/agent /workspace && chmod 0700 /home/agent /workspace"
+            }
+          ]
+        },
+        "volumes": [
+          {
+            "path": "/home/agent",
+            "size": "8589934592",
+            "mode": "0700"
+          },
+          {
+            "path": "/workspace",
+            "size": "536870912",
+            "mode": "0700"
+          },
+          {
+            "path": "/var/lib/docker",
+            "size": "21474836480",
+            "mode": "0700"
+          }
+        ]
+      }
+    }
+  ],
+  "seedReady": {
+    "protocol": 1,
+    "role": "source",
+    "boot": {
+      "id": "ed7d23d5-a661-4c62-bbca-d8e6d91cd477",
+      "pid1": "7"
+    },
+    "workerPid": 291
+  },
+  "sourceInitial": {
+    "boot": {
+      "id": "ed7d23d5-a661-4c62-bbca-d8e6d91cd477",
+      "pid1": "7"
+    },
+    "workerPid": 291,
+    "processes": [
+      {
+        "pid": 112,
+        "comm": "dockerd",
+        "args": [
+          "dockerd"
+        ],
+        "start": "47"
+      },
+      {
+        "pid": 120,
+        "comm": "containerd",
+        "args": [
+          "containerd",
+          "--config",
+          "/var/run/docker/containerd/containerd.toml"
+        ],
+        "start": "52"
+      }
+    ],
+    "mounts": [
+      "101 69 0:29 / / rw,relatime - overlay overlay rw,lowerdir=/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/1:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/2:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/3:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/4:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/5:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/6:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/7:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/8:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/9:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/10:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/11:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/12:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/13:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/14:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/15,upperdir=/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/0/upper,workdir=/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/0/work,uuid=on,nouserxattr",
+      "102 101 0:47 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw",
+      "103 101 0:48 / /dev rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "104 103 0:49 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=5,mode=620,ptmxmode=666",
+      "105 103 0:50 / /dev/shm rw,nosuid,nodev,noexec,relatime - tmpfs shm rw,size=65536k",
+      "106 103 0:46 / /dev/mqueue rw,nosuid,nodev,noexec,relatime - mqueue mqueue rw",
+      "107 101 0:51 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw",
+      "108 101 0:52 / /run rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "109 107 0:23 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup2 rw",
+      "110 108 0:53 / /run/secrets rw,nosuid,noexec,relatime - tmpfs tmpfs rw",
+      "111 101 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+      "112 101 254:64 / /workspace rw,relatime - ext4 /dev/vde rw",
+      "113 101 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+      "114 101 0:27 /resolv.conf /etc/resolv.conf ro,relatime - virtiofs bind-95f03ffa45a7d998 rw",
+      "115 101 0:28 /hosts /etc/hosts ro,relatime - virtiofs bind-4a666ea3a3b04a24 rw"
+    ],
+    "capacity": {
+      "/home/agent": {
+        "mount": "111 101 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+        "blockBytes": "8589934592"
+      },
+      "/var/lib/docker": {
+        "mount": "113 101 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+        "blockBytes": "21474836480"
+      }
+    },
+    "containerdConfig": {
+      "path": "/var/run/docker/containerd/containerd.toml",
+      "text": "version = 2\nroot = '/var/lib/docker/containerd/daemon'\nstate = '/var/run/docker/containerd/daemon'\ntemp = ''\ndisabled_plugins = ['io.containerd.grpc.v1.cri']\nrequired_plugins = []\noom_score = 0\nimports = []\n\n[debug]\nlevel = ''\nformat = 'text'\nlog_trace_id = false\naddress = '/var/run/docker/containerd/containerd-debug.sock'\n\n[cgroup]\npath = ''\n\n[grpc]\naddress = '/var/run/docker/containerd/containerd.sock'\nmax_recv_message_size = 16777216\nmax_send_message_size = 16777216\n"
+    },
+    "resources": {
+      "cpuCount": 2,
+      "memTotalKiB": 2066016
+    },
+    "docker": {
+      "version": "29.7.2",
+      "root": "/var/lib/docker",
+      "driver": "overlayfs",
+      "driverStatus": [
+        [
+          "driver-type",
+          "io.containerd.snapshotter.v1"
+        ]
+      ],
+      "liveRestore": false
+    },
+    "uid": 0,
+    "groups": [
+      0
+    ],
+    "privileges": [
+      "CapInh:\t0000000000000000",
+      "CapPrm:\t000001ffffffffff",
+      "CapEff:\t000001ffffffffff",
+      "CapBnd:\t000001ffffffffff",
+      "CapAmb:\t0000000000000000",
+      "NoNewPrivs:\t0",
+      "Seccomp:\t0",
+      "Seccomp_filters:\t0"
+    ]
+  },
+  "before": {
+    "image": {
+      "id": "sha256:c898dfaa1e8c0d1b07829d21aeb15e819f9eb0c5546b1ffa85ab2071a222c9ed",
+      "rootfs": {
+        "Type": "layers",
+        "Layers": [
+          "sha256:0a658f289a81c3da059fabcce5f4fadd18905de28c1512fc3741a042d89707ac"
+        ]
+      }
+    },
+    "container": {
+      "id": "482734b25f9d78ea150d3693d58327a1304d1e305670a045607e39c27f595859",
+      "image": "sha256:c898dfaa1e8c0d1b07829d21aeb15e819f9eb0c5546b1ffa85ab2071a222c9ed",
+      "status": "exited",
+      "restart": {
+        "Name": "unless-stopped",
+        "MaximumRetryCount": 0
+      },
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+          "source": "/var/lib/docker/volumes/blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3/_data",
+          "destination": "/data"
+        }
+      ]
+    },
+    "volume": {
+      "name": "blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+      "driver": "local",
+      "mountpoint": "/var/lib/docker/volumes/blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3/_data",
+      "sentinel": {
+        "mode": 420,
+        "uid": 0,
+        "gid": 0,
+        "size": 44,
+        "mtimeMs": 1788636738306.2942,
+        "sha256": "3a6848d9798ba47ca5738b54dc988f2f0bea11f46864a4d52139bc22dcd80895"
+      }
+    },
+    "layerSentinel": "layer:0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+    "package": {
+      "status": "install ok installed|1.0|all",
+      "files": {
+        "/opt/blobot-synthetic/installed.txt": {
+          "mode": 416,
+          "uid": 0,
+          "gid": 0,
+          "size": 44,
+          "mtimeMs": 1788635508123.4568,
+          "sha256": "f85d2d605ba17b003a1436a91a3e06515412a637e774c5b71174394183fddcf2"
+        },
+        "/etc/blobot-synthetic.conf": {
+          "mode": 384,
+          "uid": 0,
+          "gid": 0,
+          "size": 47,
+          "mtimeMs": 1788635508123.4568,
+          "sha256": "63f694e6fe868f257d85eef3923b75b7285edd8cb951903fb28360c63494f2b2"
+        }
+      },
+      "conffiles": "/etc/blobot-synthetic.conf 353d60fd334c15ba48816819226d941b"
+    },
+    "home": {
+      "files": {
+        "session": {
+          "mode": 416,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 54,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "2f9067c81b42d703be7b4193b2fee6f7ef1455c258522d533b9b528972ecff86"
+        },
+        "hardlink": {
+          "mode": 416,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 54,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "2f9067c81b42d703be7b4193b2fee6f7ef1455c258522d533b9b528972ecff86"
+        },
+        "symlink": {
+          "mode": 511,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 7,
+          "mtimeMs": 1788636740454.6355,
+          "link": "session"
+        },
+        "sparse": {
+          "mode": 384,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 1048617,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "09c242366ea92147a850273da90c2eb77fd6a72c666287785c6ab0c3f627907e"
+        }
+      },
+      "hardlinkSameInode": true,
+      "xattr": "synthetic-xattr",
+      "sparseBlocks": 8
+    }
+  },
+  "rootfsBefore": {
+    "files": {
+      "/opt/blobot-rootfs35/capability-binary": {
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {
+          "security.capability": "AQAAAgAEAAAAAAAAAAAAAAAAAAA="
+        },
+        "size": 10577824,
+        "sha256": "956b53a693650d61b2b4d3f035237de469b28522df27c58f7628d7d731e7f1e1"
+      },
+      "/opt/blobot-rootfs35/directory": {
+        "mode": 17896,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {
+          "system.posix_acl_default": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8="
+        },
+        "children": []
+      },
+      "/opt/blobot-rootfs35/fifo": {
+        "mode": 4480,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {}
+      },
+      "/opt/blobot-rootfs35/file": {
+        "mode": 33256,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {
+          "system.posix_acl_access": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8=",
+          "user.blobot": "YmluYXJ5AP94YXR0cg=="
+        },
+        "size": 25,
+        "sha256": "32629b04150170f23e77ef9c100aaf12380693c51d51cc88572b44651b6cd8ec"
+      },
+      "/opt/blobot-rootfs35/hardlink": {
+        "mode": 33256,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {
+          "system.posix_acl_access": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8=",
+          "user.blobot": "YmluYXJ5AP94YXR0cg=="
+        },
+        "size": 25,
+        "sha256": "32629b04150170f23e77ef9c100aaf12380693c51d51cc88572b44651b6cd8ec"
+      },
+      "/opt/blobot-rootfs35/sparse": {
+        "mode": 33184,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 1048587,
+        "sha256": "5482e468797d1883ae4ba5bf82bcca19e52ee2f6dd36d11968590c6385d037af",
+        "expectedContent": true,
+        "nonzeroBeforeTail": 0,
+        "tailMatches": true,
+        "blocks": 8,
+        "dataExtents": [
+          [
+            1048576,
+            1048587
+          ]
+        ]
+      },
+      "/opt/blobot-rootfs35/symlink": {
+        "mode": 41471,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "link": "file"
+      },
+      "/opt/blobot-rootfs35": {
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 3,
+        "xattrs": {},
+        "children": [
+          "capability-binary",
+          "directory",
+          "fifo",
+          "file",
+          "hardlink",
+          "sparse",
+          "symlink"
+        ]
+      },
+      "/opt/blobot-synthetic/installed.txt": {
+        "mode": 33184,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 44,
+        "sha256": "f85d2d605ba17b003a1436a91a3e06515412a637e774c5b71174394183fddcf2"
+      },
+      "/opt/blobot-synthetic": {
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {},
+        "children": [
+          "installed.txt"
+        ]
+      },
+      "/etc/blobot-synthetic.conf": {
+        "mode": 33152,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 47,
+        "sha256": "63f694e6fe868f257d85eef3923b75b7285edd8cb951903fb28360c63494f2b2"
+      },
+      "/etc/issue/replacement": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 28,
+        "sha256": "c69976ce5058b72cd6600a76e7d6aae26e8d2905fa22a8d7870ade9ec2c59a2f"
+      },
+      "/etc/issue": {
+        "mode": 16873,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {},
+        "children": [
+          "replacement"
+        ]
+      },
+      "/etc/issue.net": {
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "link": "/opt/blobot-rootfs35/file"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.list": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740444457168",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 98,
+        "sha256": "83e92810b381cd71c72fbe3d682060067af0f656fa40d908559b1d7e2fe21a80"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.md5sums": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740448611793",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 129,
+        "sha256": "3f6fe01dd08052b3d6cdbb07dd1346f288722825edc6fd4d82e68947d52b95e0"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.conffiles": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740000000000",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 27,
+        "sha256": "6c986f2ee0123259a38ece97325ef629064b2b1b9ad7df74e0e89627509051c2"
+      }
+    },
+    "hardlinks": [
+      [
+        "/opt/blobot-rootfs35/file",
+        "/opt/blobot-rootfs35/hardlink"
+      ]
+    ],
+    "deleted": {
+      "/etc/debian_version": true
+    }
+  },
+  "seedQuiescence": {
+    "before": [
+      {
+        "pid": 112,
+        "comm": "dockerd",
+        "args": [
+          "dockerd"
+        ],
+        "start": "47"
+      },
+      {
+        "pid": 120,
+        "comm": "containerd",
+        "args": [
+          "containerd",
+          "--config",
+          "/var/run/docker/containerd/containerd.toml"
+        ],
+        "start": "52"
+      }
+    ],
+    "after": [],
+    "boot": {
+      "id": "ed7d23d5-a661-4c62-bbca-d8e6d91cd477",
+      "pid1": "7"
+    },
+    "workerPid": 291
+  },
+  "sourceBeforeSave": {
+    "name": "blobot-rootfs35-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3-source",
+    "id": "c89b1364-45f4-4267-9eed-30840b1b8002",
+    "agent": "blobot-synthetic",
+    "status": "stopped"
+  },
+  "saved": {
+    "id": "5b7a46d009b2",
+    "repository": "docker.io/library/blobot-rootfs35-fixture",
+    "tag": "0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+    "flavor": "shell-docker",
+    "created_at": "2026-09-05T19:32:28Z",
+    "size": 606000726
+  },
+  "sourceAfterSave": {
+    "name": "blobot-rootfs35-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3-source",
+    "id": "c89b1364-45f4-4267-9eed-30840b1b8002",
+    "agent": "blobot-synthetic",
+    "status": "stopped"
+  },
+  "sourceMaintenanceReady": {
+    "protocol": 1,
+    "role": "source",
+    "boot": {
+      "id": "67168b93-3d03-40c3-9290-0a4ea0738b7a",
+      "pid1": "6"
+    },
+    "workerPid": 216
+  },
+  "sourceReopened": {
+    "boot": {
+      "id": "67168b93-3d03-40c3-9290-0a4ea0738b7a",
+      "pid1": "6"
+    },
+    "workerPid": 216,
+    "processes": [
+      {
+        "pid": 12,
+        "comm": "dockerd",
+        "args": [
+          "dockerd"
+        ],
+        "start": "12"
+      },
+      {
+        "pid": 19,
+        "comm": "containerd",
+        "args": [
+          "containerd",
+          "--config",
+          "/var/run/docker/containerd/containerd.toml"
+        ],
+        "start": "16"
+      }
+    ],
+    "mounts": [
+      "101 69 0:29 / / rw,relatime - overlay overlay rw,lowerdir=/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/1:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/2:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/3:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/4:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/5:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/6:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/7:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/8:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/9:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/10:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/11:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/12:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/13:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/14:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/15,upperdir=/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/0/upper,workdir=/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/0/work,nouserxattr",
+      "102 101 0:47 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw",
+      "103 101 0:48 / /dev rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "104 103 0:49 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=5,mode=620,ptmxmode=666",
+      "105 103 0:50 / /dev/shm rw,nosuid,nodev,noexec,relatime - tmpfs shm rw,size=65536k",
+      "106 103 0:46 / /dev/mqueue rw,nosuid,nodev,noexec,relatime - mqueue mqueue rw",
+      "107 101 0:51 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw",
+      "108 101 0:52 / /run rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "109 107 0:23 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup2 rw",
+      "110 108 0:53 / /run/secrets rw,nosuid,noexec,relatime - tmpfs tmpfs rw",
+      "111 101 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+      "112 101 254:64 / /workspace rw,relatime - ext4 /dev/vde rw",
+      "113 101 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+      "114 101 0:27 /resolv.conf /etc/resolv.conf ro,relatime - virtiofs bind-95f03ffa45a7d998 rw",
+      "115 101 0:28 /hosts /etc/hosts ro,relatime - virtiofs bind-4a666ea3a3b04a24 rw"
+    ],
+    "capacity": {
+      "/home/agent": {
+        "mount": "111 101 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+        "blockBytes": "8589934592"
+      },
+      "/var/lib/docker": {
+        "mount": "113 101 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+        "blockBytes": "21474836480"
+      }
+    },
+    "containerdConfig": {
+      "path": "/var/run/docker/containerd/containerd.toml",
+      "text": "version = 2\nroot = '/var/lib/docker/containerd/daemon'\nstate = '/var/run/docker/containerd/daemon'\ntemp = ''\ndisabled_plugins = ['io.containerd.grpc.v1.cri']\nrequired_plugins = []\noom_score = 0\nimports = []\n\n[debug]\nlevel = ''\nformat = 'text'\nlog_trace_id = false\naddress = '/var/run/docker/containerd/containerd-debug.sock'\n\n[cgroup]\npath = ''\n\n[grpc]\naddress = '/var/run/docker/containerd/containerd.sock'\nmax_recv_message_size = 16777216\nmax_send_message_size = 16777216\n"
+    },
+    "resources": {
+      "cpuCount": 2,
+      "memTotalKiB": 2066016
+    },
+    "docker": {
+      "version": "29.7.2",
+      "root": "/var/lib/docker",
+      "driver": "overlayfs",
+      "driverStatus": [
+        [
+          "driver-type",
+          "io.containerd.snapshotter.v1"
+        ]
+      ],
+      "liveRestore": false
+    },
+    "uid": 0,
+    "groups": [
+      0
+    ],
+    "privileges": [
+      "CapInh:\t0000000000000000",
+      "CapPrm:\t000001ffffffffff",
+      "CapEff:\t000001ffffffffff",
+      "CapBnd:\t000001ffffffffff",
+      "CapAmb:\t0000000000000000",
+      "NoNewPrivs:\t0",
+      "Seccomp:\t0",
+      "Seccomp_filters:\t0"
+    ]
+  },
+  "sourceStateBeforeCopy": {
+    "image": {
+      "id": "sha256:c898dfaa1e8c0d1b07829d21aeb15e819f9eb0c5546b1ffa85ab2071a222c9ed",
+      "rootfs": {
+        "Type": "layers",
+        "Layers": [
+          "sha256:0a658f289a81c3da059fabcce5f4fadd18905de28c1512fc3741a042d89707ac"
+        ]
+      }
+    },
+    "container": {
+      "id": "482734b25f9d78ea150d3693d58327a1304d1e305670a045607e39c27f595859",
+      "image": "sha256:c898dfaa1e8c0d1b07829d21aeb15e819f9eb0c5546b1ffa85ab2071a222c9ed",
+      "status": "exited",
+      "restart": {
+        "Name": "unless-stopped",
+        "MaximumRetryCount": 0
+      },
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+          "source": "/var/lib/docker/volumes/blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3/_data",
+          "destination": "/data"
+        }
+      ]
+    },
+    "volume": {
+      "name": "blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+      "driver": "local",
+      "mountpoint": "/var/lib/docker/volumes/blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3/_data",
+      "sentinel": {
+        "mode": 420,
+        "uid": 0,
+        "gid": 0,
+        "size": 44,
+        "mtimeMs": 1788636738306.2942,
+        "sha256": "3a6848d9798ba47ca5738b54dc988f2f0bea11f46864a4d52139bc22dcd80895"
+      }
+    },
+    "layerSentinel": "layer:0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+    "package": {
+      "status": "install ok installed|1.0|all",
+      "files": {
+        "/opt/blobot-synthetic/installed.txt": {
+          "mode": 416,
+          "uid": 0,
+          "gid": 0,
+          "size": 44,
+          "mtimeMs": 1788635508123.4568,
+          "sha256": "f85d2d605ba17b003a1436a91a3e06515412a637e774c5b71174394183fddcf2"
+        },
+        "/etc/blobot-synthetic.conf": {
+          "mode": 384,
+          "uid": 0,
+          "gid": 0,
+          "size": 47,
+          "mtimeMs": 1788635508123.4568,
+          "sha256": "63f694e6fe868f257d85eef3923b75b7285edd8cb951903fb28360c63494f2b2"
+        }
+      },
+      "conffiles": "/etc/blobot-synthetic.conf 353d60fd334c15ba48816819226d941b"
+    },
+    "home": {
+      "files": {
+        "session": {
+          "mode": 416,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 54,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "2f9067c81b42d703be7b4193b2fee6f7ef1455c258522d533b9b528972ecff86"
+        },
+        "hardlink": {
+          "mode": 416,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 54,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "2f9067c81b42d703be7b4193b2fee6f7ef1455c258522d533b9b528972ecff86"
+        },
+        "symlink": {
+          "mode": 511,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 7,
+          "mtimeMs": 1788636740454.6355,
+          "link": "session"
+        },
+        "sparse": {
+          "mode": 384,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 1048617,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "09c242366ea92147a850273da90c2eb77fd6a72c666287785c6ab0c3f627907e"
+        }
+      },
+      "hardlinkSameInode": true,
+      "xattr": "synthetic-xattr",
+      "sparseBlocks": 8
+    }
+  },
+  "sourceQuiescence": {
+    "before": [
+      {
+        "pid": 12,
+        "comm": "dockerd",
+        "args": [
+          "dockerd"
+        ],
+        "start": "12"
+      },
+      {
+        "pid": 19,
+        "comm": "containerd",
+        "args": [
+          "containerd",
+          "--config",
+          "/var/run/docker/containerd/containerd.toml"
+        ],
+        "start": "16"
+      }
+    ],
+    "after": [],
+    "boot": {
+      "id": "67168b93-3d03-40c3-9290-0a4ea0738b7a",
+      "pid1": "6"
+    },
+    "workerPid": 216
+  },
+  "digestBefore": {
+    "sha256": "26814b031e15da43eb74fd0535cd347b73dffc1450dbd9fd8e179816f7c4eea1",
+    "bytes": 47001600,
+    "guardSamples": 2,
+    "boot": {
+      "id": "67168b93-3d03-40c3-9290-0a4ea0738b7a",
+      "pid1": "6"
+    },
+    "workerPid": 216
+  },
+  "targetMaintenanceReady": {
+    "protocol": 1,
+    "role": "target",
+    "boot": {
+      "id": "2ce34740-f38f-4cfe-8cd3-5edecea1c1bf",
+      "pid1": "6"
+    },
+    "workerPid": 337
+  },
+  "targetInitial": {
+    "boot": {
+      "id": "2ce34740-f38f-4cfe-8cd3-5edecea1c1bf",
+      "pid1": "6"
+    },
+    "workerPid": 337,
+    "processes": [
+      {
+        "pid": 153,
+        "comm": "dockerd",
+        "args": [
+          "dockerd"
+        ],
+        "start": "63"
+      },
+      {
+        "pid": 161,
+        "comm": "containerd",
+        "args": [
+          "containerd",
+          "--config",
+          "/var/run/docker/containerd/containerd.toml"
+        ],
+        "start": "66"
+      }
+    ],
+    "mounts": [
+      "104 71 0:29 / / rw,relatime - overlay overlay rw,lowerdir=/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/1:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/2:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/3:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/4:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/5:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/6:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/7:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/8:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/9:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/10:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/11:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/12:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/13:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/14:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/15:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/16,upperdir=/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/0/upper,workdir=/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/0/work,uuid=on,nouserxattr",
+      "105 104 0:48 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw",
+      "106 104 0:49 / /dev rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "107 106 0:50 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=5,mode=620,ptmxmode=666",
+      "108 106 0:51 / /dev/shm rw,nosuid,nodev,noexec,relatime - tmpfs shm rw,size=65536k",
+      "109 106 0:47 / /dev/mqueue rw,nosuid,nodev,noexec,relatime - mqueue mqueue rw",
+      "110 104 0:52 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw",
+      "111 104 0:53 / /run rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "112 110 0:23 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup2 rw",
+      "113 111 0:54 / /run/secrets rw,nosuid,noexec,relatime - tmpfs tmpfs rw",
+      "114 104 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+      "115 104 254:64 / /workspace rw,relatime - ext4 /dev/vde rw",
+      "116 104 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+      "117 104 0:27 /resolv.conf /etc/resolv.conf ro,relatime - virtiofs bind-95f03ffa45a7d998 rw",
+      "118 104 0:28 /hosts /etc/hosts ro,relatime - virtiofs bind-4a666ea3a3b04a24 rw"
+    ],
+    "capacity": {
+      "/home/agent": {
+        "mount": "114 104 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+        "blockBytes": "8589934592"
+      },
+      "/var/lib/docker": {
+        "mount": "116 104 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+        "blockBytes": "21474836480"
+      }
+    },
+    "containerdConfig": {
+      "path": "/var/run/docker/containerd/containerd.toml",
+      "text": "version = 2\nroot = '/var/lib/docker/containerd/daemon'\nstate = '/var/run/docker/containerd/daemon'\ntemp = ''\ndisabled_plugins = ['io.containerd.grpc.v1.cri']\nrequired_plugins = []\noom_score = 0\nimports = []\n\n[debug]\nlevel = ''\nformat = 'text'\nlog_trace_id = false\naddress = '/var/run/docker/containerd/containerd-debug.sock'\n\n[cgroup]\npath = ''\n\n[grpc]\naddress = '/var/run/docker/containerd/containerd.sock'\nmax_recv_message_size = 16777216\nmax_send_message_size = 16777216\n"
+    },
+    "resources": {
+      "cpuCount": 3,
+      "memTotalKiB": 3104752
+    },
+    "docker": {
+      "version": "29.7.2",
+      "root": "/var/lib/docker",
+      "driver": "overlayfs",
+      "driverStatus": [
+        [
+          "driver-type",
+          "io.containerd.snapshotter.v1"
+        ]
+      ],
+      "liveRestore": false
+    },
+    "uid": 0,
+    "groups": [
+      0
+    ],
+    "privileges": [
+      "CapInh:\t0000000000000000",
+      "CapPrm:\t000001ffffffffff",
+      "CapEff:\t000001ffffffffff",
+      "CapBnd:\t000001ffffffffff",
+      "CapAmb:\t0000000000000000",
+      "NoNewPrivs:\t0",
+      "Seccomp:\t0",
+      "Seccomp_filters:\t0"
+    ]
+  },
+  "targetQuiescence": {
+    "before": [
+      {
+        "pid": 153,
+        "comm": "dockerd",
+        "args": [
+          "dockerd"
+        ],
+        "start": "63"
+      },
+      {
+        "pid": 161,
+        "comm": "containerd",
+        "args": [
+          "containerd",
+          "--config",
+          "/var/run/docker/containerd/containerd.toml"
+        ],
+        "start": "66"
+      }
+    ],
+    "after": [],
+    "boot": {
+      "id": "2ce34740-f38f-4cfe-8cd3-5edecea1c1bf",
+      "pid1": "6"
+    },
+    "workerPid": 337
+  },
+  "targetBeforeCopy": {
+    "boot": {
+      "id": "2ce34740-f38f-4cfe-8cd3-5edecea1c1bf",
+      "pid1": "6"
+    },
+    "workerPid": 337,
+    "processes": [],
+    "guardSamples": 1,
+    "guardViolation": null,
+    "package": {
+      "status": "install ok installed|1.0|all",
+      "files": {
+        "/opt/blobot-synthetic/installed.txt": {
+          "mode": 416,
+          "uid": 0,
+          "gid": 0,
+          "size": 44,
+          "mtimeMs": 1788635508000,
+          "sha256": "f85d2d605ba17b003a1436a91a3e06515412a637e774c5b71174394183fddcf2"
+        },
+        "/etc/blobot-synthetic.conf": {
+          "mode": 384,
+          "uid": 0,
+          "gid": 0,
+          "size": 47,
+          "mtimeMs": 1788635508000,
+          "sha256": "63f694e6fe868f257d85eef3923b75b7285edd8cb951903fb28360c63494f2b2"
+        }
+      },
+      "conffiles": "/etc/blobot-synthetic.conf 353d60fd334c15ba48816819226d941b"
+    },
+    "home": null
+  },
+  "rootfsSnapshot": {
+    "files": {
+      "/opt/blobot-rootfs35/capability-binary": {
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508000000000",
+        "nlink": 1,
+        "xattrs": {
+          "security.capability": "AQAAAgAEAAAAAAAAAAAAAAAAAAA="
+        },
+        "size": 10577824,
+        "sha256": "956b53a693650d61b2b4d3f035237de469b28522df27c58f7628d7d731e7f1e1"
+      },
+      "/opt/blobot-rootfs35/directory": {
+        "mode": 17896,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508000000000",
+        "nlink": 2,
+        "xattrs": {},
+        "children": []
+      },
+      "/opt/blobot-rootfs35/fifo": {
+        "mode": 4480,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508000000000",
+        "nlink": 1,
+        "xattrs": {}
+      },
+      "/opt/blobot-rootfs35/file": {
+        "mode": 33256,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508000000000",
+        "nlink": 2,
+        "xattrs": {
+          "user.blobot": "YmluYXJ5AP94YXR0cg=="
+        },
+        "size": 25,
+        "sha256": "32629b04150170f23e77ef9c100aaf12380693c51d51cc88572b44651b6cd8ec"
+      },
+      "/opt/blobot-rootfs35/hardlink": {
+        "mode": 33256,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508000000000",
+        "nlink": 2,
+        "xattrs": {
+          "user.blobot": "YmluYXJ5AP94YXR0cg=="
+        },
+        "size": 25,
+        "sha256": "32629b04150170f23e77ef9c100aaf12380693c51d51cc88572b44651b6cd8ec"
+      },
+      "/opt/blobot-rootfs35/sparse": {
+        "mode": 33184,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508000000000",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 1048587,
+        "sha256": "b48d69217e1431a3e7fd5748d05ca8382fdf6d14ecf51822b3d903074762feb3",
+        "expectedContent": false,
+        "nonzeroBeforeTail": 14702,
+        "tailMatches": true,
+        "blocks": 2056,
+        "dataExtents": [
+          [
+            978944,
+            1003520
+          ],
+          [
+            1019904,
+            1048587
+          ]
+        ]
+      },
+      "/opt/blobot-rootfs35/symlink": {
+        "mode": 41471,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508000000000",
+        "nlink": 1,
+        "xattrs": {},
+        "link": "file"
+      },
+      "/opt/blobot-rootfs35": {
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508000000000",
+        "nlink": 3,
+        "xattrs": {},
+        "children": [
+          "capability-binary",
+          "directory",
+          "fifo",
+          "file",
+          "hardlink",
+          "sparse",
+          "symlink"
+        ]
+      },
+      "/opt/blobot-synthetic/installed.txt": {
+        "mode": 33184,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508000000000",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 44,
+        "sha256": "f85d2d605ba17b003a1436a91a3e06515412a637e774c5b71174394183fddcf2"
+      },
+      "/opt/blobot-synthetic": {
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508000000000",
+        "nlink": 2,
+        "xattrs": {},
+        "children": [
+          "installed.txt"
+        ]
+      },
+      "/etc/blobot-synthetic.conf": {
+        "mode": 33152,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508000000000",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 47,
+        "sha256": "63f694e6fe868f257d85eef3923b75b7285edd8cb951903fb28360c63494f2b2"
+      },
+      "/etc/issue/replacement": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508000000000",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 28,
+        "sha256": "c69976ce5058b72cd6600a76e7d6aae26e8d2905fa22a8d7870ade9ec2c59a2f"
+      },
+      "/etc/issue": {
+        "mode": 16873,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508000000000",
+        "nlink": 2,
+        "xattrs": {},
+        "children": [
+          "replacement"
+        ]
+      },
+      "/etc/issue.net": {
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508000000000",
+        "nlink": 1,
+        "xattrs": {},
+        "link": "/opt/blobot-rootfs35/file"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.list": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740000000000",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 98,
+        "sha256": "83e92810b381cd71c72fbe3d682060067af0f656fa40d908559b1d7e2fe21a80"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.md5sums": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740000000000",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 129,
+        "sha256": "3f6fe01dd08052b3d6cdbb07dd1346f288722825edc6fd4d82e68947d52b95e0"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.conffiles": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740000000000",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 27,
+        "sha256": "6c986f2ee0123259a38ece97325ef629064b2b1b9ad7df74e0e89627509051c2"
+      }
+    },
+    "hardlinks": [
+      [
+        "/opt/blobot-rootfs35/file",
+        "/opt/blobot-rootfs35/hardlink"
+      ]
+    ],
+    "deleted": {
+      "/etc/debian_version": true
+    }
+  },
+  "rootfsSourceReopened": {
+    "files": {
+      "/opt/blobot-rootfs35/capability-binary": {
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {
+          "security.capability": "AQAAAgAEAAAAAAAAAAAAAAAAAAA="
+        },
+        "size": 10577824,
+        "sha256": "956b53a693650d61b2b4d3f035237de469b28522df27c58f7628d7d731e7f1e1"
+      },
+      "/opt/blobot-rootfs35/directory": {
+        "mode": 17896,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {
+          "system.posix_acl_default": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8="
+        },
+        "children": []
+      },
+      "/opt/blobot-rootfs35/fifo": {
+        "mode": 4480,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {}
+      },
+      "/opt/blobot-rootfs35/file": {
+        "mode": 33256,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {
+          "system.posix_acl_access": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8=",
+          "user.blobot": "YmluYXJ5AP94YXR0cg=="
+        },
+        "size": 25,
+        "sha256": "32629b04150170f23e77ef9c100aaf12380693c51d51cc88572b44651b6cd8ec"
+      },
+      "/opt/blobot-rootfs35/hardlink": {
+        "mode": 33256,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {
+          "system.posix_acl_access": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8=",
+          "user.blobot": "YmluYXJ5AP94YXR0cg=="
+        },
+        "size": 25,
+        "sha256": "32629b04150170f23e77ef9c100aaf12380693c51d51cc88572b44651b6cd8ec"
+      },
+      "/opt/blobot-rootfs35/sparse": {
+        "mode": 33184,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 1048587,
+        "sha256": "5482e468797d1883ae4ba5bf82bcca19e52ee2f6dd36d11968590c6385d037af",
+        "expectedContent": true,
+        "nonzeroBeforeTail": 0,
+        "tailMatches": true,
+        "blocks": 8,
+        "dataExtents": [
+          [
+            1048576,
+            1048587
+          ]
+        ]
+      },
+      "/opt/blobot-rootfs35/symlink": {
+        "mode": 41471,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "link": "file"
+      },
+      "/opt/blobot-rootfs35": {
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 3,
+        "xattrs": {},
+        "children": [
+          "capability-binary",
+          "directory",
+          "fifo",
+          "file",
+          "hardlink",
+          "sparse",
+          "symlink"
+        ]
+      },
+      "/opt/blobot-synthetic/installed.txt": {
+        "mode": 33184,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 44,
+        "sha256": "f85d2d605ba17b003a1436a91a3e06515412a637e774c5b71174394183fddcf2"
+      },
+      "/opt/blobot-synthetic": {
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {},
+        "children": [
+          "installed.txt"
+        ]
+      },
+      "/etc/blobot-synthetic.conf": {
+        "mode": 33152,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 47,
+        "sha256": "63f694e6fe868f257d85eef3923b75b7285edd8cb951903fb28360c63494f2b2"
+      },
+      "/etc/issue/replacement": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 28,
+        "sha256": "c69976ce5058b72cd6600a76e7d6aae26e8d2905fa22a8d7870ade9ec2c59a2f"
+      },
+      "/etc/issue": {
+        "mode": 16873,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {},
+        "children": [
+          "replacement"
+        ]
+      },
+      "/etc/issue.net": {
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "link": "/opt/blobot-rootfs35/file"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.list": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740444457168",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 98,
+        "sha256": "83e92810b381cd71c72fbe3d682060067af0f656fa40d908559b1d7e2fe21a80"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.md5sums": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740448611793",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 129,
+        "sha256": "3f6fe01dd08052b3d6cdbb07dd1346f288722825edc6fd4d82e68947d52b95e0"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.conffiles": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740000000000",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 27,
+        "sha256": "6c986f2ee0123259a38ece97325ef629064b2b1b9ad7df74e0e89627509051c2"
+      }
+    },
+    "hardlinks": [
+      [
+        "/opt/blobot-rootfs35/file",
+        "/opt/blobot-rootfs35/hardlink"
+      ]
+    ],
+    "deleted": {
+      "/etc/debian_version": true
+    }
+  },
+  "snapshotRootfsExact": false,
+  "targetDrift": {
+    "injected": [
+      "/opt/blobot-rootfs35/target-only",
+      "/etc/debian_version"
+    ]
+  },
+  "sourceArchive": {
+    "sha256": "26814b031e15da43eb74fd0535cd347b73dffc1450dbd9fd8e179816f7c4eea1",
+    "bytes": 47001600,
+    "guardSamples": 49,
+    "boot": {
+      "id": "67168b93-3d03-40c3-9290-0a4ea0738b7a",
+      "pid1": "6"
+    },
+    "workerPid": 216
+  },
+  "targetRestored": {
+    "sha256": "26814b031e15da43eb74fd0535cd347b73dffc1450dbd9fd8e179816f7c4eea1",
+    "bytes": 47001600,
+    "guardSamples": 5,
+    "boot": {
+      "id": "2ce34740-f38f-4cfe-8cd3-5edecea1c1bf",
+      "pid1": "6"
+    },
+    "workerPid": 337
+  },
+  "relay": {
+    "bytes": 47001600,
+    "sha256": "26814b031e15da43eb74fd0535cd347b73dffc1450dbd9fd8e179816f7c4eea1",
+    "ms": 283.04599999999846
+  },
+  "digestSourceAfter": {
+    "sha256": "26814b031e15da43eb74fd0535cd347b73dffc1450dbd9fd8e179816f7c4eea1",
+    "bytes": 47001600,
+    "guardSamples": 51,
+    "boot": {
+      "id": "67168b93-3d03-40c3-9290-0a4ea0738b7a",
+      "pid1": "6"
+    },
+    "workerPid": 216
+  },
+  "digestTarget": {
+    "sha256": "26814b031e15da43eb74fd0535cd347b73dffc1450dbd9fd8e179816f7c4eea1",
+    "bytes": 47001600,
+    "guardSamples": 7,
+    "boot": {
+      "id": "2ce34740-f38f-4cfe-8cd3-5edecea1c1bf",
+      "pid1": "6"
+    },
+    "workerPid": 337
+  },
+  "sourceQuietAfterCopy": {
+    "boot": {
+      "id": "67168b93-3d03-40c3-9290-0a4ea0738b7a",
+      "pid1": "6"
+    },
+    "workerPid": 216,
+    "processes": [],
+    "guardSamples": 52,
+    "guardViolation": null,
+    "package": {
+      "status": "install ok installed|1.0|all",
+      "files": {
+        "/opt/blobot-synthetic/installed.txt": {
+          "mode": 416,
+          "uid": 0,
+          "gid": 0,
+          "size": 44,
+          "mtimeMs": 1788635508123.4568,
+          "sha256": "f85d2d605ba17b003a1436a91a3e06515412a637e774c5b71174394183fddcf2"
+        },
+        "/etc/blobot-synthetic.conf": {
+          "mode": 384,
+          "uid": 0,
+          "gid": 0,
+          "size": 47,
+          "mtimeMs": 1788635508123.4568,
+          "sha256": "63f694e6fe868f257d85eef3923b75b7285edd8cb951903fb28360c63494f2b2"
+        }
+      },
+      "conffiles": "/etc/blobot-synthetic.conf 353d60fd334c15ba48816819226d941b"
+    },
+    "home": {
+      "files": {
+        "session": {
+          "mode": 416,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 54,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "2f9067c81b42d703be7b4193b2fee6f7ef1455c258522d533b9b528972ecff86"
+        },
+        "hardlink": {
+          "mode": 416,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 54,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "2f9067c81b42d703be7b4193b2fee6f7ef1455c258522d533b9b528972ecff86"
+        },
+        "symlink": {
+          "mode": 511,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 7,
+          "mtimeMs": 1788636740454.6355,
+          "link": "session"
+        },
+        "sparse": {
+          "mode": 384,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 1048617,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "09c242366ea92147a850273da90c2eb77fd6a72c666287785c6ab0c3f627907e"
+        }
+      },
+      "hardlinkSameInode": true,
+      "xattr": "synthetic-xattr",
+      "sparseBlocks": 8
+    }
+  },
+  "targetQuietAfterCopy": {
+    "boot": {
+      "id": "2ce34740-f38f-4cfe-8cd3-5edecea1c1bf",
+      "pid1": "6"
+    },
+    "workerPid": 337,
+    "processes": [],
+    "guardSamples": 7,
+    "guardViolation": null,
+    "package": {
+      "status": "install ok installed|1.0|all",
+      "files": {
+        "/opt/blobot-synthetic/installed.txt": {
+          "mode": 416,
+          "uid": 0,
+          "gid": 0,
+          "size": 44,
+          "mtimeMs": 1788635508123.4568,
+          "sha256": "f85d2d605ba17b003a1436a91a3e06515412a637e774c5b71174394183fddcf2"
+        },
+        "/etc/blobot-synthetic.conf": {
+          "mode": 384,
+          "uid": 0,
+          "gid": 0,
+          "size": 47,
+          "mtimeMs": 1788635508123.4568,
+          "sha256": "63f694e6fe868f257d85eef3923b75b7285edd8cb951903fb28360c63494f2b2"
+        }
+      },
+      "conffiles": "/etc/blobot-synthetic.conf 353d60fd334c15ba48816819226d941b"
+    },
+    "home": {
+      "files": {
+        "session": {
+          "mode": 416,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 54,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "2f9067c81b42d703be7b4193b2fee6f7ef1455c258522d533b9b528972ecff86"
+        },
+        "hardlink": {
+          "mode": 416,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 54,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "2f9067c81b42d703be7b4193b2fee6f7ef1455c258522d533b9b528972ecff86"
+        },
+        "symlink": {
+          "mode": 511,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 7,
+          "mtimeMs": 1788636740454.6355,
+          "link": "session"
+        },
+        "sparse": {
+          "mode": 384,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 1048617,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "09c242366ea92147a850273da90c2eb77fd6a72c666287785c6ab0c3f627907e"
+        }
+      },
+      "hardlinkSameInode": true,
+      "xattr": "synthetic-xattr",
+      "sparseBlocks": 8
+    }
+  },
+  "rootfsAfter": {
+    "files": {
+      "/opt/blobot-rootfs35/capability-binary": {
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {
+          "security.capability": "AQAAAgAEAAAAAAAAAAAAAAAAAAA="
+        },
+        "size": 10577824,
+        "sha256": "956b53a693650d61b2b4d3f035237de469b28522df27c58f7628d7d731e7f1e1"
+      },
+      "/opt/blobot-rootfs35/directory": {
+        "mode": 17896,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {
+          "system.posix_acl_default": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8="
+        },
+        "children": []
+      },
+      "/opt/blobot-rootfs35/fifo": {
+        "mode": 4480,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {}
+      },
+      "/opt/blobot-rootfs35/file": {
+        "mode": 33256,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {
+          "system.posix_acl_access": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8=",
+          "user.blobot": "YmluYXJ5AP94YXR0cg=="
+        },
+        "size": 25,
+        "sha256": "32629b04150170f23e77ef9c100aaf12380693c51d51cc88572b44651b6cd8ec"
+      },
+      "/opt/blobot-rootfs35/hardlink": {
+        "mode": 33256,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {
+          "system.posix_acl_access": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8=",
+          "user.blobot": "YmluYXJ5AP94YXR0cg=="
+        },
+        "size": 25,
+        "sha256": "32629b04150170f23e77ef9c100aaf12380693c51d51cc88572b44651b6cd8ec"
+      },
+      "/opt/blobot-rootfs35/sparse": {
+        "mode": 33184,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 1048587,
+        "sha256": "5482e468797d1883ae4ba5bf82bcca19e52ee2f6dd36d11968590c6385d037af",
+        "expectedContent": true,
+        "nonzeroBeforeTail": 0,
+        "tailMatches": true,
+        "blocks": 8,
+        "dataExtents": [
+          [
+            1048576,
+            1048587
+          ]
+        ]
+      },
+      "/opt/blobot-rootfs35/symlink": {
+        "mode": 41471,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "link": "file"
+      },
+      "/opt/blobot-rootfs35": {
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 3,
+        "xattrs": {},
+        "children": [
+          "capability-binary",
+          "directory",
+          "fifo",
+          "file",
+          "hardlink",
+          "sparse",
+          "symlink"
+        ]
+      },
+      "/opt/blobot-synthetic/installed.txt": {
+        "mode": 33184,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 44,
+        "sha256": "f85d2d605ba17b003a1436a91a3e06515412a637e774c5b71174394183fddcf2"
+      },
+      "/opt/blobot-synthetic": {
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {},
+        "children": [
+          "installed.txt"
+        ]
+      },
+      "/etc/blobot-synthetic.conf": {
+        "mode": 33152,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 47,
+        "sha256": "63f694e6fe868f257d85eef3923b75b7285edd8cb951903fb28360c63494f2b2"
+      },
+      "/etc/issue/replacement": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 28,
+        "sha256": "c69976ce5058b72cd6600a76e7d6aae26e8d2905fa22a8d7870ade9ec2c59a2f"
+      },
+      "/etc/issue": {
+        "mode": 16873,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {},
+        "children": [
+          "replacement"
+        ]
+      },
+      "/etc/issue.net": {
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "link": "/opt/blobot-rootfs35/file"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.list": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740444457168",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 98,
+        "sha256": "83e92810b381cd71c72fbe3d682060067af0f656fa40d908559b1d7e2fe21a80"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.md5sums": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740448611793",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 129,
+        "sha256": "3f6fe01dd08052b3d6cdbb07dd1346f288722825edc6fd4d82e68947d52b95e0"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.conffiles": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740000000000",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 27,
+        "sha256": "6c986f2ee0123259a38ece97325ef629064b2b1b9ad7df74e0e89627509051c2"
+      }
+    },
+    "hardlinks": [
+      [
+        "/opt/blobot-rootfs35/file",
+        "/opt/blobot-rootfs35/hardlink"
+      ]
+    ],
+    "deleted": {
+      "/etc/debian_version": true
+    }
+  },
+  "targetResumed": {
+    "boot": {
+      "id": "2ce34740-f38f-4cfe-8cd3-5edecea1c1bf",
+      "pid1": "6"
+    },
+    "workerPid": 337,
+    "processes": [
+      {
+        "pid": 419,
+        "comm": "dockerd",
+        "args": [
+          "dockerd"
+        ],
+        "start": "362"
+      },
+      {
+        "pid": 450,
+        "comm": "containerd",
+        "args": [
+          "containerd",
+          "--config",
+          "/var/run/docker/containerd/containerd.toml"
+        ],
+        "start": "365"
+      }
+    ],
+    "mounts": [
+      "104 71 0:29 / / rw,relatime - overlay overlay rw,lowerdir=/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/1:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/2:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/3:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/4:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/5:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/6:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/7:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/8:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/9:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/10:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/11:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/12:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/13:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/14:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/15:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/16,upperdir=/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/0/upper,workdir=/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/0/work,uuid=on,nouserxattr",
+      "105 104 0:48 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw",
+      "106 104 0:49 / /dev rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "107 106 0:50 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=5,mode=620,ptmxmode=666",
+      "108 106 0:51 / /dev/shm rw,nosuid,nodev,noexec,relatime - tmpfs shm rw,size=65536k",
+      "109 106 0:47 / /dev/mqueue rw,nosuid,nodev,noexec,relatime - mqueue mqueue rw",
+      "110 104 0:52 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw",
+      "111 104 0:53 / /run rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "112 110 0:23 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup2 rw",
+      "113 111 0:54 / /run/secrets rw,nosuid,noexec,relatime - tmpfs tmpfs rw",
+      "114 104 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+      "115 104 254:64 / /workspace rw,relatime - ext4 /dev/vde rw",
+      "116 104 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+      "117 104 0:27 /resolv.conf /etc/resolv.conf ro,relatime - virtiofs bind-95f03ffa45a7d998 rw",
+      "118 104 0:28 /hosts /etc/hosts ro,relatime - virtiofs bind-4a666ea3a3b04a24 rw"
+    ],
+    "capacity": {
+      "/home/agent": {
+        "mount": "114 104 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+        "blockBytes": "8589934592"
+      },
+      "/var/lib/docker": {
+        "mount": "116 104 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+        "blockBytes": "21474836480"
+      }
+    },
+    "containerdConfig": {
+      "path": "/var/run/docker/containerd/containerd.toml",
+      "text": "version = 2\nroot = '/var/lib/docker/containerd/daemon'\nstate = '/var/run/docker/containerd/daemon'\ntemp = ''\ndisabled_plugins = ['io.containerd.grpc.v1.cri']\nrequired_plugins = []\noom_score = 0\nimports = []\n\n[debug]\nlevel = ''\nformat = 'text'\nlog_trace_id = false\naddress = '/var/run/docker/containerd/containerd-debug.sock'\n\n[cgroup]\npath = ''\n\n[grpc]\naddress = '/var/run/docker/containerd/containerd.sock'\nmax_recv_message_size = 16777216\nmax_send_message_size = 16777216\n"
+    },
+    "resources": {
+      "cpuCount": 3,
+      "memTotalKiB": 3104752
+    },
+    "docker": {
+      "version": "29.7.2",
+      "root": "/var/lib/docker",
+      "driver": "overlayfs",
+      "driverStatus": [
+        [
+          "driver-type",
+          "io.containerd.snapshotter.v1"
+        ]
+      ],
+      "liveRestore": false
+    },
+    "uid": 0,
+    "groups": [
+      0
+    ],
+    "privileges": [
+      "CapInh:\t0000000000000000",
+      "CapPrm:\t000001ffffffffff",
+      "CapEff:\t000001ffffffffff",
+      "CapBnd:\t000001ffffffffff",
+      "CapAmb:\t0000000000000000",
+      "NoNewPrivs:\t0",
+      "Seccomp:\t0",
+      "Seccomp_filters:\t0"
+    ]
+  },
+  "after": {
+    "image": {
+      "id": "sha256:c898dfaa1e8c0d1b07829d21aeb15e819f9eb0c5546b1ffa85ab2071a222c9ed",
+      "rootfs": {
+        "Type": "layers",
+        "Layers": [
+          "sha256:0a658f289a81c3da059fabcce5f4fadd18905de28c1512fc3741a042d89707ac"
+        ]
+      }
+    },
+    "container": {
+      "id": "482734b25f9d78ea150d3693d58327a1304d1e305670a045607e39c27f595859",
+      "image": "sha256:c898dfaa1e8c0d1b07829d21aeb15e819f9eb0c5546b1ffa85ab2071a222c9ed",
+      "status": "exited",
+      "restart": {
+        "Name": "unless-stopped",
+        "MaximumRetryCount": 0
+      },
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+          "source": "/var/lib/docker/volumes/blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3/_data",
+          "destination": "/data"
+        }
+      ]
+    },
+    "volume": {
+      "name": "blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+      "driver": "local",
+      "mountpoint": "/var/lib/docker/volumes/blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3/_data",
+      "sentinel": {
+        "mode": 420,
+        "uid": 0,
+        "gid": 0,
+        "size": 44,
+        "mtimeMs": 1788636738306.2942,
+        "sha256": "3a6848d9798ba47ca5738b54dc988f2f0bea11f46864a4d52139bc22dcd80895"
+      }
+    },
+    "layerSentinel": "layer:0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+    "package": {
+      "status": "install ok installed|1.0|all",
+      "files": {
+        "/opt/blobot-synthetic/installed.txt": {
+          "mode": 416,
+          "uid": 0,
+          "gid": 0,
+          "size": 44,
+          "mtimeMs": 1788635508123.4568,
+          "sha256": "f85d2d605ba17b003a1436a91a3e06515412a637e774c5b71174394183fddcf2"
+        },
+        "/etc/blobot-synthetic.conf": {
+          "mode": 384,
+          "uid": 0,
+          "gid": 0,
+          "size": 47,
+          "mtimeMs": 1788635508123.4568,
+          "sha256": "63f694e6fe868f257d85eef3923b75b7285edd8cb951903fb28360c63494f2b2"
+        }
+      },
+      "conffiles": "/etc/blobot-synthetic.conf 353d60fd334c15ba48816819226d941b"
+    },
+    "home": {
+      "files": {
+        "session": {
+          "mode": 416,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 54,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "2f9067c81b42d703be7b4193b2fee6f7ef1455c258522d533b9b528972ecff86"
+        },
+        "hardlink": {
+          "mode": 416,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 54,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "2f9067c81b42d703be7b4193b2fee6f7ef1455c258522d533b9b528972ecff86"
+        },
+        "symlink": {
+          "mode": 511,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 7,
+          "mtimeMs": 1788636740454.6355,
+          "link": "session"
+        },
+        "sparse": {
+          "mode": 384,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 1048617,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "09c242366ea92147a850273da90c2eb77fd6a72c666287785c6ab0c3f627907e"
+        }
+      },
+      "hardlinkSameInode": true,
+      "xattr": "synthetic-xattr",
+      "sparseBlocks": 8
+    }
+  },
+  "targetReopenedReady": {
+    "protocol": 1,
+    "role": "target",
+    "boot": {
+      "id": "ad1f57bc-e5cb-4254-ad81-4d001cdcc448",
+      "pid1": "7"
+    },
+    "workerPid": 220
+  },
+  "targetReopenedInventory": {
+    "boot": {
+      "id": "ad1f57bc-e5cb-4254-ad81-4d001cdcc448",
+      "pid1": "7"
+    },
+    "workerPid": 220,
+    "processes": [
+      {
+        "pid": 12,
+        "comm": "dockerd",
+        "args": [
+          "dockerd"
+        ],
+        "start": "18"
+      },
+      {
+        "pid": 20,
+        "comm": "containerd",
+        "args": [
+          "containerd",
+          "--config",
+          "/var/run/docker/containerd/containerd.toml"
+        ],
+        "start": "22"
+      }
+    ],
+    "mounts": [
+      "104 71 0:29 / / rw,relatime - overlay overlay rw,lowerdir=/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/1:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/2:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/3:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/4:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/5:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/6:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/7:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/8:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/9:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/10:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/11:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/12:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/13:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/14:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/15:/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/16,upperdir=/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/0/upper,workdir=/run/bundles/5e0248d29c5473eeb277c04587f4599746ba059575b088e897432e8cc87f6ab9/mounts/0/work,nouserxattr",
+      "105 104 0:48 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw",
+      "106 104 0:49 / /dev rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "107 106 0:50 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=5,mode=620,ptmxmode=666",
+      "108 106 0:51 / /dev/shm rw,nosuid,nodev,noexec,relatime - tmpfs shm rw,size=65536k",
+      "109 106 0:47 / /dev/mqueue rw,nosuid,nodev,noexec,relatime - mqueue mqueue rw",
+      "110 104 0:52 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw",
+      "111 104 0:53 / /run rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "112 110 0:23 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup2 rw",
+      "113 111 0:54 / /run/secrets rw,nosuid,noexec,relatime - tmpfs tmpfs rw",
+      "114 104 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+      "115 104 254:64 / /workspace rw,relatime - ext4 /dev/vde rw",
+      "116 104 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+      "117 104 0:27 /resolv.conf /etc/resolv.conf ro,relatime - virtiofs bind-95f03ffa45a7d998 rw",
+      "118 104 0:28 /hosts /etc/hosts ro,relatime - virtiofs bind-4a666ea3a3b04a24 rw"
+    ],
+    "capacity": {
+      "/home/agent": {
+        "mount": "114 104 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+        "blockBytes": "8589934592"
+      },
+      "/var/lib/docker": {
+        "mount": "116 104 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+        "blockBytes": "21474836480"
+      }
+    },
+    "containerdConfig": {
+      "path": "/var/run/docker/containerd/containerd.toml",
+      "text": "version = 2\nroot = '/var/lib/docker/containerd/daemon'\nstate = '/var/run/docker/containerd/daemon'\ntemp = ''\ndisabled_plugins = ['io.containerd.grpc.v1.cri']\nrequired_plugins = []\noom_score = 0\nimports = []\n\n[debug]\nlevel = ''\nformat = 'text'\nlog_trace_id = false\naddress = '/var/run/docker/containerd/containerd-debug.sock'\n\n[cgroup]\npath = ''\n\n[grpc]\naddress = '/var/run/docker/containerd/containerd.sock'\nmax_recv_message_size = 16777216\nmax_send_message_size = 16777216\n"
+    },
+    "resources": {
+      "cpuCount": 3,
+      "memTotalKiB": 3104752
+    },
+    "docker": {
+      "version": "29.7.2",
+      "root": "/var/lib/docker",
+      "driver": "overlayfs",
+      "driverStatus": [
+        [
+          "driver-type",
+          "io.containerd.snapshotter.v1"
+        ]
+      ],
+      "liveRestore": false
+    },
+    "uid": 0,
+    "groups": [
+      0
+    ],
+    "privileges": [
+      "CapInh:\t0000000000000000",
+      "CapPrm:\t000001ffffffffff",
+      "CapEff:\t000001ffffffffff",
+      "CapBnd:\t000001ffffffffff",
+      "CapAmb:\t0000000000000000",
+      "NoNewPrivs:\t0",
+      "Seccomp:\t0",
+      "Seccomp_filters:\t0"
+    ]
+  },
+  "targetReopenedState": {
+    "image": {
+      "id": "sha256:c898dfaa1e8c0d1b07829d21aeb15e819f9eb0c5546b1ffa85ab2071a222c9ed",
+      "rootfs": {
+        "Type": "layers",
+        "Layers": [
+          "sha256:0a658f289a81c3da059fabcce5f4fadd18905de28c1512fc3741a042d89707ac"
+        ]
+      }
+    },
+    "container": {
+      "id": "482734b25f9d78ea150d3693d58327a1304d1e305670a045607e39c27f595859",
+      "image": "sha256:c898dfaa1e8c0d1b07829d21aeb15e819f9eb0c5546b1ffa85ab2071a222c9ed",
+      "status": "exited",
+      "restart": {
+        "Name": "unless-stopped",
+        "MaximumRetryCount": 0
+      },
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+          "source": "/var/lib/docker/volumes/blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3/_data",
+          "destination": "/data"
+        }
+      ]
+    },
+    "volume": {
+      "name": "blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+      "driver": "local",
+      "mountpoint": "/var/lib/docker/volumes/blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3/_data",
+      "sentinel": {
+        "mode": 420,
+        "uid": 0,
+        "gid": 0,
+        "size": 44,
+        "mtimeMs": 1788636738306.2942,
+        "sha256": "3a6848d9798ba47ca5738b54dc988f2f0bea11f46864a4d52139bc22dcd80895"
+      }
+    },
+    "layerSentinel": "layer:0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+    "package": {
+      "status": "install ok installed|1.0|all",
+      "files": {
+        "/opt/blobot-synthetic/installed.txt": {
+          "mode": 416,
+          "uid": 0,
+          "gid": 0,
+          "size": 44,
+          "mtimeMs": 1788635508123.4568,
+          "sha256": "f85d2d605ba17b003a1436a91a3e06515412a637e774c5b71174394183fddcf2"
+        },
+        "/etc/blobot-synthetic.conf": {
+          "mode": 384,
+          "uid": 0,
+          "gid": 0,
+          "size": 47,
+          "mtimeMs": 1788635508123.4568,
+          "sha256": "63f694e6fe868f257d85eef3923b75b7285edd8cb951903fb28360c63494f2b2"
+        }
+      },
+      "conffiles": "/etc/blobot-synthetic.conf 353d60fd334c15ba48816819226d941b"
+    },
+    "home": {
+      "files": {
+        "session": {
+          "mode": 416,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 54,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "2f9067c81b42d703be7b4193b2fee6f7ef1455c258522d533b9b528972ecff86"
+        },
+        "hardlink": {
+          "mode": 416,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 54,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "2f9067c81b42d703be7b4193b2fee6f7ef1455c258522d533b9b528972ecff86"
+        },
+        "symlink": {
+          "mode": 511,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 7,
+          "mtimeMs": 1788636740454.6355,
+          "link": "session"
+        },
+        "sparse": {
+          "mode": 384,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 1048617,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "09c242366ea92147a850273da90c2eb77fd6a72c666287785c6ab0c3f627907e"
+        }
+      },
+      "hardlinkSameInode": true,
+      "xattr": "synthetic-xattr",
+      "sparseBlocks": 8
+    }
+  },
+  "targetReopenedRootfs": {
+    "files": {
+      "/opt/blobot-rootfs35/capability-binary": {
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {
+          "security.capability": "AQAAAgAEAAAAAAAAAAAAAAAAAAA="
+        },
+        "size": 10577824,
+        "sha256": "956b53a693650d61b2b4d3f035237de469b28522df27c58f7628d7d731e7f1e1"
+      },
+      "/opt/blobot-rootfs35/directory": {
+        "mode": 17896,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {
+          "system.posix_acl_default": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8="
+        },
+        "children": []
+      },
+      "/opt/blobot-rootfs35/fifo": {
+        "mode": 4480,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {}
+      },
+      "/opt/blobot-rootfs35/file": {
+        "mode": 33256,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {
+          "system.posix_acl_access": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8=",
+          "user.blobot": "YmluYXJ5AP94YXR0cg=="
+        },
+        "size": 25,
+        "sha256": "32629b04150170f23e77ef9c100aaf12380693c51d51cc88572b44651b6cd8ec"
+      },
+      "/opt/blobot-rootfs35/hardlink": {
+        "mode": 33256,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {
+          "system.posix_acl_access": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8=",
+          "user.blobot": "YmluYXJ5AP94YXR0cg=="
+        },
+        "size": 25,
+        "sha256": "32629b04150170f23e77ef9c100aaf12380693c51d51cc88572b44651b6cd8ec"
+      },
+      "/opt/blobot-rootfs35/sparse": {
+        "mode": 33184,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 1048587,
+        "sha256": "5482e468797d1883ae4ba5bf82bcca19e52ee2f6dd36d11968590c6385d037af",
+        "expectedContent": true,
+        "nonzeroBeforeTail": 0,
+        "tailMatches": true,
+        "blocks": 8,
+        "dataExtents": [
+          [
+            1048576,
+            1048587
+          ]
+        ]
+      },
+      "/opt/blobot-rootfs35/symlink": {
+        "mode": 41471,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "link": "file"
+      },
+      "/opt/blobot-rootfs35": {
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 3,
+        "xattrs": {},
+        "children": [
+          "capability-binary",
+          "directory",
+          "fifo",
+          "file",
+          "hardlink",
+          "sparse",
+          "symlink"
+        ]
+      },
+      "/opt/blobot-synthetic/installed.txt": {
+        "mode": 33184,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 44,
+        "sha256": "f85d2d605ba17b003a1436a91a3e06515412a637e774c5b71174394183fddcf2"
+      },
+      "/opt/blobot-synthetic": {
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {},
+        "children": [
+          "installed.txt"
+        ]
+      },
+      "/etc/blobot-synthetic.conf": {
+        "mode": 33152,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 47,
+        "sha256": "63f694e6fe868f257d85eef3923b75b7285edd8cb951903fb28360c63494f2b2"
+      },
+      "/etc/issue/replacement": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 28,
+        "sha256": "c69976ce5058b72cd6600a76e7d6aae26e8d2905fa22a8d7870ade9ec2c59a2f"
+      },
+      "/etc/issue": {
+        "mode": 16873,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {},
+        "children": [
+          "replacement"
+        ]
+      },
+      "/etc/issue.net": {
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "link": "/opt/blobot-rootfs35/file"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.list": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740444457168",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 98,
+        "sha256": "83e92810b381cd71c72fbe3d682060067af0f656fa40d908559b1d7e2fe21a80"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.md5sums": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740448611793",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 129,
+        "sha256": "3f6fe01dd08052b3d6cdbb07dd1346f288722825edc6fd4d82e68947d52b95e0"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.conffiles": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740000000000",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 27,
+        "sha256": "6c986f2ee0123259a38ece97325ef629064b2b1b9ad7df74e0e89627509051c2"
+      }
+    },
+    "hardlinks": [
+      [
+        "/opt/blobot-rootfs35/file",
+        "/opt/blobot-rootfs35/hardlink"
+      ]
+    ],
+    "deleted": {
+      "/etc/debian_version": true
+    }
+  },
+  "targetRun": {
+    "ran": true,
+    "stopped": true
+  },
+  "targetMutation": {
+    "mutated": true
+  },
+  "originalDigestAfterTargetMutation": {
+    "sha256": "26814b031e15da43eb74fd0535cd347b73dffc1450dbd9fd8e179816f7c4eea1",
+    "bytes": 47001600,
+    "guardSamples": 141,
+    "boot": {
+      "id": "67168b93-3d03-40c3-9290-0a4ea0738b7a",
+      "pid1": "6"
+    },
+    "workerPid": 216
+  },
+  "originalQuietAfterTargetMutation": {
+    "boot": {
+      "id": "67168b93-3d03-40c3-9290-0a4ea0738b7a",
+      "pid1": "6"
+    },
+    "workerPid": 216,
+    "processes": [],
+    "guardSamples": 141,
+    "guardViolation": null,
+    "package": {
+      "status": "install ok installed|1.0|all",
+      "files": {
+        "/opt/blobot-synthetic/installed.txt": {
+          "mode": 416,
+          "uid": 0,
+          "gid": 0,
+          "size": 44,
+          "mtimeMs": 1788635508123.4568,
+          "sha256": "f85d2d605ba17b003a1436a91a3e06515412a637e774c5b71174394183fddcf2"
+        },
+        "/etc/blobot-synthetic.conf": {
+          "mode": 384,
+          "uid": 0,
+          "gid": 0,
+          "size": 47,
+          "mtimeMs": 1788635508123.4568,
+          "sha256": "63f694e6fe868f257d85eef3923b75b7285edd8cb951903fb28360c63494f2b2"
+        }
+      },
+      "conffiles": "/etc/blobot-synthetic.conf 353d60fd334c15ba48816819226d941b"
+    },
+    "home": {
+      "files": {
+        "session": {
+          "mode": 416,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 54,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "2f9067c81b42d703be7b4193b2fee6f7ef1455c258522d533b9b528972ecff86"
+        },
+        "hardlink": {
+          "mode": 416,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 54,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "2f9067c81b42d703be7b4193b2fee6f7ef1455c258522d533b9b528972ecff86"
+        },
+        "symlink": {
+          "mode": 511,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 7,
+          "mtimeMs": 1788636740454.6355,
+          "link": "session"
+        },
+        "sparse": {
+          "mode": 384,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 1048617,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "09c242366ea92147a850273da90c2eb77fd6a72c666287785c6ab0c3f627907e"
+        }
+      },
+      "hardlinkSameInode": true,
+      "xattr": "synthetic-xattr",
+      "sparseBlocks": 8
+    }
+  },
+  "originalResumed": {
+    "boot": {
+      "id": "67168b93-3d03-40c3-9290-0a4ea0738b7a",
+      "pid1": "6"
+    },
+    "workerPid": 216,
+    "processes": [
+      {
+        "pid": 328,
+        "comm": "dockerd",
+        "args": [
+          "dockerd"
+        ],
+        "start": "1648"
+      },
+      {
+        "pid": 353,
+        "comm": "containerd",
+        "args": [
+          "containerd",
+          "--config",
+          "/var/run/docker/containerd/containerd.toml"
+        ],
+        "start": "1651"
+      }
+    ],
+    "mounts": [
+      "101 69 0:29 / / rw,relatime - overlay overlay rw,lowerdir=/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/1:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/2:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/3:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/4:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/5:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/6:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/7:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/8:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/9:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/10:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/11:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/12:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/13:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/14:/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/15,upperdir=/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/0/upper,workdir=/run/bundles/ff80df71d3755f8239133c8491e5c8a18a975351199021c31413a99cfddea276/mounts/0/work,nouserxattr",
+      "102 101 0:47 / /proc rw,nosuid,nodev,noexec,relatime - proc proc rw",
+      "103 101 0:48 / /dev rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "104 103 0:49 / /dev/pts rw,nosuid,noexec,relatime - devpts devpts rw,gid=5,mode=620,ptmxmode=666",
+      "105 103 0:50 / /dev/shm rw,nosuid,nodev,noexec,relatime - tmpfs shm rw,size=65536k",
+      "106 103 0:46 / /dev/mqueue rw,nosuid,nodev,noexec,relatime - mqueue mqueue rw",
+      "107 101 0:51 / /sys rw,nosuid,nodev,noexec,relatime - sysfs sysfs rw",
+      "108 101 0:52 / /run rw,nosuid - tmpfs tmpfs rw,size=65536k,mode=755",
+      "109 107 0:23 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime - cgroup2 cgroup2 rw",
+      "110 108 0:53 / /run/secrets rw,nosuid,noexec,relatime - tmpfs tmpfs rw",
+      "111 101 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+      "112 101 254:64 / /workspace rw,relatime - ext4 /dev/vde rw",
+      "113 101 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+      "114 101 0:27 /resolv.conf /etc/resolv.conf ro,relatime - virtiofs bind-95f03ffa45a7d998 rw",
+      "115 101 0:28 /hosts /etc/hosts ro,relatime - virtiofs bind-4a666ea3a3b04a24 rw"
+    ],
+    "capacity": {
+      "/home/agent": {
+        "mount": "111 101 254:48 / /home/agent rw,relatime - ext4 /dev/vdd rw",
+        "blockBytes": "8589934592"
+      },
+      "/var/lib/docker": {
+        "mount": "113 101 254:80 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdf rw",
+        "blockBytes": "21474836480"
+      }
+    },
+    "containerdConfig": {
+      "path": "/var/run/docker/containerd/containerd.toml",
+      "text": "version = 2\nroot = '/var/lib/docker/containerd/daemon'\nstate = '/var/run/docker/containerd/daemon'\ntemp = ''\ndisabled_plugins = ['io.containerd.grpc.v1.cri']\nrequired_plugins = []\noom_score = 0\nimports = []\n\n[debug]\nlevel = ''\nformat = 'text'\nlog_trace_id = false\naddress = '/var/run/docker/containerd/containerd-debug.sock'\n\n[cgroup]\npath = ''\n\n[grpc]\naddress = '/var/run/docker/containerd/containerd.sock'\nmax_recv_message_size = 16777216\nmax_send_message_size = 16777216\n"
+    },
+    "resources": {
+      "cpuCount": 2,
+      "memTotalKiB": 2066016
+    },
+    "docker": {
+      "version": "29.7.2",
+      "root": "/var/lib/docker",
+      "driver": "overlayfs",
+      "driverStatus": [
+        [
+          "driver-type",
+          "io.containerd.snapshotter.v1"
+        ]
+      ],
+      "liveRestore": false
+    },
+    "uid": 0,
+    "groups": [
+      0
+    ],
+    "privileges": [
+      "CapInh:\t0000000000000000",
+      "CapPrm:\t000001ffffffffff",
+      "CapEff:\t000001ffffffffff",
+      "CapBnd:\t000001ffffffffff",
+      "CapAmb:\t0000000000000000",
+      "NoNewPrivs:\t0",
+      "Seccomp:\t0",
+      "Seccomp_filters:\t0"
+    ]
+  },
+  "originalFinalState": {
+    "image": {
+      "id": "sha256:c898dfaa1e8c0d1b07829d21aeb15e819f9eb0c5546b1ffa85ab2071a222c9ed",
+      "rootfs": {
+        "Type": "layers",
+        "Layers": [
+          "sha256:0a658f289a81c3da059fabcce5f4fadd18905de28c1512fc3741a042d89707ac"
+        ]
+      }
+    },
+    "container": {
+      "id": "482734b25f9d78ea150d3693d58327a1304d1e305670a045607e39c27f595859",
+      "image": "sha256:c898dfaa1e8c0d1b07829d21aeb15e819f9eb0c5546b1ffa85ab2071a222c9ed",
+      "status": "exited",
+      "restart": {
+        "Name": "unless-stopped",
+        "MaximumRetryCount": 0
+      },
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+          "source": "/var/lib/docker/volumes/blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3/_data",
+          "destination": "/data"
+        }
+      ]
+    },
+    "volume": {
+      "name": "blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+      "driver": "local",
+      "mountpoint": "/var/lib/docker/volumes/blobot-volume-0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3/_data",
+      "sentinel": {
+        "mode": 420,
+        "uid": 0,
+        "gid": 0,
+        "size": 44,
+        "mtimeMs": 1788636738306.2942,
+        "sha256": "3a6848d9798ba47ca5738b54dc988f2f0bea11f46864a4d52139bc22dcd80895"
+      }
+    },
+    "layerSentinel": "layer:0dc6e3fa-e37a-4839-bba0-f59c7faa9ec3",
+    "package": {
+      "status": "install ok installed|1.0|all",
+      "files": {
+        "/opt/blobot-synthetic/installed.txt": {
+          "mode": 416,
+          "uid": 0,
+          "gid": 0,
+          "size": 44,
+          "mtimeMs": 1788635508123.4568,
+          "sha256": "f85d2d605ba17b003a1436a91a3e06515412a637e774c5b71174394183fddcf2"
+        },
+        "/etc/blobot-synthetic.conf": {
+          "mode": 384,
+          "uid": 0,
+          "gid": 0,
+          "size": 47,
+          "mtimeMs": 1788635508123.4568,
+          "sha256": "63f694e6fe868f257d85eef3923b75b7285edd8cb951903fb28360c63494f2b2"
+        }
+      },
+      "conffiles": "/etc/blobot-synthetic.conf 353d60fd334c15ba48816819226d941b"
+    },
+    "home": {
+      "files": {
+        "session": {
+          "mode": 416,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 54,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "2f9067c81b42d703be7b4193b2fee6f7ef1455c258522d533b9b528972ecff86"
+        },
+        "hardlink": {
+          "mode": 416,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 54,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "2f9067c81b42d703be7b4193b2fee6f7ef1455c258522d533b9b528972ecff86"
+        },
+        "symlink": {
+          "mode": 511,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 7,
+          "mtimeMs": 1788636740454.6355,
+          "link": "session"
+        },
+        "sparse": {
+          "mode": 384,
+          "uid": 1000,
+          "gid": 1000,
+          "size": 1048617,
+          "mtimeMs": 1788636740454.6355,
+          "sha256": "09c242366ea92147a850273da90c2eb77fd6a72c666287785c6ab0c3f627907e"
+        }
+      },
+      "hardlinkSameInode": true,
+      "xattr": "synthetic-xattr",
+      "sparseBlocks": 8
+    }
+  },
+  "originalFinalRootfs": {
+    "files": {
+      "/opt/blobot-rootfs35/capability-binary": {
+        "mode": 33261,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {
+          "security.capability": "AQAAAgAEAAAAAAAAAAAAAAAAAAA="
+        },
+        "size": 10577824,
+        "sha256": "956b53a693650d61b2b4d3f035237de469b28522df27c58f7628d7d731e7f1e1"
+      },
+      "/opt/blobot-rootfs35/directory": {
+        "mode": 17896,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {
+          "system.posix_acl_default": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8="
+        },
+        "children": []
+      },
+      "/opt/blobot-rootfs35/fifo": {
+        "mode": 4480,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {}
+      },
+      "/opt/blobot-rootfs35/file": {
+        "mode": 33256,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {
+          "system.posix_acl_access": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8=",
+          "user.blobot": "YmluYXJ5AP94YXR0cg=="
+        },
+        "size": 25,
+        "sha256": "32629b04150170f23e77ef9c100aaf12380693c51d51cc88572b44651b6cd8ec"
+      },
+      "/opt/blobot-rootfs35/hardlink": {
+        "mode": 33256,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {
+          "system.posix_acl_access": "AgAAAAEABwD/////AgAEADkwAAAEAAUA/////xAABQD/////IAAAAP////8=",
+          "user.blobot": "YmluYXJ5AP94YXR0cg=="
+        },
+        "size": 25,
+        "sha256": "32629b04150170f23e77ef9c100aaf12380693c51d51cc88572b44651b6cd8ec"
+      },
+      "/opt/blobot-rootfs35/sparse": {
+        "mode": 33184,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 1048587,
+        "sha256": "5482e468797d1883ae4ba5bf82bcca19e52ee2f6dd36d11968590c6385d037af",
+        "expectedContent": true,
+        "nonzeroBeforeTail": 0,
+        "tailMatches": true,
+        "blocks": 8,
+        "dataExtents": [
+          [
+            1048576,
+            1048587
+          ]
+        ]
+      },
+      "/opt/blobot-rootfs35/symlink": {
+        "mode": 41471,
+        "uid": 1000,
+        "gid": 1001,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "link": "file"
+      },
+      "/opt/blobot-rootfs35": {
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 3,
+        "xattrs": {},
+        "children": [
+          "capability-binary",
+          "directory",
+          "fifo",
+          "file",
+          "hardlink",
+          "sparse",
+          "symlink"
+        ]
+      },
+      "/opt/blobot-synthetic/installed.txt": {
+        "mode": 33184,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 44,
+        "sha256": "f85d2d605ba17b003a1436a91a3e06515412a637e774c5b71174394183fddcf2"
+      },
+      "/opt/blobot-synthetic": {
+        "mode": 16877,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {},
+        "children": [
+          "installed.txt"
+        ]
+      },
+      "/etc/blobot-synthetic.conf": {
+        "mode": 33152,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 47,
+        "sha256": "63f694e6fe868f257d85eef3923b75b7285edd8cb951903fb28360c63494f2b2"
+      },
+      "/etc/issue/replacement": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 28,
+        "sha256": "c69976ce5058b72cd6600a76e7d6aae26e8d2905fa22a8d7870ade9ec2c59a2f"
+      },
+      "/etc/issue": {
+        "mode": 16873,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 2,
+        "xattrs": {},
+        "children": [
+          "replacement"
+        ]
+      },
+      "/etc/issue.net": {
+        "mode": 41471,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788635508123456789",
+        "nlink": 1,
+        "xattrs": {},
+        "link": "/opt/blobot-rootfs35/file"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.list": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740444457168",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 98,
+        "sha256": "83e92810b381cd71c72fbe3d682060067af0f656fa40d908559b1d7e2fe21a80"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.md5sums": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740448611793",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 129,
+        "sha256": "3f6fe01dd08052b3d6cdbb07dd1346f288722825edc6fd4d82e68947d52b95e0"
+      },
+      "/var/lib/dpkg/info/blobot-synthetic-fixture.conffiles": {
+        "mode": 33188,
+        "uid": 0,
+        "gid": 0,
+        "mtimeNs": "1788636740000000000",
+        "nlink": 1,
+        "xattrs": {},
+        "size": 27,
+        "sha256": "6c986f2ee0123259a38ece97325ef629064b2b1b9ad7df74e0e89627509051c2"
+      }
+    },
+    "hardlinks": [
+      [
+        "/opt/blobot-rootfs35/file",
+        "/opt/blobot-rootfs35/hardlink"
+      ]
+    ],
+    "deleted": {
+      "/etc/debian_version": true
+    }
+  },
+  "heldExecCopyPassed": true,
+  "passed": true
+}

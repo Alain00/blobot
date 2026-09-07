@@ -1,0 +1,413 @@
+{
+  "fixture": "44-claude-bash-failure",
+  "uuid": "e47a9f6f-3973-4fa5-a406-97546de815d9",
+  "createdAt": "2026-09-05T21:53:32.106Z",
+  "pins": {
+    "cli": "2.1.260",
+    "sdk": "0.3.232",
+    "cliSha256": "3c269f66801028823e24a63ced9fdd3988cb86cf85fccd9f03f87e463b9d3e3c",
+    "sdkSha256": "cae60ea6827d5f9b113c88b911388983fe96e7d565a382bf25904df78ab9d0fc",
+    "helperPath": "/Users/guillermo/Work/blobot/packages/core/src/adapters/claude/sandbox.ts",
+    "helperSha256": "a2bc782a37b5615d7ed494e4cdebd9ec865fe7d115c1f977ff85fb5e363e3d5b",
+    "helperPolicy": {
+      "enabled": true,
+      "failIfUnavailable": true,
+      "autoAllowBashIfSandboxed": false,
+      "allowUnsandboxedCommands": false
+    }
+  },
+  "cases": [
+    {
+      "name": "required-allow-approval",
+      "sandbox": {
+        "enabled": true,
+        "failIfUnavailable": true,
+        "autoAllowBashIfSandboxed": false,
+        "allowUnsandboxedCommands": false
+      },
+      "decision": "allow",
+      "profile": "(version 1)\n(allow default)\n(deny network*)\n(allow network-outbound (remote ip \"localhost:49383\"))\n(deny file-write*)\n(allow file-write* (subpath \"/private/tmp/blobot-claude44-TzmOR9/required-allow-approval\") (literal \"/dev/null\"))\n(deny file-read*\n  (subpath \"/Users/guillermo/.claude\") (literal \"/Users/guillermo/.claude.json\")\n  (subpath \"/Users/guillermo/.aws\") (subpath \"/Users/guillermo/.ssh\")\n  (literal \"/Users/guillermo/.gitconfig\") (subpath \"/Users/guillermo/.config/git\")\n  (literal \"/Users/guillermo/.bashrc\") (literal \"/Users/guillermo/.bash_profile\")\n  (literal \"/Users/guillermo/.zshrc\") (literal \"/Users/guillermo/.zshenv\")\n  (literal \"/Users/guillermo/.profile\")\n  (subpath \"/Users/guillermo/Library/Keychains\") (subpath \"/Library/Keychains\")\n  (subpath \"/Library/Application Support/ClaudeCode\") (subpath \"/Library/Managed Preferences\"))\n(deny mach-lookup (global-name \"com.apple.securityd\"))",
+      "command": "printf fixture44-ok > '/private/tmp/blobot-claude44-TzmOR9/required-allow-approval/project/marker'",
+      "requests": [
+        {
+          "path": "/api/hello",
+          "method": "HEAD",
+          "apiKeyWasSynthetic": false,
+          "toolResults": []
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "method": "POST",
+          "model": "claude-sonnet-4-6",
+          "stream": true,
+          "toolNames": [
+            "Bash"
+          ],
+          "apiKeyWasSynthetic": true,
+          "toolResults": []
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "method": "POST",
+          "model": "claude-sonnet-4-6",
+          "stream": true,
+          "toolNames": [
+            "Bash"
+          ],
+          "apiKeyWasSynthetic": true,
+          "toolResults": [
+            {
+              "type": "tool_result",
+              "content": "Sandbox is required but failed to initialize: EPERM: operation not permitted, listen '/private/tmp/blobot-claude44-TzmOR9/required-allow-approval/tmp/srt-mux-99928-1.sock'. Restart to retry.\n\n<system-reminder>\n<total_tokens>14999980 tokens left</total_tokens>\n</system-reminder>",
+              "is_error": true,
+              "tool_use_id": "toolu_fixture44",
+              "cache_control": {
+                "type": "ephemeral"
+              }
+            }
+          ]
+        }
+      ],
+      "messagesSent": 2,
+      "workerExitCode": 0,
+      "workerExitSignal": null,
+      "workerStderr": "",
+      "observation": {
+        "name": "required-allow-approval",
+        "approvals": [
+          {
+            "name": "Bash",
+            "input": {
+              "command": "printf fixture44-ok > '/private/tmp/blobot-claude44-TzmOR9/required-allow-approval/project/marker'",
+              "timeout": 1000,
+              "description": "Write a synthetic fixture marker"
+            },
+            "toolUseID": "toolu_fixture44",
+            "decision": "allow"
+          }
+        ],
+        "messages": [
+          {
+            "type": "system",
+            "subtype": "init"
+          },
+          {
+            "type": "assistant",
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "toolu_fixture44",
+                "name": "Bash",
+                "input": {
+                  "command": "printf fixture44-ok > '/private/tmp/blobot-claude44-TzmOR9/required-allow-approval/project/marker'",
+                  "description": "Write a synthetic fixture marker",
+                  "timeout": 1000
+                }
+              }
+            ]
+          },
+          {
+            "type": "user",
+            "content": [
+              {
+                "type": "tool_result",
+                "content": "Sandbox is required but failed to initialize: EPERM: operation not permitted, listen '/private/tmp/blobot-claude44-TzmOR9/required-allow-approval/tmp/srt-mux-99928-1.sock'. Restart to retry.",
+                "is_error": true,
+                "tool_use_id": "toolu_fixture44"
+              }
+            ],
+            "tool_use_result": "Error: Sandbox is required but failed to initialize: EPERM: operation not permitted, listen '/private/tmp/blobot-claude44-TzmOR9/required-allow-approval/tmp/srt-mux-99928-1.sock'. Restart to retry."
+          },
+          {
+            "type": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Synthetic final response after the Bash result."
+              }
+            ]
+          },
+          {
+            "type": "result",
+            "subtype": "success",
+            "is_error": false,
+            "result": "Synthetic final response after the Bash result."
+          }
+        ],
+        "initialized": true,
+        "stderr": "",
+        "sandboxDebug": [
+          "2026-09-05T21:53:32.481Z [DEBUG] Failed to initialize sandbox: EPERM: operation not permitted, listen '/private/tmp/blobot-claude44-TzmOR9/required-allow-approval/tmp/srt-mux-99928-0.sock'",
+          "2026-09-05T21:53:32.536Z [DEBUG] Failed to initialize sandbox: EPERM: operation not permitted, listen '/private/tmp/blobot-claude44-TzmOR9/required-allow-approval/tmp/srt-mux-99928-1.sock'",
+          "2026-09-05T21:53:32.538Z [DEBUG] Bash tool error (23ms): Sandbox is required but failed to initialize: EPERM: operation not permitted, listen '/private/tmp/blobot-claude44-TzmOR9/required-allow-approval/tmp/srt-mux-99928-1.sock'. Restart to retry."
+        ],
+        "nativeExitCode": 0,
+        "nativeExitSignal": null,
+        "forcedCleanup": false
+      },
+      "markerExists": false,
+      "markerContent": null
+    },
+    {
+      "name": "disabled-control",
+      "sandbox": {
+        "enabled": false
+      },
+      "decision": "allow",
+      "profile": "(version 1)\n(allow default)\n(deny network*)\n(allow network-outbound (remote ip \"localhost:49386\"))\n(deny file-write*)\n(allow file-write* (subpath \"/private/tmp/blobot-claude44-TzmOR9/disabled-control\") (literal \"/dev/null\"))\n(deny file-read*\n  (subpath \"/Users/guillermo/.claude\") (literal \"/Users/guillermo/.claude.json\")\n  (subpath \"/Users/guillermo/.aws\") (subpath \"/Users/guillermo/.ssh\")\n  (literal \"/Users/guillermo/.gitconfig\") (subpath \"/Users/guillermo/.config/git\")\n  (literal \"/Users/guillermo/.bashrc\") (literal \"/Users/guillermo/.bash_profile\")\n  (literal \"/Users/guillermo/.zshrc\") (literal \"/Users/guillermo/.zshenv\")\n  (literal \"/Users/guillermo/.profile\")\n  (subpath \"/Users/guillermo/Library/Keychains\") (subpath \"/Library/Keychains\")\n  (subpath \"/Library/Application Support/ClaudeCode\") (subpath \"/Library/Managed Preferences\"))\n(deny mach-lookup (global-name \"com.apple.securityd\"))",
+      "command": "printf fixture44-ok > '/private/tmp/blobot-claude44-TzmOR9/disabled-control/project/marker'",
+      "requests": [
+        {
+          "path": "/api/hello",
+          "method": "HEAD",
+          "apiKeyWasSynthetic": false,
+          "toolResults": []
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "method": "POST",
+          "model": "claude-sonnet-4-6",
+          "stream": true,
+          "toolNames": [
+            "Bash"
+          ],
+          "apiKeyWasSynthetic": true,
+          "toolResults": []
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "method": "POST",
+          "model": "claude-sonnet-4-6",
+          "stream": true,
+          "toolNames": [
+            "Bash"
+          ],
+          "apiKeyWasSynthetic": true,
+          "toolResults": [
+            {
+              "tool_use_id": "toolu_fixture44",
+              "type": "tool_result",
+              "content": "(Bash completed with no output)\n\n<system-reminder>\n<total_tokens>14999980 tokens left</total_tokens>\n</system-reminder>",
+              "is_error": false,
+              "cache_control": {
+                "type": "ephemeral"
+              }
+            }
+          ]
+        }
+      ],
+      "messagesSent": 2,
+      "workerExitCode": 0,
+      "workerExitSignal": null,
+      "workerStderr": "",
+      "observation": {
+        "name": "disabled-control",
+        "approvals": [
+          {
+            "name": "Bash",
+            "input": {
+              "command": "printf fixture44-ok > '/private/tmp/blobot-claude44-TzmOR9/disabled-control/project/marker'",
+              "timeout": 1000,
+              "description": "Write a synthetic fixture marker"
+            },
+            "toolUseID": "toolu_fixture44",
+            "decision": "allow"
+          }
+        ],
+        "messages": [
+          {
+            "type": "system",
+            "subtype": "init"
+          },
+          {
+            "type": "assistant",
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "toolu_fixture44",
+                "name": "Bash",
+                "input": {
+                  "command": "printf fixture44-ok > '/private/tmp/blobot-claude44-TzmOR9/disabled-control/project/marker'",
+                  "description": "Write a synthetic fixture marker",
+                  "timeout": 1000
+                }
+              }
+            ]
+          },
+          {
+            "type": "user",
+            "content": [
+              {
+                "tool_use_id": "toolu_fixture44",
+                "type": "tool_result",
+                "content": "(Bash completed with no output)",
+                "is_error": false
+              }
+            ],
+            "tool_use_result": {
+              "stdout": "",
+              "stderr": "",
+              "interrupted": false,
+              "isImage": false,
+              "noOutputExpected": false
+            }
+          },
+          {
+            "type": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Synthetic final response after the Bash result."
+              }
+            ]
+          },
+          {
+            "type": "result",
+            "subtype": "success",
+            "is_error": false,
+            "result": "Synthetic final response after the Bash result."
+          }
+        ],
+        "initialized": true,
+        "stderr": "",
+        "sandboxDebug": [],
+        "nativeExitCode": 0,
+        "nativeExitSignal": null,
+        "forcedCleanup": false
+      },
+      "markerExists": true,
+      "markerContent": "fixture44-ok"
+    },
+    {
+      "name": "required-deny-approval",
+      "sandbox": {
+        "enabled": true,
+        "failIfUnavailable": true,
+        "autoAllowBashIfSandboxed": false,
+        "allowUnsandboxedCommands": false
+      },
+      "decision": "deny",
+      "profile": "(version 1)\n(allow default)\n(deny network*)\n(allow network-outbound (remote ip \"localhost:49389\"))\n(deny file-write*)\n(allow file-write* (subpath \"/private/tmp/blobot-claude44-TzmOR9/required-deny-approval\") (literal \"/dev/null\"))\n(deny file-read*\n  (subpath \"/Users/guillermo/.claude\") (literal \"/Users/guillermo/.claude.json\")\n  (subpath \"/Users/guillermo/.aws\") (subpath \"/Users/guillermo/.ssh\")\n  (literal \"/Users/guillermo/.gitconfig\") (subpath \"/Users/guillermo/.config/git\")\n  (literal \"/Users/guillermo/.bashrc\") (literal \"/Users/guillermo/.bash_profile\")\n  (literal \"/Users/guillermo/.zshrc\") (literal \"/Users/guillermo/.zshenv\")\n  (literal \"/Users/guillermo/.profile\")\n  (subpath \"/Users/guillermo/Library/Keychains\") (subpath \"/Library/Keychains\")\n  (subpath \"/Library/Application Support/ClaudeCode\") (subpath \"/Library/Managed Preferences\"))\n(deny mach-lookup (global-name \"com.apple.securityd\"))",
+      "command": "printf fixture44-ok > '/private/tmp/blobot-claude44-TzmOR9/required-deny-approval/project/marker'",
+      "requests": [
+        {
+          "path": "/api/hello",
+          "method": "HEAD",
+          "apiKeyWasSynthetic": false,
+          "toolResults": []
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "method": "POST",
+          "model": "claude-sonnet-4-6",
+          "stream": true,
+          "toolNames": [
+            "Bash"
+          ],
+          "apiKeyWasSynthetic": true,
+          "toolResults": []
+        },
+        {
+          "path": "/v1/messages?beta=true",
+          "method": "POST",
+          "model": "claude-sonnet-4-6",
+          "stream": true,
+          "toolNames": [
+            "Bash"
+          ],
+          "apiKeyWasSynthetic": true,
+          "toolResults": [
+            {
+              "type": "tool_result",
+              "content": "Synthetic fixture denied this Bash approval.\n\n<system-reminder>\n<total_tokens>14999980 tokens left</total_tokens>\n</system-reminder>",
+              "is_error": true,
+              "tool_use_id": "toolu_fixture44",
+              "cache_control": {
+                "type": "ephemeral"
+              }
+            }
+          ]
+        }
+      ],
+      "messagesSent": 2,
+      "workerExitCode": 0,
+      "workerExitSignal": null,
+      "workerStderr": "",
+      "observation": {
+        "name": "required-deny-approval",
+        "approvals": [
+          {
+            "name": "Bash",
+            "input": {
+              "command": "printf fixture44-ok > '/private/tmp/blobot-claude44-TzmOR9/required-deny-approval/project/marker'",
+              "timeout": 1000,
+              "description": "Write a synthetic fixture marker"
+            },
+            "toolUseID": "toolu_fixture44",
+            "decision": "deny"
+          }
+        ],
+        "messages": [
+          {
+            "type": "system",
+            "subtype": "init"
+          },
+          {
+            "type": "assistant",
+            "content": [
+              {
+                "type": "tool_use",
+                "id": "toolu_fixture44",
+                "name": "Bash",
+                "input": {
+                  "command": "printf fixture44-ok > '/private/tmp/blobot-claude44-TzmOR9/required-deny-approval/project/marker'",
+                  "description": "Write a synthetic fixture marker",
+                  "timeout": 1000
+                }
+              }
+            ]
+          },
+          {
+            "type": "user",
+            "content": [
+              {
+                "type": "tool_result",
+                "content": "Synthetic fixture denied this Bash approval.",
+                "is_error": true,
+                "tool_use_id": "toolu_fixture44"
+              }
+            ],
+            "tool_use_result": "Error: Synthetic fixture denied this Bash approval."
+          },
+          {
+            "type": "assistant",
+            "content": [
+              {
+                "type": "text",
+                "text": "Synthetic final response after the Bash result."
+              }
+            ]
+          },
+          {
+            "type": "result",
+            "subtype": "success",
+            "is_error": false,
+            "result": "Synthetic final response after the Bash result."
+          }
+        ],
+        "initialized": true,
+        "stderr": "",
+        "sandboxDebug": [
+          "2026-09-05T21:53:33.241Z [DEBUG] Failed to initialize sandbox: EPERM: operation not permitted, listen '/private/tmp/blobot-claude44-TzmOR9/required-deny-approval/tmp/srt-mux-99994-0.sock'"
+        ],
+        "nativeExitCode": 0,
+        "nativeExitSignal": null,
+        "forcedCleanup": false
+      },
+      "markerExists": false,
+      "markerContent": null
+    }
+  ],
+  "assertionsPassed": 70,
+  "temporaryTreeRemoved": true
+}

@@ -1,3 +1,5 @@
+import type { SkillDiscovery } from '../../skills/inventory.js';
+import { boxPaletteNames, personalPaletteNames, type BoxPaletteScope } from '../acp/box-palette.js';
 import { readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -52,11 +54,16 @@ export const VOUCHED_BUILT_INS: readonly string[] = [
 /** Where Codex reads a person's skills from, in the order it resolves them. */
 export function skillRoots(cwd: string): string[] {
   const home = process.env['CODEX_HOME'] ?? join(homedir(), '.codex');
-  return [join(cwd, '.codex', 'skills'), join(home, 'skills'), join(homedir(), '.agents', 'skills')];
+  return [join(cwd, '.agents', 'skills'), join(cwd, '.codex', 'skills'), join(home, 'skills'), join(homedir(), '.agents', 'skills')];
 }
 
 /** Everything blobot is willing to offer in this workspace, by name and without the `$`. */
-export function offerableNames(cwd: string): Set<string> {
+export function offerableNames(cwd: string, box?: BoxPaletteScope, personalPath?: string): Set<string> {
+  return new Set([...personalPaletteNames(personalPath), ...contextNames(cwd, box)]);
+}
+
+function contextNames(cwd: string, box?: BoxPaletteScope): Set<string> {
+  if (box !== undefined) return new Set([...boxPaletteNames(cwd, [{ path: join(cwd, '.codex', 'skills'), kind: 'skills' }, { path: join(cwd, '.agents', 'skills'), kind: 'skills' }], box), ...VOUCHED_BUILT_INS]);
   const names = new Set<string>(VOUCHED_BUILT_INS);
   for (const root of skillRoots(cwd)) for (const name of skillNames(root)) names.add(name);
   return names;
@@ -99,3 +106,11 @@ function isFile(path: string): boolean {
 export function offeredName(advertised: string): string {
   return advertised.startsWith('$') ? advertised.slice(1) : advertised;
 }
+export const CODEX_SKILL_DISCOVERY: SkillDiscovery = {
+  personal: true,
+  locations: (cwd, box, shared) => [
+    ...['.agents/skills', '.codex/skills'].map((path) => ({ path: join(cwd, path), scope: 'project' as const, ...(box ? { boundary: cwd } : {}) })),
+    ...(box ? (shared ? [{ path: shared, scope: 'computer' as const, boundary: shared }] : [])
+      : [join(process.env['CODEX_HOME'] ?? join(homedir(), '.codex'), 'skills'), join(homedir(), '.agents/skills')].map((path) => ({ path, scope: 'computer' as const }))),
+  ],
+};

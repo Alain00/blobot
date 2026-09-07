@@ -1,7 +1,9 @@
 import { useCallback, useRef, useState } from 'react';
 
 const KEY = 'blobot.railWidth';
-const DEFAULT = 280;
+/** The rail's resting width. Settings' own column takes it too, so the two columns line up. */
+export const RAIL_DEFAULT_WIDTH = 280;
+const DEFAULT = RAIL_DEFAULT_WIDTH;
 /** Narrow enough to be a strip of names, wide enough that a long team name still reads. */
 const MIN = 180;
 const MAX = 460;

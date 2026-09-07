@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentEvent, Message } from '@blobot/core/domain';
-import type { UiAgentMessage, UiLog } from '../../shared/api.js';
+import type { UiAgentMessage, UiLog, UiRailAgent, UiTeamSummary } from '../../shared/api.js';
 import {
   addressedBy,
+  mentionsIn,
+  mentionPartial,
   compactionLine,
   continuesSpeaker,
   failuresIn,
@@ -14,6 +16,7 @@ import {
   messagesIn,
   notesIn,
   paneAfterSnapshot,
+  railRowsOf,
   commandMenu,
   reduce,
   rowsOf,
@@ -467,6 +470,8 @@ describe('the live half of a run', () => {
     agentIds,
     text: 'go',
   });
+  /** A second prompt to the same agent, which is what makes its earlier run a settled one. */
+  const prompt2: Item = { kind: 'user', id: 'u2', at: 2, agentIds: ['alice'], text: 'again' };
   const inFlight = (): boolean => true;
   const idle = (): boolean => false;
   const live = (rows: readonly Row[]): Extract<Row, { kind: 'live' }>[] =>
@@ -595,6 +600,55 @@ describe('the live half of a run', () => {
     expect(rows.map((row) => row.kind)).toEqual(['item', 'item']);
   });
 
+  /**
+   * The one that reproduced, 2026-09-07. `live` is a fact about the agent *now* and a run is a
+   * place in the transcript, so every one of an agent's earlier turns lifted its teammates'
+   * replies the moment that agent started a new one: a block per historical run, every one of
+   * them keyed `live:<agent>`. React leaves the duplicates' DOM behind, so they outlived the
+   * fold, the team switch and the team -- five agents' blocks, dated two days earlier, standing
+   * in a thread opened eleven minutes ago.
+   */
+  it('lifts nothing out of a settled run, however live its principal is', () => {
+    const rows = rowsOf(
+      [
+        prompt(['alice']),
+        call('a1', 'alice', 'completed'),
+        { kind: 'peer', id: 'm1', at: 1, fromId: 'alice', toId: 'bob', text: 'have a look' },
+        said('r1', 'bob', 'had a look'),
+        said('answer', 'alice', `Done. ${'and here is why '.repeat(20)}`),
+        prompt2,
+        call('a2', 'alice', 'running'),
+      ],
+      inFlight,
+    );
+    // Bob's reply is in the first run's fold, where it happened, and not in a block of its own.
+    expect(folds(rows)[0]?.items.map((item) => item.id)).toEqual(['a1', 'm1', 'r1']);
+    expect(live(rows)).toHaveLength(1);
+    expect(live(rows)[0]?.items.map((item) => item.id)).toEqual(['a2']);
+  });
+
+  /**
+   * And the promise itself, which is what the id claims: one block per agent, so no two rows in
+   * a transcript are ever drawn under one React key.
+   */
+  it('never draws two rows under one key', () => {
+    const rows = rowsOf(
+      [
+        prompt(['alice']),
+        call('a1', 'alice', 'running'),
+        said('answer', 'alice', `Done. ${'and here is why '.repeat(20)}`),
+        prompt2,
+        call('a2', 'alice', 'running'),
+      ],
+      inFlight,
+    );
+    const keys = rows.map((row) => (row.kind === 'item' ? row.item.id : row.id));
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(live(rows)).toHaveLength(1);
+    // Nothing is dropped to keep the promise: the earlier block's call is back in the column.
+    expect(keys).toContain('a1');
+  });
+
   /** A caption with its own calls under it is the face said twice, one sentence apart. */
   it('groups the block under a caption the same agent just wrote', () => {
     expect(continuesAgent('alice', caption)).toBe(true);
@@ -611,6 +665,7 @@ describe('a permission block', () => {
     title: 'rm -rf dist',
     canAllow: true,
     canAllowAlways: true,
+    allowAlways: { name: 'Allow for this session', description: 'This grant ends with the session.' },
   };
   const started: AgentEvent = {
     ...identity,
@@ -625,7 +680,7 @@ describe('a permission block', () => {
     const asked = reduce(apply([started]), { type: 'permission', request, at: 20 });
     expect(asked.items).toMatchObject([
       { kind: 'tool', id: 'tool_1', status: 'asking' },
-      { kind: 'permission', id: 'perm_1', title: 'rm -rf dist', canAllow: true },
+      { kind: 'permission', id: 'perm_1', title: 'rm -rf dist', canAllow: true, allowAlways: request.allowAlways },
     ]);
   });
 
@@ -638,7 +693,7 @@ describe('a permission block', () => {
     ]);
   });
 
-  it('starts the call on an always answer too, and says the rule was left behind', () => {
+  it('starts the call on a reusable approval too, and records that choice', () => {
     const asked = reduce(apply([started]), { type: 'permission', request, at: 20 });
     const allowed = reduce(asked, {
       type: 'permissionSettled',
@@ -697,7 +752,7 @@ describe('a permission block', () => {
         dictation: 'off' as const,
       },
     });
-    expect(state.items).toMatchObject([{ kind: 'permission', id: 'perm_1' }]);
+    expect(state.items).toMatchObject([{ kind: 'permission', id: 'perm_1', allowAlways: request.allowAlways }]);
   });
 });
 
@@ -767,6 +822,42 @@ describe('who a message is addressed to', () => {
 
   it('addresses nobody when the message starts with prose', () => {
     expect(ids('the page double-charges')).toEqual([]);
+  });
+
+  // A name is not a word. `@Creative` used to be a dud followed by prose, so a message to the
+  // one agent whose name has a space in it reached nobody and the field said so in half a name.
+  describe('a name with a space in it', () => {
+    const wide = [
+      { id: 'alice', name: 'Alice' },
+      { id: 'designer', name: 'Creative Designer' },
+    ] as unknown as readonly import('@blobot/core/domain').Agent[];
+    const to = (draft: string): string[] => addressedBy(draft, wide).map((agent) => agent.id);
+
+    it('is one mention, and it addresses', () => {
+      expect(to('@Creative Designer hello')).toEqual(['designer']);
+      expect(mentionsIn('@Creative Designer hello', wide)).toMatchObject([
+        { start: 0, end: 18, text: 'Creative Designer' },
+      ]);
+    });
+
+    it('takes any run of whitespace between its words, since the user typed it', () => {
+      expect(to('@Creative  Designer hello')).toEqual(['designer']);
+    });
+
+    it('still ends the run at the first ordinary word', () => {
+      expect(to('@Creative Designer and @Alice')).toEqual(['designer']);
+    });
+
+    it('never eats a shorter name, and never widens onto a word that is not the name', () => {
+      expect(to('@Alice Designer hello')).toEqual(['alice']);
+      expect(mentionsIn('@Alice Designer hi', wide)).toHaveLength(1);
+    });
+
+    it('is half a name while it is being typed, and the menu can see that', () => {
+      expect(mentionPartial('@Creative D', wide)?.text).toBe('Creative D');
+      // A message that has started is not a partial: the word after a name closes the menu.
+      expect(mentionPartial('@Creative Designer hello', wide)).toBeUndefined();
+    });
   });
 });
 
@@ -2253,5 +2344,207 @@ describe("a turn's pictures on one row", () => {
   it('leaves a picture that could not be drawn out of it, because it is a sentence', () => {
     const rows = rowsOf([ran('t1'), ran('t2'), shot('p1'), missing('p2')]);
     expect(rows.filter((row) => row.kind === 'pictures')).toHaveLength(0);
+  });
+});
+
+/**
+ * The rail's contents: one list of two kinds, ordered by recency, with a pin.
+ *
+ * `.scratch/rail/`. This is the single seam for ordering, pinning, mixing and the `+N`, which is
+ * why it is a pure function and why the interesting cases are here rather than in `Rail.test.tsx`
+ * — the component's job is to render what this says.
+ */
+describe('the rail rows', () => {
+  const team = (id: string, over: Partial<UiTeamSummary> = {}): UiTeamSummary => ({
+    id,
+    name: id,
+    workspacePath: `/${id}`,
+    workspaceKind: 'git',
+    members: [{ id: `${id}_a`, name: 'A' }],
+    ...over,
+  });
+  const person = (id: string, over: Partial<UiRailAgent> = {}): UiRailAgent => ({
+    id,
+    name: id,
+    role: 'works',
+    hiredAt: 0,
+    ...over,
+  });
+  const rows = (options: Parameters<typeof railRowsOf>[0]): string[] =>
+    railRowsOf(options).map((row) => row.id);
+
+  it('mixes both kinds into one order by recency', () => {
+    const list = railRowsOf({
+      teams: [
+        team('api', { lastActiveAt: 100 }),
+        team('web', { lastActiveAt: 300 }),
+        team('ida-thread', { threadFor: 'ida', lastActiveAt: 200, members: [{ id: 'ida_1', name: 'Ida' }] }),
+      ],
+      profiles: [person('ida', { hiredAt: 5, threadId: 'ida-thread' })],
+      statuses: {},
+      unread: [],
+      pinned: [],
+    });
+    // The thread is drawn as its *agent*, at the thread's own recency, and never as a team.
+    expect(list.map((row) => `${row.kind}:${row.id}`)).toEqual(['team:web', 'agent:ida', 'team:api']);
+  });
+
+  it('sorts an agent nobody has talked to on their hire time, so the order is total', () => {
+    // Not a missing value handled separately: hire time is what a never-talked agent last did,
+    // and a fresh hire landing near the top is where the person who just made them is looking.
+    expect(
+      rows({
+        teams: [team('api', { lastActiveAt: 100 })],
+        profiles: [person('fresh', { hiredAt: 900 }), person('old', { hiredAt: 1 })],
+        statuses: {},
+        unread: [],
+        pinned: [],
+      }),
+    ).toEqual(['fresh', 'api', 'old']);
+  });
+
+  it('lifts pinned rows into a block on top, in pin order rather than in recency order', () => {
+    // The block exists so the rows a person returns to stay where they left them; re-sorting it
+    // under them would undo the whole point.
+    expect(
+      rows({
+        teams: [team('api', { lastActiveAt: 100 }), team('web', { lastActiveAt: 300 })],
+        profiles: [person('ida', { hiredAt: 200 })],
+        statuses: {},
+        unread: [],
+        pinned: ['api', 'ida'],
+      }),
+    ).toEqual(['api', 'ida', 'web']);
+  });
+
+  it('ignores a pin whose row is gone, so a stale id needs no reconciliation', () => {
+    expect(
+      rows({
+        teams: [team('api', { lastActiveAt: 100 })],
+        profiles: [],
+        statuses: {},
+        unread: [],
+        pinned: ['deleted', 'api'],
+      }),
+    ).toEqual(['api']);
+  });
+
+  it('counts the members a mark cannot hold, and only past three', () => {
+    const four = team('api', {
+      members: ['a', 'b', 'c', 'd'].map((id) => ({ id, name: id })),
+    });
+    const three = team('web', {
+      members: ['a', 'b', 'c'].map((id) => ({ id: `w${id}`, name: id })),
+    });
+    const list = railRowsOf({ teams: [four, three], profiles: [], statuses: {}, unread: [], pinned: [] });
+    expect(list.find((row) => row.id === 'api')).toMatchObject({ more: 1 });
+    // A stack capped at three is honest about a team of exactly three.
+    expect(list.find((row) => row.id === 'web')).not.toHaveProperty('more');
+  });
+
+  it('drops the count while a status is showing, because the right says one thing at a time', () => {
+    const four = team('api', { members: ['a', 'b', 'c', 'd'].map((id) => ({ id, name: id })) });
+    const list = railRowsOf({
+      teams: [four],
+      profiles: [],
+      statuses: { a: 'working' },
+      unread: [],
+      pinned: [],
+    });
+    expect(list[0]).not.toHaveProperty('more');
+  });
+
+  it('names the one member waiting, and counts when there are several', () => {
+    const pair = team('api', {
+      members: [
+        { id: 'a', name: 'A' },
+        { id: 'b', name: 'B' },
+      ],
+    });
+    const one = railRowsOf({
+      teams: [pair],
+      profiles: [],
+      statuses: { a: 'waiting', b: 'idle' },
+      unread: [],
+      pinned: [],
+    });
+    expect(one[0]?.status).toEqual({ status: 'waiting', label: '1 waiting' });
+    const both = railRowsOf({
+      teams: [pair],
+      profiles: [],
+      statuses: { a: 'waiting', b: 'waiting' },
+      unread: [],
+      pinned: [],
+    });
+    expect(both[0]?.status).toEqual({ status: 'waiting', label: '2 waiting' });
+  });
+
+  it('carries the Machine behind a thread, on every loaded team and not just the open one', () => {
+    // The dot used to be read off the open team's roster, so opening another team put the light
+    // out on an agent that was still awake. The summaries carry it now, per member.
+    const list = railRowsOf({
+      teams: [
+        team('ida-thread', { threadFor: 'ida', members: [{ id: 'ida_1', name: 'Ida', machinePower: 'awake' }] }),
+        team('ola-thread', { threadFor: 'ola', members: [{ id: 'ola_1', name: 'Ola' }] }),
+      ],
+      profiles: [person('ida', { threadId: 'ida-thread' }), person('ola', { threadId: 'ola-thread' })],
+      statuses: {},
+      unread: [],
+      pinned: [],
+    });
+    const ida = list.find((row) => row.id === 'ida');
+    const ola = list.find((row) => row.id === 'ola');
+    expect(ida?.kind === 'agent' && ida.power).toBe('awake');
+    // Absent, not `unknown`: a team the pool is not holding has nothing running to ask.
+    expect(ola?.kind === 'agent' && ola.power).toBeUndefined();
+  });
+
+  it('says nothing at all when everything is idle', () => {
+    const list = railRowsOf({
+      teams: [team('api')],
+      profiles: [],
+      statuses: { api_a: 'idle' },
+      unread: [],
+      pinned: [],
+    });
+    expect(list[0]?.status).toBeUndefined();
+  });
+
+  it('gives an agent row its thread’s status and never its seats’', () => {
+    // Argued both ways on `08` and decided against: pressing that row opens the agent's thread,
+    // which is not where a team's permission request is, so the row would be reporting a problem
+    // it cannot lead you to. The team row carries it, and is both correct and pressable.
+    const list = railRowsOf({
+      teams: [
+        team('api', { members: [{ id: 'seat', name: 'Ida', profileId: 'ida' }] }),
+        team('ida-thread', { threadFor: 'ida', members: [{ id: 'ida_1', name: 'Ida' }] }),
+      ],
+      profiles: [person('ida', { threadId: 'ida-thread' })],
+      statuses: { seat: 'waiting', ida_1: 'idle' },
+      unread: ['seat'],
+      pinned: [],
+    });
+    const agent = list.find((row) => row.kind === 'agent');
+    expect(agent?.status).toBeUndefined();
+    expect(agent?.unread).toBe(false);
+    expect(list.find((row) => row.kind === 'team')?.status?.status).toBe('waiting');
+  });
+
+  it('carries the thread’s own last line onto the agent’s row', () => {
+    const list = railRowsOf({
+      teams: [
+        team('ida-thread', {
+          threadFor: 'ida',
+          lastLine: 'that looks right to me',
+          lastActiveAt: 7,
+          members: [{ id: 'ida_1', name: 'Ida' }],
+        }),
+      ],
+      profiles: [person('ida', { threadId: 'ida-thread' })],
+      statuses: {},
+      unread: ['ida_1'],
+      pinned: [],
+    });
+    expect(list[0]).toMatchObject({ last: 'that looks right to me', at: 7, unread: true });
   });
 });

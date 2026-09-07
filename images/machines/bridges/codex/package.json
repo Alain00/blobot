@@ -1,0 +1,11 @@
+{
+  "name": "blobot-machine-codex",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@agentclientprotocol/codex-acp": "1.7.0"
+  },
+  "overrides": {
+    "@openai/codex": "0.151.0"
+  }
+}

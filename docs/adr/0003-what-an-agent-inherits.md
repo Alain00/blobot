@@ -122,3 +122,68 @@ the author's 37 are links into a shared `~/.agents/skills`. `readdirSync` report
 symlink and not as a directory, so the first implementation found exactly one skill. Membership
 is now decided by `statSync` on the `SKILL.md`, which follows links, and the case is pinned by a
 test.
+
+
+## Second amendment, 2026-09-05: inheritance inside a box
+
+Accepted by Guillermo in [Where a Workspace lives when the Machine is not this one](../../.scratch/machines/issues/05-where-a-workspace-lives.md).
+On `local`, the previous amendment stands. Inside a box, `project` and `local` refer to
+its mounted AgentWorkspace, and `user` refers to that Agent's private home. The operator's
+skills are shared read-only; their global CLAUDE.md, settings, hooks and user MCP server
+configuration are not imported. Sharing skills does not require sharing a settings file
+whose permissions merge into a session.
+
+The palette reads the same host AgentWorkspace that the guest mounts, including loose
+files. Its only operator scope is the explicitly mounted skills directory. It excludes
+links that resolve outside the relevant mount and intersects these names with the runtime's
+advertisement. Adding a second host skills directory requires a separate decision.
+The image supplies each runtime's native skills lookup paths; initialization links those
+paths to the mount after the Agent's home is attached, refusing conflicting existing data.
+
+The box worktree also shares its repository's Git metadata, explicitly accepted on
+[What a Machine is, and what grain it hangs at](../../.scratch/machines/issues/01-what-a-machine-is.md).
+That includes its Git configuration and hooks; it is not an isolated Git database. No host
+credential file or signing socket is imported separately. Commits in an AgentWorkspace
+use the Agent's author and committer identity, with signing disabled in the launch
+configuration. This is a default for ordinary commits, not an enforcement boundary against
+an explicit Git command that overrides it. The user's Git configuration is never rewritten.
+
+## Third amendment, 2026-09-06: composition stays with the Agent and adapter
+
+[A per-agent composition root](../../.scratch/machines/issues/24-a-per-agent-composition-root.md)
+resolves the question imported from the earlier server fork. The Agent's launch
+composition is identity, workspace, instructions, runtime options, posture and
+named MCP servers. It does not introduce a second Machine-like object or relocate
+local authentication to create a synthetic config root. Local inheritance remains
+unchanged; the accepted box home owns that Agent's native user scope and login.
+
+Each adapter applies its own supported configuration mechanism. The pinned CLIs
+do not expose a uniform way to separate credentials from all settings and inherited
+MCP/skills. A selectable inheritance editor is a separate capability effort,
+deferred under the author's completion delegation; no generic loader or additional
+profile control is added now. This neither changes the accepted skills mount nor
+makes the palette an enforcement boundary.
+
+## Fourth amendment, 2026-09-06: portable personal skills
+
+The separately authorized [skills MVP](../../.scratch/skills/spec.md) adds management of an
+AgentProfile's personal skills. `.agents/skills` inside the existing personal volume is the
+canonical store. Claude owns its internal `.claude/skills` alias and refuses to replace other
+content there; that conflict does not prevent another adapter from using the kit. Claude and
+Codex receive the personal root on both new and resumed ACP sessions. OpenCode receives an
+additional native skills path in its session configuration. No HOME or authentication root is
+rewritten. Existing local inheritance and the sandbox's readonly operator mount remain.
+
+The manager reads complete, bounded packages, preserves license notices and source metadata,
+and stages changes outside native discovery. Publication uses a durable journal and recovery
+copies. An execution lease starts before Machine startup and ends only after provider process
+and Machine shutdown. Local runtimes have their own POSIX process group; closing a bridge also
+closes remaining processes in that group and verifies exit. Failed cleanup retains the lease.
+Direct user edits retain their native runtime semantics and cannot be deferred by the manager.
+
+The desktop inventory distinguishes personal, project and computer ownership. Native labels
+such as Claude's “project” description or Codex's “user” scope do not override filesystem
+ownership. Palette entries still require both authored files and runtime advertisement; a
+duplicate name across scopes is displayed as a conflict with no claimed universal precedence.
+Cursor and fx have no personal native integration in this cut. MCPs, private remote Git auth,
+plugin management and project installation remain separate work.

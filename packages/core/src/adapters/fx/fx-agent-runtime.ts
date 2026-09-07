@@ -35,6 +35,10 @@ import type {
   SessionUpdate,
 } from '../acp/wire.js';
 import { offerableNames } from './palette.js';
+import { LocalMachine } from '../../machines/local-machine.js';
+import { FX_MACHINE_IMAGE } from './image.js';
+import type { Machine } from '../../machines/machine.js';
+import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
 import { fxModeFor } from './permissions.js';
 import { fxPersonaBlocks } from './persona.js';
 import { spawnFx, VERIFIED_FX_VERSION, type SpawnFx } from './stdio.js';
@@ -103,6 +107,7 @@ export interface FxAgentRuntimeOptions {
   /** The user's own `fx`, from detection. */
   readonly fxExecutable?: string;
   readonly env?: Readonly<Record<string, string>>;
+  readonly machine?: Machine;
   /** Injected in tests: a transport that speaks the protocol without spawning anything. */
   readonly spawn?: SpawnFx;
   readonly onStderr?: (line: string) => void;
@@ -125,6 +130,7 @@ export interface FxAgentRuntimeOptions {
  * with no edit. What is left in this file is only what is fx's own.
  */
 export class FxAgentRuntime implements AgentRuntime {
+  readonly machineImage = FX_MACHINE_IMAGE;
   readonly agentId: string;
 
   readonly #options: FxAgentRuntimeOptions;
@@ -167,7 +173,10 @@ export class FxAgentRuntime implements AgentRuntime {
 
   constructor(options: FxAgentRuntimeOptions) {
     this.agentId = options.agentId;
-    this.#options = options;
+    this.#options = {
+      ...options,
+      machine: options.machine ?? new LocalMachine({ agentId: options.agentId, workspacePath: options.cwd }),
+    };
     this.#pictures = new PictureWatch(options.pictures);
     this.#clock = options.clock ?? new SystemClock();
     this.#spawn = options.spawn ?? spawnFx;
@@ -224,6 +233,7 @@ export class FxAgentRuntime implements AgentRuntime {
 
   async #connect(): Promise<void> {
     const transport = this.#spawn({
+      ...(this.#options.machine === undefined ? {} : { machine: this.#options.machine }),
       cwd: this.#options.cwd,
       trust: this.trust,
       ...(this.#options.env === undefined ? {} : { env: this.#options.env }),
@@ -294,7 +304,7 @@ export class FxAgentRuntime implements AgentRuntime {
         protocolVersion: PROTOCOL_VERSION,
         // We own no terminals and serve no unsaved buffers, so fx's own tools are the right
         // ones — and a client that offers to write files is a way around the posture.
-        clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
+        clientCapabilities: MACHINE_CLIENT_CAPABILITIES,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -383,7 +393,7 @@ export class FxAgentRuntime implements AgentRuntime {
     }
   }
 
-  sendPrompt(prompt: Prompt): AsyncIterable<AgentEvent> {
+  sendPrompt(prompt: Prompt, onAdmitted?: () => void): AsyncIterable<AgentEvent> {
     if (this.#lifecycle !== 'ready') {
       throw new Error(`${this.agentId}: cannot prompt a runtime that is ${this.#lifecycle}`);
     }
@@ -392,6 +402,7 @@ export class FxAgentRuntime implements AgentRuntime {
         `${this.agentId}: a turn is already in flight — the orchestrator's mailbox exists so this cannot happen`,
       );
     }
+    onAdmitted?.();
     const queue = new AsyncQueue<AgentEvent>();
     this.#turnIndex += 1;
     const turnId = `turn_${this.#turnIndex}`;
@@ -482,7 +493,7 @@ export class FxAgentRuntime implements AgentRuntime {
   }
 
   async stop(): Promise<void> {
-    if (this.#lifecycle === 'stopped') return;
+    // A stopped lifecycle can precede OS process exit; repeated stop must still join cleanup.
     this.#setLifecycle('stopped');
     await this.#connection?.close();
     this.#turn?.queue.close();
@@ -628,6 +639,11 @@ export class FxAgentRuntime implements AgentRuntime {
               optionId: option.optionId,
               kind: permissionKind(option.kind),
               name: option.name ?? option.optionId,
+              ...(option.kind === 'allow_always'
+                ? {
+                    description: 'Applies to this live session. It is not saved in settings or restored when a session is resumed. blobot does not provide a control to revoke it.',
+                  }
+                : {}),
             },
           ],
     );
@@ -751,7 +767,8 @@ function toAcpMcpServer(server: McpServerConfig): unknown {
 
 /**
  * fx offers `allow_once`, `allow_always` and `reject_once`, measured on a real permission
- * request. Ticket 14 gives `allow_always` no path to the UI. An unknown kind is a rejection.
+ * request. A reusable approval is a live session grant, not a saved setting. An unknown kind
+ * is a rejection.
  */
 function permissionKind(kind: string | undefined): PermissionOption['kind'] {
   switch (kind) {

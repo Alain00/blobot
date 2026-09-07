@@ -49,9 +49,8 @@ export function Dictation(): React.JSX.Element {
   return (
     <>
       <div className="note muted">
-        Speak into the composer and get text there. blobot transcribes on this machine with a
-        speech model it downloads, or sends the audio to one provider you name with your own key.
-        Off by default, and nothing here is sent anywhere until you choose a provider.
+        Speak into the composer and get text there. Transcribed on this machine, or by one
+        provider you name with your own key. Nothing leaves the machine until you choose one.
       </div>
 
       <div className="roster dictation">
@@ -143,15 +142,14 @@ function SwitchRow({
         }${footprint.engine ? 'the engine' : ''} · ${sizeOf(footprint.bytes)}`;
   return (
     <div className="listrow tall">
+      {/* No name on it. The heading over this list is the word this row would carry, and the
+          `.who` column and the spacer were both `flex:1`, so a row saying `Dictation` twice was
+          wrapping its one true line into a third of the width it had. */}
       <span className="who">
-        <span className="nm">
-          <b>Dictation</b>
-        </span>
         <span className="sub mono muted">
           {view.enabled ? 'on' : `off${kept}`}
         </span>
       </span>
-      <span style={{ flex: 1 }} />
       {!view.enabled && footprint.bytes > 0 && (
         <button className="btn tiny" onClick={onRemoveAll}>
           remove all · recovers about {sizeOf(footprint.bytes)}

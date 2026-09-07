@@ -1,0 +1,95 @@
+{
+  "uuid": "35fa6dcd-b71b-4854-a0fe-55d0dfd80072",
+  "image": "sha256:74d888efe94fb1544ae5a275964cfa5ba00dd96de9b4bd50bd1e8c7d917a19df",
+  "exitCode": 0,
+  "signal": null,
+  "stderr": "",
+  "observation": {
+    "edgeCases": {},
+    "environment": {
+      "kernel": "6.12.76-linuxkit",
+      "node": "v22.22.1",
+      "package": "tar\t1.35+dfsg-4ubuntu0.4",
+      "tar": "tar (GNU tar) 1.35\nCopyright (C) 2023 Free Software Foundation, Inc.\nLicense GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.\nThis is free software: you are free to change and redistribute it.\nThere is NO WARRANTY, to the extent permitted by law.\n\nWritten by John Gilmore and Jay Fenlason."
+    },
+    "fatalError": "Traceback (most recent call last):\n  File \"<stdin>\", line 76, in <module>\n  File \"<stdin>\", line 16, in archive\n  File \"<stdin>\", line 13, in run\nRuntimeError: ['tar', '--sort=name', '--format=pax', '--pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime', '--numeric-owner', '--acls', '--xattrs', '--xattrs-include=*', '--sparse', '--sparse-version=0.0', '--atime-preserve=system', '--listed-incremental=/dev/null', '-C', '/tmp/synthetic-tar37-63xytxtl/source', '-cf', '-', '.']: tar: /dev/null: Cannot truncate: Invalid argument\ntar: Exiting with failure status due to previous errors\n\n",
+    "modes": {
+      "incremental": {
+        "bytes": 10608640,
+        "createExit": 0,
+        "createStderr": "",
+        "differences": [
+          ".",
+          "deleted-base",
+          "dir",
+          "dir/target-only",
+          "empty",
+          "empty/target-only",
+          "removed-tree",
+          "removed-tree/a",
+          "removed-tree/a/b"
+        ],
+        "dumpdirs": [
+          {
+            "dumpdir": "Y--option-looking\u0000Yabsolute\u0000Ycapability\u0000Ydangling\u0000Ddir\u0000Dempty\u0000Yfifo\u0000Yfile\u0000Ylong-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\u0000Yrelative\u0000Ysparse\u0000Ywith\nnewline\u0000\u0000",
+            "name": "."
+          },
+          {
+            "dumpdir": "Ychild\u0000Yhardlink\u0000\u0000",
+            "name": "./dir"
+          },
+          {
+            "dumpdir": "\u0000",
+            "name": "./empty"
+          }
+        ],
+        "extractExit": 2,
+        "extractStderr": "tar: .: Cannot unlink: Invalid argument\ntar: ./dir: Cannot unlink: Directory not empty\ntar: ./empty: Cannot unlink: Directory not empty\ntar: Exiting with failure status due to previous errors\n",
+        "hardlinksEqual": true,
+        "inventoryEqual": false,
+        "rearchiveStable": false,
+        "repeatSha256": "e1cf087a31440f5e12212137f574aecc8c9a71fe5869b59ded4649b65a597dd9",
+        "repeatStable": true,
+        "sourceSha256": "e1cf087a31440f5e12212137f574aecc8c9a71fe5869b59ded4649b65a597dd9",
+        "sourceSparse": {
+          "blocks": 8,
+          "extents": [
+            [
+              1048576,
+              1052672
+            ]
+          ],
+          "gid": 0,
+          "mode": 33188,
+          "mtimeNs": "1788635508123456789",
+          "sha256": "a58469631d395c2da91a52eba04776568a8e79a7ae04aa055dfea2edec96fa8f",
+          "size": 2097152,
+          "uid": 0,
+          "xattrs": {}
+        },
+        "targetSha256": "0ee7dfe5d6937f5cdcaf0f68cfbcc598d59ac18ee0ca8a5a8bdcbeade9707149",
+        "targetSparse": {
+          "blocks": 8,
+          "extents": [
+            [
+              1048576,
+              1052672
+            ]
+          ],
+          "gid": 0,
+          "mode": 33188,
+          "mtimeNs": "1788635508123456789",
+          "sha256": "a58469631d395c2da91a52eba04776568a8e79a7ae04aa055dfea2edec96fa8f",
+          "size": 2097152,
+          "uid": 0,
+          "xattrs": {}
+        }
+      }
+    }
+  },
+  "cleanup": {
+    "exitCode": 0,
+    "stderr": "Error response from daemon: No such container: blobot-tar37-35fa6dcd-b71b-4854-a0fe-55d0dfd80072\n",
+    "onlyOwnedUuidName": "blobot-tar37-35fa6dcd-b71b-4854-a0fe-55d0dfd80072"
+  }
+}

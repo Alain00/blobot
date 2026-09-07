@@ -1,0 +1,92 @@
+{
+  "date": "2026-09-05T16:57:36.247Z",
+  "kind": "synthetic-worktree-not-Agent",
+  "checks": {
+    "mounts": [
+      {
+        "uid": 0,
+        "sshRelay": false,
+        "hostCheckout": false,
+        "hostIgnored": false,
+        "siblingLoose": false,
+        "mounts": [
+          {
+            "path": "/etc/resolv.conf",
+            "mode": "ro,relatime"
+          },
+          {
+            "path": "/etc/hosts",
+            "mode": "ro,relatime"
+          },
+          {
+            "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-worktree-probe-kqf5W9/alice",
+            "mode": "rw,nosuid,nodev,relatime"
+          },
+          {
+            "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-worktree-probe-kqf5W9/repo/.git",
+            "mode": "rw,nosuid,nodev,relatime"
+          }
+        ]
+      },
+      {
+        "uid": 1000,
+        "sshRelay": false,
+        "hostCheckout": false,
+        "hostIgnored": false,
+        "siblingLoose": false,
+        "mounts": [
+          {
+            "path": "/etc/resolv.conf",
+            "mode": "ro,relatime"
+          },
+          {
+            "path": "/etc/hosts",
+            "mode": "ro,relatime"
+          },
+          {
+            "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-worktree-probe-kqf5W9/alice",
+            "mode": "rw,nosuid,nodev,relatime"
+          },
+          {
+            "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-worktree-probe-kqf5W9/repo/.git",
+            "mode": "rw,nosuid,nodev,relatime"
+          }
+        ]
+      }
+    ],
+    "commit": {
+      "uid": 1000,
+      "git": "git version 2.53.0",
+      "head": "d14f5c8121cc54d60dc860213a9c1836dd52a6c7",
+      "branch": "blobot/fixture/alice",
+      "origin": "https://example.invalid/fixture.git"
+    },
+    "immediateHostBranchWithoutFetch": true,
+    "reopen": true
+  },
+  "cleanup": {
+    "sandboxRemoved": true,
+    "hostFixtureRemoved": true
+  },
+  "version": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "hostGit": "git version 2.50.1 (Apple Git-155)",
+  "create": {
+    "shape": "custom root kit + worktree + common Git directory",
+    "id": "eb1b57a5-a663-48bb-a180-974847090770",
+    "name": "blobot-worktree-db3a958d-d31f-4f57-bc83-bc01e82559d1"
+  },
+  "preExistingIds": [],
+  "ok": true
+}

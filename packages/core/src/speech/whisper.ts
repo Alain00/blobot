@@ -1,6 +1,6 @@
 import { spawn as nodeSpawn, type ChildProcess } from 'node:child_process';
 import { cpus } from 'node:os';
-import { childEnvironment } from '../adapters/acp/child-env.js';
+import { childEnvironment } from '../process/child-env.js';
 import { AsyncQueue } from '../mock/async-queue.js';
 import { PCM_16K_MONO_INT16, PCM_BYTES_PER_SECOND, type SpeechHint, type Transcriber, type TranscriberEvent } from './domain.js';
 

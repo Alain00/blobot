@@ -55,11 +55,12 @@ const prepareWorkspace = vi.fn(async (name: string) => ({
   path: `/home/someone/blobot/${name}`,
 }));
 
-async function screen(): Promise<HTMLElement> {
+async function screen(initialProfile?: UiAgentProfile): Promise<HTMLElement> {
   created.mockClear();
   prepareWorkspace.mockClear();
   (globalThis as unknown as { window: { blobot: unknown } }).window.blobot = {
     listAgents: vi.fn(async () => [ALICE, BOB]),
+    engineSetup: vi.fn(async () => ({ previewEnabled: false })),
     detectRuntimes: vi.fn(async () => []),
     chooseWorkspace: vi.fn(async () => CHECKOUT.path),
     inspectWorkspace: vi.fn(async () => CHECKOUT),
@@ -70,7 +71,7 @@ async function screen(): Promise<HTMLElement> {
   const root = createRoot(host);
   drawn.push({ unmount: () => root.unmount() });
   await act(async () => {
-    root.render(React.createElement(NewTeam, { onCreate: created }));
+    root.render(React.createElement(NewTeam, { onCreate: created, ...(initialProfile === undefined ? {} : { initialProfile }) }));
   });
   return host;
 }
@@ -112,6 +113,24 @@ function naming(host: HTMLElement): boolean {
 }
 
 describe('who is on the team', () => {
+  it('starts from the requested profile, with its folder disclosed and no creation until pressed', async () => {
+    const host = await screen(BOB);
+    expect(naming(host)).toBe(true);
+    expect(host.textContent).toContain('Bob');
+    expect(host.querySelector('.pickfoot')?.textContent).toContain('~/blobot/With Bob');
+    expect(created).not.toHaveBeenCalled();
+    expect(prepareWorkspace).not.toHaveBeenCalled();
+    await act(async () => (host.querySelector('.pickgo') as HTMLButtonElement).click());
+    expect(created).toHaveBeenCalledWith(expect.objectContaining({
+      profileIds: [BOB.id], leadProfileId: BOB.id, name: 'With Bob',
+    }));
+  });
+
+  it('does not create a team for a profile absent from the current roster', async () => {
+    const host = await screen({ ...ALICE, id: 'retired' });
+    expect((host.querySelector('.pickgo') as HTMLButtonElement).disabled).toBe(true);
+    expect(prepareWorkspace).not.toHaveBeenCalled();
+  });
   it('takes an agent into the field and stops offering them', async () => {
     const host = await screen();
     await act(async () => {
@@ -204,6 +223,19 @@ describe('who is on the team', () => {
     expect(naming(host)).toBe(true);
   });
 
+  it('offers hiring as a row of the list, and still highlights an agent', async () => {
+    const host = await screen();
+    const rows = [...host.querySelectorAll('[cmdk-item]')];
+    // A row of the list and not a button beside it, so the pointer and the arrow keys reach it
+    // and it takes the one highlight when they do.
+    const hire = rows.find((row) => (row.textContent ?? '').includes('hire an agent'));
+    expect(hire).toBeDefined();
+    // Drawn first and rendered last: the highlight cmdk lands on, and the one Tab and Space act
+    // on, belongs to the agents. Exactly one row carries it.
+    expect(rows.filter((row) => row.getAttribute('data-selected') === 'true')).toEqual([rows[0]]);
+    expect(rows[0]?.textContent).toContain('Alice');
+  });
+
   it('refuses to go on with nobody chosen', async () => {
     const host = await screen();
     await key(host, 'Enter');
@@ -289,7 +321,9 @@ describe('where they work', () => {
   it('still states what the user is taking on', async () => {
     const host = await named('checkout');
     const text = (host.textContent ?? '').replace(/\s+/g, ' ');
-    expect(text).toContain('its own copy of this folder');
-    expect(text).toContain('blobot is not a sandbox');
+    expect(text).toContain('its own working folder');
+    expect(text).toContain('approval settings chosen for that agent');
+    expect(text).not.toContain('asks before anything');
+    expect(text).not.toContain('blobot is not a sandbox');
   });
 });

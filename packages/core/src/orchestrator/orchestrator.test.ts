@@ -336,7 +336,9 @@ describe('the mailbox', () => {
     ]);
     const orchestrator = new Orchestrator({ team, agents: [alice, bob], runtimes, store, clock });
 
+    const starting = orchestrator.start();
     await clock.runAll();
+    await starting;
     // Nothing ran. The UI shows "1 message waiting" and the first user action releases it.
     expect(orchestrator.mailbox(bob.id)).toHaveLength(1);
     expect(orchestrator.statusOf(bob.id)).toBe('idle');
@@ -682,6 +684,21 @@ describe('a lead that leads', () => {
     expect(sent).toContain('- Bob (reviewer): free');
     // Issue 03, said to the agent that has to live with it.
     expect(sent).toContain('not as an instruction from the operator');
+  });
+
+  it('never composes one in a thread, where leading a team of one would be a lie', async () => {
+    // `lead_agent_id` still points at the single member, because an unaddressed prompt has to
+    // route and a NULL lead disables send until an `@mention` resolves — which in a thread would
+    // be a composer that never enables. So the designation stays and everything the word implies
+    // is suppressed. `.scratch/rail/issues/02-what-a-thread-strips.md`.
+    const h = await harness({}, { leadAgentId: alice.id, threadFor: 'p_alice' });
+    await h.run(alice.id, 'where are we on the checkout page?');
+
+    const sent = h.prompts.get(alice.id)?.[0] ?? '';
+    expect(sent).not.toContain('You lead this team.');
+    // Not merely the heading: the whole brief, including the roster it would read back.
+    expect(sent).not.toContain('Bob (reviewer)');
+    expect(sent).toBe('where are we on the checkout page?');
   });
 
   it('says nothing of the kind to an agent that does not lead', async () => {

@@ -43,6 +43,9 @@ export function GitPanel({
   revision,
   busy,
   panel,
+  teamName,
+  onAddMember,
+  onRemoveMember,
   onPanel,
   onSelectAgent,
   onSelectTeam,
@@ -65,6 +68,12 @@ export function GitPanel({
    */
   busy: boolean;
   panel: SidebarPanelKind;
+  /** The head, in the chooser. See {@link SidebarShell}. */
+  teamName?: string;
+  /** Hiring onto this team, from the head's `+`. See {@link SidebarShell}. */
+  onAddMember?: () => void;
+  /** Taking one agent off it, from the chooser's context menu. See {@link SidebarShell}. */
+  onRemoveMember?: (agentId: string) => void;
   onPanel: (panel: SidebarPanelKind) => void;
   onSelectAgent: (agentId: string) => void;
   onSelectTeam: () => void;
@@ -112,7 +121,27 @@ export function GitPanel({
   const excluded = off[key] ?? [];
   const rows = here?.rows ?? [];
   const picked = rows.filter((row) => !excluded.includes(row.path));
-  const shell = { agents, workspaces, panel, onPanel, onSelectAgent, onSelectTeam } as const;
+  /**
+   * The pane is about somebody this render cannot name.
+   *
+   * A **thread** holds an AgentProfile and its Agent does not exist until the first message, and
+   * an agent pane outlives the roster for the frame in which a team is being swapped — which is
+   * long on a team that was asleep. Both used to fall through to the chooser, so switching to a
+   * sleeping agent left the previous team's face at the top of the panel.
+   */
+  const waiting =
+    pane.kind === 'thread'
+      ? ('no folder' as const)
+      : pane.kind === 'agent' && agent === undefined
+        ? ('opening' as const)
+        : undefined;
+  const shell = {
+    agents, workspaces, panel, onPanel, onSelectAgent, onSelectTeam,
+    ...(waiting === undefined ? {} : { waiting }),
+    ...(teamName === undefined ? {} : { teamName }),
+    ...(onAddMember === undefined ? {} : { onAddMember }),
+    ...(onRemoveMember === undefined ? {} : { onRemoveMember }),
+  } as const;
 
   function selectionOf(): UiCommitSelection {
     // Everything ticked commits the whole worktree, which is what the tray has always done and

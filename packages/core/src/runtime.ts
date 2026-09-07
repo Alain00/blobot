@@ -1,4 +1,5 @@
 import type { AgentEvent } from './events.js';
+import type { RuntimeImageDefinition } from './machines/runtime-image.js';
 import type { PictureNotDrawn, PictureSource } from './pictures.js';
 
 /** One prompt handed to a session. Peer messages arrive here too, already enveloped. */
@@ -75,6 +76,8 @@ export interface PermissionOption {
   readonly optionId: string;
   readonly kind: 'allow_once' | 'allow_always' | 'reject_once' | 'reject_always';
   readonly name: string;
+  /** Adapter-owned explanation of this approval's scope or storage, when known. */
+  readonly description?: string;
 }
 
 /** Resolves with the chosen `optionId`, or `null` to cancel the turn. */
@@ -296,6 +299,8 @@ export interface AgentRuntime {
   readonly agentId: string;
   readonly sessionId: string;
   readonly lifecycle: RuntimeLifecycle;
+  /** Provider-owned box distribution; undefined for runtimes with no box image, such as the mock. */
+  readonly machineImage?: RuntimeImageDefinition | undefined;
 
   /** Spawn the process and create the session. Rejects if the runtime cannot start. */
   start(): Promise<void>;
@@ -306,8 +311,18 @@ export interface AgentRuntime {
    *
    * The iterable ends after `turn_ended`, or after a fatal `error`. Errors arrive as events
    * rather than rejections so a partial transcript survives.
+   *
+   * Call onAdmitted exactly once after readiness/serialization checks and before submitting
+   * any work to the provider. If it throws, submit nothing. The callback records local
+   * delivery; it cannot guarantee a provider accepted a request across a lost connection.
    */
-  sendPrompt(prompt: Prompt): AsyncIterable<AgentEvent>;
+  sendPrompt(prompt: Prompt, onAdmitted?: () => void): AsyncIterable<AgentEvent>;
+
+  /**
+   * Retry an unavailable execution after a remedy, retaining its last session when possible.
+   * Unlike restart(), this never intentionally discards conversation history.
+   */
+  retryStart?(): Promise<void>;
 
   /** Cancel the turn in flight. Resolves once the cancellation has been requested. */
   cancel(): Promise<void>;

@@ -56,7 +56,12 @@ function toRow(store: SqliteStore, routine: Routine, now: number): UiRoutine {
     ...(agent === undefined ? {} : { agentName: agent.name }),
     ...(agent?.hue === undefined ? {} : { agentHue: agent.hue }),
     ...(agent?.shape === undefined ? {} : { agentShape: agent.shape }),
-    ...(team === undefined ? {} : { teamName: team.name }),
+    // A **thread's** Routine names the agent alone. This screen prints the team, and a thread's
+    // Team name is the invented string of `.scratch/rail/issues/01` that nobody has ever seen.
+    // Absence is the distinction — a thread's Routine reads `alice`, a seat's reads `alice · api`
+    // — and it needs no new vocabulary: a label for the one case that does not need one is
+    // worse than nothing. `.scratch/rail/issues/05-where-a-thread-is-hidden.md`.
+    ...(team === undefined || team.threadFor !== undefined ? {} : { teamName: team.name }),
     // A disarmed Routine has no next run, and saying one would be the screen promising a firing
     // that is not coming. The whole of what arming grants is that this line exists.
     ...(routine.armed ? { nextRunAt: nextOccurrenceAfter(routine.schedule, now) } : {}),
@@ -101,7 +106,7 @@ export function routineTargets(store: SqliteStore): UiRoutineTarget[] {
       agentName: agent.name,
       ...(agent.hue === undefined ? {} : { agentHue: agent.hue }),
       ...(agent.shape === undefined ? {} : { agentShape: agent.shape }),
-      teamName: team.name,
+      ...(team.threadFor === undefined ? { teamName: team.name } : {}),
     })),
   );
 }

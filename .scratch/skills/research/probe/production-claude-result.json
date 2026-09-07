@@ -1,0 +1,240 @@
+{
+  "kind": "claude",
+  "root": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-leRHUV",
+  "name": "blobot-production-2cfdaccc",
+  "inputKind": "folder",
+  "previewFiles": [
+    "SKILL.md",
+    "references/fresh.txt",
+    "references/resumed.txt"
+  ],
+  "installed": {
+    "skills": [
+      {
+        "name": "blobot-production-2cfdaccc",
+        "description": "Run this offline fixture only when explicitly asked for blobot-production-2cfdaccc.",
+        "source": {
+          "kind": "local-import",
+          "originalPath": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-leRHUV/source/blobot-production-2cfdaccc"
+        },
+        "modified": false
+      }
+    ],
+    "drafts": [],
+    "pending": [],
+    "executions": 0
+  },
+  "aliasCanonical": true,
+  "runs": [
+    {
+      "phase": "fresh",
+      "rawCommands": [
+        "blobot-production-2cfdaccc"
+      ],
+      "requests": [
+        {
+          "method": "session/new",
+          "cwd": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-leRHUV/workspace",
+          "additionalDirectories": [
+            "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-leRHUV/profiles/ana/files"
+          ]
+        }
+      ],
+      "toolEvents": [
+        {
+          "type": "tool_call",
+          "title": "Load skill",
+          "kind": "other",
+          "rawInput": {},
+          "status": "pending"
+        },
+        {
+          "type": "tool_call_update",
+          "title": "Load skill: blobot-production-2cfdaccc",
+          "kind": "other",
+          "rawInput": {
+            "skill": "blobot-production-2cfdaccc"
+          }
+        },
+        {
+          "type": "tool_call_update"
+        },
+        {
+          "type": "tool_call_update",
+          "status": "completed"
+        },
+        {
+          "type": "tool_call",
+          "title": "Read File",
+          "kind": "read",
+          "rawInput": {},
+          "status": "pending",
+          "locations": []
+        },
+        {
+          "type": "tool_call_update",
+          "title": "Read /private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-leRHUV/profiles/ana/files/.claude/skills/blobot-production-2cfdaccc/references/fresh.txt",
+          "kind": "read",
+          "rawInput": {
+            "file_path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-leRHUV/profiles/ana/files/.claude/skills/blobot-production-2cfdaccc/references/fresh.txt"
+          },
+          "locations": [
+            {
+              "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-leRHUV/profiles/ana/files/.claude/skills/blobot-production-2cfdaccc/references/fresh.txt",
+              "line": 1
+            }
+          ]
+        },
+        {
+          "type": "tool_call_update"
+        },
+        {
+          "type": "tool_call_update",
+          "status": "completed"
+        }
+      ],
+      "messages": [
+        "FRESH-eafc79c3-ca5b-4a22-ad69-30182868ec33"
+      ],
+      "errors": [],
+      "diagnostics": [
+        "[session/query] sessionId=6c115c13-5f06-439f-bcd1-792d210cd74d resume=none apiType=native baseUrl=native",
+        "(node:1401) [CLAUDE_SDK_CAN_USE_TOOL_SHADOWED] Warning: canUseTool will not be invoked for: Edit, Write, MultiEdit, NotebookEdit. Bare allowedTools entries auto-approve the whole tool before the callback is consulted. To gate every tool call, use a PreToolUse hook; or remove the bare names from allowedTools so they fall through to canUseTool. Allow rules from settings files can also shadow the callback but are not visible here.",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ],
+      "sessionId": "6c115c13-5f06-439f-bcd1-792d210cd74d",
+      "resumed": false,
+      "palette": [
+        {
+          "name": "blobot-production-2cfdaccc",
+          "description": "Run this offline fixture only when explicitly asked for blobot-production-2cfdaccc. (project)"
+        }
+      ],
+      "sameSession": true,
+      "proofReturned": true
+    },
+    {
+      "phase": "resumed",
+      "rawCommands": [
+        "blobot-production-2cfdaccc"
+      ],
+      "requests": [
+        {
+          "method": "session/load",
+          "cwd": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-leRHUV/workspace",
+          "sessionId": "6c115c13-5f06-439f-bcd1-792d210cd74d",
+          "additionalDirectories": [
+            "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-leRHUV/profiles/ana/files"
+          ]
+        }
+      ],
+      "toolEvents": [
+        {
+          "type": "tool_call",
+          "title": "Load skill: blobot-production-2cfdaccc",
+          "kind": "other",
+          "rawInput": {
+            "skill": "blobot-production-2cfdaccc"
+          },
+          "status": "pending"
+        },
+        {
+          "type": "tool_call_update",
+          "status": "completed"
+        },
+        {
+          "type": "tool_call",
+          "title": "Read /private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-leRHUV/profiles/ana/files/.claude/skills/blobot-production-2cfdaccc/references/fresh.txt",
+          "kind": "read",
+          "rawInput": {
+            "file_path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-leRHUV/profiles/ana/files/.claude/skills/blobot-production-2cfdaccc/references/fresh.txt"
+          },
+          "status": "pending",
+          "locations": [
+            {
+              "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-leRHUV/profiles/ana/files/.claude/skills/blobot-production-2cfdaccc/references/fresh.txt",
+              "line": 1
+            }
+          ]
+        },
+        {
+          "type": "tool_call_update",
+          "status": "completed"
+        },
+        {
+          "type": "tool_call",
+          "title": "Read File",
+          "kind": "read",
+          "rawInput": {},
+          "status": "pending",
+          "locations": []
+        },
+        {
+          "type": "tool_call_update",
+          "title": "Read /private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-leRHUV/profiles/ana/files/.claude/skills/blobot-production-2cfdaccc/references/resumed.txt",
+          "kind": "read",
+          "rawInput": {
+            "file_path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-leRHUV/profiles/ana/files/.claude/skills/blobot-production-2cfdaccc/references/resumed.txt"
+          },
+          "locations": [
+            {
+              "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-leRHUV/profiles/ana/files/.claude/skills/blobot-production-2cfdaccc/references/resumed.txt",
+              "line": 1
+            }
+          ]
+        },
+        {
+          "type": "tool_call_update"
+        },
+        {
+          "type": "tool_call_update",
+          "status": "completed"
+        }
+      ],
+      "messages": [
+        "RESUMED-57466094-030c-4b69-a2b1-e4e615580db6"
+      ],
+      "errors": [],
+      "diagnostics": [
+        "[session/query] sessionId=6c115c13-5f06-439f-bcd1-792d210cd74d resume=6c115c13-5f06-439f-bcd1-792d210cd74d apiType=native baseUrl=native",
+        "(node:1806) [CLAUDE_SDK_CAN_USE_TOOL_SHADOWED] Warning: canUseTool will not be invoked for: Edit, Write, MultiEdit, NotebookEdit. Bare allowedTools entries auto-approve the whole tool before the callback is consulted. To gate every tool call, use a PreToolUse hook; or remove the bare names from allowedTools so they fall through to canUseTool. Allow rules from settings files can also shadow the callback but are not visible here.",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ],
+      "sessionId": "6c115c13-5f06-439f-bcd1-792d210cd74d",
+      "resumed": true,
+      "palette": [
+        {
+          "name": "blobot-production-2cfdaccc",
+          "description": "Run this offline fixture only when explicitly asked for blobot-production-2cfdaccc. (project)"
+        }
+      ],
+      "sameSession": true,
+      "proofReturned": true
+    }
+  ],
+  "globalFilesUnchanged": {
+    "/Users/guillermo/.claude/settings.json": true,
+    "/Users/guillermo/.claude/.credentials.json": true,
+    "/Users/guillermo/.codex/config.toml": true,
+    "/Users/guillermo/.codex/auth.json": true,
+    "/Users/guillermo/.config/opencode/opencode.json": true,
+    "/Users/guillermo/.config/opencode/opencode.jsonc": true,
+    "/Users/guillermo/.local/share/opencode/auth.json": true
+  },
+  "catalogueAfter": {
+    "skills": [
+      {
+        "name": "blobot-production-2cfdaccc",
+        "description": "Run this offline fixture only when explicitly asked for blobot-production-2cfdaccc.",
+        "source": {
+          "kind": "local-import",
+          "originalPath": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-leRHUV/source/blobot-production-2cfdaccc"
+        },
+        "modified": false
+      }
+    ],
+    "drafts": [],
+    "pending": [],
+    "executions": 0
+  }
+}

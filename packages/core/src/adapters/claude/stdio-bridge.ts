@@ -1,3 +1,4 @@
+import { CLAUDE_MACHINE_IMAGE } from './image.js';
 import {
   bridgeEntryPathOf,
   resolveBridgeExecutable,
@@ -5,6 +6,7 @@ import {
   type NpmBridgeSpec,
 } from '../acp/npm-bridge.js';
 import type { LineTransport } from '../acp/jsonrpc.js';
+import type { Machine } from '../../machines/machine.js';
 
 /** The one version this adapter is written against. Ticket 07: exact-pinned, checked loudly. */
 export const BRIDGE_VERSION = '0.70.0';
@@ -21,6 +23,7 @@ export const CLAUDE_BRIDGE: NpmBridgeSpec = {
   entry: 'dist/index.js',
   overrideEnv: 'BLOBOT_CLAUDE_BRIDGE',
   binary: 'claude',
+  guestExecutable: CLAUDE_MACHINE_IMAGE.executable,
   executableEnv: 'CLAUDE_CODE_EXECUTABLE',
   agent: 'Claude',
   install: 'Claude Code',
@@ -29,6 +32,7 @@ export const CLAUDE_BRIDGE: NpmBridgeSpec = {
 export interface SpawnBridgeOptions {
   /** The AgentWorkspace. The bridge overrides the session's `cwd` with `session/new`'s. */
   readonly cwd: string;
+  readonly machine?: Machine;
   /** The user's own `claude`, or the bridge silently runs its own bundled ~200MB copy.
    *  Resolved from `CLAUDE_CODE_EXECUTABLE` and then `PATH` when it is not given. */
   readonly claudeExecutable?: string;
@@ -42,6 +46,7 @@ export type SpawnBridge = (options: SpawnBridgeOptions) => LineTransport;
 export const spawnClaudeBridge: SpawnBridge = (options) =>
   spawnNpmBridge(CLAUDE_BRIDGE, {
     cwd: options.cwd,
+    ...(options.machine === undefined ? {} : { machine: options.machine }),
     ...(options.claudeExecutable === undefined ? {} : { executable: options.claudeExecutable }),
     ...(options.env === undefined ? {} : { env: options.env }),
     ...(options.onStderr === undefined ? {} : { onStderr: options.onStderr }),

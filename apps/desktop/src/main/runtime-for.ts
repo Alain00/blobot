@@ -1,8 +1,14 @@
+import { CLAUDE_SKILL_DISCOVERY, CODEX_SKILL_DISCOVERY, OPENCODE_SKILL_DISCOVERY, type SkillDiscovery } from '@blobot/core';
 import {
   ATTENDED_TRUST_LEVELS,
   CLAUDE_CEILINGS,
   CLAUDE_TRUST_LEVELS,
   CODEX_CEILINGS,
+  CLAUDE_LOCAL_PROTECTION,
+  CURSOR_LOCAL_PROTECTION,
+  CODEX_LOCAL_PROTECTION,
+  FX_LOCAL_PROTECTION,
+  OPENCODE_LOCAL_PROTECTION,
   ClaudeAgentRuntime,
   CodexAgentRuntime,
   CursorAgentRuntime,
@@ -12,17 +18,30 @@ import {
   claudeCeiling,
   codexCeiling,
   opencodeCeiling,
+  agentGitEnvironment,
+  CLAUDE_MACHINE_IMAGE,
+  CODEX_MACHINE_IMAGE,
+  CURSOR_MACHINE_IMAGE,
+  FX_MACHINE_IMAGE,
+  OPENCODE_MACHINE_IMAGE,
+  CLAUDE_LOGIN, CODEX_LOGIN, CURSOR_LOGIN, FX_LOGIN, OPENCODE_LOGIN,
   type AgentRuntime,
+  type Machine,
   type PictureStore,
   type TrustLevel,
+  type RuntimeImageDefinition,
+  type RuntimeLogin,
 } from '@blobot/core';
 
 export interface RuntimeRequest {
+  readonly machine?: Machine;
   readonly runtimeId: string;
   readonly agentId: string;
   /** The human name. OpenCode needs it: the persona is an agent definition with a key. */
   readonly agentName: string;
   readonly cwd: string;
+  /** Shared Git metadata required by linked worktrees, derived from the selected Workspace. */
+  readonly gitDirectories?: readonly string[];
   readonly persona: string;
   readonly resumeSessionId?: string;
   /** The user's own binary, as detection found it. Ticket 07: never a bundled copy. */
@@ -61,9 +80,11 @@ export interface RuntimeRequest {
  */
 export function runtimeFor(request: RuntimeRequest): AgentRuntime {
   const shared = {
+    ...(request.machine === undefined ? {} : { machine: request.machine }),
     agentId: request.agentId,
     cwd: request.cwd,
     persona: request.persona,
+    env: agentGitEnvironment(request.agentName, request.machine?.kind === 'box' ? {} : process.env),
     ...(request.resumeSessionId === undefined ? {} : { resumeSessionId: request.resumeSessionId }),
     ...(request.options === undefined ? {} : { options: request.options }),
     ...(request.trust === undefined ? {} : { trust: request.trust }),
@@ -75,6 +96,7 @@ export function runtimeFor(request: RuntimeRequest): AgentRuntime {
     case 'claude-code':
       return new ClaudeAgentRuntime({
         ...shared,
+        ...(request.gitDirectories === undefined ? {} : { gitDirectories: request.gitDirectories }),
         ...(request.executablePath === undefined
           ? {}
           : { claudeExecutable: request.executablePath }),
@@ -114,6 +136,22 @@ export function runtimeFor(request: RuntimeRequest): AgentRuntime {
     default:
       throw new Error(`${request.agentName} is set up for ${request.runtimeId}, which blobot cannot run`);
   }
+}
+
+const MACHINE_IMAGES: Readonly<Record<string, RuntimeImageDefinition>> = {
+  'claude-code': CLAUDE_MACHINE_IMAGE, codex: CODEX_MACHINE_IMAGE,
+  cursor: CURSOR_MACHINE_IMAGE, fx: FX_MACHINE_IMAGE, opencode: OPENCODE_MACHINE_IMAGE,
+};
+
+export function imageFor(runtimeId: string): RuntimeImageDefinition | undefined {
+  return Object.hasOwn(MACHINE_IMAGES, runtimeId) ? MACHINE_IMAGES[runtimeId] : undefined;
+}
+
+const RUNTIME_LOGINS: Readonly<Record<string, RuntimeLogin>> = {
+  'claude-code': CLAUDE_LOGIN, codex: CODEX_LOGIN, cursor: CURSOR_LOGIN, fx: FX_LOGIN, opencode: OPENCODE_LOGIN,
+};
+export function loginFor(runtimeId: string): RuntimeLogin | undefined {
+  return Object.hasOwn(RUNTIME_LOGINS, runtimeId) ? RUNTIME_LOGINS[runtimeId] : undefined;
 }
 
 /**
@@ -177,4 +215,25 @@ export const CEILING_TABLES: Readonly<Record<string, Readonly<Record<string, num
  */
 export function trustLevelsFor(runtimeId: string): readonly TrustLevel[] {
   return runtimeId === 'claude-code' ? CLAUDE_TRUST_LEVELS : ATTENDED_TRUST_LEVELS;
+}
+
+/** Adapter-owned descriptions of local reach, not authentication or a live attestation. */
+export function localProtectionFor(runtimeId: string): string | undefined {
+  const descriptions: Readonly<Record<string, string>> = {
+    'claude-code': CLAUDE_LOCAL_PROTECTION,
+    cursor: CURSOR_LOCAL_PROTECTION,
+    codex: CODEX_LOCAL_PROTECTION,
+    fx: FX_LOCAL_PROTECTION,
+    opencode: OPENCODE_LOCAL_PROTECTION,
+  };
+  return Object.hasOwn(descriptions, runtimeId) ? descriptions[runtimeId] : undefined;
+}
+
+export function skillsFor(runtimeId: string): SkillDiscovery {
+  switch (runtimeId) {
+    case 'claude-code': return CLAUDE_SKILL_DISCOVERY;
+    case 'codex': return CODEX_SKILL_DISCOVERY;
+    case 'opencode': return OPENCODE_SKILL_DISCOVERY;
+    default: return { personal: false, locations: () => [] };
+  }
 }

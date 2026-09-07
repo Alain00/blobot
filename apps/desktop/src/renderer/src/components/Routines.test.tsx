@@ -101,7 +101,7 @@ describe('the screen', () => {
 
     // The one place the limitation is stated. blobot is a desktop app and not a daemon, and a
     // schedule it cannot keep is worse than one it can.
-    expect(text).toContain('blobot runs these while it is open. It does not run them in the background.');
+    expect(text).toContain('blobot runs these only while it is open, never in the background.');
   });
 
   it('says the shape and what the shape costs, and never says cron', async () => {

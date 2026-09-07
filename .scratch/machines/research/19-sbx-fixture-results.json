@@ -1,0 +1,419 @@
+{
+  "date": "2026-09-05T15:05:50.484Z",
+  "kind": "minimal-shell-not-full-Agent",
+  "commands": [
+    {
+      "label": "create-old",
+      "ms": 3108.5102080000006,
+      "code": 0
+    },
+    {
+      "label": "first-exec",
+      "ms": 177.6324169999998,
+      "code": 0
+    },
+    {
+      "label": "stop-0",
+      "ms": 5218.5439590000005,
+      "code": 0
+    },
+    {
+      "label": "wake-exec-0",
+      "ms": 857.6763750000009,
+      "code": 0
+    },
+    {
+      "label": "warm-exec-0",
+      "ms": 157.47879199999988,
+      "code": 0
+    },
+    {
+      "label": "stop-1",
+      "ms": 5218.986417000002,
+      "code": 0
+    },
+    {
+      "label": "wake-exec-1",
+      "ms": 884.521041,
+      "code": 0
+    },
+    {
+      "label": "warm-exec-1",
+      "ms": 173.26733299999978,
+      "code": 0
+    },
+    {
+      "label": "stop-2",
+      "ms": 5205.2358330000025,
+      "code": 0
+    },
+    {
+      "label": "wake-exec-2",
+      "ms": 878.0112499999996,
+      "code": 0
+    },
+    {
+      "label": "warm-exec-2",
+      "ms": 157.1387079999986,
+      "code": 0
+    },
+    {
+      "label": "seed-64MiB-256-files",
+      "ms": 218.60858400000143,
+      "code": 0
+    },
+    {
+      "label": "tmpfs-allocate-32MiB",
+      "ms": 167.8379590000004,
+      "code": 0
+    },
+    {
+      "label": "tmpfs-release",
+      "ms": 173.06595799999923,
+      "code": 0
+    },
+    {
+      "label": "hash64MiBx8",
+      "ms": 2380.6850419999973,
+      "code": 0
+    },
+    {
+      "label": "source-stop-before-copy",
+      "ms": 5228.366542000003,
+      "code": 0
+    },
+    {
+      "label": "create-new",
+      "ms": 2460.4224590000013,
+      "code": 0
+    },
+    {
+      "label": "verified-copy-64MiB-256-files",
+      "ms": 1538.4229580000028,
+      "bytes": 67655680,
+      "code": 0
+    },
+    {
+      "label": "target-stop",
+      "ms": 5250.307832999999,
+      "code": 0
+    },
+    {
+      "label": "final-source-stop",
+      "ms": 5213.4416249999995,
+      "code": 0
+    },
+    {
+      "label": "final-target-stop",
+      "ms": 5338.149999999994,
+      "code": 0
+    }
+  ],
+  "phases": [
+    {
+      "label": "before",
+      "inventory": [],
+      "allBoxesAreFixture": true,
+      "shimProcesses": [],
+      "aggregateShimRssKiB": 0
+    },
+    {
+      "label": "one-empty",
+      "inventory": [
+        {
+          "name": "blobot-cost-c096ee35-dcdb-428d-884c-e84d262e5750-old",
+          "id": "7bd7bcf8-3a88-4c8b-8cdd-b878a34574d4",
+          "status": "running"
+        }
+      ],
+      "allBoxesAreFixture": true,
+      "shimProcesses": [
+        {
+          "pid": 22618,
+          "rssKiB": 721088
+        }
+      ],
+      "aggregateShimRssKiB": 721088,
+      "guest": {
+        "uid": 0,
+        "kernel": "7.0.12",
+        "cpuCount": 2,
+        "meminfo": [
+          "MemTotal:        2066016 kB",
+          "MemAvailable:    1912240 kB",
+          "Shmem:               272 kB"
+        ],
+        "cgroupMemoryCurrent": null,
+        "cgroupMemoryMax": null,
+        "cgroupCpuMax": null,
+        "cgroupCpuStat": "usage_usec 796000\nuser_usec 520000\nsystem_usec 276000\nnice_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0"
+      }
+    },
+    {
+      "label": "stopped-0",
+      "inventory": [
+        {
+          "name": "blobot-cost-c096ee35-dcdb-428d-884c-e84d262e5750-old",
+          "id": "7bd7bcf8-3a88-4c8b-8cdd-b878a34574d4",
+          "status": "stopped"
+        }
+      ],
+      "allBoxesAreFixture": true,
+      "shimProcesses": [],
+      "aggregateShimRssKiB": 0
+    },
+    {
+      "label": "stopped-1",
+      "inventory": [
+        {
+          "name": "blobot-cost-c096ee35-dcdb-428d-884c-e84d262e5750-old",
+          "id": "7bd7bcf8-3a88-4c8b-8cdd-b878a34574d4",
+          "status": "stopped"
+        }
+      ],
+      "allBoxesAreFixture": true,
+      "shimProcesses": [],
+      "aggregateShimRssKiB": 0
+    },
+    {
+      "label": "stopped-2",
+      "inventory": [
+        {
+          "name": "blobot-cost-c096ee35-dcdb-428d-884c-e84d262e5750-old",
+          "id": "7bd7bcf8-3a88-4c8b-8cdd-b878a34574d4",
+          "status": "stopped"
+        }
+      ],
+      "allBoxesAreFixture": true,
+      "shimProcesses": [],
+      "aggregateShimRssKiB": 0
+    },
+    {
+      "label": "data-seeded",
+      "inventory": [
+        {
+          "name": "blobot-cost-c096ee35-dcdb-428d-884c-e84d262e5750-old",
+          "id": "7bd7bcf8-3a88-4c8b-8cdd-b878a34574d4",
+          "status": "running"
+        }
+      ],
+      "allBoxesAreFixture": true,
+      "shimProcesses": [
+        {
+          "pid": 22846,
+          "rssKiB": 629312
+        }
+      ],
+      "aggregateShimRssKiB": 629312,
+      "guest": {
+        "uid": 0,
+        "kernel": "7.0.12",
+        "cpuCount": 2,
+        "meminfo": [
+          "MemTotal:        2066016 kB",
+          "MemAvailable:    1909952 kB",
+          "Shmem:               256 kB"
+        ],
+        "cgroupMemoryCurrent": null,
+        "cgroupMemoryMax": null,
+        "cgroupCpuMax": null,
+        "cgroupCpuStat": "usage_usec 796000\nuser_usec 564000\nsystem_usec 232000\nnice_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0"
+      }
+    },
+    {
+      "label": "tmpfs-held",
+      "inventory": [
+        {
+          "name": "blobot-cost-c096ee35-dcdb-428d-884c-e84d262e5750-old",
+          "id": "7bd7bcf8-3a88-4c8b-8cdd-b878a34574d4",
+          "status": "running"
+        }
+      ],
+      "allBoxesAreFixture": true,
+      "shimProcesses": [
+        {
+          "pid": 22846,
+          "rssKiB": 885552
+        }
+      ],
+      "aggregateShimRssKiB": 885552,
+      "guest": {
+        "uid": 0,
+        "kernel": "7.0.12",
+        "cpuCount": 2,
+        "meminfo": [
+          "MemTotal:        2066016 kB",
+          "MemAvailable:    1878304 kB",
+          "Shmem:             33024 kB"
+        ],
+        "cgroupMemoryCurrent": null,
+        "cgroupMemoryMax": null,
+        "cgroupCpuMax": null,
+        "cgroupCpuStat": "usage_usec 896000\nuser_usec 636000\nsystem_usec 260000\nnice_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0"
+      }
+    },
+    {
+      "label": "tmpfs-released",
+      "inventory": [
+        {
+          "name": "blobot-cost-c096ee35-dcdb-428d-884c-e84d262e5750-old",
+          "id": "7bd7bcf8-3a88-4c8b-8cdd-b878a34574d4",
+          "status": "running"
+        }
+      ],
+      "allBoxesAreFixture": true,
+      "shimProcesses": [
+        {
+          "pid": 22846,
+          "rssKiB": 893808
+        }
+      ],
+      "aggregateShimRssKiB": 893808,
+      "guest": {
+        "uid": 0,
+        "kernel": "7.0.12",
+        "cpuCount": 2,
+        "meminfo": [
+          "MemTotal:        2066016 kB",
+          "MemAvailable:    1876656 kB",
+          "Shmem:               272 kB"
+        ],
+        "cgroupMemoryCurrent": null,
+        "cgroupMemoryMax": null,
+        "cgroupCpuMax": null,
+        "cgroupCpuStat": "usage_usec 1016000\nuser_usec 724000\nsystem_usec 292000\nnice_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0"
+      }
+    },
+    {
+      "label": "two-running-before-copy",
+      "inventory": [
+        {
+          "name": "blobot-cost-c096ee35-dcdb-428d-884c-e84d262e5750-new",
+          "id": "62ce70aa-5c65-4735-9f5d-ced9ff40c355",
+          "status": "running"
+        },
+        {
+          "name": "blobot-cost-c096ee35-dcdb-428d-884c-e84d262e5750-old",
+          "id": "7bd7bcf8-3a88-4c8b-8cdd-b878a34574d4",
+          "status": "running"
+        }
+      ],
+      "allBoxesAreFixture": true,
+      "shimProcesses": [
+        {
+          "pid": 23022,
+          "rssKiB": 742208
+        },
+        {
+          "pid": 23050,
+          "rssKiB": 548864
+        }
+      ],
+      "aggregateShimRssKiB": 1291072,
+      "guest": {
+        "uid": 0,
+        "kernel": "7.0.12",
+        "cpuCount": 2,
+        "meminfo": [
+          "MemTotal:        2066016 kB",
+          "MemAvailable:    1914560 kB",
+          "Shmem:               256 kB"
+        ],
+        "cgroupMemoryCurrent": null,
+        "cgroupMemoryMax": null,
+        "cgroupCpuMax": null,
+        "cgroupCpuStat": "usage_usec 436000\nuser_usec 264000\nsystem_usec 172000\nnice_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0"
+      }
+    },
+    {
+      "label": "two-running-after-copy",
+      "inventory": [
+        {
+          "name": "blobot-cost-c096ee35-dcdb-428d-884c-e84d262e5750-new",
+          "id": "62ce70aa-5c65-4735-9f5d-ced9ff40c355",
+          "status": "running"
+        },
+        {
+          "name": "blobot-cost-c096ee35-dcdb-428d-884c-e84d262e5750-old",
+          "id": "7bd7bcf8-3a88-4c8b-8cdd-b878a34574d4",
+          "status": "running"
+        }
+      ],
+      "allBoxesAreFixture": true,
+      "shimProcesses": [
+        {
+          "pid": 23050,
+          "rssKiB": 839376
+        },
+        {
+          "pid": 23186,
+          "rssKiB": 644112
+        }
+      ],
+      "aggregateShimRssKiB": 1483488,
+      "guest": {
+        "uid": 0,
+        "kernel": "7.0.12",
+        "cpuCount": 3,
+        "meminfo": [
+          "MemTotal:        3104752 kB",
+          "MemAvailable:    2922080 kB",
+          "Shmem:               272 kB"
+        ],
+        "cgroupMemoryCurrent": null,
+        "cgroupMemoryMax": null,
+        "cgroupCpuMax": null,
+        "cgroupCpuStat": "usage_usec 660000\nuser_usec 468000\nsystem_usec 192000\nnice_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0"
+      }
+    },
+    {
+      "label": "both-stopped",
+      "inventory": [
+        {
+          "name": "blobot-cost-c096ee35-dcdb-428d-884c-e84d262e5750-new",
+          "id": "62ce70aa-5c65-4735-9f5d-ced9ff40c355",
+          "status": "stopped"
+        },
+        {
+          "name": "blobot-cost-c096ee35-dcdb-428d-884c-e84d262e5750-old",
+          "id": "7bd7bcf8-3a88-4c8b-8cdd-b878a34574d4",
+          "status": "stopped"
+        }
+      ],
+      "allBoxesAreFixture": true,
+      "shimProcesses": [],
+      "aggregateShimRssKiB": 0
+    }
+  ],
+  "checks": {
+    "copiedDigestMetadataAndCountMatch": true,
+    "targetStopWakePreservesData": true,
+    "independentOriginalUnaffectedByTargetWrite": true,
+    "syntheticBytes": 67108864,
+    "smallFiles": 256
+  },
+  "cleanup": {
+    "errors": [],
+    "remainingFixture": []
+  },
+  "version": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "limits": {
+    "cpus": 2,
+    "memoryBytes": 2147483648,
+    "volumeBytesEach": 536870912
+  },
+  "image": "docker/sandbox-templates:shell-docker (cached; not same image as Engine fixture)",
+  "passed": true
+}

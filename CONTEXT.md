@@ -7,10 +7,21 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
 - **Team** — a named group of Agents working on one Workspace, formed out of AgentProfiles that
   already exist. Owns the repository and scopes the message bus: "which agents can Alice address?" is answered by her Team. Also owns the
   turn budget.
+- **Thread** — the Team behind an agent's own conversation: one member, no team surface. An
+  AgentProfile's row in the rail opens one, it is made by the first message rather than by the
+  press, and it is the only Team the user never sees as a team — hidden from the rail's team
+  rows, the navigator, the roster editor and the team pane. Told apart from a one-member Team by
+  a stored `thread_for` value and never by counting its roster; one per agent, enforced by the
+  database. It names no team in its Persona, composes no lead brief, and advertises no
+  `message_agent`. See `.scratch/rail/`.
 - **AgentProfile** — an Agent that exists on its own: a name, a role, a RuntimeProvider and
   optional standing instructions, belonging to no Team. Agents are hired once and can be on
   several Teams at the same time. *Mara, marketing.* See
   `docs/adr/0001-agents-exist-independently-of-teams.md`.
+- **PersonalDirectory** — the profile's persistent writable folder, shared by its memberships
+  across local and sandbox execution on this computer. Reusable scripts, utilities and personal
+  files belong here. A Machine borrows the folder; removing a membership or Machine and retiring
+  the profile retain it. Skills/MCP installation and configuration composition are a separate effort.
 - **Agent** — an AgentProfile instantiated on a Team: a named member of it with a role and an
   AgentWorkspace. *Alice*, *Bob*. The definition is copied from the profile when the team is
   formed. Editing the profile afterwards **restates** the role, the standing instructions and
@@ -25,10 +36,35 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
 - **AgentWorkspace** — an Agent's own isolated copy of the Workspace. One per Agent per Team.
   The name deliberately promises neither git nor Docker, because the mechanism follows the
   kind: a worktree on a `blobot/<team>/<agent>` branch, a mirrored tree of worktrees for the
-  repositories in **scope**, or a plain copy. The isolation is the same in all three; the
-  *guarantees* are not, and a copy has no branch, no diff and no recovery.
+  repositories in **scope**, or a plain copy, on either Machine kind. Each Agent has its own
+  working files; repository metadata is shared by worktrees. A copy has no branch, no diff
+  and no recovery.
 - **Scope** — for a `nested` Workspace, the repositories the user put in. A repository out of
   scope is **absent** from the AgentWorkspace, not present and off limits.
+
+## Execution
+
+- **Machine** — the place an Agent's Turn executes. One per Agent and never shared: a Team gives
+  each Agent a Machine the way it gives it an AgentWorkspace, and deleting the Agent deletes it.
+  It is one of a closed set of **kinds**, chosen when the Team is formed — once for the Team, and
+  per Agent for the exception: **this computer**, or **a sandbox on this computer**, a small
+  virtual machine holding the Agent's own copy of its runtime, its own login and its own copy of
+  the Workspace. It can also write the Workspace’s shared Git metadata, reach the mailbox and
+  the Internet and services on the host/local network under its runtime's own restrictions,
+  and read the operator’s skills. Blobot imposes no additional destination list; reaching a
+  service does not grant authority to use it. The main checkout and other Agents’ working
+  files are outside it. The profile's PersonalDirectory is a deliberate writable bridge between
+  its own memberships; runtime HOME, login and sessions remain private to each sandbox. A Machine
+  borrows that folder rather than owning its lifetime. On screen a Machine is said by kind and in plain words; the mechanism behind
+  a kind is never named. See `.scratch/machines/`.
+- **Approval posture** — when an Agent's runtime asks the operator before acting. Separate
+  from where the Agent executes and what it can reach: choosing a Machine does not itself
+  grant more permission. See `docs/adr/0006-machine-boundaries-and-approval-posture.md`.
+- **Shared Git trust** — the worktree's common Git metadata is writable. Blobot's host Git
+  controls skip repository hooks and fsmonitor, disable external diff/textconv, and restrict
+  configured transports. This leaves Agent Git unchanged and does not make hostile metadata,
+  filters or credential helpers safe; other host tools do not inherit these overrides.
+  A sandbox is not an independent repository. See `docs/machines.md`.
 
 ## Runtimes
 
@@ -76,6 +112,9 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
 - **Standing instructions** — what is true of an AgentProfile on *every* team it is on. Folded
   into its Persona, and said as such, so it is never mistaken for this team's framing — which is
   the **Handbook**, and is the thing that sentence was written before there was.
+- **Profile overview** — an AgentProfile's current team memberships, declared roles and
+  teammates. It carries awareness across teams, never their work contents or authority to act
+  in them; it is not a shared personal memory or a place where an Agent executes.
 - **Persona** — an Agent's system prompt. Carries the static facts about its situation (role,
   Workspace, AgentWorkspace path, roster, the rules). Adapter-owned.
 - **Mailbox** — an Agent's queue of undelivered Messages. Delivered as one prompt when the Agent
@@ -123,6 +162,18 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
   user reversed is still a decision they made. It is what clears the ink edge, and it is why
   *unreviewed* is a fact on the row rather than an inference from *armed or gone*.
 
+## Personal skills
+
+Personal skills are owned by an AgentProfile and stored once in its personal folder under
+`.agents/skills`. A draft lives outside discovery in `.blobot/skills/drafts` until explicitly
+published. Folder imports retain the complete package; Git imports retain a commit and content
+hash. A personal copy retains its source as provenance while detaching remote updates.
+`PersonalSkills` owns catalogue mutations. Its execution leases span provider startup through
+confirmed process and Machine shutdown, so managed updates wait for all of a profile's sessions.
+Claude, Codex and OpenCode adapters connect the personal root using native mechanisms. Project
+and computer inventory is read-only, and a detected file is not proof of runtime use. See
+`.scratch/skills/build.md` for the MVP's acceptance evidence and platform limits.
+
 ## Avoid
 
 - **"worktree"** as a domain term — it is the git *mechanism* behind AgentWorkspace, not the
@@ -138,5 +189,11 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
   told something. **The exception is the user's own mouth**: *remember that* is a plain
   instruction to an Agent and must keep working. It is wrong in blobot's mouth, on screen or in a
   persona, and never wrong in theirs.
+- **"Sandbox"** for any Machine — it is the name of one kind, *a sandbox on this computer*, and
+  nothing else; *this computer* is not a sandbox and must not be called a weaker one. And
+  **"Docker"**, **"VM"**, **"container"**, **"image"** anywhere a user reads: the mechanism behind
+  a kind is invisible infrastructure. One exception, and only one: the **account** is named, once each,
+  on the onboarding screen, where a sandbox is offered, and where the engine's readiness is shown
+  in Settings, because a sign-in cannot be anonymous.
 - **"Cron"** — it names a mechanism blobot does not implement and promises a guarantee it cannot
   keep: a Routine does not fire while the app is closed, and a missed firing is never run late. Say *Routine*, and say *every day at 09:00* rather than a schedule expression.

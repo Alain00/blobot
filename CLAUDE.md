@@ -29,7 +29,8 @@ and raise it rather than working around it.
 - **The orchestrator owns agent-to-agent communication.** It is our concern, not ACP's, and
   never a full context copy between agents — always compact context.
 - **The blobatars are the only saturated thing on screen.** Status is monochrome, carried by
-  motion, a mono word and a hairline. The rest of the interface's rules, and the reason behind
+  motion, a mono word and a hairline, with DESIGN.md's explicit low-chroma Machine-power-dot exception.
+  The rest of the interface's rules, and the reason behind
   each, live in `DESIGN.md` at the repo root. **Read it before changing anything a user sees.**
 
 ## Engineering constraints
@@ -191,6 +192,30 @@ up. Read it before starting work.
   are not the same record of what happened. `reject_always` stays unoffered: refusing forever is
   the same standing rule pointed the other way, and nobody has asked for it.
 
+- **Permission disclosure corrected, 2026-09-06.** The historical Claude observation above is
+  not a universal file or persistence guarantee. Machines' **What a sandbox lets blobot say**
+  carries the selected reusable option's name and adapter-owned scope/storage explanation;
+  session grants and saved rules share an ACP kind. Both Machine kinds retain the same
+  advertised approval choices. `DESIGN.md` and first-demo's permission ticket record the amendment.
+
+- **Machines per Agent (`local`/`box`), implemented as a preview.** Teams can mix installed
+  runtimes and sbx RC5 sandboxes on this computer. The Agent worktree and common `.git` are
+  shared read/write; its home/login and installed software stay private. Internet/host/LAN
+  reach is open under the selected harness approval posture. Box activation requires
+  `BLOBOT_MACHINES_PREVIEW=1`; post-creation resizing and automatic image migration remain
+  deferred. Local Claude's native sandbox policy applies independently of this preview flag.
+  Missing local runtimes fail by Agent name and can retry from their conversation; peers keep
+  working. Read [the flow and boundaries](docs/machines.md),
+  [ADR-0006](docs/adr/0006-machine-boundaries-and-approval-posture.md),
+  [implementation history](.scratch/machines/build.md) and
+  [the PR review responses](.scratch/machines/review-pr-comments.md).
+
+- **Personal files belong to the AgentProfile.** Its memberships share one writable
+  `PersonalDirectory` on this computer, across local and sandbox execution. Machines borrow
+  it; removal and profile retirement retain it. This is separate from each runtime's HOME and
+  from the Workspace. Skills/MCP management and UI remain a separate effort. See
+  [the scoped contract](.scratch/machines/proposal-personal-agent-state.md) and `docs/machines.md`.
+
 - **Agents exist independently of teams** — `docs/adr/0001-agents-exist-independently-of-teams.md`,
   the repo's first ADR, and the reason `CONTEXT.md` now has an **AgentProfile**. An agent is
   hired once, on no team, and can be on several at the same time; joining a team instantiates an
@@ -211,8 +236,12 @@ up. Read it before starting work.
   their own effort at `.scratch/runtime-posture/`.
 
 - **Switching a team no longer restarts it.** `TeamPool` (`apps/desktop/src/main/team-pool.ts`)
-  keeps the last three live, LRU by selection, never evicting the active team or one that is
-  mid-turn. The Claude adapter resumes with `session/load`, re-supplying `mcpServers` and muting
+  keeps the last twenty live — LRU by selection, never evicting the active team or one that is
+  mid-turn, and **the count is the user's setting** (Settings → Machines → *Loaded teams*, stored
+  beside sleep in `machine-preferences.json`, applied to the running pool). It was a hard three
+  until 2026-09-06, which stopped Machines behind the user's back with nothing on screen saying
+  so; the rail's power dot is drawn for every loaded team's thread now, and never off the open
+  team's roster alone. The Claude adapter resumes with `session/load`, re-supplying `mcpServers` and muting
   the transcript replay, so a team that *was* evicted comes back knowing the conversation; a
   session the provider has forgotten falls back to a new one rather than failing the launch.
   Every stream channel leads with a team id, because several teams stream at once now, and a
@@ -299,8 +328,8 @@ up. Read it before starting work.
   argv is core's and never the renderer's: two ids travel, and the command is looked up on the
   far side. Nothing concludes from an exit code, because an installer can exit 0 having installed
   nothing, so the screen ends on detection asked again in the same four words. Detection still
-  gates nothing, with one addition: a launch whose agent's runtime is `not_installed` is refused
-  by name rather than surfacing as `spawn opencode ENOENT`. xterm is handed a monochrome palette,
+  gates nothing, with one addition: an Agent whose local runtime is `not_installed` fails
+  by name while its peers start, and offers retry after installation. xterm is handed a monochrome palette,
   because a terminal is quoted and not exempt from the governing rule. `.scratch/runtime-readiness/`
   has the decisions; `claude auth login` is the one path not run live.
 
@@ -542,9 +571,12 @@ up. Read it before starting work.
   (`-32602`), accepted gracefully by Claude and Codex, and **confabulated on by OpenCode**, which
   invented a task and went reading files. So the control sends a minimal instruction on the wire
   that is never drawn. And an empty turn is not a free turn: ~36,000 tokens of cached prefix for
-  seventeen output tokens. And a person meets it in the **agent's pane and nowhere else**: a notice card above the composer
-while the Handbook is empty, carrying *brief them*, and once it is not, a `handbook · 4` door on
-the tray with a **dialog** behind it. It shipped as a panel under the composer and became a dialog
+  seventeen output tokens. And a person meets it in the **agent's pane and nowhere else**: a `handbook · N` door on the
+tray, at every count including zero, with a **dialog** behind it. *The unbriefed notice card that
+used to stand above the composer was withdrawn 2026-09-06 at the author's direction* — it
+announced what an agent did not know directly above that agent's own first words saying it
+better, which is the third party ticket 02 exists to keep out of the room. Briefing is a
+conversation and happens in the conversation. It shipped as a panel under the composer and became a dialog
 the same day, from the first real Handbook: two entries and 774 characters took two thirds of the
 pane against a bound of 8,000, and a body with no ceiling cannot live in the composer's footing.
 It is a dialog rather than a screen over the surface because *your agents* is a **place** and this
@@ -568,7 +600,7 @@ problem, because four Handbooks do not fold into one the way four statuses fold 
   list chosen by criteria (OpenAI, Deepgram, Mistral), one key per provider in
   `dictation-keys.json` (`safeStorage` where the OS can, plain **and stated** where it cannot,
   `basic_text` never) or in `BLOBOT_<PROVIDER>_API_KEY`, which always wins and is **stripped
-  from every runtime's environment** by `adapters/acp/child-env.ts`. **Local first**: a
+  from every runtime's environment** by `process/child-env.ts`. **Local first**: a
   readiness scan from RAM, arch and disk (four words, `unfit` / `untested` / `fit` / `slow`, the
   last two measured by a real sentence in *say something*), three whisper.cpp weights and a
   `whisper-cli` blobot builds in its own CI (the repo's first workflow) fetched to
@@ -719,7 +751,10 @@ problem, because four Handbooks do not fold into one the way four statuses fold 
   **draws the pane's agent, full stop** — no selection of its own, because a tree quietly showing a
   different checkout than the diff line above it is the `STOPPED`-on-every-rail-row failure again —
   and in the team pane the **empty state is the chooser**, the members' faces with no line over
-  them, clicking one being the same act as its rail row. The head is the face and the name, never
+  them, clicking one being the same act as its rail row. *Amended 2026-09-06: it is **open by
+default** and shutting it is what is remembered; the chooser gets a **head** carrying the team's
+name and a `+` that opens the creation flow's roster step pointed at this team (`AddMember`), and
+taking somebody off is a right-click on their face.* The head is the face and the name, never
   the branch, which the tray forty pixels away already says, and **pressing it is the way back to
   the team**: the face took you in, so the panel must not be one-way.
   **A window onto the work, never an editor.** Read-only in every direction, a click opens the file
@@ -774,7 +809,10 @@ problem, because four Handbooks do not fold into one the way four statuses fold 
   once a team had settled its two hundredth tool call. `AppState.settled` is a counter now.
   `.scratch/file-sidebar/build.md` has what was decided at the keyboard.
 
-Next: **the dictation done-when by hand** — a Spanish sentence with identifiers into a real
+Next: **Machines account/platform acceptance and Guillermo's product review** — follow
+`.scratch/machines/handoff.md` and the evidence ledger before enabling box execution by default.
+The draft PR stays unready until Guillermo finishes his review. Remaining independent work:
+**the dictation done-when by hand** — a Spanish sentence with identifiers into a real
 agent, locally and through one provider (the `whisper-cli` workflow ran and its hashes are
 pinned; the engine's release URL is private for now, on `build.md`). Then **brief a real
 agent**, which is the only thing left in that effort and what every

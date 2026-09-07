@@ -3,6 +3,7 @@ import type {
   Agent,
   AgentEvent,
   AgentStatus,
+  MachinePower,
   Message,
   PictureNotDrawn,
   PictureSource,
@@ -19,13 +20,28 @@ import type {
   UiLog,
   UiHandbookEntry,
   UiHandbookWrite,
+  UiRailAgent,
   UiScheduledRoutine,
+  UiTeamSummary,
   UiSnapshot,
   UiUsage,
 } from '../../shared/api.js';
 
-/** What a conversation pane is showing: one agent's session, or the whole team's stream. */
-export type Pane = { readonly kind: 'team' } | { readonly kind: 'agent'; readonly agentId: string };
+/**
+ * What a conversation pane is showing: one agent's session, the whole team's stream, or an
+ * agent's **thread** that does not exist yet.
+ *
+ * The third kind is `.scratch/rail/issues/04`'s deliberate amendment to this map's own charting
+ * premise. A thread is created on the first message and never on the press of a rail row, so
+ * between those two moments the pane is showing a person rather than a session: it holds an
+ * AgentProfile id, and resolves to `{kind: 'agent'}` the moment the Agent exists. It is the only
+ * option where the rail's identity and the pane's identity agree — a row is a person, so what it
+ * selects is a person.
+ */
+export type Pane =
+  | { readonly kind: 'team' }
+  | { readonly kind: 'agent'; readonly agentId: string }
+  | { readonly kind: 'thread'; readonly profileId: string };
 
 export type Item =
   /**
@@ -202,6 +218,7 @@ export type Item =
       title: string;
       canAllow: boolean;
       canAllowAlways: boolean;
+      allowAlways?: UiPermissionRequest['allowAlways'];
       /** Absent while it is still standing there. Present is a record of what you answered. */
       outcome?: UiPermissionOutcome;
     };
@@ -413,8 +430,8 @@ export interface AppState {
   injection: Record<string, UiInjection>;
   /**
    * Each agent's Handbook, live. Unlike `injection` this **does** stream: an agent records into
-   * its own mid-turn, and three surfaces read it — the panel under the composer, the notice card
-   * above it, and the gauge's handbook row, which is the sum of exactly these entries.
+   * its own mid-turn, and two surfaces read it — the panel behind the tray's door, and the
+   * gauge's handbook row, which is the sum of exactly these entries.
    */
   handbooks: Record<string, readonly UiHandbookEntry[]>;
   /**
@@ -723,6 +740,7 @@ export function reduce(state: AppState, action: Action): AppState {
               title: request.title,
               canAllow: request.canAllow,
               canAllowAlways: request.canAllowAlways,
+              ...(request.allowAlways === undefined ? {} : { allowAlways: request.allowAlways }),
             }),
           ),
         ].sort((left, right) => left.at - right.at),
@@ -783,6 +801,9 @@ export function reduce(state: AppState, action: Action): AppState {
             title: action.request.title,
             canAllow: action.request.canAllow,
             canAllowAlways: action.request.canAllowAlways,
+            ...(action.request.allowAlways === undefined
+              ? {}
+              : { allowAlways: action.request.allowAlways }),
           },
         ],
       };
@@ -1500,11 +1521,28 @@ export function paneAfterSnapshot(options: {
   readonly arrived: boolean;
   readonly roster: readonly { readonly id: string }[];
   readonly wanted?: string;
+  /**
+   * Set when the team that just arrived is a **thread**.
+   *
+   * A thread has no team view — the team view of a one-member team is the member's transcript
+   * with the roster furniture drawn around it — so the pane lands on its one member instead of
+   * on `{kind: 'team'}`. This is also what makes a thread a legitimate thing to relaunch onto:
+   * `.scratch/rail/issues/05-where-a-thread-is-hidden.md`.
+   */
+  readonly thread?: boolean;
 }): Pane {
-  const { open, arrived, roster, wanted } = options;
+  const { open, arrived, roster, wanted, thread } = options;
   const onRoster = (agentId: string): boolean => roster.some((agent) => agent.id === agentId);
   if (wanted !== undefined && onRoster(wanted)) return { kind: 'agent', agentId: wanted };
+  if (thread === true) {
+    const only = roster[0];
+    if (only !== undefined) return { kind: 'agent', agentId: only.id };
+  }
   if (!arrived && open.kind === 'agent' && onRoster(open.agentId)) return open;
+  // A thread the user pressed whose Team does not exist yet survives every snapshot: there is
+  // nothing on the roster to resolve it to, and resetting to the team pane would drop the
+  // person they selected the instant anything else re-read the store.
+  if (open.kind === 'thread') return open;
   return { kind: 'team' };
 }
 
@@ -1516,8 +1554,12 @@ export function paneAfterSnapshot(options: {
  */
 export function itemsFor(items: readonly Item[], pane: Pane): Item[] {
   const visible =
-    pane.kind === 'team'
-      ? [...items]
+    // A thread with nothing in it yet: no Agent exists, so nothing in the transcript can be
+    // about it. An empty pane rather than the team's stream, which belongs to another team.
+    pane.kind !== 'agent'
+      ? pane.kind === 'thread'
+        ? []
+        : [...items]
       : items.filter((item) =>
           item.kind === 'peer'
             ? item.fromId === pane.agentId || item.toId === pane.agentId
@@ -1944,6 +1986,8 @@ function liveRunIn(
   if (principal === undefined || !live(principal)) return [];
 
   const calls: number[] = [];
+  /** Whether this run is the tail of the transcript, which is where a turn in flight stands. */
+  const tail = end === items.length;
   const replies: number[] = [];
   let open = -1;
   let lastOwn = -1;
@@ -1990,6 +2034,20 @@ function liveRunIn(
    * renderer, so this hands over everything that has settled and `useDwell` decides how long a
    * reply stands.
    */
+  /*
+   * **Nothing is lifted out of a run that is neither open nor the tail**, however live its
+   * principal is. `live` is a fact about the agent *now* and a run is a place in the
+   * transcript, so a restored conversation full of an agent's earlier turns had every one of
+   * them lift its teammates' replies the moment that agent started a new turn -- a live block
+   * per historical run, all of them keyed `live:<agent>`, which is one key many times over.
+   * React leaves the duplicates behind: they survived the fold, the team switch, and the team.
+   *
+   * Observed 2026-09-07 on a cold start: opening a five-agent team and then an agent's own
+   * thread left six of that team's blocks standing in the thread, dated two days earlier.
+   * A settled reply in a finished run belongs in that run's fold, which is where it already is.
+   */
+  if (batch.length === 0 && !tail) return [];
+
   // In the order they happened: a reply that came back between two calls belongs between them,
   // because this is the turn as it is being lived rather than two lists stacked.
   //
@@ -2054,7 +2112,19 @@ export function rowsOf(
   live: LiveNow = NOBODY_LIVE,
   folded: ReadonlySet<string> = NOTHING_FOLDED,
 ): Row[] {
-  const rows: Row[] = [];
+  /*
+   * A slot per row, because a row can be taken back after it is written: {@link demoteLiveRow}
+   * empties one and folds what was in it into the run above. Flattened on the way out.
+   */
+  const rows: (Row | Row[])[] = [];
+  /**
+   * Where each agent's live block stands, and the fold of the run it was lifted out of.
+   *
+   * The block's id says `live:<agent>`, so **one per agent is a promise the rows have to keep**
+   * and not a hope about the transcript: two rows under one React key leaves the loser's DOM
+   * standing after the row is gone, and it outlives the fold, the switch and the team.
+   */
+  const standing = new Map<string, { block: number; fold?: number }>();
   let index = 0;
   let addressed: ReadonlySet<string> = new Set();
 
@@ -2087,7 +2157,10 @@ export function rowsOf(
        * Mail with no turn behind it is neither: one outbound line nobody has answered yet is
        * already one line, and it is the addressed agent's own act rather than somebody else's.
        */
+      /** Where this run's fold stands, for a block of this run's that is taken back later. */
+      let foldAt: number | undefined;
       if (run.length > 0 && (partnerSpoke(run, principal) || toolsIn(run) >= WORTH_FOLDING)) {
+        foldAt = rows.length;
         rows.push({
           kind: 'steps',
           id: `steps:${(run[0] as Item).id}`,
@@ -2126,6 +2199,14 @@ export function rowsOf(
        */
       const turning = open.length > 0 || (principal !== undefined && live(principal) && found.end === items.length);
       if (turning) {
+        // The same agent cannot hold two turns at once, so an earlier block of its own goes
+        // back into the run it was lifted out of rather than standing beside this one.
+        const held = standing.get(principal as string);
+        if (held !== undefined) demoteLiveRow(rows, held);
+        standing.set(principal as string, {
+          block: rows.length,
+          ...(foldAt === undefined ? {} : { fold: foldAt }),
+        });
         rows.push({
           kind: 'live',
           /*
@@ -2151,7 +2232,36 @@ export function rowsOf(
     index += 1;
   }
 
-  return oneRowPerTurnsPictures(rows);
+  return oneRowPerTurnsPictures(rows.flat());
+}
+
+/**
+ * Take a live block back, because the agent it belongs to has opened a later turn.
+ *
+ * A block is a *turn* in flight and an agent holds one at a time, which is what its
+ * `live:<agent>` id promises the renderer. Everything in it was lifted out of a run, so nothing
+ * is dropped here: it goes back into that run's fold, in the order it happened, and where the run
+ * had no fold to go back into it is drawn flat where the block stood.
+ *
+ * Nothing observed reaches this any more -- {@link liveRunIn} stops lifting out of a settled run,
+ * which is where the duplicates came from -- and it stays because the id is a promise, and the
+ * cost of breaking it is not a wrong row but a row that never goes away.
+ */
+function demoteLiveRow(rows: (Row | Row[])[], held: { block: number; fold?: number }): void {
+  const block = rows[held.block];
+  if (block === undefined || Array.isArray(block) || block.kind !== 'live') return;
+  const fold = held.fold === undefined ? undefined : rows[held.fold];
+  if (fold !== undefined && !Array.isArray(fold) && fold.kind === 'steps') {
+    const items = [...fold.items, ...block.items].sort((left, right) => left.at - right.at);
+    rows[held.fold as number] = {
+      ...fold,
+      items,
+      partnerIds: partnersOf(items, fold.agentId === '' ? undefined : fold.agentId),
+    };
+    rows[held.block] = [];
+    return;
+  }
+  rows[held.block] = block.items.map((item): Row => ({ kind: 'item', at: item.at, item }));
 }
 
 /**
@@ -2288,11 +2398,92 @@ export interface CommandMenu {
 }
 
 /**
- * Who a message is addressed to: the **leading run** of mentions.
+ * One `@mention` in the draft: where it starts, where it ends, and who it names.
+ *
+ * A mention is not a word. `Creative Designer` is one agent, and a tokenizer that stops at the
+ * first space drew half of that name as a dud and addressed nobody — the composer's own report,
+ * 2026-09-07. So the roster is what says where a mention ends, and this is the one place that
+ * decides it: the field's highlighting, the addressing rule and the menu all read it, because
+ * three answers to *where does this name stop* is three chances to disagree.
+ *
+ * Longest name first, so an `Alice` on a roster that also has an `Alice Smith` never eats the
+ * longer one's second word. Whitespace inside a name matches any run of it, because what the
+ * user typed between two words of a name is not a fact about who they meant. What resolves
+ * against nobody is still a mention — `@alic` is a dud the field has to be able to draw — and
+ * there the old word-shaped token is exactly right, since there is no name to measure against.
+ */
+export interface Mention {
+  readonly start: number;
+  readonly end: number;
+  /** The name as typed, without the `@`. */
+  readonly text: string;
+  /** Undefined when nobody answers to it. */
+  readonly agent?: Agent | undefined;
+}
+
+/** A name as it may have been typed: escaped, with any run of whitespace between its words. */
+function namePattern(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('\\s+');
+}
+
+export function mentionsIn(draft: string, roster: readonly Agent[]): Mention[] {
+  const byLength = [...roster].sort((a, b) => b.name.length - a.name.length);
+  const found: Mention[] = [];
+  for (let at = draft.indexOf('@'); at !== -1; at = draft.indexOf('@', at + 1)) {
+    // `bob@example.com` is an address and not a mention, which is the rule `namesMentioned`
+    // already keeps on the other side of this gesture.
+    const before = at === 0 ? '' : draft[at - 1];
+    if (before !== undefined && /[\w@]/.test(before)) continue;
+    const rest = draft.slice(at + 1);
+    const named = byLength.find((agent) =>
+      new RegExp(`^${namePattern(agent.name)}(?![\\w@])`, 'i').test(rest),
+    );
+    if (named !== undefined) {
+      const length = new RegExp(`^${namePattern(named.name)}`, 'i').exec(rest)?.[0].length ?? 0;
+      const text = rest.slice(0, length);
+      // Resolved through `findAgentByName` even though the match already found the candidate,
+      // so the composer and the orchestrator's `message_agent` keep the one answer to *who is
+      // this*. The pattern above decides where a name ends; this decides whose it is.
+      // Asked with its whitespace collapsed: `@Creative  Designer` is the same recipient as
+      // `@Creative Designer`, and the orchestrator's lookup compares a name exactly.
+      const asked = text.replace(/\s+/g, ' ');
+      found.push({ start: at, end: at + 1 + length, text, agent: findAgentByName(roster, asked) });
+      at = at + length;
+      continue;
+    }
+    const word = /^[\w-]+/.exec(rest)?.[0];
+    if (word === undefined) continue;
+    found.push({ start: at, end: at + 1 + word.length, text: word });
+    at = at + word.length;
+  }
+  return found;
+}
+
+/**
+ * Where the leading run of mentions ends: the To: line's length, in characters.
  *
  * Mentions before the first ordinary word are the recipients — the To: line, where the eye
  * already looks. A mention anywhere after that is a *reference*, so `ask @bob about @alice's
  * branch` reaches Bob alone, which is the misfire the rule exists to prevent.
+ *
+ * An unresolved mention inside the run does not end it: `@alic @bob hi` reaches Bob, and the
+ * field draws `@alic` as the dud it is.
+ */
+function leadingRunEnd(draft: string, roster: readonly Agent[]): number {
+  let end = /^\s*/.exec(draft)?.[0].length ?? 0;
+  for (const mention of mentionsIn(draft, roster)) {
+    if (mention.start !== end) break;
+    end = mention.end + (/^\s*/.exec(draft.slice(mention.end))?.[0].length ?? 0);
+  }
+  return end;
+}
+
+/**
+ * Who a message is addressed to: the **leading run** of mentions.
  *
  * This replaced ticket 12's **last valid mention wins**, and its second reopen records that.
  * `ship it @bob` no longer sends to Bob: keeping it would have meant two addressing rules, the
@@ -2302,17 +2493,13 @@ export interface CommandMenu {
  * tokens and all — splitting `@alice do the UI, @bob do the API` into clauses would be blobot
  * deciding which half is whose, which is inference, and Bob seeing what Alice was asked is what
  * stops him doing it twice.
- *
- * An unresolved mention inside the run does not end it: `@alic @bob hi` reaches Bob, and the
- * field draws `@alic` as the dud it is.
  */
 export function addressedBy(draft: string, roster: readonly Agent[]): Agent[] {
-  const leading = /^[\s]*((?:@[\w-]+\s*)+)/.exec(draft)?.[1];
-  if (leading === undefined) return [];
-  const named = [...leading.matchAll(/@([\w-]+)/g)].map((match) =>
-    findAgentByName(roster, match[1] ?? ''),
-  );
-  const found = named.filter((agent): agent is Agent => agent !== undefined);
+  const end = leadingRunEnd(draft, roster);
+  const found = mentionsIn(draft, roster)
+    .filter((mention) => mention.end <= end)
+    .map((mention) => mention.agent)
+    .filter((agent): agent is Agent => agent !== undefined);
   // The same agent twice is one recipient: two rows would be the same words delivered to one
   // session twice, and the second is not a second instruction.
   return found.filter((agent, index) => found.findIndex((it) => it.id === agent.id) === index);
@@ -2324,9 +2511,31 @@ export function addressedBy(draft: string, roster: readonly Agent[]): Agent[] {
  * The field draws the difference, because an underline that means "this is going to them" must
  * not appear over a name that is only being talked about.
  */
-export function isAddressing(draft: string, offset: number): boolean {
-  const leading = /^[\s]*((?:@[\w-]+\s*)+)/.exec(draft)?.[0];
-  return leading !== undefined && offset < leading.length;
+export function isAddressing(draft: string, offset: number, roster: readonly Agent[]): boolean {
+  return offset < leadingRunEnd(draft, roster);
+}
+
+/**
+ * The mention being typed at the very end of the draft, if there is one.
+ *
+ * A partial can hold spaces, for the same reason a mention can — but only as far as somebody's
+ * name goes. `@Creative D` is half of a name and keeps the menu open; `@Bob what do you` is a
+ * message that has started, and the menu closes on the word after the name rather than on the
+ * space, which no fixed pattern could tell apart.
+ */
+export function mentionPartial(
+  draft: string,
+  roster: readonly Agent[],
+): { readonly start: number; readonly text: string } | undefined {
+  const at = draft.lastIndexOf('@');
+  if (at === -1) return undefined;
+  const before = at === 0 ? '' : draft[at - 1];
+  if (before !== undefined && /[\w@]/.test(before)) return undefined;
+  const text = draft.slice(at + 1);
+  if (/^[\w-]*$/.test(text)) return { start: at, text };
+  const wanted = text.toLowerCase().replace(/\s+/g, ' ');
+  const held = roster.some((agent) => agent.name.toLowerCase().replace(/\s+/g, ' ').startsWith(wanted));
+  return held ? { start: at, text } : undefined;
 }
 
 /**
@@ -2369,4 +2578,150 @@ export function commandMenu(options: {
       command.name.toLowerCase().startsWith(partial.toLowerCase()),
     ),
   };
+}
+
+// ------------------------------------------------------------------ the rail's contents
+
+/**
+ * One row in the rail, of the two kinds that are now peers.
+ *
+ * `.scratch/rail/`. The rail was a list of teams with the open team's roster nested under it, so
+ * a person the user hired existed on screen as a child of a project, and only while that project
+ * was the one being read. Now every hired agent is a row of its own and every team is one row
+ * that opens no roster, in one list ordered by recency with a pin.
+ *
+ * Both kinds wear the same shape, which is what makes them peers in the literal sense: a 34px
+ * mark, the name and the time on the first line, the last thing said on the second. Neither
+ * reads as a heading over the other, because the 20px team row was small only while it *headed*
+ * a roster, and there is no roster under it now.
+ */
+export type RailRow =
+  | {
+      readonly kind: 'team';
+      readonly id: string;
+      readonly name: string;
+      readonly team: UiTeamSummary;
+      readonly at?: number;
+      readonly last?: string;
+      readonly status?: { readonly status: AgentStatus; readonly label: string };
+      /**
+       * Members past the three the mark can hold. Absent below four, and **absent whenever a
+       * status is showing**: the right of a row says one thing at a time, and a stack capped at
+       * three would otherwise be claiming *three people* about a team of nine.
+       */
+      readonly more?: number;
+      readonly unread: boolean;
+      readonly pinned: boolean;
+    }
+  | {
+      readonly kind: 'agent';
+      readonly id: string;
+      readonly name: string;
+      readonly agent: UiRailAgent;
+      readonly at?: number;
+      readonly last?: string;
+      readonly status?: { readonly status: AgentStatus; readonly label: string };
+      /**
+       * What the Machine behind this agent's thread is doing. Absent while the thread is not
+       * loaded, which is the only honest answer there: nothing is running to ask.
+       *
+       * A thread has exactly one member, so this is that member's reading and never a fold.
+       * Team rows carry none: four Machines do not fold into one dot the way four statuses fold
+       * into a `StatusWord`, and nobody has asked what a team's power is.
+       */
+      readonly power?: MachinePower;
+      readonly unread: boolean;
+      readonly pinned: boolean;
+    };
+
+/** How many faces a team's mark holds before the rest become a count. See `TeamMark`. */
+export const MARK_FACES = 3;
+
+/**
+ * The rail's list: teams and agents, mixed, ordered by recency, pinned rows in a block on top.
+ *
+ * The single seam for all five of those decisions, which is why it is a pure function here
+ * rather than five conditions spread through the component. `Rail.tsx` renders what this says.
+ *
+ * **Ordering is by last activity across both kinds**, and an agent who has never said anything
+ * sorts on their **hire time** — so the order is total with no special case, and a fresh hire
+ * lands near the top where the person who just made them is looking.
+ *
+ * **An agent row draws its thread's status and its thread's unread, and nothing about its
+ * seats.** Argued both ways on `.scratch/rail/issues/08` and decided against, on the grounds
+ * that pressing that row opens the agent's thread, which is not where a team's permission
+ * request is: a row would be reporting a problem it cannot lead you to. The team row carries
+ * that, inverted, and is both correct and pressable.
+ */
+export function railRowsOf(options: {
+  readonly teams: readonly UiTeamSummary[];
+  readonly profiles: readonly UiRailAgent[];
+  readonly statuses: Readonly<Record<string, AgentStatus>>;
+  readonly unread: readonly string[];
+  /** Pinned row ids — a team id or a profile id — in the order the user pinned them. */
+  readonly pinned: readonly string[];
+}): readonly RailRow[] {
+  const { teams, profiles, statuses, unread, pinned } = options;
+  const statusOf = (agentIds: readonly string[]): RailRow['status'] => {
+    if (agentIds.length === 0) return undefined;
+    const folded = foldTeamStatus(agentIds.map((id) => statuses[id] ?? 'idle'));
+    return folded.status === 'idle' ? undefined : folded;
+  };
+  // A thread is a Team in the store and never one on screen, so the team rows are the teams
+  // that are not threads and the thread rows are drawn from their agent instead.
+  const threads = new Map(
+    teams.filter((team) => team.threadFor !== undefined).map((team) => [team.id, team]),
+  );
+
+  const teamRows: RailRow[] = teams
+    .filter((team) => team.threadFor === undefined)
+    .map((team) => {
+      const status = statusOf(team.members.map((member) => member.id));
+      const more = team.members.length - MARK_FACES;
+      return {
+        kind: 'team' as const,
+        id: team.id,
+        name: team.name,
+        team,
+        ...(team.lastActiveAt === undefined ? {} : { at: team.lastActiveAt }),
+        ...(team.lastLine === undefined ? {} : { last: team.lastLine }),
+        ...(status === undefined ? {} : { status }),
+        // Dropped while a status is showing, which is the *one thing at a time* rule the right
+        // edge already had. A team that is working is not also usefully described by its size.
+        ...(more > 0 && status === undefined ? { more } : {}),
+        unread: team.members.some((member) => unread.includes(member.id)),
+        pinned: pinned.includes(team.id),
+      };
+    });
+
+  const agentRows: RailRow[] = profiles.map((profile) => {
+    const thread = profile.threadId === undefined ? undefined : threads.get(profile.threadId);
+    const members = thread?.members ?? [];
+    const status = statusOf(members.map((member) => member.id));
+    const power = members[0]?.machinePower;
+    return {
+      kind: 'agent' as const,
+      id: profile.id,
+      name: profile.name,
+      agent: profile,
+      ...(power === undefined ? {} : { power }),
+      // Hire time is a never-talked agent's activity. Not a missing value handled separately:
+      // it is what they last did, and it is what makes this sort total.
+      at: thread?.lastActiveAt ?? profile.hiredAt,
+      ...(thread?.lastLine === undefined ? {} : { last: thread.lastLine }),
+      ...(status === undefined ? {} : { status }),
+      unread: members.some((member) => unread.includes(member.id)),
+      pinned: pinned.includes(profile.id),
+    };
+  });
+
+  const byRecency = (left: RailRow, right: RailRow): number => (right.at ?? 0) - (left.at ?? 0);
+  const rest = [...teamRows, ...agentRows].filter((row) => !row.pinned).sort(byRecency);
+  // Pinned rows keep **pin order**, not recency: the block exists so the rows a person returns
+  // to stay where they left them, and reordering it under them would undo the whole point.
+  const block = pinned.flatMap((id) => {
+    const row = [...teamRows, ...agentRows].find((candidate) => candidate.id === id);
+    return row === undefined ? [] : [row];
+  });
+  return [...block, ...rest];
 }

@@ -1,5 +1,4 @@
 import { createHash } from 'node:crypto';
-import { createWriteStream } from 'node:fs';
 import { mkdir, open, rename, rm, stat, chmod } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
@@ -16,7 +15,7 @@ export interface DownloadRequest {
   readonly sha256: string;
   /** Where the verified file ends up. The `.part` sits beside it. */
   readonly to: string;
-  /** The size, when known, so the figure can say `412 MB of 574 MB` before the first byte. */
+  /** Exact expected bytes: both the progress total and the maximum written download size. */
   readonly bytes?: number;
   readonly onProgress?: (received: number, total: number | undefined) => void;
   readonly signal?: AbortSignal;
@@ -84,36 +83,45 @@ export async function downloadVerified(request: DownloadRequest): Promise<Downlo
   const total = totalOf(response, received, request.bytes);
   const freshHash = append ? hash : createHash('sha256');
 
-  const out = createWriteStream(part, { flags: append ? 'a' : 'w' });
+  let out: Awaited<ReturnType<typeof open>> | undefined;
+  let exceededSize = false;
   try {
+    out = await open(part, append ? 'a' : 'w');
     for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
+      request.signal?.throwIfAborted();
+      if (request.bytes !== undefined && received + chunk.byteLength > request.bytes) {
+        exceededSize = true;
+        // Ending the async iteration cancels the response body. Never write excess bytes,
+        // even when the response advertises another size or never reaches EOF.
+        break;
+      }
+      // Await disk writes too: ENOSPC must reject the download, never emit an unhandled
+      // stream error or leave a promise waiting forever for a drain that cannot happen.
+      await out.writeFile(chunk);
       freshHash.update(chunk);
       received += chunk.byteLength;
-      if (!out.write(chunk)) await new Promise<void>((resolve) => out.once('drain', resolve));
       request.onProgress?.(received, total);
     }
+    request.signal?.throwIfAborted();
+    await out.close();
+    out = undefined;
   } catch (error) {
-    // What arrived is kept on disk, flushed, so the retry resumes from exactly this byte.
-    await finish(out);
+    await out?.close().catch(() => {});
     if (request.signal?.aborted === true) return cancelled(part);
-    return { ok: false, kind: 'network', error: describe(error), received };
+    if (!exceededSize) {
+      // A failed write can be partial. Resume from bytes actually on disk, not bytes fetched.
+      return { ok: false, kind: 'network', error: describe(error), received: (await stat(part).catch(() => undefined))?.size ?? 0 };
+    }
+    // A response that fails while being cancelled is still an oversized, invalid artifact.
   }
-  await finish(out);
 
-  if (freshHash.digest('hex') !== request.sha256.toLowerCase()) {
+  if (exceededSize || (request.bytes !== undefined && received !== request.bytes) || freshHash.digest('hex') !== request.sha256.toLowerCase()) {
     await rm(part, { force: true });
     return { ok: false, kind: 'checksum', error: CHECKSUM_MISMATCH };
   }
   await rename(part, request.to);
   if (request.executable === true) await chmod(request.to, 0o755);
   return { ok: true, bytes: received };
-}
-
-function finish(out: ReturnType<typeof createWriteStream>): Promise<void> {
-  return new Promise<void>((resolve) => {
-    out.once('error', () => resolve());
-    out.end(() => resolve());
-  });
 }
 
 async function cancelled(part: string): Promise<DownloadOutcome> {

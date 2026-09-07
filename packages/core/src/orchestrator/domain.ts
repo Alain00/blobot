@@ -6,6 +6,7 @@
 import type { AttachmentKind } from '../runtime.js';
 import type { TrustLevel } from '../trust.js';
 import type { VerbosityLevel } from '../verbosity.js';
+import type { StoredMachinePlacement } from '../machines/placement.js';
 
 /**
  * The two answers to "may blobot start this agent a fresh session when its window fills up".
@@ -19,6 +20,8 @@ export type CompactionSetting = 'auto' | 'off';
 export const DEFAULT_COMPACTION: CompactionSetting = 'auto';
 
 export interface Team {
+  /** Creation default for new members. Invalid persisted settings require an explicit new choice. */
+  readonly defaultMachine?: StoredMachinePlacement;
   readonly id: string;
   /** Load-bearing: the branch is `blobot/<team>/<agent>`. */
   readonly name: string;
@@ -40,6 +43,16 @@ export interface Team {
    * never a replacement for it.
    */
   readonly icon?: string;
+  /**
+   * The AgentProfile this Team is the **thread** for, when it is one.
+   *
+   * A thread is a Team the user never sees as a team: it is one agent's own conversation,
+   * reached from that agent's row in the rail. Present means no team is named in the persona,
+   * no lead brief is composed, no roster line is sent, and `message_agent` is not advertised —
+   * see `.scratch/rail/issues/02-what-a-thread-strips.md`. `leadAgentId` still points at the
+   * one member, because an unaddressed prompt has to route somewhere.
+   */
+  readonly threadFor?: string;
   /** Total agent turns per user prompt, before the team halts and asks. */
   readonly turnBudget: number;
   /**
@@ -141,6 +154,8 @@ export interface AgentDefinition {
 }
 
 export interface Agent {
+  /** Immutable execution choice. Absent means this computer; an invalid persisted choice cannot start. */
+  readonly machine?: StoredMachinePlacement;
   readonly id: string;
   readonly teamId: string;
   /** The AgentProfile this Agent was instantiated from, when it came from one. */

@@ -1,0 +1,13 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { Details } from '../../apps/desktop/src/renderer/src/components/Details';
+import { Skills } from '../../apps/desktop/src/renderer/src/components/Skills';
+import '../../apps/desktop/src/renderer/src/styles.css';
+const text = '---\nname: customer-research\ndescription: Use when interviewing customers and reviewing findings.\nlicense: MIT\n---\nRead references/interviews.md before preparing the interview.\nUse scripts/report.sh to format the findings.\n';
+const research = {name:'customer-research', description:'Use when interviewing customers and reviewing findings.', source:{kind:'local-import',originalPath:'/custom/research'}, modified:false, license:'MIT'};
+const files=['SKILL.md','references/interviews.md','scripts/report.sh','templates/summary.md'];
+const params=new URLSearchParams(location.search);
+let catalogue={ skills:params.has('empty')?[]:[research], drafts:[], pending:params.has('pending')?[{id:'op',name:'weekly-report',action:'install'}]:[], executions:params.has('pending')?2:0, supported:!params.has('unsupported'), sessions:params.has('pending')?[{teamId:'blue',teamName:'Blue'},{teamId:'contab',teamName:'Contab'}]:[], history:[] };
+const api={list:async()=>structuredClone(catalogue), chooseFolder:async()=>'/custom/research', preview:async()=>({id:'preview',skills:[{...research,text,files,hash:'fixture'}]}), read:async()=>({text,files,path:'/personal/ana/.agents/skills/customer-research'}), create:async(_id,input)=>{catalogue.drafts.push({id:'draft',name:input.name});return {id:'draft',name:input.name};}, importDraft:async()=>{}, check:async()=>({changed:false,preview:{id:'preview',skills:[]}}), act:async(_id,action)=>{if(action.kind==='install')catalogue.pending=[{id:'op',name:'customer-research',action:'install'}];if(action.kind==='cancel')catalogue.pending=[];}, inventory:async()=>({profileId:'ana',skills:[{name:'customer-research',description:'Interview customers',scope:'personal',path:'/personal/ana/.agents/skills/customer-research/SKILL.md',command:true,conflict:false}],supported:true})};
+window.blobot={skills:api,onTeamChanged:()=>()=>{},openLink:async()=>{},selectTeam:async()=>({ok:true})};
+createRoot(document.getElementById('root')).render(params.has('session') ? <Details startOpen teamId="blue" agents={[{id:'ana-blue',name:'Ana',role:'Researcher',runtimeLabel:'Runtime',workspacePath:'/blue'}]} usage={{}} injection={{}} handbooks={{}} workspaces={[]} looking={false} onRefreshWorkspaces={()=>{}} onPublish={async()=>({ok:true})} onPlan={()=>{}} /> : <Skills profile={{id:'ana',name:'Ana'}} onClose={()=>{document.title='Back to Your agents';}}/>);

@@ -58,3 +58,5 @@ export function fxModeFor(_trust: TrustLevel): string {
 export function fxPermissionEnv(trust: TrustLevel): Record<string, string> {
   return { [FX_PERMISSION_MODE_ENV]: fxModeFor(trust) };
 }
+export const FX_LOCAL_PROTECTION =
+  'Local execution has no OS sandbox. Tools run with your account’s access; approval rules still apply.';

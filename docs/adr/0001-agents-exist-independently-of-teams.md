@@ -60,7 +60,27 @@ the team was formed.
 - The creation flow reads in the model's order: *your agents*, then the team formed out of them.
   Hiring from inside that flow is a convenience, not how agents come into being.
 
+**Amendment, 2026-09-06 — membership awareness.** The author accepted a Profile overview:
+current team names, declared roles and teammate names/roles may accompany every turn across
+the profile's memberships. This reuses metadata only, not another team's work, transcript or
+Handbook, and grants no new access or messaging authority. It is composed from existing records,
+not a shared writable home or a second runtime instance. Standing instructions remain under
+the user's control. See the answer on
+[What lives in an agent's home, and what map.md may say](../../.scratch/machines/issues/06-what-lives-in-an-agents-home.md).
+
 ## Not decided here
+
+**Amendment, 2026-09-06 — persistent personal files.** Guillermo subsequently requested a
+shared personal folder for the same profile across teams and execution contexts. This extends
+the reusable part beyond the definition: a `PersonalDirectory` belongs to `AgentProfile`, while
+Workspace, conversation, mailbox, runtime HOME and Machine retain their existing ownership.
+Its files persist when a membership or Machine is removed and when the profile is retired.
+Local execution and sandboxes on this computer use the same host-backed folder. Attaching it
+does not import existing runtime homes or configure native skill/MCP discovery. That integration,
+credential handling and the interface are separate work. This explicitly supersedes ticket 06's
+earlier restriction that any future physical home could never be shared as a mount; the profile
+overview's metadata scope is unchanged. See
+[the personal-directory contract](../../.scratch/machines/proposal-personal-agent-state.md).
 
 Editing a profile (rename, change role, change runtime), and what an edit means for the teams an
 agent is already on. Today a profile is hired and retired, nothing in between.

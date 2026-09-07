@@ -19,6 +19,36 @@ export type {
 } from './events.js';
 
 export { sameCommands } from './commands.js';
+export { LocalMachine } from './machines/local-machine.js';
+export { PersonalDirectories, PERSONAL_DIRECTORY_ENV } from './personal/personal-directory.js';
+export type { PersonalDirectory, PersonalDirectoryReference } from './personal/personal-directory.js';
+export { SleepingRuntime } from './machines/sleeping-runtime.js';
+export type { SleepingRuntimeOptions } from './machines/sleeping-runtime.js';
+export { DEFAULT_MACHINE_IDLE_MS, machineIdleMs } from './machines/power.js';
+export type { MachinePower } from './machines/power.js';
+export { DEFAULT_MACHINE_LIMITS, machineLimits } from './machines/resources.js';
+export type { MachineLimits } from './machines/resources.js';
+export { machinePlacement } from './machines/placement.js';
+export type { MachinePlacement, StoredMachinePlacement } from './machines/placement.js';
+export { machineFor } from './machines/machine-for.js';
+export { MachineUnavailableError } from './machines/machine.js';
+export { SbxImageStore, verifyRuntimeImageArchive } from './machines/sbx/image-store.js';
+export { SbxEngine, sbxCommandRunner } from './machines/sbx/engine.js';
+export { SbxInstaller, SBX_INSTALL_VERSION, sbxHostArtifact, sbxKvmAvailable } from './machines/sbx/installation.js';
+export type { SbxInstallation } from './machines/sbx/installation.js';
+export { sbxClientEnvironment } from './machines/sbx/client-environment.js';
+export type { SbxPtyRunner } from './machines/sbx/engine.js';
+export { SbxRegistry } from './machines/sbx/registry.js';
+export type { SbxRecord } from './machines/sbx/registry.js';
+export { OwnedSbxMachine } from './machines/sbx/owned-machine.js';
+export { SBX_INITIAL_STORAGE, sbxKitMismatch } from './machines/sbx/kit.js';
+export { runtimeImageBuild } from './machines/runtime-image.js';
+export type { RuntimeImageBuild, RuntimeImageDefinition } from './machines/runtime-image.js';
+export type {
+  Machine, MachineKind, MachineCommand, MachineIdentity, MachineLocation, MachineReadiness,
+  MachineReconcileOutcome, MachineRuntimeRequirements, MachineRuntimeAccess, MachineSpawnRequest, MachineStartRequest,
+  MachineTransport,
+} from './machines/machine.js';
 
 /** A Picture, and every way one fails to be on screen. `.scratch/agent-media/`. */
 export type { PictureNotDrawn, PictureSource, PictureMeasurement } from './pictures.js';
@@ -144,6 +174,7 @@ export { findAgentByName, namesMentioned } from './orchestrator/roster.js';
 export { InMemoryMessageStore } from './orchestrator/message-store.js';
 export type { AttachmentStore, MessageStore } from './orchestrator/message-store.js';
 export { Orchestrator } from './orchestrator/orchestrator.js';
+export type { ProfileOverview, ProfileOverviewSource } from './orchestrator/profile-overview.js';
 export type { RoutineStore, RoutineTurn } from './orchestrator/orchestrator.js';
 export type {
   BudgetExhausted,
@@ -157,7 +188,18 @@ export type {
 
 // The Claude Code adapter. Exported from the full entry point only: it spawns a process, so
 // it has no business in `@blobot/core/domain`, which the renderer imports.
+export { MachineLogin } from './adapters/login.js';
+export type { RuntimeLogin, RuntimeLoginMethod, RuntimeLoginSpec, LoginChallenge } from './adapters/login.js';
+export { openLoginCallbackRelay } from './adapters/login-callback.js';
+
 export { ClaudeAgentRuntime } from './adapters/claude/claude-agent-runtime.js';
+export { CLAUDE_MACHINE_IMAGE } from './adapters/claude/image.js';
+export { CLAUDE_LOGIN } from './adapters/claude/login.js';
+export { CLAUDE_LOCAL_PROTECTION } from './adapters/claude/sandbox.js';
+export { CURSOR_LOCAL_PROTECTION } from './adapters/cursor/permissions.js';
+export { CODEX_LOCAL_PROTECTION } from './adapters/codex/permissions.js';
+export { FX_LOCAL_PROTECTION } from './adapters/fx/permissions.js';
+export { OPENCODE_LOCAL_PROTECTION } from './adapters/opencode/config.js';
 export {
   CLAUDE_POSTURE_MODE,
   CLAUDE_TRUST_LEVELS,
@@ -179,6 +221,8 @@ export {
 
 // The OpenCode adapter. Same reason it is not in `/domain`: it spawns `opencode acp`.
 export { OpencodeAgentRuntime } from './adapters/opencode/opencode-agent-runtime.js';
+export { OPENCODE_MACHINE_IMAGE } from './adapters/opencode/image.js';
+export { OPENCODE_LOGIN } from './adapters/opencode/login.js';
 export type { OpencodeAgentRuntimeOptions } from './adapters/opencode/opencode-agent-runtime.js';
 export { agentKeyFor, opencodeConfigContent, permissionPosture } from './adapters/opencode/config.js';
 export {
@@ -196,6 +240,8 @@ export { inspectWorkspace } from './workspace/inspect.js';
 export { prepareWorkspace } from './workspace/prepare.js';
 export { findWorkspaceIcon, type WorkspaceIcon } from './workspace/icon.js';
 export { workspaceProviderFor } from './workspace/provider-for.js';
+export { agentGitEnvironment } from './workspace/git-identity.js';
+export { boxWorkspaceMounts, type BoxWorkspaceMounts } from './workspace/box-mounts.js';
 // What a full clean would recover. The words for a size are the renderer's, not core's.
 export { directorySize } from './workspace/size.js';
 export {
@@ -261,6 +307,8 @@ export type {
 // Ticket 11: detecting what the user already has. Spawns processes, so not in `/domain`.
 // The Codex adapter. Same reason again: it spawns a pinned npm bridge over stdio.
 export { CodexAgentRuntime } from './adapters/codex/codex-agent-runtime.js';
+export { CODEX_MACHINE_IMAGE } from './adapters/codex/image.js';
+export { CODEX_LOGIN } from './adapters/codex/login.js';
 export type { CodexAgentRuntimeOptions } from './adapters/codex/codex-agent-runtime.js';
 export {
   CODEX_EXPRESSES_TRUST,
@@ -275,6 +323,8 @@ export {
 
 // The fx adapter. Same reason again, minus the bridge: `fx acp` is the user's own binary.
 export { FxAgentRuntime } from './adapters/fx/fx-agent-runtime.js';
+export { FX_MACHINE_IMAGE } from './adapters/fx/image.js';
+export { FX_LOGIN } from './adapters/fx/login.js';
 export type { FxAgentRuntimeOptions } from './adapters/fx/fx-agent-runtime.js';
 export {
   FX_EXPRESSES_TRUST,
@@ -288,6 +338,8 @@ export { resolveFxExecutable, spawnFx, VERIFIED_FX_VERSION } from './adapters/fx
 
 // The Cursor adapter. First-party ACP again: `cursor-agent acp` is the user's own binary.
 export { CursorAgentRuntime } from './adapters/cursor/cursor-agent-runtime.js';
+export { CURSOR_MACHINE_IMAGE } from './adapters/cursor/image.js';
+export { CURSOR_LOGIN } from './adapters/cursor/login.js';
 export type { CursorAgentRuntimeOptions } from './adapters/cursor/cursor-agent-runtime.js';
 export {
   CURSOR_APPROVAL_MODE,
@@ -304,6 +356,8 @@ export {
 } from './adapters/cursor/stdio.js';
 
 export { detectRuntimes, parseCursorStatus, parseOpencodeAuthList, parseVersion, stripAnsi } from './detect/runtimes.js';
+export { detectAgentRuntime, engineDetection } from './detect/machine-runtime.js';
+export type { DetectionSubject, MachineDetection, AgentProbeAccess } from './detect/machine-runtime.js';
 export type {
   CommandResult,
   CommandRunner,
@@ -396,7 +450,7 @@ export { WhisperTranscriber, parseTranscription, wavHeader } from './speech/whis
 export type { WhisperTranscriberOptions } from './speech/whisper.js';
 export { SPEECH_PROVIDERS, authorizationFor, speechProvider, validateSpeechKey } from './speech/providers.js';
 export type { KeyValidation, SpeechProviderId, SpeechProviderSpec } from './speech/providers.js';
-export { BLOBOT_KEY_VARIABLE, childEnvironment } from './adapters/acp/child-env.js';
+export { BLOBOT_KEY_VARIABLE, childEnvironment } from './process/child-env.js';
 export { OPENAI_LIVE_MODEL, OPENAI_REALTIME_URL, OpenAiTranscriber, localeLanguage } from './speech/openai.js';
 export type { OpenAiTranscriberOptions } from './speech/openai.js';
 export { DEEPGRAM_LISTEN_URL, DeepgramTranscriber, deepgramQuery } from './speech/deepgram.js';
@@ -405,3 +459,8 @@ export { MISTRAL_MODEL, MISTRAL_TRANSCRIPTIONS_URL, MistralTranscriber } from '.
 export type { MistralTranscriberOptions } from './speech/mistral.js';
 export { nodeSocket, resample16to24 } from './speech/socket.js';
 export type { SocketFactory, SocketLike } from './speech/socket.js';
+export { PersonalSkills } from './skills/personal-skills.js';
+export { CLAUDE_SKILL_DISCOVERY } from './adapters/claude/palette.js';
+export { CODEX_SKILL_DISCOVERY } from './adapters/codex/palette.js';
+export { OPENCODE_SKILL_DISCOVERY } from './adapters/opencode/palette.js';
+export { inspectSkillLocations, type SkillDiscovery } from './skills/inventory.js';

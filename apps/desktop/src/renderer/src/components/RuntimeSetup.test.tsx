@@ -64,6 +64,7 @@ const READY: UiRuntimeChoice = {
   version: '2.1.251',
   remedies: [],
   trustLevels: ['careful', 'normal', 'trusting', 'unattended'],
+  localProtection: 'Synthetic local reach description supplied by the adapter.',
 };
 
 const drawn: { unmount: () => void; host: HTMLElement }[] = [];
@@ -129,6 +130,9 @@ describe('the readiness line', () => {
       <HireAgent runtimes={[READY]} onClose={() => undefined} onHired={() => undefined} />,
     );
     expect(onScreen()).not.toContain('sign in');
+    // The adapter's local-reach paragraph is not on this bar: it stood under the readiness line
+    // as a second foot and said nothing the person hiring an agent was deciding. *2026-09-07.*
+    expect(onScreen()).not.toContain(READY.localProtection);
   });
 
   it('does not gate the picker on any of it', async () => {
@@ -137,8 +141,9 @@ describe('the readiness line', () => {
       <HireAgent runtimes={[MISSING]} onClose={() => undefined} onHired={() => undefined} />,
     );
     // The trigger is a Radix select showing the runtime, not a disabled control: ticket 11's
-    // rule is that the user is always allowed to try.
-    const trigger = document.querySelector('[aria-labelledby="runtimelabel"]');
+    // rule is that the user is always allowed to try. It is a chip in the agent bar's first row
+    // since 2026-09-07, and the rule is the same one.
+    const trigger = document.querySelector('[aria-label="Runtime"]');
     expect(trigger?.hasAttribute('disabled')).toBe(false);
   });
 });

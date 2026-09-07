@@ -125,7 +125,7 @@ put to the author and agreed:
   given work, do the work"), which is the whole trigger for briefing and gives ticket 02 a
   fallback. One string from `composePersona`, no adapter changes. The handoff is told not to
   restate it.
-- [Reading and editing a Handbook](issues/06-the-screen.md) — a **notice card above the composer**
+- [Reading and editing a Handbook](issues/06-the-screen.md) — *amended 2026-09-06: the notice card is withdrawn, briefing happens in the conversation* — a **notice card above the composer**
   while unbriefed (`.openerror`'s existing shape, persistent because it is a state, no icon, no
   dismiss), and a **panel behind a tray door** once there are entries. The tray's own rule
   (*a live number or a door, never a description*) is what forced the split. Removal only, never

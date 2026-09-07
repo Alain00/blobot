@@ -58,6 +58,7 @@ import {
 } from './compaction.js';
 import { workingCeiling } from '../context-ceiling.js';
 import { composeLeadBrief, composeWakePrompt } from './envelope.js';
+import { composeProfileOverview, type ProfileOverviewSource } from './profile-overview.js';
 import {
   InMemoryMessageStore,
   type AttachmentStore,
@@ -104,6 +105,8 @@ export interface OrchestratorOptions {
    * line above makes: a tool a model can see is a capability it will believe in.
    */
   readonly handbooks?: HandbookStore;
+  /** Current, bounded membership metadata shared by a profile across its teams. */
+  readonly profileOverviews?: ProfileOverviewSource;
 }
 
 /**
@@ -145,8 +148,8 @@ export interface PendingPermission {
  * the chosen option does not exist on this runtime. It is not the same as a rejection, and the
  * transcript says which.
  *
- * `allowed_always` is separate from `allowed` because it is not the same act: it leaves a
- * standing rule behind, and the line the transcript keeps has to say so.
+ * `allowed_always` is separate from `allowed` because it chooses a reusable approval. Its
+ * lifetime and scope belong to the runtime option, not to this outcome.
  */
 export type PermissionOutcome = 'allowed' | 'allowed_always' | 'rejected' | 'cancelled';
 
@@ -261,7 +264,11 @@ export class Orchestrator {
 
   readonly #trackers = new Map<string, AgentStatusTracker>();
   readonly #busy = new Set<string>();
+  readonly #mailDuringStartup = new Set<string>();
+  readonly #retries = new Map<string, Promise<void>>();
+  #pendingAdmissions = 0;
   readonly #inFlight = new Set<Promise<void>>();
+  #disposed = false;
   readonly #eventListeners = new Set<(event: AgentEvent) => void>();
   readonly #statusListeners = new Set<(agentId: string, status: AgentStatus) => void>();
   readonly #commandListeners = new Set<
@@ -322,6 +329,7 @@ export class Orchestrator {
    */
   readonly #routines: RoutineStore | undefined;
   readonly #handbooks: HandbookStore | undefined;
+  readonly #profileOverviews: ProfileOverviewSource | undefined;
   readonly #recordedThisTurn = new Map<string, number>();
   readonly #handbookListeners = new Set<(write: HandbookWrite) => void>();
   readonly #routineListeners = new Set<() => void>();
@@ -368,6 +376,7 @@ export class Orchestrator {
     this.#budgetCeiling = options.team.turnBudget;
     this.#routines = options.routines;
     this.#handbooks = options.handbooks;
+    this.#profileOverviews = options.profileOverviews;
 
     for (const agent of this.#agents) {
       const tracker = new AgentStatusTracker(agent.id);
@@ -508,6 +517,7 @@ export class Orchestrator {
   }
 
   dispose(): void {
+    this.#disposed = true;
     for (const unsubscribe of this.#subscriptions) unsubscribe();
     // A request nobody will ever answer now: the window is closing or the team is being
     // stopped. Cancelling releases the bridge's RPC instead of leaving the process wedged on
@@ -526,6 +536,9 @@ export class Orchestrator {
         if (runtime === undefined) return;
         try {
           await runtime.start();
+          // A fresh arrival may proceed when this member becomes ready. Persisted backlog
+          // alone never starts work merely because the app was opened.
+          if (this.#mailDuringStartup.delete(agent.id)) await this.#wake(agent.id);
         } catch (error) {
           this.#trackers
             .get(agent.id)
@@ -561,6 +574,7 @@ export class Orchestrator {
     text: string,
     attachmentIds: readonly string[] = [],
   ): Promise<void> {
+    if (this.#disposed) throw new Error('This team is closing.');
     const agents = agentIds.map((agentId) => this.#requireAgent(agentId));
     const attachments = attachmentIds.map((id) => {
       const found = this.#store.attachment(id);
@@ -606,7 +620,7 @@ export class Orchestrator {
        * draining it, which is the path a mid-turn peer message already takes. So the row is
        * committed and drawn, and simply not marked delivered.
        */
-      const busy = this.#busy.has(agent.id);
+      const busy = this.#busy.has(agent.id) || !this.#canDeliver(agent.id);
       const message = this.#store.commit({
         id: this.#createId(now),
         teamId: this.team.id,
@@ -620,15 +634,7 @@ export class Orchestrator {
           ? {}
           : { attachments: attachments.map(({ data: _data, at: _at, ...record }) => record) }),
       });
-      if (!busy) this.#store.markDelivered([message.id], now);
       this.#announceMessage(message);
-      if (attachments.length > 0) {
-        const sent = this.#attachmentsSent.get(agent.id) ?? { count: 0, bytes: 0 };
-        this.#attachmentsSent.set(agent.id, {
-          count: sent.count + attachments.length,
-          bytes: sent.bytes + attachments.reduce((total, one) => total + one.bytes, 0),
-        });
-      }
       return { agent, message, busy };
     });
     // Committed for everybody before anybody starts. A turn can message a teammate mid-flight,
@@ -666,6 +672,8 @@ export class Orchestrator {
             // exists to prevent.
             addressed: agents.map((agent) => agent.id),
           },
+          true,
+          [entry.message],
         ),
       ),
     );
@@ -685,6 +693,7 @@ export class Orchestrator {
    * turn, so a lead being briefed still gets its lead brief.
    */
   async promptForBriefing(agentId: string): Promise<void> {
+    if (this.#disposed) throw new Error('This team is closing.');
     const agent = this.#requireAgent(agentId);
     // A session runs one turn at a time. Unlike a peer message there is no mailbox to fall back
     // on: the knock is a knock, and one that arrives while the agent is mid-turn is not a thing
@@ -727,6 +736,7 @@ export class Orchestrator {
     text: string,
     run: { readonly runId: string; readonly permissionExpiryMs: number },
   ): Promise<RoutineTurn> {
+    if (this.#disposed) throw new Error('This team is closing.');
     const agent = this.#requireAgent(agentId);
     // Nothing is committed and nothing runs. A session runs one turn at a time, and the two
     // existing paths into `#runTurn` both reach it through a mailbox that knows that; this one
@@ -1023,6 +1033,7 @@ export class Orchestrator {
    * the background.
    */
   async handleMessageAgent(call: PeerMessageCall): Promise<PeerMessageAck> {
+    if (this.#disposed) throw new Error('This team is closing.');
     const sender = this.#requireAgent(call.from);
     const recipient = this.#resolveRecipient(call.agent, sender);
     // Before the commit, because a message that is refused must not exist: it is not in the
@@ -1071,7 +1082,7 @@ export class Orchestrator {
       return { delivered: true, recipient: recipient.name, status: 'started' };
     }
 
-    if (this.#busy.has(recipient.id) || this.#budgetIsSpent()) {
+    if (this.#busy.has(recipient.id) || !this.#canDeliver(recipient.id) || this.#budgetIsSpent()) {
       // Queued: mid-turn arrivals are the common case, and a session runs one turn at a time.
       if (this.#budgetIsSpent()) this.#announceBudget();
       return { delivered: true, recipient: recipient.name, status: 'queued' };
@@ -1088,6 +1099,56 @@ export class Orchestrator {
     return this.#store.undelivered(agentId);
   }
 
+  /** Includes reserved work before the provider admits a turn, such as Machine verification. */
+  isBusy(agentId: string): boolean { return this.#busy.has(agentId) || this.#retries.has(agentId); }
+
+  /** A failed per-Agent factory must remain visible while the rest of its team runs. */
+  failAgent(agentId: string, reason: string): void {
+    this.#requireAgent(agentId);
+    this.#trackers.get(agentId)?.markFailed(reason);
+  }
+
+  /** Actionable refusal for the Agent, independent of where its execution lives. */
+  failureOf(agentId: string): string | undefined {
+    return this.#trackers.get(agentId)?.failure;
+  }
+
+  /** A deliberate retry after sign-in or another remedy, scoped to this member only. */
+  retryAgent(agentId: string): Promise<void> {
+    if (this.#disposed) return Promise.reject(new Error('This team is closing.'));
+    this.#requireAgent(agentId);
+    const pending = this.#retries.get(agentId);
+    if (pending !== undefined) return pending;
+    if (this.#busy.has(agentId)) return Promise.resolve();
+    const retry = (async () => {
+      const runtime = this.#runtimes.get(agentId);
+      if (runtime === undefined) throw new Error('Edit this agent’s execution settings and reopen its team to retry.');
+      try {
+        if (runtime.lifecycle !== 'ready') {
+          if (runtime.retryStart === undefined) throw new Error('Reopen this team to retry this agent.');
+          await runtime.retryStart();
+        }
+        const tracker = this.#trackers.get(agentId);
+        // Admission can fail while the provider remains ready (for example a transient
+        // store write). An explicit retry clears that failure without replacing its session.
+        if (runtime.lifecycle === 'ready' && tracker?.status === 'failed') {
+          tracker.lifecycleChanged('starting');
+          tracker.lifecycleChanged('ready');
+        }
+        this.#mailDuringStartup.delete(agentId);
+        await this.#wake(agentId);
+      } catch (error) {
+        this.#trackers.get(agentId)?.markFailed(error instanceof Error ? error.message : String(error));
+        throw error;
+      }
+    })();
+    this.#retries.set(agentId, retry);
+    this.#inFlight.add(retry);
+    const release = () => { this.#retries.delete(agentId); this.#inFlight.delete(retry); };
+    void retry.then(release, release);
+    return retry;
+  }
+
   /** The user answered "continue?" — release the budget and drain every mailbox. */
   resumeAfterBudget(): void {
     this.#turnsThisPrompt = 0;
@@ -1101,7 +1162,18 @@ export class Orchestrator {
     }
   }
 
+  /** Shutdown drains every continuation, even when an independent turn has failed. */
+  async drained(): Promise<void> {
+    while (this.#inFlight.size > 0) await Promise.allSettled([...this.#inFlight]);
+  }
+
   // ------------------------------------------------------------------ internals
+
+  #canDeliver(agentId: string): boolean {
+    const lifecycle = this.#runtimes.get(agentId)?.lifecycle;
+    if (lifecycle === 'created' || lifecycle === 'starting') this.#mailDuringStartup.add(agentId);
+    return lifecycle === 'ready';
+  }
 
   /**
    * Auto-wake: a message to an idle agent starts its turn immediately, whether or not the user
@@ -1109,7 +1181,9 @@ export class Orchestrator {
    * unwatched, which is the actual product and also what makes the turn budget mandatory.
    */
   async #wake(agentId: string): Promise<void> {
+    if (this.#disposed) return;
     if (this.#busy.has(agentId)) return;
+    if (!this.#canDeliver(agentId)) return;
     const agent = this.#agents.find((candidate) => candidate.id === agentId);
     if (agent === undefined) return;
 
@@ -1127,12 +1201,13 @@ export class Orchestrator {
     // handful a numbered list stops being a prompt and becomes a context dump with numbers on
     // it. The overflow stays in the mailbox and `#runTurn` wakes this agent again when the
     // turn ends, which is the path a mid-turn arrival already takes.
-    const mail = waiting.slice(0, WAKE_BATCH_LIMIT);
-    this.#store.markDelivered(
-      mail.map((message) => message.id),
-      this.#clock.now(),
-    );
-    const text = composeWakePrompt(
+    // User messages retain their own attachment association and authority. Batch consecutive
+    // peer messages only, without moving one past a message from the user.
+    const first = waiting[0]!;
+    const nextUser = waiting.findIndex((message) => message.fromAgentId === null);
+    const mail = waiting.slice(0, first.fromAgentId === null ? 1
+      : Math.min(WAKE_BATCH_LIMIT, nextUser < 0 ? waiting.length : nextUser));
+    const text = first.fromAgentId === null ? this.#withBrief(agentId, first.body) : composeWakePrompt(
       mail,
       (message) =>
         message.fromAgentId === null
@@ -1142,7 +1217,15 @@ export class Orchestrator {
       this.#leadBrief(agentId),
     );
     this.#lastWake.set(agentId, { chars: text.length, messages: mail.length });
-    await this.#runTurn(agent, { text, from: 'peer' }, mail[mail.length - 1]?.id);
+    const attachments = (first.attachments ?? []).map((record) => this.#store.attachment(record.id));
+    if (attachments.some((content) => content === undefined)) {
+      this.#trackers.get(agentId)?.markFailed('A queued attachment is no longer available.');
+      return;
+    }
+    await this.#runTurn(agent, {
+      text, from: first.fromAgentId === null ? 'user' : 'peer',
+      ...(attachments.length === 0 ? {} : { attachments: attachments.filter((content) => content !== undefined) }),
+    }, mail[mail.length - 1]?.id, undefined, true, mail);
   }
 
   async #runTurn(
@@ -1159,7 +1242,9 @@ export class Orchestrator {
      * asking *continue?* about work the user never requested.
      */
     counted = true,
+    delivery: readonly Message[] = [],
   ): Promise<void> {
+    if (this.#disposed) return;
     const runtime = this.#runtimes.get(agent.id);
     const tracker = this.#trackers.get(agent.id);
     if (runtime === undefined || tracker === undefined) return;
@@ -1171,9 +1256,9 @@ export class Orchestrator {
     // about the agent got a wrong answer.
     const held = this.#busy.has(agent.id);
     this.#busy.add(agent.id);
-    if (counted) this.#turnsThisPrompt += 1;
-    tracker.turnStarted();
-    this.#recorder?.turnStarted(agent.id, this.#clock.now(), triggerMessageId);
+    // Reserve a budget slot while an asleep Machine is waking. Concurrent peer wakes cannot
+    // all observe the same final slot; a refused admission releases it without spending it.
+    if (counted) this.#pendingAdmissions += 1;
     // Populated for every turn, not only a watched one: the routing-turn refund below is
     // defined by what a turn *did*, never by who did it or what started it.
     this.#wroteThisTurn.set(agent.id, new Set());
@@ -1184,8 +1269,26 @@ export class Orchestrator {
       // What the agent actually said, and whether the turn got to the end of itself.
       let said = '';
       let endedOrdinarily = false;
+      let admitted = false;
+      const admit = () => {
+        if (admitted) throw new Error('This turn was already admitted.');
+        this.#store.markDelivered(delivery.map((message) => message.id), this.#clock.now());
+        admitted = true;
+        if (counted) { this.#pendingAdmissions -= 1; this.#turnsThisPrompt += 1; }
+        tracker.turnStarted();
+        this.#recorder?.turnStarted(agent.id, this.#clock.now(), triggerMessageId);
+        const attachments = delivery.flatMap((message) => message.attachments ?? []);
+        if (attachments.length > 0) {
+          const sent = this.#attachmentsSent.get(agent.id) ?? { count: 0, bytes: 0 };
+          this.#attachmentsSent.set(agent.id, {
+            count: sent.count + attachments.length,
+            bytes: sent.bytes + attachments.reduce((total, one) => total + one.bytes, 0),
+          });
+        }
+      };
       try {
-        for await (const event of runtime.sendPrompt(prompt)) {
+        for await (const event of runtime.sendPrompt(this.#withProfileOverview(agent, prompt), admit)) {
+          if (!admitted) throw new Error('The runtime emitted an event before admitting its turn.');
           // Publish first, fold second: a consumer sees the event, then the status it caused.
           this.#publish(event);
           tracker.apply(event);
@@ -1201,8 +1304,18 @@ export class Orchestrator {
             this.#usage.set(agent.id, { used: event.used, size: event.size });
           }
         }
+      } catch (error) {
+        if (admitted || delivery.length === 0) throw error;
+        tracker.markFailed(error instanceof Error ? error.message : String(error));
       } finally {
+        if (!admitted && counted) this.#pendingAdmissions -= 1;
         if (!held) this.#busy.delete(agent.id);
+      }
+      if (!admitted) {
+        this.#wroteThisTurn.delete(agent.id);
+        this.#proposedThisTurn.delete(agent.id);
+        this.#recordedThisTurn.delete(agent.id);
+        return;
       }
       if (watch !== undefined && endedOrdinarily) {
         this.#observeSilentHandoff(agent, watch, said);
@@ -1278,6 +1391,14 @@ export class Orchestrator {
    * brief is a lead handing work to somebody who stopped being free a minute ago.
    */
   #leadBrief(agentId: string): string | undefined {
+    // A **thread** never composes one. `lead_agent_id` still points at its single member,
+    // because an unaddressed prompt has to route somewhere and a NULL lead disables send until
+    // an `@mention` resolves — which in a thread would be a composer that never enables. So the
+    // designation stays and everything the word implies is suppressed: without this the agent
+    // would be told it leads a team, read its own status back off the roster, and be instructed
+    // to hand work over with a tool it does not have.
+    // `.scratch/rail/issues/02-what-a-thread-strips.md`.
+    if (this.team.threadFor !== undefined) return undefined;
     if (this.team.leadAgentId !== agentId) return undefined;
     return composeLeadBrief(
       this.#agents
@@ -1295,9 +1416,20 @@ export class Orchestrator {
    */
   #withBrief(agentId: string, text: string): string {
     const brief = this.#leadBrief(agentId);
+    this.#lastWake.set(agentId, { chars: brief?.length ?? 0, messages: 0 });
     if (brief === undefined) return text;
-    this.#lastWake.set(agentId, { chars: brief.length, messages: 0 });
     return `${text}\n\n${brief}`;
+  }
+
+  #withProfileOverview(agent: Agent, prompt: Prompt): Prompt {
+    if (agent.profileId === undefined || this.#profileOverviews === undefined) return prompt;
+    const overview = composeProfileOverview(this.#profileOverviews.profileOverviewOf(agent.profileId));
+    const previous = this.#lastWake.get(agent.id);
+    this.#lastWake.set(agent.id, {
+      chars: (previous?.chars ?? 0) + overview.length + 2,
+      messages: previous?.messages ?? 0,
+    });
+    return { ...prompt, text: `${prompt.text}\n\n${overview}` };
   }
 
   /**
@@ -1323,6 +1455,7 @@ export class Orchestrator {
    * cheap; a compaction timer would turn that into background spend nobody asked for.
    */
   async #maybeCompact(agent: Agent): Promise<void> {
+    if (this.#disposed) return;
     if ((agent.compaction ?? DEFAULT_COMPACTION) === 'off') return;
     if (this.#compacting.has(agent.id)) return;
     /**
@@ -1376,9 +1509,7 @@ export class Orchestrator {
     // moment available. `said` is the whole of what it wrote: a handoff turn that stopped for
     // any reason at all is a refusal, because a truncated handoff plus a discarded session is
     // worse than either alone.
-    const written = await this.#runCompactionTurn(agent, () =>
-      runtime.sendPrompt({ text: HANDOFF_PROMPT, from: 'peer' }),
-    );
+    const written = await this.#runCompactionTurn(agent, runtime, { text: HANDOFF_PROMPT, from: 'peer' });
     const refuse = (reason: string): void => {
       this.#announceCompaction(agent, runtime, {
         how: 'refused',
@@ -1407,6 +1538,7 @@ export class Orchestrator {
       })
       .catch(() => undefined);
 
+    if (this.#disposed) return;
     try {
       await runtime.restart();
     } catch {
@@ -1418,9 +1550,7 @@ export class Orchestrator {
 
     // Not counted, not watched, and deliberately the fresh session's first turn: the handoff
     // has to be in the context before any queued mail is answered against it.
-    await this.#runCompactionTurn(agent, () =>
-      runtime.sendPrompt({ text: resumeFromHandoff(handoff), from: 'peer' }),
-    );
+    await this.#runCompactionTurn(agent, runtime, { text: resumeFromHandoff(handoff), from: 'peer' });
 
     this.#announceCompaction(agent, runtime, {
       how: 'handoff',
@@ -1457,17 +1587,19 @@ export class Orchestrator {
    */
   async #runCompactionTurn(
     agent: Agent,
-    start: () => AsyncIterable<AgentEvent>,
+    runtime: AgentRuntime,
+    prompt: Prompt,
   ): Promise<{ said: string; endedOrdinarily: boolean }> {
     const tracker = this.#trackers.get(agent.id);
     if (tracker === undefined) return { said: '', endedOrdinarily: false };
+    this.#lastWake.set(agent.id, { chars: prompt.text.length, messages: 0 });
     let said = '';
     let endedOrdinarily = false;
     this.#busy.add(agent.id);
     tracker.turnStarted();
     this.#recorder?.turnStarted(agent.id, this.#clock.now());
     try {
-      for await (const event of start()) {
+      for await (const event of runtime.sendPrompt(this.#withProfileOverview(agent, prompt))) {
         if (event.type === 'agent_message_completed') said += `\n${event.text}`;
         // The status fold still sees everything: an agent that is writing is `responding`,
         // whoever it happens to be writing to.
@@ -1545,7 +1677,7 @@ export class Orchestrator {
   }
 
   #budgetIsSpent(): boolean {
-    return this.#turnsThisPrompt >= this.#budgetCeiling;
+    return this.#turnsThisPrompt + this.#pendingAdmissions >= this.#budgetCeiling;
   }
 
   #announceBudget(): void {

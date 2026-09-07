@@ -1,0 +1,19 @@
+{
+  "started": "2026-09-06T01:07:24.980Z",
+  "source": "packages/core/src/machines/sbx/installation.ts",
+  "sourceSha256Before": "366507bac4da09c282c67de21fa84fd86d9116009587ffcb4de75de5ac77decb",
+  "initialFreeBytes": "24115863552",
+  "validator": {
+    "passed": true,
+    "names": 58,
+    "detailRows": 58
+  },
+  "passed": false,
+  "error": "Command failed: /usr/bin/codesign --verify --strict -R anchor apple generic and certificate leaf[subject.OU] = \"9BNSXJN65R\" /private/tmp/wayfinder-installer65-Gc6m8F/engine/.install-5O1TiM/bin/sbx\nanchor apple generic and certificate leaf[subject.OU] = \"9BNSXJN65R\": No such file or directory\ninvalid requirement specification\n",
+  "fetchCalls": 0,
+  "cleanup": {
+    "temporaryRootRemoved": true,
+    "engineCalls": 0
+  },
+  "finished": "2026-09-06T01:07:26.301Z"
+}

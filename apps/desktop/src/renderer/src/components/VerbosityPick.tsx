@@ -60,23 +60,37 @@ const CHOICES: readonly Choice[] = [
  * text is unchanged and one keystroke away, on the row it belongs to, where it is read while the
  * choice is being made rather than after it has been.
  */
+/**
+ * `chip` is the label this control wears in the agent bar, where it is a chip in a row of them
+ * rather than a field in a column. The menu is untouched: the word and the sentence under it are
+ * the same, read in the same place. Only the closed shape differs, because the bar states an
+ * answer where the column asked a question.
+ */
 export function VerbosityPick({
   value,
   onChange,
+  chip,
 }: {
   value: VerbosityLevel;
   onChange: (value: VerbosityLevel) => void;
+  chip?: string;
 }): React.JSX.Element {
   return (
     <Select.Root value={value} onValueChange={(next) => onChange(next as VerbosityLevel)}>
-      <Select.Trigger className="field selecttrigger" aria-label="How much it says">
+      <Select.Trigger
+        className={chip === undefined ? 'field selecttrigger' : 'chip'}
+        aria-label="How much it says"
+      >
+        {chip !== undefined && <span className="mono">{chip}</span>}
         <Select.Value className="selectvalue" />
-        <Select.Icon>
-          <ChevronDown size={14} aria-hidden />
-        </Select.Icon>
+        {chip === undefined && (
+          <Select.Icon>
+            <ChevronDown size={14} aria-hidden />
+          </Select.Icon>
+        )}
       </Select.Trigger>
       <Select.Portal>
-        <Select.Content className="selectmenu" position="popper" sideOffset={6}>
+        <Select.Content className="selectmenu trustmenu" position="popper" sideOffset={6}>
           <Select.Viewport>
             {CHOICES.map((choice) => (
               <Select.Item key={choice.id} value={choice.id} className="selectitem trustitem">

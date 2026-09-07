@@ -9,6 +9,18 @@ export interface PoolableTeam {
   close(): Promise<void> | void;
 }
 
+/**
+ * A live-team count that can be honoured. At least one, because the active team is never
+ * evicted, and bounded above so a typo in a settings field cannot ask for a thousand bridge
+ * processes.
+ */
+export function teamPoolLimit(value: number): number {
+  if (!Number.isSafeInteger(value) || value < 1 || value > 100) {
+    throw new Error('The number of teams that stay loaded must be a whole number from 1 to 100.');
+  }
+  return value;
+}
+
 export interface TeamPoolOptions<T extends PoolableTeam> {
   /**
    * How many teams stay live. A count rather than an idle timer, on purpose: a timer makes
@@ -16,6 +28,9 @@ export interface TeamPoolOptions<T extends PoolableTeam> {
    * which is not a rule anybody can hold in their head. A count is one sentence — the last
    * few teams you touched are still running — and it bounds the process fan-out, which is the
    * cost that actually scales.
+   *
+   * The starting value. It is the user's setting, so it moves while the app is running: see
+   * {@link TeamPool.limit}.
    */
   readonly limit: number;
   start(team: Team): Promise<T>;
@@ -43,15 +58,41 @@ export interface TeamPoolOptions<T extends PoolableTeam> {
  */
 export class TeamPool<T extends PoolableTeam> {
   readonly #options: TeamPoolOptions<T>;
+  #limit: number;
   /** Most recently selected first. The head is the active team. */
   #live: T[] = [];
   /** In-flight starts, so two clicks on the same team do not spawn two sets of agents. */
   readonly #starting = new Map<string, Promise<T>>();
   /** Teams held live by something other than the user looking at them. See {@link hold}. */
   readonly #pinned = new Set<string>();
+  #closed = false;
+  #closing: Promise<void> | undefined;
+  readonly #closingTeams = new Map<string, Promise<void>>();
+  readonly #closures = new WeakMap<T, Promise<void>>();
+  readonly #changes = new Map<string, Promise<unknown>>();
+  readonly #revisions = new Map<string, number>();
 
   constructor(options: TeamPoolOptions<T>) {
     this.#options = options;
+    this.#limit = options.limit;
+  }
+
+  /**
+   * How many teams stay live, now.
+   *
+   * Settable, because it is a preference and not a constant: the number that made the common
+   * shape cheap on a laptop with three teams is the number that put every other team's Machine
+   * to sleep on a machine with twenty. Raising it takes at the next start, which costs nothing;
+   * lowering it collects the excess immediately, under the same rule as any other eviction —
+   * never the active team, never one mid-turn, never one held.
+   */
+  get limit(): number {
+    return this.#limit;
+  }
+
+  set limit(value: number) {
+    this.#limit = teamPoolLimit(value);
+    void this.#evict();
   }
 
   /** The team the user is looking at, or undefined before the first one is selected. */
@@ -67,6 +108,8 @@ export class TeamPool<T extends PoolableTeam> {
   find(teamId: string): T | undefined {
     return this.#live.find((candidate) => candidate.team.id === teamId);
   }
+
+  isHeld(teamId: string): boolean { return this.#pinned.has(teamId); }
 
   /**
    * Make this team the active one, starting it if it is not already live.
@@ -105,7 +148,21 @@ export class TeamPool<T extends PoolableTeam> {
   }
 
   async #bring(team: Team, how: 'select' | 'hold'): Promise<T> {
+    const revision = this.#revisions.get(team.id);
+    const checkAdmission = () => {
+      if (this.#closed) throw new Error('The application is closing.');
+      if (this.#changes.has(team.id) || this.#revisions.get(team.id) !== revision) {
+        throw new Error('This team is changing. Open it again when the change finishes.');
+      }
+    };
+    checkAdmission();
+    // Eviction removes a Team from the list before its processes have finished stopping.
+    // The next execution must wait for that ownership to be released.
+    const closing = this.#closingTeams.get(team.id);
+    if (closing !== undefined) await closing;
+    checkAdmission();
     const settle = (live: T): T => {
+      checkAdmission();
       if (how === 'select') this.#promote(live);
       return live;
     };
@@ -124,6 +181,8 @@ export class TeamPool<T extends PoolableTeam> {
     } finally {
       this.#starting.delete(team.id);
     }
+    // closeAll owns in-flight starts as well as live teams; never publish one after shutdown.
+    checkAdmission();
     // A second selection may have landed while this one was starting.
     const raced = this.find(team.id);
     if (raced !== undefined) {
@@ -134,24 +193,56 @@ export class TeamPool<T extends PoolableTeam> {
     if (how === 'select') this.#live.unshift(live);
     else this.#live.splice(1, 0, live);
     await this.#evict();
+    checkAdmission();
     return live;
   }
 
   /** Drop a team on purpose — it was deleted, or its agents changed under it. */
   async release(teamId: string): Promise<void> {
+    await this.withReleased(teamId, async () => {});
+  }
+
+  /** Keep admission closed until persistent roster/deletion changes have finished. */
+  withReleased<Result>(teamId: string, work: () => Promise<Result>): Promise<Result> {
+    if (this.#closed) return Promise.reject(new Error('The application is closing.'));
+    if (this.#changes.has(teamId)) return Promise.reject(new Error('This team is already changing.'));
+    this.#revisions.set(teamId, (this.#revisions.get(teamId) ?? 0) + 1);
+    const change = (async () => {
+      try {
+        await this.#release(teamId);
+        return await work();
+      } finally { this.#changes.delete(teamId); }
+    })();
+    this.#changes.set(teamId, change);
+    return change;
+  }
+
+  async #release(teamId: string): Promise<void> {
     this.#pinned.delete(teamId);
+    const starting = this.#starting.get(teamId);
     const live = this.find(teamId);
-    if (live === undefined) return;
     this.#live = this.#live.filter((candidate) => candidate !== live);
-    await this.#close(live, 'closed');
+    const started = await starting?.catch(() => undefined);
+    await Promise.all([
+      ...new Set([live, started].filter((candidate): candidate is T => candidate !== undefined)),
+    ].map((candidate) => this.#close(candidate, 'closed')));
+    await this.#closingTeams.get(teamId);
   }
 
   /** Quitting. Everything stops, working or not: the window is going away regardless. */
   async closeAll(): Promise<void> {
+    if (this.#closing !== undefined) return this.#closing;
+    this.#closed = true;
     this.#pinned.clear();
     const closing = this.#live;
     this.#live = [];
-    await Promise.all(closing.map((live) => this.#close(live, 'closed')));
+    this.#closing = Promise.all([
+      ...closing.map((live) => this.#close(live, 'closed')),
+      ...[...this.#starting.values()].map((starting) => starting.then((live) => this.#close(live, 'closed'), () => {})),
+      ...this.#closingTeams.values(),
+      ...[...this.#changes.values()].map((change) => change.catch(() => {})),
+    ]).then(() => {});
+    await this.#closing;
   }
 
   /**
@@ -167,12 +258,12 @@ export class TeamPool<T extends PoolableTeam> {
   }
 
   async #evict(): Promise<void> {
-    if (this.#live.length <= this.#options.limit) return;
+    if (this.#live.length <= this.#limit) return;
     // Oldest first, and never the active team even at a limit of one — the user is looking
     // at it.
     const doomed: T[] = [];
     for (let index = this.#live.length - 1; index > 0; index -= 1) {
-      if (this.#live.length - doomed.length <= this.#options.limit) break;
+      if (this.#live.length - doomed.length <= this.#limit) break;
       const candidate = this.#live[index];
       if (candidate === undefined || this.#options.isWorking(candidate)) continue;
       if (this.#pinned.has(candidate.team.id)) continue;
@@ -183,14 +274,21 @@ export class TeamPool<T extends PoolableTeam> {
     await Promise.all(doomed.map((live) => this.#close(live, 'over_limit')));
   }
 
-  async #close(live: T, reason: 'over_limit' | 'closed'): Promise<void> {
-    this.#options.onEvict?.(live, reason);
+  #close(live: T, reason: 'over_limit' | 'closed'): Promise<void> {
+    const existing = this.#closures.get(live);
+    if (existing !== undefined) return existing;
     // A team that throws on the way out must not take the switch down with it: the user asked
     // for a different team, and they get one either way.
-    try {
-      await live.close();
-    } catch {
+    const closing = (async () => {
+      try { this.#options.onEvict?.(live, reason); }
+      finally { await live.close(); }
+    })().catch(() => {
       // The bridge is already gone, or never came up. Nothing here can act on it.
-    }
+    }).finally(() => {
+      if (this.#closingTeams.get(live.team.id) === closing) this.#closingTeams.delete(live.team.id);
+    });
+    this.#closures.set(live, closing);
+    this.#closingTeams.set(live.team.id, closing);
+    return closing;
   }
 }

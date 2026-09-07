@@ -1,8 +1,8 @@
-import { childEnvironment } from './child-env.js';
-import { spawn } from 'node:child_process';
+import { LocalMachine } from '../../machines/local-machine.js';
+import type { Machine } from '../../machines/machine.js';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
-import { childTransport, isExecutable, searchPath } from './child-transport.js';
+import { isExecutable, searchPath } from '../../process/child-transport.js';
 import type { LineTransport } from './jsonrpc.js';
 
 /**
@@ -32,6 +32,8 @@ export interface NpmBridgeSpec {
   readonly overrideEnv: string;
   /** The user's own CLI, as it is named on `PATH`. */
   readonly binary: string;
+  /** Fixed by the adapter's published image; never resolved against the host. */
+  readonly guestExecutable?: string;
   /** The environment variable the bridge reads to find that binary. */
   readonly executableEnv: string;
   /** How the agent is named in the sentence a failure to resolve produces. */
@@ -41,6 +43,7 @@ export interface NpmBridgeSpec {
 }
 
 export interface SpawnNpmBridgeOptions {
+  readonly machine?: Machine;
   /** The AgentWorkspace. The bridge overrides the session's `cwd` with `session/new`'s. */
   readonly cwd: string;
   /** The user's own binary. Resolved from the spec's environment variable and then `PATH`
@@ -60,17 +63,23 @@ export function spawnNpmBridge(
   spec: NpmBridgeSpec,
   options: SpawnNpmBridgeOptions,
 ): LineTransport {
-  const child = spawn(process.execPath, [bridgeEntryPathOf(spec)], {
+  const machine = options.machine ?? new LocalMachine({ agentId: 'standalone', workspacePath: options.cwd });
+  if (machine.kind === 'box' && spec.guestExecutable === undefined) throw new Error('This bridge has no sandbox executable.');
+  return machine.spawn({
+    command: {
+      kind: 'node-module', package: spec.package, version: spec.version, entry: spec.entry,
+      ...(machine.kind === 'local' ? { localEntryPath: bridgeEntryPathOf(spec) } : {}),
+    },
     cwd: options.cwd,
-    env: childEnvironment(options.env, {
-      [spec.executableEnv]: resolveBridgeExecutable(spec, options.executable),
+    env: {
+      ...options.env,
+      [spec.executableEnv]: machine.kind === 'box' ? spec.guestExecutable : resolveBridgeExecutable(spec, options.executable),
       // `process.execPath` is Electron in the desktop app, and Electron only behaves like
       // node when told to. Harmless under plain node, which ignores it.
-      ELECTRON_RUN_AS_NODE: '1',
-    }),
-    stdio: ['pipe', 'pipe', 'pipe'],
+      ...(machine.kind === 'local' ? { ELECTRON_RUN_AS_NODE: '1' } : {}),
+    },
+    ...(options.onStderr === undefined ? {} : { onStderr: options.onStderr }),
   });
-  return childTransport(child, options.onStderr);
 }
 
 /**

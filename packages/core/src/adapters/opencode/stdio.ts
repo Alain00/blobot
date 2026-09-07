@@ -1,8 +1,9 @@
-import { childEnvironment } from '../acp/child-env.js';
-import { spawn } from 'node:child_process';
+import { OPENCODE_MACHINE_IMAGE } from './image.js';
+import { LocalMachine } from '../../machines/local-machine.js';
+import type { Machine } from '../../machines/machine.js';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { childTransport, isExecutable, searchPath } from '../acp/child-transport.js';
+import { isExecutable, searchPath } from '../../process/child-transport.js';
 import type { LineTransport } from '../acp/jsonrpc.js';
 
 /**
@@ -16,6 +17,7 @@ import type { LineTransport } from '../acp/jsonrpc.js';
 export const VERIFIED_OPENCODE_VERSION = '1.18.4';
 
 export interface SpawnOpencodeOptions {
+  readonly machine?: Machine;
   /** The AgentWorkspace. Also passed per-session: `cwd` binds to the session, not the process. */
   readonly cwd: string;
   /** The user's own `opencode`. Resolved from `OPENCODE_BIN`, then `PATH`, then `~/.opencode/bin`. */
@@ -43,19 +45,21 @@ export type SpawnOpencode = (options: SpawnOpencodeOptions) => LineTransport;
  * decides what blobot *offers* rather than what the agent *can do*.
  */
 export const spawnOpencode: SpawnOpencode = (options) => {
-  const child = spawn(resolveOpencodeExecutable(options.opencodeExecutable), ['acp'], {
+  const machine = options.machine ?? new LocalMachine({ agentId: 'standalone', workspacePath: options.cwd });
+  return machine.spawn({
+    command: { kind: 'exec', executable: machine.kind === 'box' ? OPENCODE_MACHINE_IMAGE.executable : resolveOpencodeExecutable(options.opencodeExecutable), args: ['acp'] },
     cwd: options.cwd,
-    env: childEnvironment(options.env, {
+    env: {
+      ...options.env,
       ...(options.configContent === undefined
         ? {}
         : { OPENCODE_CONFIG_CONTENT: options.configContent }),
       // stderr is diagnostics, and it is the only channel that would carry colour. stdout is
       // protocol and was observed clean from byte 0 either way.
       NO_COLOR: '1',
-    }),
-    stdio: ['pipe', 'pipe', 'pipe'],
+    },
+    ...(options.onStderr === undefined ? {} : { onStderr: options.onStderr }),
   });
-  return childTransport(child, options.onStderr);
 };
 
 /**

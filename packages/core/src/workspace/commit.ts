@@ -1,4 +1,5 @@
 import type { CommandRunner } from './status.js';
+import { agentGitEnvironment } from './git-identity.js';
 
 /**
  * Committing what is in an AgentWorkspace, at the user's click.
@@ -18,13 +19,13 @@ import type { CommandRunner } from './status.js';
  * the agent that wrote the code to also name what it did is a different feature with a different
  * failure mode. An empty message is refused rather than filled in.
  *
- * **`git commit` is on no trust level's allowlist and stays off it.** An agent commits nothing;
- * a person does, from here, and no runtime is told it happened.
+ * Both the runtime and this button author the Agent's work as the Agent, unsigned.
  */
 
 export interface CommitRequest {
   readonly path: string;
   readonly message: string;
+  readonly agentName: string;
   /**
    * The paths to take, where the user picked some of them. Absent is *everything here*, which is
    * what the tray has always done and what an empty git panel selection can never mean.
@@ -81,6 +82,7 @@ export async function commitWorktree(
 ): Promise<CommitOutcome> {
   const message = request.message.trim();
   if (message === '') return { ok: false, error: 'a commit needs a message' };
+  const env = agentGitEnvironment(request.agentName, process.env);
 
   const paths = request.paths;
   if (paths !== undefined && paths.length === 0) return { ok: false, error: 'nothing is ticked' };
@@ -95,7 +97,7 @@ export async function commitWorktree(
   const committed = await exec(
     'git',
     paths === undefined ? ['commit', '-m', message] : ['commit', '-m', message, '--', ...paths],
-    { cwd: request.path, timeoutMs: 30_000 },
+    { cwd: request.path, timeoutMs: 30_000, env },
   );
   if (committed.code !== 0) {
     // The `add` above is the one thing here that outlives a failure, so it is taken back. A

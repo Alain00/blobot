@@ -1,0 +1,2190 @@
+{
+  "name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+  "startedAt": "2026-09-05T23:06:05.260Z",
+  "commands": [
+    {
+      "args": [
+        "version",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"client\": {\n    \"version\": \"v0.42.0-rc5\",\n    \"revision\": \"ca4a4bd42035628137d78c5a0bef5c0d3301a35a\",\n    \"build_tags\": \"cloud\"\n  },\n  \"server\": {\n    \"state\": \"running\",\n    \"version\": \"v0.42.0-rc5\",\n    \"revision\": \"ca4a4bd42035628137d78c5a0bef5c0d3301a35a\",\n    \"api_version\": \"0.28.0\"\n  }\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "daemon",
+        "status",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"status\": \"running\",\n  \"socket\": \"/Users/guillermo/Library/Application Support/com.docker.sandboxes/sandboxes/sandboxd/sandboxd.sock\",\n  \"logs\": \"/Users/guillermo/Library/Application Support/com.docker.sandboxes/sandboxes/sandboxd/daemon.log\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "settings",
+        "get",
+        "--json",
+        "ssh.agentForwardingEnabled"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"default\": true,\n  \"description\": \"Allow clients to forward an SSH agent into sandboxes. Existing forwarders require a daemon restart after changes.\",\n  \"key\": \"ssh.agentForwardingEnabled\",\n  \"requires_restart\": true,\n  \"source\": \"override\",\n  \"type\": \"bool\",\n  \"value\": false\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "ls",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"sandboxes\": []\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "ls",
+        "--type",
+        "network",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"rules\": [\n    {\n      \"id\": \"default-deny-all\",\n      \"name\": \"default-deny-all\",\n      \"policy_name\": \"default-deny-all\",\n      \"scope\": \"global\",\n      \"applies_to\": \"all\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"**\"\n      ],\n      \"origin\": \"local\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": false\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "template",
+        "ls",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"images\": [\n    {\n      \"id\": \"94670d5b2a24\",\n      \"repository\": \"docker.io/docker/sandbox-templates\",\n      \"tag\": \"claude-code-docker\",\n      \"flavor\": \"claude-code-docker\",\n      \"created_at\": \"2026-09-04T18:58:46Z\",\n      \"size\": 936879795\n    },\n    {\n      \"id\": \"5fc81bc7a127\",\n      \"repository\": \"docker.io/docker/sandbox-templates\",\n      \"tag\": \"shell-docker\",\n      \"flavor\": \"shell-docker\",\n      \"created_at\": \"2026-09-04T18:54:27Z\",\n      \"size\": 588725040\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "create",
+        "--name",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--cpus",
+        "2",
+        "--memory",
+        "2g",
+        "/private/tmp/blobot-open-network.pOEglv/kit"
+      ],
+      "code": 0,
+      "stdout": "── RESOLVE SETUP\n   resolving configuration…\n     sandbox    blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\n     agent      blobot\n     kit        /private/tmp/blobot-open-network.pOEglv/kit\n     workspace  none · no workspace bind mount\n     image      docker/sandbox-templates:shell-docker\n     cpu        2\n     memory     2g\n   ✓ configuration resolved\n── PREPARE IMAGE\n   → pull docker/sandbox-templates:shell-docker\n     5fc81bc7a127 already present\n     997823f3c13c already present\n     53b08fa716a1 already present\n     d353bf15d949 already present\n     20f94f68292e already present\n     063dc9e66f35 already present\n     a60edac90bd7 already present\n   ✓ image ready\n── CREATE SANDBOX\n   ✓ Created sandbox blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\n\nTo connect to this sandbox, run:\n  sbx run --name blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "ls",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"sandboxes\": [\n    {\n      \"name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"id\": \"5e683309-d849-43c0-80da-ca6ba39f34fd\",\n      \"agent\": \"blobot\",\n      \"status\": \"running\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "example.com:443"
+      ],
+      "code": 1,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": false,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"deny_kind\": \"implicit\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"reason\": \"No matching allow rule (default deny)\",\n  \"resource_type\": \"net:domain\",\n  \"resource_value\": \"example.com:443\",\n  \"target\": \"example.com:443\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "1.1.1.1:443"
+      ],
+      "code": 1,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": false,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"deny_kind\": \"implicit\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"reason\": \"No matching allow rule (default deny)\",\n  \"resource_type\": \"net:domain\",\n  \"resource_value\": \"1.1.1.1:443\",\n  \"target\": \"1.1.1.1:443\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "localhost:53206"
+      ],
+      "code": 1,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": false,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"deny_kind\": \"implicit\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"reason\": \"No matching allow rule (default deny)\",\n  \"resource_type\": \"net:domain\",\n  \"resource_value\": \"localhost:53206\",\n  \"target\": \"localhost:53206\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "127.0.0.1:53206"
+      ],
+      "code": 1,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": false,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"deny_kind\": \"implicit\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"reason\": \"No matching allow rule (default deny)\",\n  \"resource_type\": \"net:domain\",\n  \"resource_value\": \"127.0.0.1:53206\",\n  \"target\": \"127.0.0.1:53206\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "host.docker.internal:53206"
+      ],
+      "code": 1,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": false,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"deny_kind\": \"implicit\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"reason\": \"No matching allow rule (default deny)\",\n  \"resource_type\": \"net:domain\",\n  \"resource_value\": \"host.docker.internal:53206\",\n  \"target\": \"host.docker.internal:53206\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "127.0.0.1.sslip.io:53206"
+      ],
+      "code": 1,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": false,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"deny_kind\": \"implicit\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"reason\": \"No matching allow rule (default deny)\",\n  \"resource_type\": \"net:domain\",\n  \"resource_value\": \"127.0.0.1.sslip.io:53206\",\n  \"target\": \"127.0.0.1.sslip.io:53206\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "169.254.169.254:80"
+      ],
+      "code": 1,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": false,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"deny_kind\": \"implicit\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"reason\": \"No matching allow rule (default deny)\",\n  \"resource_type\": \"net:domain\",\n  \"resource_value\": \"169.254.169.254:80\",\n  \"target\": \"169.254.169.254:80\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "exec",
+        "-u",
+        "1000",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "curl",
+        "-sS",
+        "--max-time",
+        "8",
+        "-o",
+        "/dev/null",
+        "-w",
+        "%{http_code}",
+        "https://example.com"
+      ],
+      "code": 0,
+      "stdout": "403",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "exec",
+        "-u",
+        "1000",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "curl",
+        "-sS",
+        "--noproxy",
+        "*",
+        "--max-time",
+        "8",
+        "-o",
+        "/dev/null",
+        "-w",
+        "%{http_code}",
+        "https://example.com"
+      ],
+      "code": 6,
+      "stdout": "000",
+      "stderr": "curl: (6) Could not resolve host: example.com\n"
+    },
+    {
+      "args": [
+        "exec",
+        "-u",
+        "1000",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "curl",
+        "-sS",
+        "--max-time",
+        "4",
+        "-o",
+        "/dev/null",
+        "-w",
+        "%{http_code}",
+        "http://host.docker.internal:53206/deny-all"
+      ],
+      "code": 0,
+      "stdout": "403",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "exec",
+        "-u",
+        "1000",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "curl",
+        "-sS",
+        "--max-time",
+        "4",
+        "-o",
+        "/dev/null",
+        "-w",
+        "%{http_code}",
+        "http://127.0.0.1.sslip.io:53206/deny-all"
+      ],
+      "code": 0,
+      "stdout": "403",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "ls",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--type",
+        "network",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"rules\": [\n    {\n      \"id\": \"default-deny-all\",\n      \"name\": \"default-deny-all\",\n      \"policy_name\": \"default-deny-all\",\n      \"scope\": \"global\",\n      \"applies_to\": \"all\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"**\"\n      ],\n      \"origin\": \"local\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": false\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "log",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"blocked_hosts\": [\n    {\n      \"host\": \"127.0.0.1.sslip.io:53206\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"forward\",\n      \"rule\": \"no applicable policies for op(action=net:connect:tcp, resource=net:domain:127.0.0.1.sslip.io:53206)\",\n      \"last_seen\": \"2026-09-06T01:06:11.129699+02:00\",\n      \"since\": \"2026-09-06T01:06:11.129699+02:00\",\n      \"count_since\": 1,\n      \"reason\": \"No matching allow rule (default deny)\"\n    },\n    {\n      \"host\": \"localhost:53206\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"forward\",\n      \"rule\": \"no applicable policies for op(action=net:connect:tcp, resource=net:domain:localhost:53206)\",\n      \"last_seen\": \"2026-09-06T01:06:10.912964+02:00\",\n      \"since\": \"2026-09-06T01:06:10.912964+02:00\",\n      \"count_since\": 1,\n      \"reason\": \"No matching allow rule (default deny)\"\n    },\n    {\n      \"host\": \"example.com.blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185.docker.internal\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"network\",\n      \"rule\": \"<dns proxy policy>\",\n      \"last_seen\": \"2026-09-06T01:06:10.71536+02:00\",\n      \"since\": \"2026-09-06T01:06:10.715344+02:00\",\n      \"count_since\": 2,\n      \"reason\": \"DNS lookup blocked by proxy policy\"\n    },\n    {\n      \"host\": \"example.com\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"network\",\n      \"rule\": \"<dns proxy policy>\",\n      \"last_seen\": \"2026-09-06T01:06:10.715166+02:00\",\n      \"since\": \"2026-09-06T01:06:10.715137+02:00\",\n      \"count_since\": 2,\n      \"reason\": \"DNS lookup blocked by proxy policy\"\n    },\n    {\n      \"host\": \"example.com:443\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"forward\",\n      \"rule\": \"no applicable policies for op(action=net:connect:tcp, resource=net:domain:example.com:443)\",\n      \"last_seen\": \"2026-09-06T01:06:10.396545+02:00\",\n      \"since\": \"2026-09-06T01:06:10.396545+02:00\",\n      \"count_since\": 1,\n      \"reason\": \"No matching allow rule (default deny)\"\n    }\n  ],\n  \"allowed_hosts\": []\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "ls",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"sandboxes\": [\n    {\n      \"name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"id\": \"5e683309-d849-43c0-80da-ca6ba39f34fd\",\n      \"agent\": \"blobot\",\n      \"status\": \"running\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "allow",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "0.0.0.0/0,::/0"
+      ],
+      "code": 0,
+      "stdout": "Rule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): e940b711-590d-4e3c-a682-6349be856f00 (0.0.0.0/0)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): a8e14eef-da5b-4a2e-9855-b69d1a1bed48 (::/0)\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "ls",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"sandboxes\": [\n    {\n      \"name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"id\": \"5e683309-d849-43c0-80da-ca6ba39f34fd\",\n      \"agent\": \"blobot\",\n      \"status\": \"running\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "deny",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "0.0.0.0/8,10.0.0.0/8,100.64.0.0/10,127.0.0.0/8,169.254.0.0/16,172.16.0.0/12,192.168.0.0/16,::1/128,fc00::/7,fe80::/10"
+      ],
+      "code": 0,
+      "stdout": "Rule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): 4edd39e2-587c-4634-930f-323c18f6427c (0.0.0.0/8)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): 57298bcd-3ce9-4b7e-b401-8826350ef82a (10.0.0.0/8)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): e51c41f4-3926-44aa-ad57-dff10d62187d (100.64.0.0/10)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): fd29f106-fb77-4c54-839b-ecb0baa70ca1 (127.0.0.0/8)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): 46e9c776-32df-4c7b-8533-e5f7693f7609 (169.254.0.0/16)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): 62bb1124-60ec-4d3f-bbc0-179d28e0a025 (172.16.0.0/12)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): 5a4631f9-d890-4cdf-9814-9c5af0fd3f12 (192.168.0.0/16)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): e92fd6b2-1715-49ed-ab38-9b2e63c5ac53 (::1/128)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): 77aaa19a-8c89-4f69-964c-ba6c92597d6b (fc00::/7)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): 87e5a487-553f-488d-869d-1e7d1321f153 (fe80::/10)\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "example.com:443"
+      ],
+      "code": 1,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": false,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"deny_kind\": \"implicit\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"reason\": \"No matching allow rule (default deny)\",\n  \"resource_type\": \"net:domain\",\n  \"resource_value\": \"example.com:443\",\n  \"target\": \"example.com:443\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "1.1.1.1:443"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": true,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"resource_type\": \"net:cidr\",\n  \"resource_value\": \"1.1.1.1\",\n  \"target\": \"1.1.1.1:443\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "localhost:53206"
+      ],
+      "code": 1,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": false,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"deny_kind\": \"implicit\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"reason\": \"No matching allow rule (default deny)\",\n  \"resource_type\": \"net:domain\",\n  \"resource_value\": \"localhost:53206\",\n  \"target\": \"localhost:53206\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "127.0.0.1:53206"
+      ],
+      "code": 1,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": false,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"deny_kind\": \"explicit\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"origin\": \"local\",\n  \"reason\": \"Denied by local rule\",\n  \"resource_type\": \"net:cidr\",\n  \"resource_value\": \"127.0.0.1\",\n  \"rule\": \"local:fd29f106-fb77-4c54-839b-ecb0baa70ca1\",\n  \"target\": \"127.0.0.1:53206\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "host.docker.internal:53206"
+      ],
+      "code": 1,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": false,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"deny_kind\": \"implicit\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"reason\": \"No matching allow rule (default deny)\",\n  \"resource_type\": \"net:domain\",\n  \"resource_value\": \"host.docker.internal:53206\",\n  \"target\": \"host.docker.internal:53206\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "127.0.0.1.sslip.io:53206"
+      ],
+      "code": 1,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": false,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"deny_kind\": \"implicit\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"reason\": \"No matching allow rule (default deny)\",\n  \"resource_type\": \"net:domain\",\n  \"resource_value\": \"127.0.0.1.sslip.io:53206\",\n  \"target\": \"127.0.0.1.sslip.io:53206\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "169.254.169.254:80"
+      ],
+      "code": 1,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": false,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"deny_kind\": \"explicit\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"origin\": \"local\",\n  \"reason\": \"Denied by local rule\",\n  \"resource_type\": \"net:cidr\",\n  \"resource_value\": \"169.254.169.254\",\n  \"rule\": \"local:46e9c776-32df-4c7b-8533-e5f7693f7609\",\n  \"target\": \"169.254.169.254:80\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "exec",
+        "-u",
+        "1000",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "curl",
+        "-sS",
+        "--max-time",
+        "8",
+        "-o",
+        "/dev/null",
+        "-w",
+        "%{http_code}",
+        "https://example.com"
+      ],
+      "code": 0,
+      "stdout": "403",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "exec",
+        "-u",
+        "1000",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "curl",
+        "-sS",
+        "--noproxy",
+        "*",
+        "--max-time",
+        "8",
+        "-o",
+        "/dev/null",
+        "-w",
+        "%{http_code}",
+        "https://example.com"
+      ],
+      "code": 6,
+      "stdout": "000",
+      "stderr": "curl: (6) Could not resolve host: example.com\n"
+    },
+    {
+      "args": [
+        "exec",
+        "-u",
+        "1000",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "curl",
+        "-sS",
+        "--max-time",
+        "4",
+        "-o",
+        "/dev/null",
+        "-w",
+        "%{http_code}",
+        "http://host.docker.internal:53206/ip-policy"
+      ],
+      "code": 0,
+      "stdout": "403",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "exec",
+        "-u",
+        "1000",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "curl",
+        "-sS",
+        "--max-time",
+        "4",
+        "-o",
+        "/dev/null",
+        "-w",
+        "%{http_code}",
+        "http://127.0.0.1.sslip.io:53206/ip-policy"
+      ],
+      "code": 0,
+      "stdout": "403",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "ls",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--type",
+        "network",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"rules\": [\n    {\n      \"id\": \"e940b711-590d-4e3c-a682-6349be856f00\",\n      \"name\": \"e940b711-590d-4e3c-a682-6349be856f00\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"allow\",\n      \"resources\": [\n        \"0.0.0.0/0\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"a8e14eef-da5b-4a2e-9855-b69d1a1bed48\",\n      \"name\": \"a8e14eef-da5b-4a2e-9855-b69d1a1bed48\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"allow\",\n      \"resources\": [\n        \"::/0\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"4edd39e2-587c-4634-930f-323c18f6427c\",\n      \"name\": \"4edd39e2-587c-4634-930f-323c18f6427c\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"0.0.0.0/8\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"57298bcd-3ce9-4b7e-b401-8826350ef82a\",\n      \"name\": \"57298bcd-3ce9-4b7e-b401-8826350ef82a\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"10.0.0.0/8\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"e51c41f4-3926-44aa-ad57-dff10d62187d\",\n      \"name\": \"e51c41f4-3926-44aa-ad57-dff10d62187d\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"100.64.0.0/10\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"fd29f106-fb77-4c54-839b-ecb0baa70ca1\",\n      \"name\": \"fd29f106-fb77-4c54-839b-ecb0baa70ca1\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"127.0.0.0/8\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"46e9c776-32df-4c7b-8533-e5f7693f7609\",\n      \"name\": \"46e9c776-32df-4c7b-8533-e5f7693f7609\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"169.254.0.0/16\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"62bb1124-60ec-4d3f-bbc0-179d28e0a025\",\n      \"name\": \"62bb1124-60ec-4d3f-bbc0-179d28e0a025\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"172.16.0.0/12\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"5a4631f9-d890-4cdf-9814-9c5af0fd3f12\",\n      \"name\": \"5a4631f9-d890-4cdf-9814-9c5af0fd3f12\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"192.168.0.0/16\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"e92fd6b2-1715-49ed-ab38-9b2e63c5ac53\",\n      \"name\": \"e92fd6b2-1715-49ed-ab38-9b2e63c5ac53\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"::1/128\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"77aaa19a-8c89-4f69-964c-ba6c92597d6b\",\n      \"name\": \"77aaa19a-8c89-4f69-964c-ba6c92597d6b\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"fc00::/7\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"87e5a487-553f-488d-869d-1e7d1321f153\",\n      \"name\": \"87e5a487-553f-488d-869d-1e7d1321f153\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"fe80::/10\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "log",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"blocked_hosts\": [\n    {\n      \"host\": \"127.0.0.1.sslip.io:53206\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"forward\",\n      \"rule\": \"no applicable policies for op(action=net:connect:tcp, resource=net:domain:127.0.0.1.sslip.io:53206)\",\n      \"last_seen\": \"2026-09-06T01:06:13.722148+02:00\",\n      \"since\": \"2026-09-06T01:06:11.129699+02:00\",\n      \"count_since\": 2,\n      \"reason\": \"No matching allow rule (default deny)\"\n    },\n    {\n      \"host\": \"localhost:53206\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"forward\",\n      \"rule\": \"no applicable policies for op(action=net:connect:tcp, resource=net:domain:localhost:53206)\",\n      \"last_seen\": \"2026-09-06T01:06:13.501279+02:00\",\n      \"since\": \"2026-09-06T01:06:10.912964+02:00\",\n      \"count_since\": 2,\n      \"reason\": \"No matching allow rule (default deny)\"\n    },\n    {\n      \"host\": \"example.com.blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185.docker.internal\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"network\",\n      \"rule\": \"<dns proxy policy>\",\n      \"last_seen\": \"2026-09-06T01:06:13.298933+02:00\",\n      \"since\": \"2026-09-06T01:06:10.715344+02:00\",\n      \"count_since\": 4,\n      \"reason\": \"DNS lookup blocked by proxy policy\"\n    },\n    {\n      \"host\": \"example.com\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"network\",\n      \"rule\": \"<dns proxy policy>\",\n      \"last_seen\": \"2026-09-06T01:06:13.298563+02:00\",\n      \"since\": \"2026-09-06T01:06:10.715137+02:00\",\n      \"count_since\": 4,\n      \"reason\": \"DNS lookup blocked by proxy policy\"\n    },\n    {\n      \"host\": \"example.com:443\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"forward\",\n      \"rule\": \"no applicable policies for op(action=net:connect:tcp, resource=net:domain:example.com:443)\",\n      \"last_seen\": \"2026-09-06T01:06:13.069465+02:00\",\n      \"since\": \"2026-09-06T01:06:10.396545+02:00\",\n      \"count_since\": 2,\n      \"reason\": \"No matching allow rule (default deny)\"\n    }\n  ],\n  \"allowed_hosts\": []\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "ls",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"sandboxes\": [\n    {\n      \"name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"id\": \"5e683309-d849-43c0-80da-ca6ba39f34fd\",\n      \"agent\": \"blobot\",\n      \"status\": \"running\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "ls",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--type",
+        "network",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"rules\": [\n    {\n      \"id\": \"e940b711-590d-4e3c-a682-6349be856f00\",\n      \"name\": \"e940b711-590d-4e3c-a682-6349be856f00\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"allow\",\n      \"resources\": [\n        \"0.0.0.0/0\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"a8e14eef-da5b-4a2e-9855-b69d1a1bed48\",\n      \"name\": \"a8e14eef-da5b-4a2e-9855-b69d1a1bed48\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"allow\",\n      \"resources\": [\n        \"::/0\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"4edd39e2-587c-4634-930f-323c18f6427c\",\n      \"name\": \"4edd39e2-587c-4634-930f-323c18f6427c\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"0.0.0.0/8\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"57298bcd-3ce9-4b7e-b401-8826350ef82a\",\n      \"name\": \"57298bcd-3ce9-4b7e-b401-8826350ef82a\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"10.0.0.0/8\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"e51c41f4-3926-44aa-ad57-dff10d62187d\",\n      \"name\": \"e51c41f4-3926-44aa-ad57-dff10d62187d\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"100.64.0.0/10\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"fd29f106-fb77-4c54-839b-ecb0baa70ca1\",\n      \"name\": \"fd29f106-fb77-4c54-839b-ecb0baa70ca1\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"127.0.0.0/8\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"46e9c776-32df-4c7b-8533-e5f7693f7609\",\n      \"name\": \"46e9c776-32df-4c7b-8533-e5f7693f7609\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"169.254.0.0/16\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"62bb1124-60ec-4d3f-bbc0-179d28e0a025\",\n      \"name\": \"62bb1124-60ec-4d3f-bbc0-179d28e0a025\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"172.16.0.0/12\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"5a4631f9-d890-4cdf-9814-9c5af0fd3f12\",\n      \"name\": \"5a4631f9-d890-4cdf-9814-9c5af0fd3f12\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"192.168.0.0/16\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"e92fd6b2-1715-49ed-ab38-9b2e63c5ac53\",\n      \"name\": \"e92fd6b2-1715-49ed-ab38-9b2e63c5ac53\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"::1/128\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"77aaa19a-8c89-4f69-964c-ba6c92597d6b\",\n      \"name\": \"77aaa19a-8c89-4f69-964c-ba6c92597d6b\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"fc00::/7\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"87e5a487-553f-488d-869d-1e7d1321f153\",\n      \"name\": \"87e5a487-553f-488d-869d-1e7d1321f153\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"fe80::/10\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "e940b711-590d-4e3c-a682-6349be856f00"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=e940b711-590d-4e3c-a682-6349be856f00\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "a8e14eef-da5b-4a2e-9855-b69d1a1bed48"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=a8e14eef-da5b-4a2e-9855-b69d1a1bed48\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "4edd39e2-587c-4634-930f-323c18f6427c"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=4edd39e2-587c-4634-930f-323c18f6427c\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "57298bcd-3ce9-4b7e-b401-8826350ef82a"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=57298bcd-3ce9-4b7e-b401-8826350ef82a\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "e51c41f4-3926-44aa-ad57-dff10d62187d"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=e51c41f4-3926-44aa-ad57-dff10d62187d\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "fd29f106-fb77-4c54-839b-ecb0baa70ca1"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=fd29f106-fb77-4c54-839b-ecb0baa70ca1\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "46e9c776-32df-4c7b-8533-e5f7693f7609"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=46e9c776-32df-4c7b-8533-e5f7693f7609\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "62bb1124-60ec-4d3f-bbc0-179d28e0a025"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=62bb1124-60ec-4d3f-bbc0-179d28e0a025\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "5a4631f9-d890-4cdf-9814-9c5af0fd3f12"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=5a4631f9-d890-4cdf-9814-9c5af0fd3f12\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "e92fd6b2-1715-49ed-ab38-9b2e63c5ac53"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=e92fd6b2-1715-49ed-ab38-9b2e63c5ac53\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "77aaa19a-8c89-4f69-964c-ba6c92597d6b"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=77aaa19a-8c89-4f69-964c-ba6c92597d6b\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "87e5a487-553f-488d-869d-1e7d1321f153"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=87e5a487-553f-488d-869d-1e7d1321f153\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "ls",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"sandboxes\": [\n    {\n      \"name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"id\": \"5e683309-d849-43c0-80da-ca6ba39f34fd\",\n      \"agent\": \"blobot\",\n      \"status\": \"running\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "allow",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "**"
+      ],
+      "code": 0,
+      "stdout": "Rule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): 7b43a733-b136-4c8e-b3e3-9bc9fe4a0c84 (**)\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "ls",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"sandboxes\": [\n    {\n      \"name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"id\": \"5e683309-d849-43c0-80da-ca6ba39f34fd\",\n      \"agent\": \"blobot\",\n      \"status\": \"running\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "deny",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "127.0.0.0/8,169.254.0.0/16,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,::1/128,fc00::/7,fe80::/10"
+      ],
+      "code": 0,
+      "stdout": "Rule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): 494cf730-b9ad-4fff-9c0d-f78364de9888 (127.0.0.0/8)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): bce359a9-9f1f-48a1-a6ca-c060e376dcf2 (169.254.0.0/16)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): c5c97798-b384-4ebd-8941-267da9bcfc1e (10.0.0.0/8)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): 15836fdd-ca56-4648-9d9d-3fe5fb53d52c (172.16.0.0/12)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): 65bf1354-8dd7-427d-9821-4f001da7747d (192.168.0.0/16)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): f4974c51-05b2-4a88-90c0-8136833e8838 (::1/128)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): 3ff0f60e-0abe-4a3f-b395-fd245f4b2bf1 (fc00::/7)\nRule added to policy local (scope: sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185): 928065e0-fa30-41dc-90ea-095825959a92 (fe80::/10)\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "example.com:443"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": true,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"resource_type\": \"net:domain\",\n  \"resource_value\": \"example.com:443\",\n  \"target\": \"example.com:443\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "1.1.1.1:443"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": true,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"resource_type\": \"net:domain\",\n  \"resource_value\": \"1.1.1.1:443\",\n  \"target\": \"1.1.1.1:443\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "localhost:53206"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": true,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"resource_type\": \"net:domain\",\n  \"resource_value\": \"localhost:53206\",\n  \"target\": \"localhost:53206\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "127.0.0.1:53206"
+      ],
+      "code": 1,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": false,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"deny_kind\": \"explicit\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"origin\": \"local\",\n  \"reason\": \"Denied by local rule\",\n  \"resource_type\": \"net:cidr\",\n  \"resource_value\": \"127.0.0.1\",\n  \"rule\": \"local:494cf730-b9ad-4fff-9c0d-f78364de9888\",\n  \"target\": \"127.0.0.1:53206\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "host.docker.internal:53206"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": true,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"resource_type\": \"net:domain\",\n  \"resource_value\": \"host.docker.internal:53206\",\n  \"target\": \"host.docker.internal:53206\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "127.0.0.1.sslip.io:53206"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": true,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"resource_type\": \"net:domain\",\n  \"resource_value\": \"127.0.0.1.sslip.io:53206\",\n  \"target\": \"127.0.0.1.sslip.io:53206\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "check",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json",
+        "169.254.169.254:80"
+      ],
+      "code": 1,
+      "stdout": "{\n  \"action\": \"net:connect:tcp\",\n  \"allowed\": false,\n  \"context\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n  \"deny_kind\": \"explicit\",\n  \"governance\": {\n    \"active\": false\n  },\n  \"origin\": \"local\",\n  \"reason\": \"Denied by local rule\",\n  \"resource_type\": \"net:cidr\",\n  \"resource_value\": \"169.254.169.254\",\n  \"rule\": \"local:bce359a9-9f1f-48a1-a6ca-c060e376dcf2\",\n  \"target\": \"169.254.169.254:80\",\n  \"type\": \"network\"\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "exec",
+        "-u",
+        "1000",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "curl",
+        "-sS",
+        "--max-time",
+        "8",
+        "-o",
+        "/dev/null",
+        "-w",
+        "%{http_code}",
+        "https://example.com"
+      ],
+      "code": 0,
+      "stdout": "200",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "exec",
+        "-u",
+        "1000",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "curl",
+        "-sS",
+        "--noproxy",
+        "*",
+        "--max-time",
+        "8",
+        "-o",
+        "/dev/null",
+        "-w",
+        "%{http_code}",
+        "https://example.com"
+      ],
+      "code": 0,
+      "stdout": "200",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "exec",
+        "-u",
+        "1000",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "curl",
+        "-sS",
+        "--max-time",
+        "4",
+        "-o",
+        "/dev/null",
+        "-w",
+        "%{http_code}",
+        "http://host.docker.internal:53206/wildcard-and-cidr"
+      ],
+      "code": 0,
+      "stdout": "200",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "exec",
+        "-u",
+        "1000",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "curl",
+        "-sS",
+        "--max-time",
+        "4",
+        "-o",
+        "/dev/null",
+        "-w",
+        "%{http_code}",
+        "http://127.0.0.1.sslip.io:53206/wildcard-and-cidr"
+      ],
+      "code": 0,
+      "stdout": "200",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "ls",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--type",
+        "network",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"rules\": [\n    {\n      \"id\": \"7b43a733-b136-4c8e-b3e3-9bc9fe4a0c84\",\n      \"name\": \"7b43a733-b136-4c8e-b3e3-9bc9fe4a0c84\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"allow\",\n      \"resources\": [\n        \"**\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"494cf730-b9ad-4fff-9c0d-f78364de9888\",\n      \"name\": \"494cf730-b9ad-4fff-9c0d-f78364de9888\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"127.0.0.0/8\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"bce359a9-9f1f-48a1-a6ca-c060e376dcf2\",\n      \"name\": \"bce359a9-9f1f-48a1-a6ca-c060e376dcf2\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"169.254.0.0/16\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"c5c97798-b384-4ebd-8941-267da9bcfc1e\",\n      \"name\": \"c5c97798-b384-4ebd-8941-267da9bcfc1e\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"10.0.0.0/8\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"15836fdd-ca56-4648-9d9d-3fe5fb53d52c\",\n      \"name\": \"15836fdd-ca56-4648-9d9d-3fe5fb53d52c\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"172.16.0.0/12\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"65bf1354-8dd7-427d-9821-4f001da7747d\",\n      \"name\": \"65bf1354-8dd7-427d-9821-4f001da7747d\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"192.168.0.0/16\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"f4974c51-05b2-4a88-90c0-8136833e8838\",\n      \"name\": \"f4974c51-05b2-4a88-90c0-8136833e8838\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"::1/128\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"3ff0f60e-0abe-4a3f-b395-fd245f4b2bf1\",\n      \"name\": \"3ff0f60e-0abe-4a3f-b395-fd245f4b2bf1\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"fc00::/7\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"928065e0-fa30-41dc-90ea-095825959a92\",\n      \"name\": \"928065e0-fa30-41dc-90ea-095825959a92\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"fe80::/10\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "log",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"blocked_hosts\": [\n    {\n      \"host\": \"127.0.0.1.sslip.io:53206\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"forward\",\n      \"rule\": \"no applicable policies for op(action=net:connect:tcp, resource=net:domain:127.0.0.1.sslip.io:53206)\",\n      \"last_seen\": \"2026-09-06T01:06:13.722148+02:00\",\n      \"since\": \"2026-09-06T01:06:11.129699+02:00\",\n      \"count_since\": 2,\n      \"reason\": \"No matching allow rule (default deny)\"\n    },\n    {\n      \"host\": \"localhost:53206\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"forward\",\n      \"rule\": \"no applicable policies for op(action=net:connect:tcp, resource=net:domain:localhost:53206)\",\n      \"last_seen\": \"2026-09-06T01:06:13.501279+02:00\",\n      \"since\": \"2026-09-06T01:06:10.912964+02:00\",\n      \"count_since\": 2,\n      \"reason\": \"No matching allow rule (default deny)\"\n    },\n    {\n      \"host\": \"example.com.blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185.docker.internal\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"network\",\n      \"rule\": \"<dns proxy policy>\",\n      \"last_seen\": \"2026-09-06T01:06:13.298933+02:00\",\n      \"since\": \"2026-09-06T01:06:10.715344+02:00\",\n      \"count_since\": 4,\n      \"reason\": \"DNS lookup blocked by proxy policy\"\n    },\n    {\n      \"host\": \"example.com\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"network\",\n      \"rule\": \"<dns proxy policy>\",\n      \"last_seen\": \"2026-09-06T01:06:13.298563+02:00\",\n      \"since\": \"2026-09-06T01:06:10.715137+02:00\",\n      \"count_since\": 4,\n      \"reason\": \"DNS lookup blocked by proxy policy\"\n    },\n    {\n      \"host\": \"example.com:443\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"forward\",\n      \"rule\": \"no applicable policies for op(action=net:connect:tcp, resource=net:domain:example.com:443)\",\n      \"last_seen\": \"2026-09-06T01:06:13.069465+02:00\",\n      \"since\": \"2026-09-06T01:06:10.396545+02:00\",\n      \"count_since\": 2,\n      \"reason\": \"No matching allow rule (default deny)\"\n    }\n  ],\n  \"allowed_hosts\": [\n    {\n      \"host\": \"127.0.0.1.sslip.io:53206\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"forward\",\n      \"rule\": \"\",\n      \"last_seen\": \"2026-09-06T01:06:18.544858+02:00\",\n      \"since\": \"2026-09-06T01:06:18.544858+02:00\",\n      \"count_since\": 1\n    },\n    {\n      \"host\": \"localhost:53206\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"forward\",\n      \"rule\": \"\",\n      \"last_seen\": \"2026-09-06T01:06:18.004731+02:00\",\n      \"since\": \"2026-09-06T01:06:18.004731+02:00\",\n      \"count_since\": 1\n    },\n    {\n      \"host\": \"example.com:443\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"transparent\",\n      \"rule\": \"\",\n      \"last_seen\": \"2026-09-06T01:06:17.737374+02:00\",\n      \"since\": \"2026-09-06T01:06:17.737374+02:00\",\n      \"count_since\": 1\n    },\n    {\n      \"host\": \"example.com:443\",\n      \"vm_name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"proxy_type\": \"forward-bypass\",\n      \"rule\": \"\",\n      \"last_seen\": \"2026-09-06T01:06:17.436198+02:00\",\n      \"since\": \"2026-09-06T01:06:17.436198+02:00\",\n      \"count_since\": 1\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "ls",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"sandboxes\": [\n    {\n      \"name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"id\": \"5e683309-d849-43c0-80da-ca6ba39f34fd\",\n      \"agent\": \"blobot\",\n      \"status\": \"running\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "ls",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"sandboxes\": [\n    {\n      \"name\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"id\": \"5e683309-d849-43c0-80da-ca6ba39f34fd\",\n      \"agent\": \"blobot\",\n      \"status\": \"running\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "ls",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--type",
+        "network",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"rules\": [\n    {\n      \"id\": \"7b43a733-b136-4c8e-b3e3-9bc9fe4a0c84\",\n      \"name\": \"7b43a733-b136-4c8e-b3e3-9bc9fe4a0c84\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"allow\",\n      \"resources\": [\n        \"**\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"494cf730-b9ad-4fff-9c0d-f78364de9888\",\n      \"name\": \"494cf730-b9ad-4fff-9c0d-f78364de9888\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"127.0.0.0/8\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"bce359a9-9f1f-48a1-a6ca-c060e376dcf2\",\n      \"name\": \"bce359a9-9f1f-48a1-a6ca-c060e376dcf2\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"169.254.0.0/16\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"c5c97798-b384-4ebd-8941-267da9bcfc1e\",\n      \"name\": \"c5c97798-b384-4ebd-8941-267da9bcfc1e\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"10.0.0.0/8\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"15836fdd-ca56-4648-9d9d-3fe5fb53d52c\",\n      \"name\": \"15836fdd-ca56-4648-9d9d-3fe5fb53d52c\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"172.16.0.0/12\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"65bf1354-8dd7-427d-9821-4f001da7747d\",\n      \"name\": \"65bf1354-8dd7-427d-9821-4f001da7747d\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"192.168.0.0/16\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"f4974c51-05b2-4a88-90c0-8136833e8838\",\n      \"name\": \"f4974c51-05b2-4a88-90c0-8136833e8838\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"::1/128\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"3ff0f60e-0abe-4a3f-b395-fd245f4b2bf1\",\n      \"name\": \"3ff0f60e-0abe-4a3f-b395-fd245f4b2bf1\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"fc00::/7\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    },\n    {\n      \"id\": \"928065e0-fa30-41dc-90ea-095825959a92\",\n      \"name\": \"928065e0-fa30-41dc-90ea-095825959a92\",\n      \"policy_id\": \"260f66e6-c8b1-4ed2-bf2f-22425e93bc5e\",\n      \"scope\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"applies_to\": \"sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"fe80::/10\"\n      ],\n      \"origin\": \"scoped\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": true,\n      \"sandbox_id\": \"blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "7b43a733-b136-4c8e-b3e3-9bc9fe4a0c84"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=7b43a733-b136-4c8e-b3e3-9bc9fe4a0c84\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "494cf730-b9ad-4fff-9c0d-f78364de9888"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=494cf730-b9ad-4fff-9c0d-f78364de9888\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "bce359a9-9f1f-48a1-a6ca-c060e376dcf2"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=bce359a9-9f1f-48a1-a6ca-c060e376dcf2\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "c5c97798-b384-4ebd-8941-267da9bcfc1e"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=c5c97798-b384-4ebd-8941-267da9bcfc1e\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "15836fdd-ca56-4648-9d9d-3fe5fb53d52c"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=15836fdd-ca56-4648-9d9d-3fe5fb53d52c\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "65bf1354-8dd7-427d-9821-4f001da7747d"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=65bf1354-8dd7-427d-9821-4f001da7747d\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "f4974c51-05b2-4a88-90c0-8136833e8838"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=f4974c51-05b2-4a88-90c0-8136833e8838\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "3ff0f60e-0abe-4a3f-b395-fd245f4b2bf1"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=3ff0f60e-0abe-4a3f-b395-fd245f4b2bf1\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "rm",
+        "network",
+        "--sandbox",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+        "--id",
+        "928065e0-fa30-41dc-90ea-095825959a92"
+      ],
+      "code": 0,
+      "stdout": "Rule removed from policy local: id=928065e0-fa30-41dc-90ea-095825959a92\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "rm",
+        "-f",
+        "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+      ],
+      "code": 0,
+      "stdout": "Deleting sandbox blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185...\nSandbox 'blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185' removed\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "ls",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"sandboxes\": []\n}\n",
+      "stderr": ""
+    },
+    {
+      "args": [
+        "policy",
+        "ls",
+        "--type",
+        "network",
+        "--json"
+      ],
+      "code": 0,
+      "stdout": "{\n  \"rules\": [\n    {\n      \"id\": \"default-deny-all\",\n      \"name\": \"default-deny-all\",\n      \"policy_name\": \"default-deny-all\",\n      \"scope\": \"global\",\n      \"applies_to\": \"all\",\n      \"resource_type\": \"network\",\n      \"decision\": \"deny\",\n      \"resources\": [\n        \"**\"\n      ],\n      \"origin\": \"local\",\n      \"layer\": \"local\",\n      \"status\": \"active\",\n      \"editable\": false\n    }\n  ]\n}\n",
+      "stderr": ""
+    }
+  ],
+  "phases": [
+    {
+      "label": "deny-all",
+      "checks": [
+        {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "deny_kind": "implicit",
+          "governance": {
+            "active": false
+          },
+          "reason": "No matching allow rule (default deny)",
+          "resource_type": "net:domain",
+          "resource_value": "example.com:443",
+          "target": "example.com:443",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "deny_kind": "implicit",
+          "governance": {
+            "active": false
+          },
+          "reason": "No matching allow rule (default deny)",
+          "resource_type": "net:domain",
+          "resource_value": "1.1.1.1:443",
+          "target": "1.1.1.1:443",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "deny_kind": "implicit",
+          "governance": {
+            "active": false
+          },
+          "reason": "No matching allow rule (default deny)",
+          "resource_type": "net:domain",
+          "resource_value": "localhost:53206",
+          "target": "localhost:53206",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "deny_kind": "implicit",
+          "governance": {
+            "active": false
+          },
+          "reason": "No matching allow rule (default deny)",
+          "resource_type": "net:domain",
+          "resource_value": "127.0.0.1:53206",
+          "target": "127.0.0.1:53206",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "deny_kind": "implicit",
+          "governance": {
+            "active": false
+          },
+          "reason": "No matching allow rule (default deny)",
+          "resource_type": "net:domain",
+          "resource_value": "host.docker.internal:53206",
+          "target": "host.docker.internal:53206",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "deny_kind": "implicit",
+          "governance": {
+            "active": false
+          },
+          "reason": "No matching allow rule (default deny)",
+          "resource_type": "net:domain",
+          "resource_value": "127.0.0.1.sslip.io:53206",
+          "target": "127.0.0.1.sslip.io:53206",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "deny_kind": "implicit",
+          "governance": {
+            "active": false
+          },
+          "reason": "No matching allow rule (default deny)",
+          "resource_type": "net:domain",
+          "resource_value": "169.254.169.254:80",
+          "target": "169.254.169.254:80",
+          "type": "network"
+        }
+      ],
+      "results": [
+        {
+          "code": 0,
+          "stdout": "403",
+          "stderr": ""
+        },
+        {
+          "code": 6,
+          "stdout": "000",
+          "stderr": "curl: (6) Could not resolve host: example.com\n"
+        },
+        {
+          "code": 0,
+          "stdout": "403",
+          "stderr": ""
+        },
+        {
+          "code": 0,
+          "stdout": "403",
+          "stderr": ""
+        }
+      ],
+      "requests": [],
+      "rules": {
+        "rules": [
+          {
+            "id": "default-deny-all",
+            "name": "default-deny-all",
+            "policy_name": "default-deny-all",
+            "scope": "global",
+            "applies_to": "all",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "**"
+            ],
+            "origin": "local",
+            "layer": "local",
+            "status": "active",
+            "editable": false
+          }
+        ]
+      },
+      "log": {
+        "blocked_hosts": [
+          {
+            "host": "127.0.0.1.sslip.io:53206",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "forward",
+            "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:127.0.0.1.sslip.io:53206)",
+            "last_seen": "2026-09-06T01:06:11.129699+02:00",
+            "since": "2026-09-06T01:06:11.129699+02:00",
+            "count_since": 1,
+            "reason": "No matching allow rule (default deny)"
+          },
+          {
+            "host": "localhost:53206",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "forward",
+            "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:localhost:53206)",
+            "last_seen": "2026-09-06T01:06:10.912964+02:00",
+            "since": "2026-09-06T01:06:10.912964+02:00",
+            "count_since": 1,
+            "reason": "No matching allow rule (default deny)"
+          },
+          {
+            "host": "example.com.blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185.docker.internal",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "network",
+            "rule": "<dns proxy policy>",
+            "last_seen": "2026-09-06T01:06:10.71536+02:00",
+            "since": "2026-09-06T01:06:10.715344+02:00",
+            "count_since": 2,
+            "reason": "DNS lookup blocked by proxy policy"
+          },
+          {
+            "host": "example.com",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "network",
+            "rule": "<dns proxy policy>",
+            "last_seen": "2026-09-06T01:06:10.715166+02:00",
+            "since": "2026-09-06T01:06:10.715137+02:00",
+            "count_since": 2,
+            "reason": "DNS lookup blocked by proxy policy"
+          },
+          {
+            "host": "example.com:443",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "forward",
+            "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:example.com:443)",
+            "last_seen": "2026-09-06T01:06:10.396545+02:00",
+            "since": "2026-09-06T01:06:10.396545+02:00",
+            "count_since": 1,
+            "reason": "No matching allow rule (default deny)"
+          }
+        ],
+        "allowed_hosts": []
+      }
+    },
+    {
+      "label": "ip-policy",
+      "checks": [
+        {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "deny_kind": "implicit",
+          "governance": {
+            "active": false
+          },
+          "reason": "No matching allow rule (default deny)",
+          "resource_type": "net:domain",
+          "resource_value": "example.com:443",
+          "target": "example.com:443",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": true,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "governance": {
+            "active": false
+          },
+          "resource_type": "net:cidr",
+          "resource_value": "1.1.1.1",
+          "target": "1.1.1.1:443",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "deny_kind": "implicit",
+          "governance": {
+            "active": false
+          },
+          "reason": "No matching allow rule (default deny)",
+          "resource_type": "net:domain",
+          "resource_value": "localhost:53206",
+          "target": "localhost:53206",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "deny_kind": "explicit",
+          "governance": {
+            "active": false
+          },
+          "origin": "local",
+          "reason": "Denied by local rule",
+          "resource_type": "net:cidr",
+          "resource_value": "127.0.0.1",
+          "rule": "local:fd29f106-fb77-4c54-839b-ecb0baa70ca1",
+          "target": "127.0.0.1:53206",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "deny_kind": "implicit",
+          "governance": {
+            "active": false
+          },
+          "reason": "No matching allow rule (default deny)",
+          "resource_type": "net:domain",
+          "resource_value": "host.docker.internal:53206",
+          "target": "host.docker.internal:53206",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "deny_kind": "implicit",
+          "governance": {
+            "active": false
+          },
+          "reason": "No matching allow rule (default deny)",
+          "resource_type": "net:domain",
+          "resource_value": "127.0.0.1.sslip.io:53206",
+          "target": "127.0.0.1.sslip.io:53206",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "deny_kind": "explicit",
+          "governance": {
+            "active": false
+          },
+          "origin": "local",
+          "reason": "Denied by local rule",
+          "resource_type": "net:cidr",
+          "resource_value": "169.254.169.254",
+          "rule": "local:46e9c776-32df-4c7b-8533-e5f7693f7609",
+          "target": "169.254.169.254:80",
+          "type": "network"
+        }
+      ],
+      "results": [
+        {
+          "code": 0,
+          "stdout": "403",
+          "stderr": ""
+        },
+        {
+          "code": 6,
+          "stdout": "000",
+          "stderr": "curl: (6) Could not resolve host: example.com\n"
+        },
+        {
+          "code": 0,
+          "stdout": "403",
+          "stderr": ""
+        },
+        {
+          "code": 0,
+          "stdout": "403",
+          "stderr": ""
+        }
+      ],
+      "requests": [],
+      "rules": {
+        "rules": [
+          {
+            "id": "e940b711-590d-4e3c-a682-6349be856f00",
+            "name": "e940b711-590d-4e3c-a682-6349be856f00",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "allow",
+            "resources": [
+              "0.0.0.0/0"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "a8e14eef-da5b-4a2e-9855-b69d1a1bed48",
+            "name": "a8e14eef-da5b-4a2e-9855-b69d1a1bed48",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "allow",
+            "resources": [
+              "::/0"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "4edd39e2-587c-4634-930f-323c18f6427c",
+            "name": "4edd39e2-587c-4634-930f-323c18f6427c",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "0.0.0.0/8"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "57298bcd-3ce9-4b7e-b401-8826350ef82a",
+            "name": "57298bcd-3ce9-4b7e-b401-8826350ef82a",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "10.0.0.0/8"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "e51c41f4-3926-44aa-ad57-dff10d62187d",
+            "name": "e51c41f4-3926-44aa-ad57-dff10d62187d",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "100.64.0.0/10"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "fd29f106-fb77-4c54-839b-ecb0baa70ca1",
+            "name": "fd29f106-fb77-4c54-839b-ecb0baa70ca1",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "127.0.0.0/8"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "46e9c776-32df-4c7b-8533-e5f7693f7609",
+            "name": "46e9c776-32df-4c7b-8533-e5f7693f7609",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "169.254.0.0/16"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "62bb1124-60ec-4d3f-bbc0-179d28e0a025",
+            "name": "62bb1124-60ec-4d3f-bbc0-179d28e0a025",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "172.16.0.0/12"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "5a4631f9-d890-4cdf-9814-9c5af0fd3f12",
+            "name": "5a4631f9-d890-4cdf-9814-9c5af0fd3f12",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "192.168.0.0/16"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "e92fd6b2-1715-49ed-ab38-9b2e63c5ac53",
+            "name": "e92fd6b2-1715-49ed-ab38-9b2e63c5ac53",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "::1/128"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "77aaa19a-8c89-4f69-964c-ba6c92597d6b",
+            "name": "77aaa19a-8c89-4f69-964c-ba6c92597d6b",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "fc00::/7"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "87e5a487-553f-488d-869d-1e7d1321f153",
+            "name": "87e5a487-553f-488d-869d-1e7d1321f153",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "fe80::/10"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          }
+        ]
+      },
+      "log": {
+        "blocked_hosts": [
+          {
+            "host": "127.0.0.1.sslip.io:53206",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "forward",
+            "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:127.0.0.1.sslip.io:53206)",
+            "last_seen": "2026-09-06T01:06:13.722148+02:00",
+            "since": "2026-09-06T01:06:11.129699+02:00",
+            "count_since": 2,
+            "reason": "No matching allow rule (default deny)"
+          },
+          {
+            "host": "localhost:53206",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "forward",
+            "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:localhost:53206)",
+            "last_seen": "2026-09-06T01:06:13.501279+02:00",
+            "since": "2026-09-06T01:06:10.912964+02:00",
+            "count_since": 2,
+            "reason": "No matching allow rule (default deny)"
+          },
+          {
+            "host": "example.com.blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185.docker.internal",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "network",
+            "rule": "<dns proxy policy>",
+            "last_seen": "2026-09-06T01:06:13.298933+02:00",
+            "since": "2026-09-06T01:06:10.715344+02:00",
+            "count_since": 4,
+            "reason": "DNS lookup blocked by proxy policy"
+          },
+          {
+            "host": "example.com",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "network",
+            "rule": "<dns proxy policy>",
+            "last_seen": "2026-09-06T01:06:13.298563+02:00",
+            "since": "2026-09-06T01:06:10.715137+02:00",
+            "count_since": 4,
+            "reason": "DNS lookup blocked by proxy policy"
+          },
+          {
+            "host": "example.com:443",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "forward",
+            "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:example.com:443)",
+            "last_seen": "2026-09-06T01:06:13.069465+02:00",
+            "since": "2026-09-06T01:06:10.396545+02:00",
+            "count_since": 2,
+            "reason": "No matching allow rule (default deny)"
+          }
+        ],
+        "allowed_hosts": []
+      }
+    },
+    {
+      "label": "wildcard-and-cidr",
+      "checks": [
+        {
+          "action": "net:connect:tcp",
+          "allowed": true,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "governance": {
+            "active": false
+          },
+          "resource_type": "net:domain",
+          "resource_value": "example.com:443",
+          "target": "example.com:443",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": true,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "governance": {
+            "active": false
+          },
+          "resource_type": "net:domain",
+          "resource_value": "1.1.1.1:443",
+          "target": "1.1.1.1:443",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": true,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "governance": {
+            "active": false
+          },
+          "resource_type": "net:domain",
+          "resource_value": "localhost:53206",
+          "target": "localhost:53206",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "deny_kind": "explicit",
+          "governance": {
+            "active": false
+          },
+          "origin": "local",
+          "reason": "Denied by local rule",
+          "resource_type": "net:cidr",
+          "resource_value": "127.0.0.1",
+          "rule": "local:494cf730-b9ad-4fff-9c0d-f78364de9888",
+          "target": "127.0.0.1:53206",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": true,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "governance": {
+            "active": false
+          },
+          "resource_type": "net:domain",
+          "resource_value": "host.docker.internal:53206",
+          "target": "host.docker.internal:53206",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": true,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "governance": {
+            "active": false
+          },
+          "resource_type": "net:domain",
+          "resource_value": "127.0.0.1.sslip.io:53206",
+          "target": "127.0.0.1.sslip.io:53206",
+          "type": "network"
+        },
+        {
+          "action": "net:connect:tcp",
+          "allowed": false,
+          "context": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+          "deny_kind": "explicit",
+          "governance": {
+            "active": false
+          },
+          "origin": "local",
+          "reason": "Denied by local rule",
+          "resource_type": "net:cidr",
+          "resource_value": "169.254.169.254",
+          "rule": "local:bce359a9-9f1f-48a1-a6ca-c060e376dcf2",
+          "target": "169.254.169.254:80",
+          "type": "network"
+        }
+      ],
+      "results": [
+        {
+          "code": 0,
+          "stdout": "200",
+          "stderr": ""
+        },
+        {
+          "code": 0,
+          "stdout": "200",
+          "stderr": ""
+        },
+        {
+          "code": 0,
+          "stdout": "200",
+          "stderr": ""
+        },
+        {
+          "code": 0,
+          "stdout": "200",
+          "stderr": ""
+        }
+      ],
+      "requests": [
+        {
+          "url": "/wildcard-and-cidr",
+          "host": "localhost:53206",
+          "at": "2026-09-05T23:06:18.007Z"
+        },
+        {
+          "url": "/wildcard-and-cidr",
+          "host": "127.0.0.1.sslip.io:53206",
+          "at": "2026-09-05T23:06:18.545Z"
+        }
+      ],
+      "rules": {
+        "rules": [
+          {
+            "id": "7b43a733-b136-4c8e-b3e3-9bc9fe4a0c84",
+            "name": "7b43a733-b136-4c8e-b3e3-9bc9fe4a0c84",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "allow",
+            "resources": [
+              "**"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "494cf730-b9ad-4fff-9c0d-f78364de9888",
+            "name": "494cf730-b9ad-4fff-9c0d-f78364de9888",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "127.0.0.0/8"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "bce359a9-9f1f-48a1-a6ca-c060e376dcf2",
+            "name": "bce359a9-9f1f-48a1-a6ca-c060e376dcf2",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "169.254.0.0/16"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "c5c97798-b384-4ebd-8941-267da9bcfc1e",
+            "name": "c5c97798-b384-4ebd-8941-267da9bcfc1e",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "10.0.0.0/8"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "15836fdd-ca56-4648-9d9d-3fe5fb53d52c",
+            "name": "15836fdd-ca56-4648-9d9d-3fe5fb53d52c",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "172.16.0.0/12"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "65bf1354-8dd7-427d-9821-4f001da7747d",
+            "name": "65bf1354-8dd7-427d-9821-4f001da7747d",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "192.168.0.0/16"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "f4974c51-05b2-4a88-90c0-8136833e8838",
+            "name": "f4974c51-05b2-4a88-90c0-8136833e8838",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "::1/128"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "3ff0f60e-0abe-4a3f-b395-fd245f4b2bf1",
+            "name": "3ff0f60e-0abe-4a3f-b395-fd245f4b2bf1",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "fc00::/7"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          },
+          {
+            "id": "928065e0-fa30-41dc-90ea-095825959a92",
+            "name": "928065e0-fa30-41dc-90ea-095825959a92",
+            "policy_id": "260f66e6-c8b1-4ed2-bf2f-22425e93bc5e",
+            "scope": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "applies_to": "sandbox:blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "resource_type": "network",
+            "decision": "deny",
+            "resources": [
+              "fe80::/10"
+            ],
+            "origin": "scoped",
+            "layer": "local",
+            "status": "active",
+            "editable": true,
+            "sandbox_id": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185"
+          }
+        ]
+      },
+      "log": {
+        "blocked_hosts": [
+          {
+            "host": "127.0.0.1.sslip.io:53206",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "forward",
+            "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:127.0.0.1.sslip.io:53206)",
+            "last_seen": "2026-09-06T01:06:13.722148+02:00",
+            "since": "2026-09-06T01:06:11.129699+02:00",
+            "count_since": 2,
+            "reason": "No matching allow rule (default deny)"
+          },
+          {
+            "host": "localhost:53206",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "forward",
+            "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:localhost:53206)",
+            "last_seen": "2026-09-06T01:06:13.501279+02:00",
+            "since": "2026-09-06T01:06:10.912964+02:00",
+            "count_since": 2,
+            "reason": "No matching allow rule (default deny)"
+          },
+          {
+            "host": "example.com.blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185.docker.internal",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "network",
+            "rule": "<dns proxy policy>",
+            "last_seen": "2026-09-06T01:06:13.298933+02:00",
+            "since": "2026-09-06T01:06:10.715344+02:00",
+            "count_since": 4,
+            "reason": "DNS lookup blocked by proxy policy"
+          },
+          {
+            "host": "example.com",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "network",
+            "rule": "<dns proxy policy>",
+            "last_seen": "2026-09-06T01:06:13.298563+02:00",
+            "since": "2026-09-06T01:06:10.715137+02:00",
+            "count_since": 4,
+            "reason": "DNS lookup blocked by proxy policy"
+          },
+          {
+            "host": "example.com:443",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "forward",
+            "rule": "no applicable policies for op(action=net:connect:tcp, resource=net:domain:example.com:443)",
+            "last_seen": "2026-09-06T01:06:13.069465+02:00",
+            "since": "2026-09-06T01:06:10.396545+02:00",
+            "count_since": 2,
+            "reason": "No matching allow rule (default deny)"
+          }
+        ],
+        "allowed_hosts": [
+          {
+            "host": "127.0.0.1.sslip.io:53206",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "forward",
+            "rule": "",
+            "last_seen": "2026-09-06T01:06:18.544858+02:00",
+            "since": "2026-09-06T01:06:18.544858+02:00",
+            "count_since": 1
+          },
+          {
+            "host": "localhost:53206",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "forward",
+            "rule": "",
+            "last_seen": "2026-09-06T01:06:18.004731+02:00",
+            "since": "2026-09-06T01:06:18.004731+02:00",
+            "count_since": 1
+          },
+          {
+            "host": "example.com:443",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "transparent",
+            "rule": "",
+            "last_seen": "2026-09-06T01:06:17.737374+02:00",
+            "since": "2026-09-06T01:06:17.737374+02:00",
+            "count_since": 1
+          },
+          {
+            "host": "example.com:443",
+            "vm_name": "blobot-network-ec133c53-d1d0-4237-9bfa-0de8f574b185",
+            "proxy_type": "forward-bypass",
+            "rule": "",
+            "last_seen": "2026-09-06T01:06:17.436198+02:00",
+            "since": "2026-09-06T01:06:17.436198+02:00",
+            "count_since": 1
+          }
+        ]
+      }
+    }
+  ],
+  "cleanup": {
+    "boxRemoved": true,
+    "globalAfter": {
+      "rules": [
+        {
+          "id": "default-deny-all",
+          "name": "default-deny-all",
+          "policy_name": "default-deny-all",
+          "scope": "global",
+          "applies_to": "all",
+          "resource_type": "network",
+          "decision": "deny",
+          "resources": [
+            "**"
+          ],
+          "origin": "local",
+          "layer": "local",
+          "status": "active",
+          "editable": false
+        }
+      ]
+    },
+    "globalUnchanged": true
+  },
+  "globalBefore": {
+    "rules": [
+      {
+        "id": "default-deny-all",
+        "name": "default-deny-all",
+        "policy_name": "default-deny-all",
+        "scope": "global",
+        "applies_to": "all",
+        "resource_type": "network",
+        "decision": "deny",
+        "resources": [
+          "**"
+        ],
+        "origin": "local",
+        "layer": "local",
+        "status": "active",
+        "editable": false
+      }
+    ]
+  },
+  "hostPort": 53206,
+  "id": "5e683309-d849-43c0-80da-ca6ba39f34fd",
+  "completed": true
+}

@@ -47,9 +47,20 @@ function peerMessage(body: string, context?: string): Message {
 describe('the persona', () => {
   const persona = composePersona(bob, team, [alice, bob]);
 
+  it('distinguishes reusable personal files from project work and keeps standing instructions last', () => {
+    const personal = composePersona({ ...bob, instructions: 'Follow my own writing style.' }, team, [alice, bob], [], '/profiles/bob/files');
+    expect(personal).toContain('Your personal folder is "/profiles/bob/files"');
+    expect(personal).toContain('BLOBOT_PERSONAL_DIR');
+    expect(personal).toContain('The same folder follows you across teams');
+    expect(personal).toContain('Keep project-specific files and configuration in this workspace');
+    expect(personal.endsWith('Follow my own writing style.')).toBe(true);
+    expect(persona).not.toContain('BLOBOT_PERSONAL_DIR');
+  });
+
   it('states the situation that never changes', () => {
     expect(persona).toContain('You are Bob, reviewer, on the team "demo"');
     expect(persona).toContain('/agents/bob');
+    expect(persona).not.toContain(team.workspacePath);
     expect(persona).toContain('Alice (frontend)');
   });
 
@@ -321,5 +332,56 @@ describe('the Handbook in the persona', () => {
 
     expect(persona).toContain('name the number it');
     expect(persona).toContain('cannot withdraw something you were told');
+  });
+});
+
+/**
+ * A **thread**: one agent working directly with the operator, with no team at all.
+ *
+ * `.scratch/rail/issues/02-what-a-thread-strips.md`. The test for each surface was the same one:
+ * does it make a claim about *members*? If yes it goes. If it makes a claim about the work, it
+ * stays.
+ */
+describe('a thread', () => {
+  const thread: Team = { ...team, name: 'Bob', threadFor: 'p_bob' };
+  const persona = composePersona(bob, thread, [bob]);
+
+  it('names no team, because the name is an invented string nobody has ever seen', () => {
+    expect(persona).toContain('You are Bob, reviewer, working directly with the operator.');
+    expect(persona).not.toContain('Bob"');
+    expect(persona).not.toContain('on the team');
+  });
+
+  it('says nothing about teammates, in either direction', () => {
+    // The empty-roster branch is deliberately not reused: *"You have no teammates on this team
+    // yet"* promises teammates that cannot arrive, which is the lies-by-arrangement failure this
+    // repo has written down three times.
+    expect(persona).not.toContain('teammate');
+    expect(persona).not.toContain('teammates');
+    expect(persona).not.toContain('message_agent');
+  });
+
+  it('keeps everything that is a claim about the work rather than about members', () => {
+    expect(persona).toContain('/agents/bob');
+    expect(persona).toContain('Your shell already starts there');
+    expect(persona).toContain('propose_routine');
+    expect(persona).toContain('Do not use em dashes');
+  });
+
+  it('keeps standing instructions last, so they are still the user’s last word', () => {
+    const withStanding = composePersona(
+      { ...bob, instructions: 'Cite a source.' },
+      thread,
+      [bob],
+    );
+    expect(withStanding.trimEnd().endsWith('Cite a source.')).toBe(true);
+  });
+
+  it('composes no roster line on a wake, because there is nobody to name', () => {
+    // Unreachable in the app — a thread has no peers to be woken by — and asserted all the same,
+    // because the failure it prevents is a prompt reading `Teammates you can message: .`
+    const woken = composeWakePrompt([peerMessage('anything')], () => undefined, []);
+    expect(woken).not.toContain('Teammates you can message');
+    expect(woken).toContain('They cannot see this turn');
   });
 });

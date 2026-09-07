@@ -1,3 +1,4 @@
+import { prepareClaudePersonalSkills } from './personal-skills.js';
 import type { Clock } from '../../clock.js';
 import { DEFAULT_TRUST, type TrustLevel } from '../../trust.js';
 import { SystemClock } from '../../clock.js';
@@ -28,6 +29,11 @@ import {
   type SpawnBridge,
 } from './stdio-bridge.js';
 import { offerableNames, paletteOf } from './palette.js';
+import { LocalMachine } from '../../machines/local-machine.js';
+import { CLAUDE_MACHINE_IMAGE } from './image.js';
+import { claudeSandboxFor } from './sandbox.js';
+import type { Machine } from '../../machines/machine.js';
+import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
 import {
   CLAUDE_POSTURE_MODE,
   claudeModeFor,
@@ -159,6 +165,8 @@ export interface ClaudeAgentRuntimeOptions {
   readonly agentId: string;
   /** The agent's own worktree. One process, one workspace. */
   readonly cwd: string;
+  /** Host-derived Git metadata for this Agent’s linked worktrees. */
+  readonly gitDirectories?: readonly string[];
   /** Composed by core (`composePersona`); injected here by the mechanism Claude offers. */
   readonly persona?: string;
   /**
@@ -183,6 +191,7 @@ export interface ClaudeAgentRuntimeOptions {
   /** The user's own `claude`. Defaults to `CLAUDE_CODE_EXECUTABLE`, then `PATH`. */
   readonly claudeExecutable?: string;
   readonly env?: Readonly<Record<string, string>>;
+  readonly machine?: Machine;
   /** Injected in tests: a transport that speaks the protocol without spawning anything. */
   readonly spawn?: SpawnBridge;
   readonly onStderr?: (line: string) => void;
@@ -201,6 +210,7 @@ export interface ClaudeAgentRuntimeOptions {
  * event. Nothing above this class can tell which provider an agent is.
  */
 export class ClaudeAgentRuntime implements AgentRuntime {
+  readonly machineImage = CLAUDE_MACHINE_IMAGE;
   readonly agentId: string;
 
   readonly #options: ClaudeAgentRuntimeOptions;
@@ -229,7 +239,10 @@ export class ClaudeAgentRuntime implements AgentRuntime {
 
   constructor(options: ClaudeAgentRuntimeOptions) {
     this.agentId = options.agentId;
-    this.#options = options;
+    this.#options = {
+      ...options,
+      machine: options.machine ?? new LocalMachine({ agentId: options.agentId, workspacePath: options.cwd }),
+    };
     this.#pictures = new PictureWatch(options.pictures);
     this.#clock = options.clock ?? new SystemClock();
     this.#spawn = options.spawn ?? spawnClaudeBridge;
@@ -261,6 +274,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
   }
 
   async start(): Promise<void> {
+    await prepareClaudePersonalSkills(this.#options.machine?.location().personalPath);
     if (this.#lifecycle === 'starting' || this.#lifecycle === 'ready') {
       throw new Error(`${this.agentId}: already started`);
     }
@@ -277,6 +291,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
 
   async #connect(): Promise<void> {
     const transport = this.#spawn({
+      ...(this.#options.machine === undefined ? {} : { machine: this.#options.machine }),
       cwd: this.#options.cwd,
       ...(this.#options.claudeExecutable === undefined
         ? {}
@@ -301,7 +316,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
       protocolVersion: PROTOCOL_VERSION,
       // We own no terminals and serve no unsaved buffers: the agent works in a real worktree
       // on disk, so the bridge's own file and shell tools are the right ones to use.
-      clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
+      clientCapabilities: MACHINE_CLIENT_CAPABILITIES,
     });
     assertBridgeVersion(initialized);
     assertAuthenticated(initialized);
@@ -373,8 +388,10 @@ export class ClaudeAgentRuntime implements AgentRuntime {
   /** Identical on `session/new` and `session/load`, because the second is a resume of the
    *  first and the bridge fingerprints these params to decide whether to tear the query down. */
   #sessionParams(): Record<string, unknown> {
+    const personalPath = this.#options.machine?.location().personalPath;
     return {
       cwd: this.#options.cwd,
+      ...(personalPath ? { additionalDirectories: [personalPath] } : {}),
       mcpServers: (this.#options.mcpServers ?? []).map(toAcpMcpServer),
       _meta: {
         // Off-spec, and it stays in here: `_meta` is an adapter extension OpenCode ignores.
@@ -384,6 +401,8 @@ export class ClaudeAgentRuntime implements AgentRuntime {
             disallowedTools: [...SHADOWING_TOOLS, ...refusedTools(this.trust)],
             settingSources: SETTING_SCOPES,
             allowedTools: preApprovedTools(this.#options.mcpServers ?? [], this.trust),
+            sandbox: claudeSandboxFor(this.#options.machine?.kind ?? 'local',
+              this.#options.gitDirectories, this.#options.machine?.location().personalPath),
           },
         },
       },
@@ -425,7 +444,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
     this.#modeId = modeId;
   }
 
-  sendPrompt(prompt: Prompt): AsyncIterable<AgentEvent> {
+  sendPrompt(prompt: Prompt, onAdmitted?: () => void): AsyncIterable<AgentEvent> {
     if (this.#lifecycle !== 'ready') {
       throw new Error(`${this.agentId}: cannot prompt a runtime that is ${this.#lifecycle}`);
     }
@@ -434,6 +453,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
         `${this.agentId}: a turn is already in flight — the orchestrator's mailbox exists so this cannot happen`,
       );
     }
+    onAdmitted?.();
     const queue = new AsyncQueue<AgentEvent>();
     this.#turnIndex += 1;
     const turnId = `turn_${this.#turnIndex}`;
@@ -543,7 +563,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
   }
 
   async stop(): Promise<void> {
-    if (this.#lifecycle === 'stopped') return;
+    // A stopped lifecycle can precede OS process exit; repeated stop must still join cleanup.
     this.#setLifecycle('stopped');
     // Close the session before the pipe. Dropping stdin on a live session works — the bridge
     // exits on EOF — but it tears the SDK query down mid-flight and the bridge logs a cleanup
@@ -606,7 +626,7 @@ export class ClaudeAgentRuntime implements AgentRuntime {
   /** Read once. A skill added to the workspace mid-session needs a restart to be offered,
    *  which is the same bargain the provider's own `/reload-skills` exists to make. */
   #projectCommands(): ReadonlySet<string> {
-    this.#projectNames ??= offerableNames(this.#options.cwd);
+    this.#projectNames = offerableNames(this.#options.cwd, this.#options.machine?.kind === 'box' ? this.#options.machine.location() : undefined, this.#options.machine?.location().personalPath);
     return this.#projectNames;
   }
 
@@ -653,6 +673,11 @@ export class ClaudeAgentRuntime implements AgentRuntime {
               optionId: option.optionId,
               kind: permissionKind(option.kind),
               name: option.name ?? option.optionId,
+              ...(option.kind === 'allow_always'
+                ? {
+                    description: 'Claude can save approval rules in .claude/settings.local.json in this agent\'s working folder. You can remove saved rules from that file; when the change takes effect depends on the runtime.',
+                  }
+                : {}),
             },
           ],
     );

@@ -11,6 +11,10 @@ import type {
   Team,
 } from '../orchestrator/domain.js';
 import type { AttachmentStore, MessageStore } from '../orchestrator/message-store.js';
+import {
+  PROFILE_OVERVIEW_LIMITS,
+  type ProfileOverview,
+} from '../orchestrator/profile-overview.js';
 import { uuidv7 } from '../ids.js';
 import { PICTURE_LIMIT, measurePicture, type PictureNotDrawn } from '../pictures.js';
 import type { KeptPicture, PictureContent, PictureKept } from '../runtime.js';
@@ -20,6 +24,7 @@ import { trustLevelOf, type TrustLevel } from '../trust.js';
 import { verbosityLevelOf, type VerbosityLevel } from '../verbosity.js';
 import { DEFAULT_COMPACTION, type CompactionSetting } from '../orchestrator/domain.js';
 import type { BlobotDatabase } from './database.js';
+import { machinePlacement, type StoredMachinePlacement } from '../machines/placement.js';
 import {
   agentMessages,
   agentProfiles,
@@ -140,12 +145,14 @@ export class SqliteStore implements MessageStore, AttachmentStore {
   createTeam(team: Team & { createdAt: number }): Team {
     this.#db.insert(teams).values({
       id: team.id,
+      ...placementColumns(team.defaultMachine),
       name: team.name,
       workspacePath: team.workspacePath,
       workspaceKind: team.workspaceKind,
       workspaceRepos:
         team.workspaceRepos === undefined ? null : JSON.stringify(team.workspaceRepos),
       icon: team.icon ?? null,
+      threadFor: team.threadFor ?? null,
       turnBudget: team.turnBudget,
       leadAgentId: team.leadAgentId ?? null,
       createdAt: team.createdAt,
@@ -188,6 +195,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
       .filter((row) => options.includeDeleted === true || row.deletedAt === null)
       .map((row) => ({
         id: row.id,
+        ...placementOf(row, 'defaultMachine'),
         name: row.name,
         workspacePath: row.workspacePath,
         workspaceKind: row.workspaceKind,
@@ -195,6 +203,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
           ? {}
           : { workspaceRepos: JSON.parse(row.workspaceRepos) as string[] }),
         ...(row.icon === null ? {} : { icon: row.icon }),
+        ...(row.threadFor === null ? {} : { threadFor: row.threadFor }),
         turnBudget: row.turnBudget,
         ...(row.leadAgentId === null ? {} : { leadAgentId: row.leadAgentId }),
         createdAt: row.createdAt,
@@ -225,6 +234,17 @@ export class SqliteStore implements MessageStore, AttachmentStore {
   /** The name is unique in the schema because it is half of a branch name. */
   teamByName(name: string): Team | undefined {
     return this.listTeams().find((team) => team.name === name);
+  }
+
+  /**
+   * The **thread** an agent has, if it has one: the Team behind that agent's own conversation.
+   *
+   * A lookup on a stored value, never the `members.length === 1` inference two files used to
+   * make separately. Undefined is the ordinary state of a freshly hired agent, whose thread does
+   * not exist until the first message — see `.scratch/rail/issues/04`.
+   */
+  threadOf(profileId: string): Team | undefined {
+    return this.listTeams().find((team) => team.threadFor === profileId);
   }
 
   /**
@@ -317,6 +337,49 @@ export class SqliteStore implements MessageStore, AttachmentStore {
   }
 
   /**
+   * Bounded membership metadata only. The query cannot pull in paths, instructions or work
+   * contents. A retired profile's remaining memberships still exist; a deleted team does not.
+   * The transaction keeps team and roster reads in one snapshot, without caching between turns.
+   */
+  profileOverviewOf(profileId: string): ProfileOverview {
+    const limits = PROFILE_OVERVIEW_LIMITS;
+    return this.#db.transaction((tx) => {
+      const memberships = tx.select({
+        agentId: agents.id,
+        teamId: teams.id,
+        name: sql<string>`substr(${teams.name}, 1, ${limits.name + 1})`,
+        role: sql<string>`substr(${agents.role}, 1, ${limits.role + 1})`,
+        total: sql<number>`count(*) over ()`,
+      }).from(agents).innerJoin(teams, eq(agents.teamId, teams.id))
+        .where(and(eq(agents.profileId, profileId), isNull(agents.deletedAt), isNull(teams.deletedAt)))
+        .orderBy(asc(teams.createdAt), asc(teams.id), asc(agents.id))
+        .limit(limits.teams).all();
+
+      return {
+        teams: memberships.map((membership) => {
+          const peers = tx.select({
+            name: sql<string>`substr(${agents.name}, 1, ${limits.name + 1})`,
+            role: sql<string>`substr(${agents.role}, 1, ${limits.role + 1})`,
+            total: sql<number>`count(*) over ()`,
+          }).from(agents)
+            .where(and(
+              eq(agents.teamId, membership.teamId), isNull(agents.deletedAt),
+              sql`${agents.id} <> ${membership.agentId}`,
+            ))
+            .orderBy(asc(agents.createdAt), asc(agents.id)).limit(limits.teammates).all();
+          return {
+            name: membership.name,
+            role: membership.role,
+            teammates: peers.map(({ name, role }) => ({ name, role })),
+            omittedTeammates: (peers[0]?.total ?? 0) - peers.length,
+          };
+        }),
+        omittedTeams: (memberships[0]?.total ?? 0) - memberships.length,
+      };
+    });
+  }
+
+  /**
    * Rewrite an agent's definition. Every field is given, because this is what the profile is
    * now rather than a patch against what it was.
    *
@@ -404,6 +467,7 @@ export class SqliteStore implements MessageStore, AttachmentStore {
   createAgent(agent: AgentRecord): AgentRecord {
     this.#db.insert(agents).values({
       id: agent.id,
+      ...placementColumns(agent.machine),
       teamId: agent.teamId,
       profileId: agent.profileId ?? null,
       name: agent.name,
@@ -1194,6 +1258,43 @@ export class SqliteStore implements MessageStore, AttachmentStore {
     return times.length === 0 ? undefined : Math.max(...times);
   }
 
+  /**
+   * The last thing said in a team, with the words, for a rail row's second line.
+   *
+   * `lastActiveAt`'s two queries with the text carried out of them, rather than a third pass:
+   * the rail draws the same fact twice — when, and what — and reading them apart would let a
+   * row show a time from one message and words from another.
+   *
+   * The user's own words count. A row saying what *you* last said is what a chat column does,
+   * and it is the only thing there is to show on a thread nobody has answered yet.
+   */
+  lastSaidIn(teamId: string): { at: number; text: string } | undefined {
+    const said = this.#db
+      .select({ at: messages.at, text: messages.body })
+      .from(messages)
+      .where(eq(messages.teamId, teamId))
+      .orderBy(desc(messages.at))
+      .limit(1)
+      .get();
+    const roster = this.agentsOfTeam(teamId, { includeDeleted: true }).map((agent) => agent.id);
+    const answered =
+      roster.length === 0
+        ? undefined
+        : this.#db
+            .select({ at: agentMessages.at, text: agentMessages.text })
+            .from(agentMessages)
+            .where(inArray(agentMessages.agentId, roster))
+            .orderBy(desc(agentMessages.at))
+            .limit(1)
+            .get();
+    const both = [said, answered].filter(
+      (row): row is { at: number; text: string } => row !== undefined,
+    );
+    if (both.length === 0) return undefined;
+    const latest = both.reduce((best, row) => (row.at > best.at ? row : best));
+    return { at: latest.at, text: latest.text };
+  }
+
   /** A row count per table, for the demo's closing line and for eyeballing a transcript. */
   transcriptCounts(): Record<string, number> {
     const tables = ['turns', 'agent_messages', 'tool_calls', 'messages', 'events'];
@@ -1722,6 +1823,28 @@ type MessageRow = typeof messages.$inferSelect;
 type AgentRow = typeof agents.$inferSelect;
 type AgentProfileRow = typeof agentProfiles.$inferSelect;
 
+function placementColumns(value: StoredMachinePlacement | undefined) {
+  const placement = machinePlacement(value);
+  return placement.kind === 'local'
+    ? { machineKind: null, machineCpus: null, machineMemoryBytes: null }
+    : { machineKind: placement.kind, machineCpus: placement.limits.maxCpus, machineMemoryBytes: placement.limits.maxMemoryBytes };
+}
+
+function placementOf(row: {
+  machineKind: string | null; machineCpus: number | null; machineMemoryBytes: number | null;
+}, key: 'machine' | 'defaultMachine') {
+  if ((row.machineKind === null || row.machineKind === 'local') && row.machineCpus === null && row.machineMemoryBytes === null) return {};
+  // Only placement validation is isolated here. Database errors and unrelated record failures
+  // still propagate. A damaged row remains editable/deletable without hiding healthy peers.
+  let placement: StoredMachinePlacement;
+  try {
+    placement = machinePlacement({ kind: row.machineKind, limits: { maxCpus: row.machineCpus, maxMemoryBytes: row.machineMemoryBytes } });
+  } catch {
+    placement = { kind: 'invalid', detail: 'Stored Machine settings are invalid and must be repaired before use.' };
+  }
+  return { [key]: placement };
+}
+
 function toProfileRecord(row: AgentProfileRow): AgentProfileRecord {
   return {
     id: row.id,
@@ -1779,6 +1902,7 @@ function toMessage(row: MessageRow): Message {
 function toAgentRecord(row: AgentRow): AgentRecord {
   return {
     id: row.id,
+    ...placementOf(row, 'machine'),
     teamId: row.teamId,
     name: row.name,
     role: row.role,

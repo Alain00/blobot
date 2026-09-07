@@ -1,5 +1,8 @@
 import type { TrustLevel } from '../../trust.js';
 
+export const CODEX_LOCAL_PROTECTION =
+  'Local execution keeps native shell write and network restrictions. These remain tied to its approval mode.';
+
 /**
  * What blobot vouches for on a Codex session, and the two things it refuses to pretend.
  *

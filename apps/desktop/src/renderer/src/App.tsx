@@ -2,27 +2,31 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { PanelRight } from 'lucide-react';
 import { Agents } from './components/Agents.js';
 import { Composer } from './components/Composer.js';
+import { AgentMachine } from './components/AgentMachine.js';
 import { Conversation } from './components/Conversation.js';
 import { Details } from './components/Details.js';
 import { FileTree } from './components/FileTree.js';
 import { GitPanel } from './components/GitPanel.js';
-import { ComposerFooter, HandbookNotice } from './components/Handbook.js';
+import { ComposerFooter } from './components/Handbook.js';
 import { Navigator } from './components/Navigator.js';
 import { NewTeam } from './components/NewTeam.js';
 import { Rail } from './components/Rail.js';
 import { Routines } from './components/Routines.js';
 import { Settings } from './components/Settings.js';
-import { DeleteTeam, EditTeam } from './components/TeamEdits.js';
+import { AddMember } from './components/AddMember.js';
+import { RetireAgent } from './components/AgentForm.js';
+import { DeleteTeam, EditTeam, RemoveMember } from './components/TeamEdits.js';
 import { initialState, itemsFor, paneAfterSnapshot, reduce, type Pane } from './model.js';
 import { useWorkspaces } from './useWorkspaces.js';
 import { useRailWidth } from './useRailWidth.js';
+import { useRailPins } from './useRailPins.js';
 import { useSidebarPanel } from './useSidebarPanel.js';
 import { useSidebarWidth } from './useSidebarWidth.js';
 import { useDictation } from './useDictation.js';
 import { settingsSectionOf } from './components/Settings.js';
 import { useComposerRoom } from './useComposerRoom.js';
 import { usePlaySound } from './sound/useSound.js';
-import type { NewTeamSpec } from '../../shared/api.js';
+import type { NewTeamSpec, UiAgentProfile, UiTeamSummary } from '../../shared/api.js';
 
 export function App(): React.JSX.Element {
   const [state, dispatch] = useReducer(reduce, initialState);
@@ -43,6 +47,7 @@ export function App(): React.JSX.Element {
   // `--screen=new-team` opens it, for the same reason `--screen=agents` exists: the flow is a
   // surface a screenshot cannot click its way to, and now one of its steps decides who leads.
   const [creating, setCreating] = useState(opened.get('screen') === 'new-team');
+  const [initialProfile, setInitialProfile] = useState<UiAgentProfile>();
   /**
    * A team handed over and not yet on screen.
    *
@@ -71,7 +76,27 @@ export function App(): React.JSX.Element {
   const [finding, setFinding] = useState(opened.get('screen') === 'find');
   /** The team a modal is about, and which one. Never the team on screen by implication. */
   const [editing, setEditing] = useState<string | undefined>(undefined);
+  /**
+   * Adding somebody to a team, from the sidebar head's `+`.
+   *
+   * Its own state beside `editing` because it is its own act: this only adds, so it is the
+   * creation bar's *who* step over the window, where an edit is the whole roster restated in a
+   * dialog that has to be able to report what a departure left behind.
+   */
+  const [adding, setAdding] = useState<string | undefined>(undefined);
+  /**
+   * Taking one agent off the open team, from the chooser's context menu. An **Agent id**, which
+   * is the membership, because that is what the sidebar draws; the roster it composes is made of
+   * profile ids, and the team's own summary is what carries both.
+   */
+  const [removing, setRemoving] = useState<string | undefined>(undefined);
   const [deleting, setDeleting] = useState<string | undefined>(undefined);
+  /**
+   * The agent the rail's menu asked to retire, whole rather than by id: the dialog prices what
+   * it is about to end and names the teams that keep running, and the rail carries neither —
+   * its rows are `UiRailAgent`. So the definition is read when the menu is answered.
+   */
+  const [retiring, setRetiring] = useState<UiAgentProfile | undefined>(undefined);
   /** Why the last team the user clicked would not open. Cleared by the next click. */
   const [openError, setOpenError] = useState<string | undefined>(undefined);
   /**
@@ -83,8 +108,10 @@ export function App(): React.JSX.Element {
    */
   const [suggest, setSuggest] = useState<{ text: string; at: number } | undefined>(undefined);
   const rail = useRailWidth();
-  /* The file sidebar. Closed by default, and `--screen=files` opens it at launch, because it is
-     a surface a screenshot cannot click to — the same affordance `--screen=details` is. */
+  /** Which rail rows are pinned, and in what order. A preference on this machine. */
+  const pins = useRailPins();
+  /* The file sidebar. Open unless this machine shut it, and `--screen=files` opens it at launch
+     anyway, because it is a surface a screenshot cannot click to — as `--screen=details` is. */
   const sidebar = useSidebarWidth(rail.width, opened.get('screen') === 'files');
   /* Which panel it is showing. One global preference, remembered beside the width. */
   const [panel, setPanel] = useSidebarPanel();
@@ -143,8 +170,26 @@ export function App(): React.JSX.Element {
     });
   }, []);
 
+  /**
+   * How many snapshots have been asked for. An answer that has been overtaken is dropped.
+   *
+   * `.scratch/live-steps/issues/11`. Main pushes `blobot:team` from a dozen places and each push
+   * is a fresh `snapshot()`, so two are in flight across every switch — and the reducer replaces
+   * the pane wholesale, so whichever lands *last* is what the transcript is. An answer that
+   * describes the team the user has just left is not a stale detail to be corrected on the next
+   * push: it is the previous team's whole conversation, its live blocks included, put back into
+   * a pane that had moved on.
+   *
+   * The rule `loadEarlier` already applies, applied to the thing that replaces everything rather
+   * than only to the thing that prepends to it. A counter and not the team id, because two
+   * snapshots of the *same* team race the same way and the later one is still the true one.
+   */
+  const asked = useRef(0);
+
   const refresh = useCallback((resetPane = false) => {
+    const mine = (asked.current += 1);
     void window.blobot.snapshot().then((snapshot) => {
+      if (asked.current !== mine) return;
       const arrived = showing.current !== snapshot.team?.id;
       showing.current = snapshot.team?.id;
       setOpenError(snapshot.openError);
@@ -157,6 +202,7 @@ export function App(): React.JSX.Element {
           open,
           arrived,
           roster: snapshot.agents,
+          ...(snapshot.team?.threadFor === undefined ? {} : { thread: true }),
           ...(want === undefined ? {} : { wanted: want }),
         }),
       );
@@ -276,6 +322,54 @@ export function App(): React.JSX.Element {
     });
   }, []);
 
+  /**
+   * Open an agent's **thread**: their own conversation, and the only Team the user never sees as
+   * one.
+   *
+   * The pane holds the *profile* until the thread exists, which is `.scratch/rail/issues/04`'s
+   * amendment: a row is a person, so what it selects is a person, and the thread is something
+   * that person's conversation acquires on the first message. Creating on press instead would
+   * charge for curiosity — twenty idle clicks, twenty repositories under a directory the user is
+   * meant to open in an editor.
+   */
+  const openThread = useCallback(
+    async (profileId: string) => {
+      setBrowsingAgents(false);
+      setOpenError(undefined);
+      setPane({ kind: 'thread', profileId });
+      const result = await window.blobot
+        .openThread(profileId)
+        .catch(() => ({ ok: false as const, error: 'That conversation could not be opened.' }));
+      if (!result.ok) {
+        setOpenError(result.error);
+        return result;
+      }
+      if (result.agentId !== undefined) {
+        // **The pane stays on the profile until that agent's team is the one in hand.**
+        //
+        // It used to move to `{kind: 'agent'}` here, the moment main answered, and the snapshot
+        // is still the team being left at that instant. An agent pane on a thread takes its
+        // selected row from `team.threadFor` — the *old* thread's profile — so pressing one
+        // thread lit the row you came from for a frame before the snapshot corrected it, and the
+        // transcript blanked with it, since the wanted agent is not on the old roster. A team
+        // with members never showed it: `openTeam` sets no pane at all, so its selection moves
+        // once, when the snapshot arrives.
+        //
+        // `wanted` and `paneAfterSnapshot` already do this properly for every other opening. The
+        // clearing of the unread mark is the one thing `openPane` was here for, so it is kept
+        // outright rather than deferred: the row was pressed now.
+        wanted.current = result.agentId;
+        dispatch({ type: 'seen', agentId: result.agentId });
+        void window.blobot.seenRoutineRuns(result.agentId);
+        refresh(true);
+        return result;
+      }
+      refresh();
+      return result;
+    },
+    [refresh],
+  );
+
   const items = useMemo(() => itemsFor(state.items, pane), [state.items, pane]);
   // Kept current on every render, so the callback above reads the cursor as it is now rather
   // than as it was when it was built.
@@ -302,6 +396,7 @@ export function App(): React.JSX.Element {
   const startTeam = useCallback(
     (spec: NewTeamSpec) => {
       setCreating(false);
+      setInitialProfile(undefined);
       setStarting(true);
       void window.blobot.createTeam(spec).then((result) => {
         setStarting(false);
@@ -349,6 +444,9 @@ export function App(): React.JSX.Element {
   // Looked up rather than copied into state: a team that has just been deleted must not stay
   // on screen inside a modal that is about it.
   const editingTeam = snapshot.teams.find((row) => row.id === editing);
+  const addingTeam = snapshot.teams.find((row) => row.id === adding);
+  const removingFrom = snapshot.teams.find((row) => row.id === openTeamId);
+  const leaving = removingFrom?.members.find((row) => row.id === removing);
   // `--screen=delete-team` opens it on the team that is showing, so the dialog that prices a
   // full clean is reviewable by a screenshot. The id is not known until the snapshot arrives.
   const deletingTeam =
@@ -368,8 +466,12 @@ export function App(): React.JSX.Element {
       // left-aligned anchor above a page that is set centred. The working surface lost its
       // header for the same reason.
       <div className="app">
-        {openError !== undefined && <div className="openerror">{openError}</div>}
-        <NewTeam onCreate={startTeam} />
+        {openError !== undefined && (
+          <div className="openerrorwrap">
+            <div className="openerror">{openError}</div>
+          </div>
+        )}
+        <NewTeam onCreate={startTeam} {...(initialProfile === undefined ? {} : { initialProfile })} />
       </div>
     );
   }
@@ -388,17 +490,36 @@ export function App(): React.JSX.Element {
   /** The roster's own word for an agent. The Handbook's copy is about a person, so it uses it. */
   const nameOf = (agentId: string): string =>
     snapshot.agents.find((agent) => agent.id === agentId)?.name ?? 'this agent';
+  /**
+   * Whose **thread** this pane is, when it is one — before the thread exists and after.
+   *
+   * Both halves matter. Before: the pane holds an AgentProfile id and there is no Agent, so the
+   * composer takes its name from the rail's own list. After: the pane holds an Agent id and the
+   * open team carries `threadFor`, which is the stored value rather than a roster inference.
+   */
+  const threadProfileId =
+    pane.kind === 'thread' ? pane.profileId : undefined;
+  const threadName =
+    pane.kind === 'thread'
+      ? (snapshot.profiles ?? []).find((profile) => profile.id === pane.profileId)?.name
+      : team.threadFor !== undefined && pane.kind === 'agent'
+        ? nameOf(pane.agentId)
+        : undefined;
 
   return (
     <div className="app">
       {/* Above the panes rather than inside them: the team on screen is still the one that
           was there, and nothing in it is wrong. What failed was the click. */}
       {openError !== undefined && (
-        <div className="openerror">
-          {openError}
-          <button className="dismiss" onClick={() => setOpenError(undefined)} aria-label="Dismiss">
-            ×
-          </button>
+        /* The wrapper is what grows, because what has to move is everything beneath it: this sits
+           above the panes and in flow, so arriving it shoves the whole working surface down. */
+        <div className="openerrorwrap">
+          <div className="openerror">
+            {openError}
+            <button className="dismiss" onClick={() => setOpenError(undefined)} aria-label="Dismiss">
+              ×
+            </button>
+          </div>
         </div>
       )}
       <div
@@ -414,11 +535,12 @@ export function App(): React.JSX.Element {
         <Rail
           team={snapshot.team}
           teams={snapshot.teams}
+          {...(snapshot.profiles === undefined ? {} : { profiles: snapshot.profiles })}
           agents={snapshot.agents}
           statuses={state.statuses}
-          items={state.items}
           pane={pane}
           unread={state.unread}
+          pinned={pins.pinned}
           onSelect={openPane}
           // Not gated on having several teams, unlike the rest of the rail's chrome: a door
           // that appears once you have eight teams is a door nobody finds. Demo mode has it
@@ -428,6 +550,15 @@ export function App(): React.JSX.Element {
             ? {}
             : {
                 onSelectTeam: (teamId: string) => openTeam(teamId),
+                onSelectAgent: (profileId: string) => void openThread(profileId),
+                onTogglePin: pins.toggle,
+                onDeleteThread: (teamId: string) => setDeleting(teamId),
+                onRetireAgent: (profileId: string) => {
+                  void window.blobot.listAgents().then((list) => {
+                    const found = list.find((one) => one.id === profileId);
+                    if (found !== undefined) setRetiring(found);
+                  });
+                },
                 onNewTeam: () => setCreating(true),
                 onOpenAgents: () => setBrowsingAgents(true),
                 onOpenRoutines: () => setBrowsingRoutines(true),
@@ -441,6 +572,10 @@ export function App(): React.JSX.Element {
             pane={pane}
             place={place}
             agents={snapshot.agents}
+            /* The people who wrote into this transcript and have since been taken off the team.
+               Handed only here: every other surface in the window is about the roster, and a
+               departed member belongs in none of them. `.scratch/team-addressing/issues/07`. */
+            departed={snapshot.departed ?? []}
             statuses={state.statuses}
             items={items}
             opening={snapshot.opening === true}
@@ -488,6 +623,7 @@ export function App(): React.JSX.Element {
                     it: the column is gone and `CONTEXT` and `WORKSPACE` are read on purpose
                     now rather than watched. */}
                 <Details
+                  {...(snapshot.demoMode ? {} : { teamId: team.id })}
                   agents={snapshot.agents}
                   usage={state.usage}
                   injection={state.injection}
@@ -533,6 +669,7 @@ export function App(): React.JSX.Element {
             {...(snapshot.team?.leadAgentId === undefined
               ? {}
               : { lead: snapshot.team.leadAgentId })}
+            {...(threadName === undefined ? {} : { thread: { name: threadName } })}
             opening={snapshot.opening === true}
             /* Where the user just arrived. The composer puts the cursor in the field whenever
                this changes, which is what a click on the rail was for. */
@@ -542,6 +679,23 @@ export function App(): React.JSX.Element {
               // in the set because of it. It survives the frequency because it is the one
               // committed act whose completion nothing else reports once the eye has moved.
               playSound('send');
+              // A thread's **first** message is what makes the thread: the folder, the Team, the
+              // Agent and the launch all happen behind this one call, so it is not a `prompt`
+              // with a creation step bolted on the renderer's side. A failure comes back here
+              // and lands in the strip above the panes, and the composer keeps the words.
+              if (threadProfileId !== undefined) {
+                void window.blobot
+                  .promptThread(threadProfileId, text, attachmentIds)
+                  .then((result) => {
+                    if (!result.ok) return setOpenError(result.error);
+                    if (result.agentId !== undefined) {
+                      wanted.current = result.agentId;
+                      setPane({ kind: 'agent', agentId: result.agentId });
+                    }
+                    refresh();
+                  });
+                return;
+              }
               void window.blobot.prompt(agentIds, text, attachmentIds);
             }}
             /* The tray under the field, and only in an agent's pane: there it is one branch and
@@ -553,20 +707,14 @@ export function App(): React.JSX.Element {
             {...(pane.kind !== 'agent'
               ? {}
               : {
-                  /* Unbriefed, and only then: the card is the invitation and the tray's door is
-                     absent while it is up, so the two are never both on screen. */
-                  ...((state.handbooks[pane.agentId] ?? []).length > 0
-                    ? {}
-                    : {
-                        notice: (
-                          <HandbookNotice
-                            agentName={nameOf(pane.agentId)}
-                            teamName={snapshot.team?.name ?? 'this team'}
-                            busy={(state.statuses[pane.agentId] ?? 'idle') !== 'idle'}
-                            onBrief={() => void window.blobot.brief(pane.agentId)}
-                          />
-                        ),
-                      }),
+                  /* Above the field: what this agent's Machine is doing, and nothing else.
+                     Briefing is not announced here any more — an unbriefed agent says so in
+                     its own first words, which is the only place there is no third party in
+                     the room. */
+                  notice: <>
+                    {snapshot.agents.filter((agent) => agent.id === pane.agentId)
+                      .map((agent) => <AgentMachine key={`${team.id}:${agent.id}`} teamId={team.id} agent={agent} status={state.statuses[agent.id] ?? 'idle'} />)}
+                  </>,
                   footer: (
                     <ComposerFooter
                       key={pane.agentId}
@@ -616,6 +764,24 @@ export function App(): React.JSX.Element {
               onPanel: setPanel,
               onSelectAgent: (agentId: string) => openPane({ kind: 'agent', agentId }),
               onSelectTeam: () => openPane({ kind: 'team' }),
+              // The head over the chooser. A thread has no roster to add to — it is one agent's
+              // own conversation — and demo mode's team is a TypeScript file, so both lose the
+              // `+` and a thread loses the head with it: its name is the agent's, said twice.
+              ...(snapshot.demoMode === true || team.threadFor !== undefined
+                ? {}
+                : {
+                    teamName: team.name,
+                    onAddMember: () => setAdding(team.id),
+                    // Offered only where it can be composed and where it leaves a team behind:
+                    // the roster on the wire is profile ids, and a team formed before profiles
+                    // existed has members with none — dropping those would take everybody off.
+                    // And a team of nobody is not a team, so the last member cannot leave.
+                    ...(removingFrom !== undefined &&
+                    removingFrom.members.length > 1 &&
+                    removingFrom.members.every((row) => row.profileId !== undefined)
+                      ? { onRemoveMember: (agentId: string) => setRemoving(agentId) }
+                      : {}),
+                  }),
             };
             return panel === 'git' ? (
               <GitPanel
@@ -636,6 +802,33 @@ export function App(): React.JSX.Element {
             onPointerUp={sidebar.onPointerUp}
           />
         )}
+        {removingFrom !== undefined && leaving !== undefined && (
+          <RemoveMember
+            team={removingFrom}
+            member={leaving}
+            onClose={() => setRemoving(undefined)}
+            onRemoved={() => refresh(true)}
+          />
+        )}
+        {addingTeam !== undefined && (
+          <AddMember
+            team={addingTeam}
+            onClose={() => setAdding(undefined)}
+            // Handed over and gone, which is `startTeam`'s shape and for its reason: the edit
+            // provisions a workspace, opens a session and restarts the team before it comes
+            // back, and a bar held over the window for those seconds is a lock on a window with
+            // nothing wrong with it. A failure lands in the strip above the panes.
+            onAdd={(profileIds) => {
+              setAdding(undefined);
+              void window.blobot
+                .editTeam(addingTeam.id, profileIds, addingTeam.leadProfileId, {})
+                .then((result) => {
+                  if (result.ok) refresh(true);
+                  else setOpenError(result.error ?? 'The team could not be changed.');
+                });
+            }}
+          />
+        )}
         {editingTeam !== undefined && (
           <EditTeam
             team={editingTeam}
@@ -645,14 +838,14 @@ export function App(): React.JSX.Element {
             onSaved={() => refresh(true)}
           />
         )}
-        {/* Over the panes rather than in place of them: the team behind it keeps running, and
-            an edit here is about agents rather than about what is on screen. Nothing it does
-            restarts a team, so nothing behind it has to be torn down. */}
+        {/* Browsing and editing definitions keep the working surface alive. `talk` is explicit
+            navigation to that agent's own conversation, so it closes the screen. */}
         {browsingAgents && (
           <Agents
             onClose={() => setBrowsingAgents(false)}
             onChanged={refresh}
             hiringAtOnce={opened.get('screen') === 'hire'}
+            onTalk={(profileId) => void openThread(profileId)}
           />
         )}
         {/* Over the panes for the same reason *your agents* is: the team behind it keeps
@@ -673,6 +866,16 @@ export function App(): React.JSX.Element {
             {...(settingsSection === undefined ? {} : { section: settingsSection })}
           />
         )}
+        {/* Retiring, from the rail's own menu. The same dialog *your agents* opens, because it
+            is the same act and a second wording of it would be a second answer to what retiring
+            costs. */}
+        {retiring !== undefined && (
+          <RetireAgent
+            agent={retiring}
+            onClose={() => setRetiring(undefined)}
+            onRetired={() => refresh(true)}
+          />
+        )}
         {deletingTeam !== undefined && (
           <DeleteTeam
             team={deletingTeam}
@@ -683,7 +886,11 @@ export function App(): React.JSX.Element {
         {/* The same layer the navigator takes, and for the same reason: forming a team is a
             door, not a place, and the team you are on is still running behind it. */}
         {creating && (
-          <NewTeam onCancel={() => setCreating(false)} onCreate={startTeam} />
+          <NewTeam onCancel={() => {
+            setCreating(false);
+            if (initialProfile !== undefined) setBrowsingAgents(true);
+            setInitialProfile(undefined);
+          }} onCreate={startTeam} {...(initialProfile === undefined ? {} : { initialProfile })} />
         )}
         {/* Over every other layer, because it is how you leave the one you are on. It is the
             only surface in the app that is not a place: it opens on a key, answers, and goes. */}
@@ -692,12 +899,11 @@ export function App(): React.JSX.Element {
             team={team}
             teams={snapshot.teams}
             agents={snapshot.agents}
+            {...(snapshot.profiles === undefined ? {} : { profiles: snapshot.profiles })}
             onClose={() => setFinding(false)}
-            onSelectAgent={(teamId, agentId) => {
+            onSelectAgent={(profileId) => {
               setFinding(false);
-              setBrowsingAgents(false);
-              if (teamId === team.id) openPane({ kind: 'agent', agentId });
-              else openTeam(teamId, agentId);
+              void openThread(profileId);
             }}
             {...(snapshot.demoMode
               ? {}

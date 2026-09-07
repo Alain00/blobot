@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-09-05T18:57:20.938Z",
+  "receiptPath": "/private/tmp/blobot-machine-images.040Rvi/final/codex-arm64.json",
+  "receipt": {
+    "schemaVersion": 1,
+    "runtime": "codex",
+    "arch": "arm64",
+    "version": "0.151.0",
+    "recipe": "7d78c9d89189a3a43e10ae58dd35fb474c3ee67178749238fc5bd110717a6e6e",
+    "reference": "blobot-machine-codex:7d78c9d89189a3a43e10-arm64",
+    "imageId": "sha256:ad2a973ec98f7f7ec07e0991347381d609af3069fcf2797600dd559c8f77137b",
+    "imageBytes": 719319010,
+    "versionOutput": "codex-cli 0.151.0",
+    "base": "docker/sandbox-templates@sha256:5fc81bc7a127e59d81b244a06831ae3212a0310b2e5a0349c54e29249e45e919",
+    "guestNode": "/usr/bin/node",
+    "moduleRoot": "/opt/blobot",
+    "executable": "/opt/blobot/bin/codex"
+  },
+  "scope": "One credential-free local build in sbx deny-all; idle boot, version, signed-out status, ACP initialize only.",
+  "candidate": "blobot-traffic-probe:codex-8ae901ca-7669-4623-b9c2-9969b2ef7075",
+  "commands": [
+    {
+      "label": "daemon status",
+      "tool": "sbx",
+      "ms": 133.398167,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "version --json",
+      "tool": "sbx",
+      "ms": 121.76075,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "settings get",
+      "tool": "sbx",
+      "ms": 256.121625,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "ls --json",
+      "tool": "sbx",
+      "ms": 121.89662500000009,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "template ls",
+      "tool": "sbx",
+      "ms": 127.02158299999996,
+      "code": 0,
+      "killed": false
+    },
+    {
+      "label": "policy ls",
+      "tool": "sbx",
+      "ms": 137.93316700000003,
+      "code": 0,
+      "killed": false
+    }
+  ],
+  "policySnapshots": [],
+  "phases": [],
+  "cleanup": {
+    "errors": [],
+    "remainingBoxes": [],
+    "remainingImages": []
+  },
+  "observationWindowsMs": {
+    "idleBoot": 15000,
+    "afterVersion": 3000,
+    "afterStatus": 10000,
+    "initializeAfterResponse": 10000
+  },
+  "engine": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "policyBeforeCreate": {
+    "global": {
+      "rules": [
+        {
+          "id": "default-deny-all",
+          "name": "default-deny-all",
+          "policy_name": "default-deny-all",
+          "scope": "global",
+          "applies_to": "all",
+          "resource_type": "network",
+          "decision": "deny",
+          "resources": [
+            "**"
+          ],
+          "origin": "local",
+          "layer": "local",
+          "status": "active",
+          "editable": false
+        }
+      ]
+    }
+  },
+  "hostSpace": {
+    "availableBytes": "1695997952",
+    "requiredBytes": "2512379844"
+  },
+  "measurementCompleted": false,
+  "error": "Insufficient host headroom for one export plus engine import",
+  "finishedAt": "2026-09-05T18:57:21.840Z"
+}

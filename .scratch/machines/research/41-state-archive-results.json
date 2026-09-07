@@ -1,0 +1,14 @@
+{
+  "container": "blobot-archive41-eebfe9d5-0ddb-4241-a08d-92619c4a8335",
+  "image": "sha256:74d888efe94fb1544ae5a275964cfa5ba00dd96de9b4bd50bd1e8c7d917a19df",
+  "startedAt": "2026-09-05T20:55:52.452Z",
+  "checks": {
+    "actualGnuPaxAccepted": true,
+    "bytes": 20480,
+    "sha256": "0e6316e622fa505ec83dd1bb273d815ef3404ce179f6e29c3b2b8c385af78e96",
+    "stderrEmpty": true,
+    "code": 0,
+    "signal": null
+  },
+  "cleanup": true
+}

@@ -3,6 +3,7 @@ import { Pencil, Trash2, X } from 'lucide-react';
 import type { UiAgentProfile, UiRuntimeChoice } from '../../../shared/api.js';
 import { EditAgent, HireAgent, RetireAgent } from './AgentForm.js';
 import { Blob } from './Blob.js';
+import { Skills } from './Skills.js';
 
 /**
  * Your agents: everyone you have hired, on no team and on several at once.
@@ -24,6 +25,7 @@ export function Agents({
   onClose,
   onChanged,
   hiringAtOnce,
+  onTalk,
 }: {
   onClose: () => void;
   /**
@@ -39,6 +41,15 @@ export function Agents({
   onChanged?: () => void;
   /** `--screen=hire` only: the dialog a screenshot cannot click its way to. */
   hiringAtOnce?: boolean;
+  /**
+   * Open this agent's thread, which is exactly what their rail row does.
+   *
+   * `talk` stays and its chooser dialog goes: that dialog existed to pick among several
+   * individual Teams, and one thread per agent made the question impossible to ask. One
+   * behaviour behind two doors rather than two mechanisms. Machines' ticket `18` is superseded
+   * on this point. `.scratch/rail/issues/05-where-a-thread-is-hidden.md`.
+   */
+  onTalk: (profileId: string) => void;
 }): React.JSX.Element {
   const [roster, setRoster] = useState<readonly UiAgentProfile[]>([]);
   const [runtimes, setRuntimes] = useState<readonly UiRuntimeChoice[]>([]);
@@ -47,6 +58,7 @@ export function Agents({
    *  to be replaced by a reloaded one, and a copy held here would go stale on save. */
   const [editing, setEditing] = useState<string | undefined>();
   const [retiring, setRetiring] = useState<string | undefined>();
+  const [skills, setSkills] = useState<UiAgentProfile>();
 
   const reload = useCallback(async (): Promise<void> => {
     setRoster(await window.blobot.listAgents());
@@ -71,16 +83,17 @@ export function Agents({
   // Escape closes the screen, because every other layer in this app answers to it and one that
   // does not reads as stuck. Not while a dialog is open: Radix is already closing that, and
   // both would go at once.
-  const dialogOpen = hiring || editingAgent !== undefined || retiringAgent !== undefined;
+  const dialogOpen = hiring || editingAgent !== undefined || retiringAgent !== undefined || skills !== undefined;
   useEffect(() => {
     if (dialogOpen) return;
     const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape' && document.querySelector('[role="dialog"]') === null) onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [dialogOpen, onClose]);
 
+  if (skills) return <Skills profile={skills} onClose={() => setSkills(undefined)} />;
   return (
     <div className="agentspage">
       <div className="agentssheet">
@@ -104,8 +117,8 @@ export function Agents({
 
         {roster.length === 0 ? (
           <div className="note muted">
-            An agent is hired once and belongs to nobody. Hire one and it can join this team and
-            any other, at the same time.
+            An agent is hired once and belongs to nobody. It can be on any number of teams at
+            the same time.
           </div>
         ) : (
           <div className="roster">
@@ -135,6 +148,20 @@ export function Agents({
                   </span>
                 </button>
                 <span className="rowacts">
+                  <button
+                    className="btn agenttalk"
+                    onClick={() => onTalk(agent.id)}
+                    aria-label={`Talk with ${agent.name}`}
+                  >
+                    talk
+                  </button>
+                  <button
+                    className="btn"
+                    onClick={() => setSkills(agent)}
+                    aria-label={`Skills for ${agent.name}`}
+                  >
+                    skills
+                  </button>
                   <button
                     className="iconbtn sm"
                     onClick={() => setEditing(agent.id)}

@@ -1,0 +1,24 @@
+{
+  "started": "2026-09-06T01:08:44.848Z",
+  "source": "packages/core/src/machines/sbx/installation.ts",
+  "sourceSha256Before": "d5329344cbfc8e84c4cf4b4c24c83804451a01d9992bb83a20c538f4d4ff8e31",
+  "initialFreeBytes": "24113692672",
+  "validator": {
+    "passed": true,
+    "names": 58,
+    "detailRows": 58
+  },
+  "executableRelativePath": "engine/v0.42.0-rc5/bin/sbx",
+  "cliSha256": "e0bc95e6d4b80cb9a6b84ae8b2f2f540d5289fec9347be40b01f7af5317f007a",
+  "additionalRootfsDockerSignatureValid": true,
+  "stagingDirectoriesRemaining": 0,
+  "destinationType": "directory",
+  "sourceSha256After": "d5329344cbfc8e84c4cf4b4c24c83804451a01d9992bb83a20c538f4d4ff8e31",
+  "passed": true,
+  "fetchCalls": 0,
+  "cleanup": {
+    "temporaryRootRemoved": true,
+    "engineCalls": 0
+  },
+  "finished": "2026-09-06T01:08:46.319Z"
+}

@@ -1,0 +1,1441 @@
+{
+  "startedAt": "2026-09-06T01:40:56.072Z",
+  "root": "/private/tmp/blobot-research72-Kws1eq",
+  "runtimes": [
+    {
+      "runtimeId": "codex",
+      "agentId": "research72_27586b82-d766-4423-bd35-f1bd6204568d",
+      "cliVersion": "0.151.0",
+      "build": {
+        "arch": "arm64",
+        "reference": "blobot-machine-codex:475f185a738767edbd26a87ad2e6141c473f4698a3acadafcbd3b0740e88125c-arm64",
+        "imageId": "sha256:475f185a738767edbd26a87ad2e6141c473f4698a3acadafcbd3b0740e88125c",
+        "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-codex-arm64-475f185a738767edbd26a87ad2e6141c473f4698a3acadafcbd3b0740e88125c.tar",
+        "sha256": "23afd9ac9381563f4bc02b9a4b0cf04b6f8da59a840b5dd7f1b078e358b505d2",
+        "bytes": 719340032
+      },
+      "rounds": [
+        {
+          "label": "fresh",
+          "launches": [],
+          "requests": [],
+          "replies": [],
+          "inboundMethods": [],
+          "stderr": [],
+          "mcpLogs": [
+            "[mcp] listening on 127.0.0.1:50326"
+          ],
+          "closes": [],
+          "toolCalls": 0,
+          "owned": {
+            "name": "blobot-8fa28d69-2424-4cf7-95ab-12fed4e8c3b3",
+            "id": "d7fec8b9-35cc-4c83-bed6-8809235b1a1f",
+            "limits": {
+              "maxCpus": 2,
+              "maxMemoryBytes": 2147483648
+            },
+            "baseline": {
+              "memoryKiB": 2066016,
+              "mounts": "[[\"/\",\"overlay\",[\"relatime\",\"rw\"]],[\"/dev\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/dev/mqueue\",\"mqueue\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/pts\",\"devpts\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/shm\",\"tmpfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/etc/hosts\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/etc/resolv.conf\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/home/agent\",\"ext4\",[\"relatime\",\"rw\"]],[\"/private/tmp/blobot-research72-Kws1eq/codex/source/.git\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/private/tmp/blobot-research72-Kws1eq/codex/worktree\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/proc\",\"proc\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/run\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/run/secrets\",\"tmpfs\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys\",\"sysfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys/fs/cgroup\",\"cgroup2\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/var/lib/docker\",\"ext4\",[\"relatime\",\"rw\"]]]"
+            }
+          },
+          "mounts": {
+            "path": "/private/tmp/blobot-research72-Kws1eq/codex/worktree",
+            "commonGit": [
+              "/private/tmp/blobot-research72-Kws1eq/codex/source/.git"
+            ]
+          },
+          "detection": {
+            "subject": {
+              "kind": "agent",
+              "agentId": "research72_27586b82-d766-4423-bd35-f1bd6204568d"
+            },
+            "runtimeId": "codex",
+            "readiness": "needs_sign_in",
+            "detail": "Installed, not signed in"
+          },
+          "desktopGate": {
+            "passed": false,
+            "refusal": "Installed, not signed in"
+          },
+          "guestBefore": {
+            "uid": 1000,
+            "home": "/home/agent",
+            "cpus": 2,
+            "memTotal": "MemTotal:        2066016 kB",
+            "sshSocketPresent": false,
+            "mainCheckoutVisible": false,
+            "hostSecretEnvNames": [],
+            "homeEntries": [
+              ".codex",
+              ".gitconfig",
+              ".gitignore_global",
+              "lost+found"
+            ]
+          },
+          "observing": false,
+          "runtimeStarted": false,
+          "refusal": "A launch environment variable is not permitted in the sandbox",
+          "lifecycle": "dead",
+          "mailboxReady": false,
+          "guestAfter": {
+            "uid": 1000,
+            "home": "/home/agent",
+            "cpus": 2,
+            "memTotal": "MemTotal:        2066016 kB",
+            "sshSocketPresent": false,
+            "mainCheckoutVisible": false,
+            "hostSecretEnvNames": [],
+            "homeEntries": [
+              ".codex",
+              ".gitconfig",
+              ".gitignore_global",
+              "lost+found"
+            ]
+          },
+          "stopped": "stopped"
+        },
+        {
+          "label": "reopened",
+          "launches": [],
+          "requests": [],
+          "replies": [],
+          "inboundMethods": [],
+          "stderr": [],
+          "mcpLogs": [
+            "[mcp] listening on 127.0.0.1:50994"
+          ],
+          "closes": [],
+          "toolCalls": 0,
+          "owned": {
+            "name": "blobot-8fa28d69-2424-4cf7-95ab-12fed4e8c3b3",
+            "id": "d7fec8b9-35cc-4c83-bed6-8809235b1a1f",
+            "limits": {
+              "maxCpus": 2,
+              "maxMemoryBytes": 2147483648
+            },
+            "baseline": {
+              "memoryKiB": 2066016,
+              "mounts": "[[\"/\",\"overlay\",[\"relatime\",\"rw\"]],[\"/dev\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/dev/mqueue\",\"mqueue\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/pts\",\"devpts\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/shm\",\"tmpfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/etc/hosts\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/etc/resolv.conf\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/home/agent\",\"ext4\",[\"relatime\",\"rw\"]],[\"/private/tmp/blobot-research72-Kws1eq/codex/source/.git\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/private/tmp/blobot-research72-Kws1eq/codex/worktree\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/proc\",\"proc\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/run\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/run/secrets\",\"tmpfs\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys\",\"sysfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys/fs/cgroup\",\"cgroup2\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/var/lib/docker\",\"ext4\",[\"relatime\",\"rw\"]]]"
+            }
+          },
+          "mounts": {
+            "path": "/private/tmp/blobot-research72-Kws1eq/codex/worktree",
+            "commonGit": [
+              "/private/tmp/blobot-research72-Kws1eq/codex/source/.git"
+            ]
+          },
+          "detection": {
+            "subject": {
+              "kind": "agent",
+              "agentId": "research72_27586b82-d766-4423-bd35-f1bd6204568d"
+            },
+            "runtimeId": "codex",
+            "readiness": "needs_sign_in",
+            "detail": "Installed, not signed in"
+          },
+          "desktopGate": {
+            "passed": false,
+            "refusal": "Installed, not signed in"
+          },
+          "guestBefore": {
+            "uid": 1000,
+            "home": "/home/agent",
+            "cpus": 2,
+            "memTotal": "MemTotal:        2066016 kB",
+            "sshSocketPresent": false,
+            "mainCheckoutVisible": false,
+            "hostSecretEnvNames": [],
+            "homeEntries": [
+              ".codex",
+              ".gitconfig",
+              ".gitignore_global",
+              "lost+found"
+            ]
+          },
+          "observing": false,
+          "runtimeStarted": false,
+          "refusal": "A launch environment variable is not permitted in the sandbox",
+          "lifecycle": "dead",
+          "mailboxReady": false,
+          "guestAfter": {
+            "uid": 1000,
+            "home": "/home/agent",
+            "cpus": 2,
+            "memTotal": "MemTotal:        2066016 kB",
+            "sshSocketPresent": false,
+            "mainCheckoutVisible": false,
+            "hostSecretEnvNames": [],
+            "homeEntries": [
+              ".codex",
+              ".gitconfig",
+              ".gitignore_global",
+              "lost+found"
+            ]
+          },
+          "stopped": "stopped"
+        }
+      ],
+      "steps": [
+        {
+          "phase": "desktop-install-image",
+          "ms": 11304.119583,
+          "passed": true
+        },
+        {
+          "phase": "fresh:desktop-machine-start",
+          "ms": 15450.048874999999,
+          "passed": true
+        },
+        {
+          "phase": "fresh:runtimeFor-start",
+          "ms": 0.3351670000010927,
+          "error": "A launch environment variable is not permitted in the sandbox",
+          "passed": false
+        },
+        {
+          "phase": "fresh:runtime-stop",
+          "ms": 0.2833329999994021,
+          "passed": true
+        },
+        {
+          "phase": "fresh:desktop-machine-stop",
+          "ms": 6686.647000000001,
+          "passed": true
+        },
+        {
+          "phase": "reopened:desktop-machine-start",
+          "ms": 4946.897874999995,
+          "passed": true
+        },
+        {
+          "phase": "reopened:runtimeFor-start",
+          "ms": 0.06820800000423333,
+          "error": "A launch environment variable is not permitted in the sandbox",
+          "passed": false
+        },
+        {
+          "phase": "reopened:runtime-stop",
+          "ms": 0.06137500000477303,
+          "passed": true
+        },
+        {
+          "phase": "reopened:desktop-machine-stop",
+          "ms": 6832.082583000003,
+          "passed": true
+        }
+      ],
+      "cleanup": {
+        "errors": [],
+        "boxes": [],
+        "images": [
+          {
+            "id": "94670d5b2a24",
+            "repository": "docker.io/docker/sandbox-templates",
+            "tag": "claude-code-docker",
+            "flavor": "claude-code-docker",
+            "created_at": "2026-09-04T18:58:46Z",
+            "size": 936879795
+          },
+          {
+            "id": "5fc81bc7a127",
+            "repository": "docker.io/docker/sandbox-templates",
+            "tag": "shell-docker",
+            "flavor": "shell-docker",
+            "created_at": "2026-09-04T18:54:27Z",
+            "size": 588725040
+          }
+        ],
+        "imagesUnchanged": true,
+        "temporaryAreaRemoved": true
+      },
+      "initiallyAbsent": true,
+      "completed": true
+    },
+    {
+      "runtimeId": "opencode",
+      "agentId": "research72_91de7c0a-86f9-4212-b24c-bcea699f6ee0",
+      "cliVersion": "1.18.4",
+      "build": {
+        "arch": "arm64",
+        "reference": "blobot-machine-opencode:f64b333bf23e6ec25614c54d4fbf59c124869b78e1f0735abf0f8f9ced2856b1-arm64",
+        "imageId": "sha256:f64b333bf23e6ec25614c54d4fbf59c124869b78e1f0735abf0f8f9ced2856b1",
+        "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-opencode-arm64-f64b333bf23e6ec25614c54d4fbf59c124869b78e1f0735abf0f8f9ced2856b1.tar",
+        "sha256": "57287378b62a5a7e4060fd759570e9a7ac786abe34f0940495cc3e447857836e",
+        "bytes": 649681920
+      },
+      "rounds": [
+        {
+          "label": "fresh",
+          "launches": [
+            {
+              "command": {
+                "kind": "exec",
+                "executable": "/opt/blobot/bin/opencode",
+                "args": [
+                  "acp"
+                ]
+              },
+              "cwd": "/private/tmp/blobot-research72-Kws1eq/opencode/worktree",
+              "env": {
+                "GIT_AUTHOR_NAME": "Research72",
+                "GIT_COMMITTER_NAME": "Research72",
+                "GIT_AUTHOR_EMAIL": "research72@agents.blobot.invalid",
+                "GIT_COMMITTER_EMAIL": "research72@agents.blobot.invalid",
+                "GIT_CONFIG_COUNT": "1",
+                "GIT_CONFIG_KEY_0": "commit.gpgsign",
+                "GIT_CONFIG_VALUE_0": "false",
+                "OPENCODE_CONFIG_CONTENT": "{\"$schema\":\"https://opencode.ai/config.json\",\"default_agent\":\"research72\",\"permission\":{\"edit\":\"allow\",\"bash\":{\"*\":\"allow\",\"rm *\":\"ask\",\"sudo *\":\"ask\",\"chmod *\":\"ask\",\"chown *\":\"ask\",\"curl *\":\"ask\",\"wget *\":\"ask\",\"ssh *\":\"ask\",\"scp *\":\"ask\",\"docker *\":\"ask\",\"git push*\":\"ask\",\"git remote*\":\"ask\",\"gh *\":\"ask\",\"gh pr view*\":\"allow\",\"gh pr list*\":\"allow\",\"gh pr diff*\":\"allow\",\"gh pr checks*\":\"allow\",\"gh pr status*\":\"allow\",\"gh issue view*\":\"allow\",\"gh issue list*\":\"allow\",\"gh issue status*\":\"allow\",\"gh repo view*\":\"allow\",\"gh repo list*\":\"allow\",\"gh run view*\":\"allow\",\"gh run list*\":\"allow\",\"gh workflow view*\":\"allow\",\"gh workflow list*\":\"allow\",\"gh release view*\":\"allow\",\"gh release list*\":\"allow\",\"gh label list*\":\"allow\",\"gh search*\":\"allow\",\"gh auth status*\":\"allow\",\"npm install*\":\"ask\",\"npx *\":\"ask\",\"pnpm add*\":\"ask\",\"yarn add*\":\"ask\",\"bun add*\":\"ask\",\"import *\":\"ask\",\"scrot*\":\"ask\",\"grim*\":\"ask\",\"maim*\":\"ask\",\"spectacle*\":\"ask\",\"screencapture*\":\"ask\",\"gnome-screenshot*\":\"ask\",\"flameshot*\":\"ask\",\"wayshot*\":\"ask\",\"xwd*\":\"ask\",\"xdotool*\":\"ask\",\"wmctrl*\":\"ask\",\"ydotool*\":\"ask\",\"ffmpeg*\":\"ask\"}},\"agent\":{\"research72\":{\"description\":\"Research72, a blobot teammate.\",\"mode\":\"primary\",\"prompt\":\"\",\"permission\":{\"edit\":\"allow\",\"bash\":{\"*\":\"allow\",\"rm *\":\"ask\",\"sudo *\":\"ask\",\"chmod *\":\"ask\",\"chown *\":\"ask\",\"curl *\":\"ask\",\"wget *\":\"ask\",\"ssh *\":\"ask\",\"scp *\":\"ask\",\"docker *\":\"ask\",\"git push*\":\"ask\",\"git remote*\":\"ask\",\"gh *\":\"ask\",\"gh pr view*\":\"allow\",\"gh pr list*\":\"allow\",\"gh pr diff*\":\"allow\",\"gh pr checks*\":\"allow\",\"gh pr status*\":\"allow\",\"gh issue view*\":\"allow\",\"gh issue list*\":\"allow\",\"gh issue status*\":\"allow\",\"gh repo view*\":\"allow\",\"gh repo list*\":\"allow\",\"gh run view*\":\"allow\",\"gh run list*\":\"allow\",\"gh workflow view*\":\"allow\",\"gh workflow list*\":\"allow\",\"gh release view*\":\"allow\",\"gh release list*\":\"allow\",\"gh label list*\":\"allow\",\"gh search*\":\"allow\",\"gh auth status*\":\"allow\",\"npm install*\":\"ask\",\"npx *\":\"ask\",\"pnpm add*\":\"ask\",\"yarn add*\":\"ask\",\"bun add*\":\"ask\",\"import *\":\"ask\",\"scrot*\":\"ask\",\"grim*\":\"ask\",\"maim*\":\"ask\",\"spectacle*\":\"ask\",\"screencapture*\":\"ask\",\"gnome-screenshot*\":\"ask\",\"flameshot*\":\"ask\",\"wayshot*\":\"ask\",\"xwd*\":\"ask\",\"xdotool*\":\"ask\",\"wmctrl*\":\"ask\",\"ydotool*\":\"ask\",\"ffmpeg*\":\"ask\"}}}}}",
+                "NO_COLOR": "1"
+              },
+              "configs": []
+            }
+          ],
+          "requests": [
+            {
+              "method": "initialize",
+              "ms": 0.2434579999971902
+            },
+            {
+              "method": "session/new",
+              "ms": 824.2236660000053,
+              "cwd": "/private/tmp/blobot-research72-Kws1eq/opencode/worktree",
+              "mcpServers": [
+                {
+                  "type": "http",
+                  "name": "blobot",
+                  "url": "http://host.docker.internal:51673/agents/research72_91de7c0a-86f9-4212-b24c-bcea699f6ee0/mcp",
+                  "headerNames": [
+                    "Authorization"
+                  ]
+                }
+              ]
+            },
+            {
+              "method": "session/close",
+              "ms": 1289.7645829999965
+            }
+          ],
+          "replies": [
+            {
+              "method": "initialize",
+              "ms": 0.24008299999695737,
+              "responseMs": 824.029165999993,
+              "result": {
+                "protocolVersion": 1,
+                "agentInfo": {
+                  "name": "OpenCode",
+                  "version": "1.18.4"
+                },
+                "authMethods": [
+                  {
+                    "id": "opencode-login",
+                    "name": "Login with opencode"
+                  }
+                ]
+              }
+            },
+            {
+              "method": "session/new",
+              "ms": 824.2225409999955,
+              "responseMs": 1288.8271660000028,
+              "result": {
+                "sessionIdHash": "e6d313404a0d299ff3f2852a806fdb9a83f69ef2ed30c0e269e7a02afe29b35f",
+                "configOptionCount": 2
+              }
+            },
+            {
+              "method": "session/close",
+              "ms": 1289.7631249999977,
+              "responseMs": 1294.7610410000052,
+              "result": {}
+            }
+          ],
+          "inboundMethods": [
+            "session/update"
+          ],
+          "stderr": [],
+          "mcpLogs": [
+            "[mcp] listening on 127.0.0.1:51673",
+            "[mcp] research72_91de7c0a-86f9-4212-b24c-bcea699f6ee0 handshaked. It has 1 of blobot's own tools"
+          ],
+          "closes": [
+            {
+              "ms": 1309.153124999997,
+              "reason": null
+            }
+          ],
+          "toolCalls": 0,
+          "owned": {
+            "name": "blobot-c4a0b529-e63f-4c61-87f3-d8aa29c10ce0",
+            "id": "29cddf15-f11f-4f96-8a38-74bc3651cb55",
+            "limits": {
+              "maxCpus": 2,
+              "maxMemoryBytes": 2147483648
+            },
+            "baseline": {
+              "memoryKiB": 2066016,
+              "mounts": "[[\"/\",\"overlay\",[\"relatime\",\"rw\"]],[\"/dev\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/dev/mqueue\",\"mqueue\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/pts\",\"devpts\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/shm\",\"tmpfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/etc/hosts\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/etc/resolv.conf\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/home/agent\",\"ext4\",[\"relatime\",\"rw\"]],[\"/private/tmp/blobot-research72-Kws1eq/opencode/source/.git\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/private/tmp/blobot-research72-Kws1eq/opencode/worktree\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/proc\",\"proc\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/run\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/run/secrets\",\"tmpfs\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys\",\"sysfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys/fs/cgroup\",\"cgroup2\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/var/lib/docker\",\"ext4\",[\"relatime\",\"rw\"]]]"
+            }
+          },
+          "mounts": {
+            "path": "/private/tmp/blobot-research72-Kws1eq/opencode/worktree",
+            "commonGit": [
+              "/private/tmp/blobot-research72-Kws1eq/opencode/source/.git"
+            ]
+          },
+          "detection": {
+            "subject": {
+              "kind": "agent",
+              "agentId": "research72_91de7c0a-86f9-4212-b24c-bcea699f6ee0"
+            },
+            "runtimeId": "opencode",
+            "readiness": "needs_sign_in",
+            "detail": "Installed, no credentials found"
+          },
+          "desktopGate": {
+            "passed": false,
+            "refusal": "Installed, no credentials found"
+          },
+          "guestBefore": {
+            "uid": 1000,
+            "home": "/home/agent",
+            "cpus": 2,
+            "memTotal": "MemTotal:        2066016 kB",
+            "sshSocketPresent": false,
+            "mainCheckoutVisible": false,
+            "hostSecretEnvNames": [],
+            "homeEntries": [
+              ".cache",
+              ".config",
+              ".gitconfig",
+              ".gitignore_global",
+              ".local",
+              "lost+found"
+            ]
+          },
+          "observing": false,
+          "runtimeStarted": true,
+          "lifecycle": "ready",
+          "sessionIdHash": "e6d313404a0d299ff3f2852a806fdb9a83f69ef2ed30c0e269e7a02afe29b35f",
+          "mailboxReady": true,
+          "guestAfter": {
+            "uid": 1000,
+            "home": "/home/agent",
+            "cpus": 2,
+            "memTotal": "MemTotal:        2066016 kB",
+            "sshSocketPresent": false,
+            "mainCheckoutVisible": false,
+            "hostSecretEnvNames": [],
+            "homeEntries": [
+              ".cache",
+              ".config",
+              ".gitconfig",
+              ".gitignore_global",
+              ".local",
+              "lost+found"
+            ]
+          },
+          "stopped": "stopped"
+        },
+        {
+          "label": "reopened",
+          "launches": [
+            {
+              "command": {
+                "kind": "exec",
+                "executable": "/opt/blobot/bin/opencode",
+                "args": [
+                  "acp"
+                ]
+              },
+              "cwd": "/private/tmp/blobot-research72-Kws1eq/opencode/worktree",
+              "env": {
+                "GIT_AUTHOR_NAME": "Research72",
+                "GIT_COMMITTER_NAME": "Research72",
+                "GIT_AUTHOR_EMAIL": "research72@agents.blobot.invalid",
+                "GIT_COMMITTER_EMAIL": "research72@agents.blobot.invalid",
+                "GIT_CONFIG_COUNT": "1",
+                "GIT_CONFIG_KEY_0": "commit.gpgsign",
+                "GIT_CONFIG_VALUE_0": "false",
+                "OPENCODE_CONFIG_CONTENT": "{\"$schema\":\"https://opencode.ai/config.json\",\"default_agent\":\"research72\",\"permission\":{\"edit\":\"allow\",\"bash\":{\"*\":\"allow\",\"rm *\":\"ask\",\"sudo *\":\"ask\",\"chmod *\":\"ask\",\"chown *\":\"ask\",\"curl *\":\"ask\",\"wget *\":\"ask\",\"ssh *\":\"ask\",\"scp *\":\"ask\",\"docker *\":\"ask\",\"git push*\":\"ask\",\"git remote*\":\"ask\",\"gh *\":\"ask\",\"gh pr view*\":\"allow\",\"gh pr list*\":\"allow\",\"gh pr diff*\":\"allow\",\"gh pr checks*\":\"allow\",\"gh pr status*\":\"allow\",\"gh issue view*\":\"allow\",\"gh issue list*\":\"allow\",\"gh issue status*\":\"allow\",\"gh repo view*\":\"allow\",\"gh repo list*\":\"allow\",\"gh run view*\":\"allow\",\"gh run list*\":\"allow\",\"gh workflow view*\":\"allow\",\"gh workflow list*\":\"allow\",\"gh release view*\":\"allow\",\"gh release list*\":\"allow\",\"gh label list*\":\"allow\",\"gh search*\":\"allow\",\"gh auth status*\":\"allow\",\"npm install*\":\"ask\",\"npx *\":\"ask\",\"pnpm add*\":\"ask\",\"yarn add*\":\"ask\",\"bun add*\":\"ask\",\"import *\":\"ask\",\"scrot*\":\"ask\",\"grim*\":\"ask\",\"maim*\":\"ask\",\"spectacle*\":\"ask\",\"screencapture*\":\"ask\",\"gnome-screenshot*\":\"ask\",\"flameshot*\":\"ask\",\"wayshot*\":\"ask\",\"xwd*\":\"ask\",\"xdotool*\":\"ask\",\"wmctrl*\":\"ask\",\"ydotool*\":\"ask\",\"ffmpeg*\":\"ask\"}},\"agent\":{\"research72\":{\"description\":\"Research72, a blobot teammate.\",\"mode\":\"primary\",\"prompt\":\"\",\"permission\":{\"edit\":\"allow\",\"bash\":{\"*\":\"allow\",\"rm *\":\"ask\",\"sudo *\":\"ask\",\"chmod *\":\"ask\",\"chown *\":\"ask\",\"curl *\":\"ask\",\"wget *\":\"ask\",\"ssh *\":\"ask\",\"scp *\":\"ask\",\"docker *\":\"ask\",\"git push*\":\"ask\",\"git remote*\":\"ask\",\"gh *\":\"ask\",\"gh pr view*\":\"allow\",\"gh pr list*\":\"allow\",\"gh pr diff*\":\"allow\",\"gh pr checks*\":\"allow\",\"gh pr status*\":\"allow\",\"gh issue view*\":\"allow\",\"gh issue list*\":\"allow\",\"gh issue status*\":\"allow\",\"gh repo view*\":\"allow\",\"gh repo list*\":\"allow\",\"gh run view*\":\"allow\",\"gh run list*\":\"allow\",\"gh workflow view*\":\"allow\",\"gh workflow list*\":\"allow\",\"gh release view*\":\"allow\",\"gh release list*\":\"allow\",\"gh label list*\":\"allow\",\"gh search*\":\"allow\",\"gh auth status*\":\"allow\",\"npm install*\":\"ask\",\"npx *\":\"ask\",\"pnpm add*\":\"ask\",\"yarn add*\":\"ask\",\"bun add*\":\"ask\",\"import *\":\"ask\",\"scrot*\":\"ask\",\"grim*\":\"ask\",\"maim*\":\"ask\",\"spectacle*\":\"ask\",\"screencapture*\":\"ask\",\"gnome-screenshot*\":\"ask\",\"flameshot*\":\"ask\",\"wayshot*\":\"ask\",\"xwd*\":\"ask\",\"xdotool*\":\"ask\",\"wmctrl*\":\"ask\",\"ydotool*\":\"ask\",\"ffmpeg*\":\"ask\"}}}}}",
+                "NO_COLOR": "1"
+              },
+              "configs": []
+            }
+          ],
+          "requests": [
+            {
+              "method": "initialize",
+              "ms": 0.07250000000931323
+            },
+            {
+              "method": "session/new",
+              "ms": 720.7507080000069,
+              "cwd": "/private/tmp/blobot-research72-Kws1eq/opencode/worktree",
+              "mcpServers": [
+                {
+                  "type": "http",
+                  "name": "blobot",
+                  "url": "http://host.docker.internal:52354/agents/research72_91de7c0a-86f9-4212-b24c-bcea699f6ee0/mcp",
+                  "headerNames": [
+                    "Authorization"
+                  ]
+                }
+              ]
+            },
+            {
+              "method": "session/close",
+              "ms": 1092.9625420000084
+            }
+          ],
+          "replies": [
+            {
+              "method": "initialize",
+              "ms": 0.07100000001082662,
+              "responseMs": 720.6934170000022,
+              "result": {
+                "protocolVersion": 1,
+                "agentInfo": {
+                  "name": "OpenCode",
+                  "version": "1.18.4"
+                },
+                "authMethods": [
+                  {
+                    "id": "opencode-login",
+                    "name": "Login with opencode"
+                  }
+                ]
+              }
+            },
+            {
+              "method": "session/new",
+              "ms": 720.7495830000116,
+              "responseMs": 1092.0159170000115,
+              "result": {
+                "sessionIdHash": "280bd6c345b66724094a59e131b79a0c052762da0bbd4404d96dd8542b909dd6",
+                "configOptionCount": 2
+              }
+            },
+            {
+              "method": "session/close",
+              "ms": 1092.961083000002,
+              "responseMs": 1097.234083000003,
+              "result": {}
+            }
+          ],
+          "inboundMethods": [
+            "session/update"
+          ],
+          "stderr": [],
+          "mcpLogs": [
+            "[mcp] listening on 127.0.0.1:52354",
+            "[mcp] research72_91de7c0a-86f9-4212-b24c-bcea699f6ee0 handshaked. It has 1 of blobot's own tools"
+          ],
+          "closes": [
+            {
+              "ms": 1110.3122920000023,
+              "reason": null
+            }
+          ],
+          "toolCalls": 0,
+          "owned": {
+            "name": "blobot-c4a0b529-e63f-4c61-87f3-d8aa29c10ce0",
+            "id": "29cddf15-f11f-4f96-8a38-74bc3651cb55",
+            "limits": {
+              "maxCpus": 2,
+              "maxMemoryBytes": 2147483648
+            },
+            "baseline": {
+              "memoryKiB": 2066016,
+              "mounts": "[[\"/\",\"overlay\",[\"relatime\",\"rw\"]],[\"/dev\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/dev/mqueue\",\"mqueue\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/pts\",\"devpts\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/shm\",\"tmpfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/etc/hosts\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/etc/resolv.conf\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/home/agent\",\"ext4\",[\"relatime\",\"rw\"]],[\"/private/tmp/blobot-research72-Kws1eq/opencode/source/.git\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/private/tmp/blobot-research72-Kws1eq/opencode/worktree\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/proc\",\"proc\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/run\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/run/secrets\",\"tmpfs\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys\",\"sysfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys/fs/cgroup\",\"cgroup2\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/var/lib/docker\",\"ext4\",[\"relatime\",\"rw\"]]]"
+            }
+          },
+          "mounts": {
+            "path": "/private/tmp/blobot-research72-Kws1eq/opencode/worktree",
+            "commonGit": [
+              "/private/tmp/blobot-research72-Kws1eq/opencode/source/.git"
+            ]
+          },
+          "detection": {
+            "subject": {
+              "kind": "agent",
+              "agentId": "research72_91de7c0a-86f9-4212-b24c-bcea699f6ee0"
+            },
+            "runtimeId": "opencode",
+            "readiness": "needs_sign_in",
+            "detail": "Installed, no credentials found"
+          },
+          "desktopGate": {
+            "passed": false,
+            "refusal": "Installed, no credentials found"
+          },
+          "guestBefore": {
+            "uid": 1000,
+            "home": "/home/agent",
+            "cpus": 2,
+            "memTotal": "MemTotal:        2066016 kB",
+            "sshSocketPresent": false,
+            "mainCheckoutVisible": false,
+            "hostSecretEnvNames": [],
+            "homeEntries": [
+              ".cache",
+              ".config",
+              ".gitconfig",
+              ".gitignore_global",
+              ".local",
+              "lost+found"
+            ]
+          },
+          "observing": false,
+          "runtimeStarted": true,
+          "lifecycle": "ready",
+          "sessionIdHash": "280bd6c345b66724094a59e131b79a0c052762da0bbd4404d96dd8542b909dd6",
+          "mailboxReady": true,
+          "guestAfter": {
+            "uid": 1000,
+            "home": "/home/agent",
+            "cpus": 2,
+            "memTotal": "MemTotal:        2066016 kB",
+            "sshSocketPresent": false,
+            "mainCheckoutVisible": false,
+            "hostSecretEnvNames": [],
+            "homeEntries": [
+              ".cache",
+              ".config",
+              ".gitconfig",
+              ".gitignore_global",
+              ".local",
+              "lost+found"
+            ]
+          },
+          "stopped": "stopped"
+        }
+      ],
+      "steps": [
+        {
+          "phase": "desktop-install-image",
+          "ms": 9794.575791000003,
+          "passed": true
+        },
+        {
+          "phase": "fresh:desktop-machine-start",
+          "ms": 10741.309792,
+          "passed": true
+        },
+        {
+          "phase": "fresh:runtimeFor-start",
+          "ms": 1289.9953749999986,
+          "passed": true
+        },
+        {
+          "phase": "fresh:runtime-stop",
+          "ms": 19.479582999993,
+          "passed": true
+        },
+        {
+          "phase": "fresh:desktop-machine-stop",
+          "ms": 7007.763583000007,
+          "passed": true
+        },
+        {
+          "phase": "reopened:desktop-machine-start",
+          "ms": 4876.889207999993,
+          "passed": true
+        },
+        {
+          "phase": "reopened:runtimeFor-start",
+          "ms": 1092.6490830000112,
+          "passed": true
+        },
+        {
+          "phase": "reopened:runtime-stop",
+          "ms": 17.388707999998587,
+          "passed": true
+        },
+        {
+          "phase": "reopened:desktop-machine-stop",
+          "ms": 6998.281375000006,
+          "passed": true
+        }
+      ],
+      "cleanup": {
+        "errors": [],
+        "boxes": [],
+        "images": [
+          {
+            "id": "94670d5b2a24",
+            "repository": "docker.io/docker/sandbox-templates",
+            "tag": "claude-code-docker",
+            "flavor": "claude-code-docker",
+            "created_at": "2026-09-04T18:58:46Z",
+            "size": 936879795
+          },
+          {
+            "id": "5fc81bc7a127",
+            "repository": "docker.io/docker/sandbox-templates",
+            "tag": "shell-docker",
+            "flavor": "shell-docker",
+            "created_at": "2026-09-04T18:54:27Z",
+            "size": 588725040
+          }
+        ],
+        "imagesUnchanged": true,
+        "temporaryAreaRemoved": true
+      },
+      "initiallyAbsent": true,
+      "completed": true
+    },
+    {
+      "runtimeId": "cursor",
+      "agentId": "research72_cab72ff2-42fa-4f19-8ff6-d271a9423f16",
+      "cliVersion": "2026.09.02-c22c1a3",
+      "build": {
+        "arch": "arm64",
+        "reference": "blobot-machine-cursor:781376cc4e5d4ee335c6e62f1176219ae825ef5f74655af88b64472f8035f7ca-arm64",
+        "imageId": "sha256:781376cc4e5d4ee335c6e62f1176219ae825ef5f74655af88b64472f8035f7ca",
+        "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-cursor-arm64-781376cc4e5d4ee335c6e62f1176219ae825ef5f74655af88b64472f8035f7ca.tar",
+        "sha256": "a9321604a8bbf6315ee426581b4bcbc45d72fd92f9d8802f195874bc59c4bb79",
+        "bytes": 772251136
+      },
+      "rounds": [
+        {
+          "label": "fresh",
+          "launches": [
+            {
+              "command": {
+                "kind": "exec",
+                "executable": "/opt/blobot/bin/cursor-agent",
+                "args": [
+                  "acp",
+                  "--workspace",
+                  "/private/tmp/blobot-research72-Kws1eq/cursor/worktree"
+                ]
+              },
+              "cwd": "/private/tmp/blobot-research72-Kws1eq/cursor/worktree",
+              "env": {
+                "GIT_AUTHOR_NAME": "Research72",
+                "GIT_COMMITTER_NAME": "Research72",
+                "GIT_AUTHOR_EMAIL": "research72@agents.blobot.invalid",
+                "GIT_COMMITTER_EMAIL": "research72@agents.blobot.invalid",
+                "GIT_CONFIG_COUNT": "1",
+                "GIT_CONFIG_KEY_0": "commit.gpgsign",
+                "GIT_CONFIG_VALUE_0": "false",
+                "NO_COLOR": "1",
+                "CURSOR_API_KEY": "<unset>",
+                "CURSOR_AUTH_TOKEN": "<unset>",
+                "CURSOR_CONFIG_DIR": "/home/agent/.config/blobot/cursor"
+              },
+              "configs": [
+                {
+                  "root": "/home/agent",
+                  "relativePath": ".config/blobot/cursor/cli-config.json",
+                  "patch": {
+                    "version": 1,
+                    "approvalMode": "allowlist",
+                    "permissions": {
+                      "allow": [
+                        "Mcp(blobot:*)",
+                        "Read(**)",
+                        "Write(**)",
+                        "Shell(ls)",
+                        "Shell(cat)",
+                        "Shell(head)",
+                        "Shell(tail)",
+                        "Shell(wc)",
+                        "Shell(pwd)",
+                        "Shell(echo)",
+                        "Shell(which)",
+                        "Shell(file)",
+                        "Shell(stat)",
+                        "Shell(date)",
+                        "Shell(du)",
+                        "Shell(find)",
+                        "Shell(grep)",
+                        "Shell(rg)",
+                        "Shell(tree)",
+                        "Shell(diff)",
+                        "Shell(sort)",
+                        "Shell(uniq)",
+                        "Shell(basename)",
+                        "Shell(dirname)",
+                        "Shell(realpath)",
+                        "Shell(git:status*)",
+                        "Shell(git:diff*)",
+                        "Shell(git:log*)",
+                        "Shell(git:show*)",
+                        "Shell(git:branch*)",
+                        "Shell(git:add*)",
+                        "Shell(git:commit*)",
+                        "Shell(git:checkout*)",
+                        "Shell(git:switch*)",
+                        "Shell(git:restore*)",
+                        "Shell(git:stash*)",
+                        "Shell(git:rev-parse*)",
+                        "Shell(git:ls-files*)",
+                        "Shell(git:blame*)",
+                        "Shell(git:fetch*)",
+                        "Shell(git:pull*)",
+                        "Shell(git:merge*)",
+                        "Shell(git:rebase*)",
+                        "Shell(git:reset*)",
+                        "Shell(git:tag*)",
+                        "Shell(git:describe*)",
+                        "Shell(git:config*)",
+                        "Shell(git:apply*)",
+                        "Shell(git:cherry-pick*)",
+                        "Shell(gh:pr view*)",
+                        "Shell(gh:pr list*)",
+                        "Shell(gh:pr diff*)",
+                        "Shell(gh:pr checks*)",
+                        "Shell(gh:pr status*)",
+                        "Shell(gh:issue view*)",
+                        "Shell(gh:issue list*)",
+                        "Shell(gh:issue status*)",
+                        "Shell(gh:repo view*)",
+                        "Shell(gh:repo list*)",
+                        "Shell(gh:run view*)",
+                        "Shell(gh:run list*)",
+                        "Shell(gh:workflow view*)",
+                        "Shell(gh:workflow list*)",
+                        "Shell(gh:release view*)",
+                        "Shell(gh:release list*)",
+                        "Shell(gh:label list*)",
+                        "Shell(gh:search*)",
+                        "Shell(gh:auth status*)",
+                        "Shell(npm:test*)",
+                        "Shell(npm:run*)",
+                        "Shell(npm:ls*)",
+                        "Shell(pnpm:test*)",
+                        "Shell(pnpm:run*)",
+                        "Shell(pnpm:ls*)",
+                        "Shell(pnpm:build*)",
+                        "Shell(yarn:test*)",
+                        "Shell(yarn:run*)",
+                        "Shell(bun:test*)",
+                        "Shell(bun:run*)",
+                        "Shell(make)",
+                        "Shell(cargo:test*)",
+                        "Shell(cargo:build*)",
+                        "Shell(cargo:check*)",
+                        "Shell(go:test*)",
+                        "Shell(go:build*)",
+                        "Shell(go:vet*)",
+                        "Shell(pytest)",
+                        "Shell(vitest)",
+                        "Shell(jest)",
+                        "Shell(tsc)",
+                        "Shell(node)",
+                        "Shell(python)",
+                        "Shell(python3)",
+                        "Shell(ruby)",
+                        "Shell(mkdir)",
+                        "Shell(touch)",
+                        "Shell(cp)",
+                        "Shell(mv)",
+                        "Shell(sed)",
+                        "Shell(awk)",
+                        "Shell(tee)",
+                        "Shell(ln)"
+                      ],
+                      "deny": []
+                    },
+                    "sandbox": {
+                      "mode": "disabled",
+                      "networkAccess": "allow_all"
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "requests": [
+            {
+              "method": "initialize",
+              "ms": 0.21645800000987947
+            },
+            {
+              "method": "session/new",
+              "ms": 547.6824170000036,
+              "cwd": "/private/tmp/blobot-research72-Kws1eq/cursor/worktree",
+              "mcpServers": [
+                {
+                  "type": "http",
+                  "name": "blobot",
+                  "url": "http://host.docker.internal:53031/agents/research72_cab72ff2-42fa-4f19-8ff6-d271a9423f16/mcp",
+                  "headerNames": [
+                    "Authorization"
+                  ]
+                }
+              ]
+            }
+          ],
+          "replies": [
+            {
+              "method": "initialize",
+              "ms": 0.21458299999358132,
+              "responseMs": 547.4861249999958,
+              "result": {
+                "protocolVersion": 1,
+                "authMethods": [
+                  {
+                    "id": "cursor_login",
+                    "name": "Cursor Login"
+                  }
+                ]
+              }
+            },
+            {
+              "method": "session/new",
+              "ms": 547.6812079999945,
+              "responseMs": 562.4570419999945,
+              "error": {
+                "code": -32000,
+                "message": "Authentication required"
+              }
+            }
+          ],
+          "inboundMethods": [],
+          "stderr": [],
+          "mcpLogs": [
+            "[mcp] listening on 127.0.0.1:53031"
+          ],
+          "closes": [
+            {
+              "ms": 2574.6663750000007,
+              "reason": "the agent process was killed by SIGKILL"
+            }
+          ],
+          "toolCalls": 0,
+          "owned": {
+            "name": "blobot-0dc2a929-8c71-4846-bee5-3a2871351a61",
+            "id": "7736d02c-749f-47f8-bf2e-b93f9355cfe4",
+            "limits": {
+              "maxCpus": 2,
+              "maxMemoryBytes": 2147483648
+            },
+            "baseline": {
+              "memoryKiB": 2066016,
+              "mounts": "[[\"/\",\"overlay\",[\"relatime\",\"rw\"]],[\"/dev\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/dev/mqueue\",\"mqueue\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/pts\",\"devpts\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/shm\",\"tmpfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/etc/hosts\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/etc/resolv.conf\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/home/agent\",\"ext4\",[\"relatime\",\"rw\"]],[\"/private/tmp/blobot-research72-Kws1eq/cursor/source/.git\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/private/tmp/blobot-research72-Kws1eq/cursor/worktree\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/proc\",\"proc\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/run\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/run/secrets\",\"tmpfs\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys\",\"sysfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys/fs/cgroup\",\"cgroup2\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/var/lib/docker\",\"ext4\",[\"relatime\",\"rw\"]]]"
+            }
+          },
+          "mounts": {
+            "path": "/private/tmp/blobot-research72-Kws1eq/cursor/worktree",
+            "commonGit": [
+              "/private/tmp/blobot-research72-Kws1eq/cursor/source/.git"
+            ]
+          },
+          "detection": {
+            "subject": {
+              "kind": "agent",
+              "agentId": "research72_cab72ff2-42fa-4f19-8ff6-d271a9423f16"
+            },
+            "runtimeId": "cursor",
+            "readiness": "needs_sign_in",
+            "detail": "Installed, not signed in"
+          },
+          "desktopGate": {
+            "passed": false,
+            "refusal": "Installed, not signed in"
+          },
+          "guestBefore": {
+            "uid": 1000,
+            "home": "/home/agent",
+            "cpus": 2,
+            "memTotal": "MemTotal:        2066016 kB",
+            "sshSocketPresent": false,
+            "mainCheckoutVisible": false,
+            "hostSecretEnvNames": [],
+            "homeEntries": [
+              ".cache",
+              ".cursor",
+              ".gitconfig",
+              ".gitignore_global",
+              "lost+found"
+            ]
+          },
+          "observing": false,
+          "runtimeStarted": false,
+          "refusal": "research72_cab72ff2-42fa-4f19-8ff6-d271a9423f16: cursor-agent would not open a session (Authentication required). If Cursor is signed out, sign in with cursor-agent login.",
+          "lifecycle": "dead",
+          "mailboxReady": false,
+          "guestAfter": {
+            "uid": 1000,
+            "home": "/home/agent",
+            "cpus": 2,
+            "memTotal": "MemTotal:        2066016 kB",
+            "sshSocketPresent": false,
+            "mainCheckoutVisible": false,
+            "hostSecretEnvNames": [],
+            "homeEntries": [
+              ".cache",
+              ".config",
+              ".cursor",
+              ".gitconfig",
+              ".gitignore_global",
+              "lost+found"
+            ]
+          },
+          "stopped": "stopped"
+        },
+        {
+          "label": "reopened",
+          "launches": [
+            {
+              "command": {
+                "kind": "exec",
+                "executable": "/opt/blobot/bin/cursor-agent",
+                "args": [
+                  "acp",
+                  "--workspace",
+                  "/private/tmp/blobot-research72-Kws1eq/cursor/worktree"
+                ]
+              },
+              "cwd": "/private/tmp/blobot-research72-Kws1eq/cursor/worktree",
+              "env": {
+                "GIT_AUTHOR_NAME": "Research72",
+                "GIT_COMMITTER_NAME": "Research72",
+                "GIT_AUTHOR_EMAIL": "research72@agents.blobot.invalid",
+                "GIT_COMMITTER_EMAIL": "research72@agents.blobot.invalid",
+                "GIT_CONFIG_COUNT": "1",
+                "GIT_CONFIG_KEY_0": "commit.gpgsign",
+                "GIT_CONFIG_VALUE_0": "false",
+                "NO_COLOR": "1",
+                "CURSOR_API_KEY": "<unset>",
+                "CURSOR_AUTH_TOKEN": "<unset>",
+                "CURSOR_CONFIG_DIR": "/home/agent/.config/blobot/cursor"
+              },
+              "configs": [
+                {
+                  "root": "/home/agent",
+                  "relativePath": ".config/blobot/cursor/cli-config.json",
+                  "patch": {
+                    "version": 1,
+                    "approvalMode": "allowlist",
+                    "permissions": {
+                      "allow": [
+                        "Mcp(blobot:*)",
+                        "Read(**)",
+                        "Write(**)",
+                        "Shell(ls)",
+                        "Shell(cat)",
+                        "Shell(head)",
+                        "Shell(tail)",
+                        "Shell(wc)",
+                        "Shell(pwd)",
+                        "Shell(echo)",
+                        "Shell(which)",
+                        "Shell(file)",
+                        "Shell(stat)",
+                        "Shell(date)",
+                        "Shell(du)",
+                        "Shell(find)",
+                        "Shell(grep)",
+                        "Shell(rg)",
+                        "Shell(tree)",
+                        "Shell(diff)",
+                        "Shell(sort)",
+                        "Shell(uniq)",
+                        "Shell(basename)",
+                        "Shell(dirname)",
+                        "Shell(realpath)",
+                        "Shell(git:status*)",
+                        "Shell(git:diff*)",
+                        "Shell(git:log*)",
+                        "Shell(git:show*)",
+                        "Shell(git:branch*)",
+                        "Shell(git:add*)",
+                        "Shell(git:commit*)",
+                        "Shell(git:checkout*)",
+                        "Shell(git:switch*)",
+                        "Shell(git:restore*)",
+                        "Shell(git:stash*)",
+                        "Shell(git:rev-parse*)",
+                        "Shell(git:ls-files*)",
+                        "Shell(git:blame*)",
+                        "Shell(git:fetch*)",
+                        "Shell(git:pull*)",
+                        "Shell(git:merge*)",
+                        "Shell(git:rebase*)",
+                        "Shell(git:reset*)",
+                        "Shell(git:tag*)",
+                        "Shell(git:describe*)",
+                        "Shell(git:config*)",
+                        "Shell(git:apply*)",
+                        "Shell(git:cherry-pick*)",
+                        "Shell(gh:pr view*)",
+                        "Shell(gh:pr list*)",
+                        "Shell(gh:pr diff*)",
+                        "Shell(gh:pr checks*)",
+                        "Shell(gh:pr status*)",
+                        "Shell(gh:issue view*)",
+                        "Shell(gh:issue list*)",
+                        "Shell(gh:issue status*)",
+                        "Shell(gh:repo view*)",
+                        "Shell(gh:repo list*)",
+                        "Shell(gh:run view*)",
+                        "Shell(gh:run list*)",
+                        "Shell(gh:workflow view*)",
+                        "Shell(gh:workflow list*)",
+                        "Shell(gh:release view*)",
+                        "Shell(gh:release list*)",
+                        "Shell(gh:label list*)",
+                        "Shell(gh:search*)",
+                        "Shell(gh:auth status*)",
+                        "Shell(npm:test*)",
+                        "Shell(npm:run*)",
+                        "Shell(npm:ls*)",
+                        "Shell(pnpm:test*)",
+                        "Shell(pnpm:run*)",
+                        "Shell(pnpm:ls*)",
+                        "Shell(pnpm:build*)",
+                        "Shell(yarn:test*)",
+                        "Shell(yarn:run*)",
+                        "Shell(bun:test*)",
+                        "Shell(bun:run*)",
+                        "Shell(make)",
+                        "Shell(cargo:test*)",
+                        "Shell(cargo:build*)",
+                        "Shell(cargo:check*)",
+                        "Shell(go:test*)",
+                        "Shell(go:build*)",
+                        "Shell(go:vet*)",
+                        "Shell(pytest)",
+                        "Shell(vitest)",
+                        "Shell(jest)",
+                        "Shell(tsc)",
+                        "Shell(node)",
+                        "Shell(python)",
+                        "Shell(python3)",
+                        "Shell(ruby)",
+                        "Shell(mkdir)",
+                        "Shell(touch)",
+                        "Shell(cp)",
+                        "Shell(mv)",
+                        "Shell(sed)",
+                        "Shell(awk)",
+                        "Shell(tee)",
+                        "Shell(ln)"
+                      ],
+                      "deny": []
+                    },
+                    "sandbox": {
+                      "mode": "disabled",
+                      "networkAccess": "allow_all"
+                    }
+                  }
+                }
+              ]
+            }
+          ],
+          "requests": [
+            {
+              "method": "initialize",
+              "ms": 0.06029200000921264
+            },
+            {
+              "method": "session/new",
+              "ms": 543.4448750000156,
+              "cwd": "/private/tmp/blobot-research72-Kws1eq/cursor/worktree",
+              "mcpServers": [
+                {
+                  "type": "http",
+                  "name": "blobot",
+                  "url": "http://host.docker.internal:53732/agents/research72_cab72ff2-42fa-4f19-8ff6-d271a9423f16/mcp",
+                  "headerNames": [
+                    "Authorization"
+                  ]
+                }
+              ]
+            }
+          ],
+          "replies": [
+            {
+              "method": "initialize",
+              "ms": 0.05833400000119582,
+              "responseMs": 543.3703340000066,
+              "result": {
+                "protocolVersion": 1,
+                "authMethods": [
+                  {
+                    "id": "cursor_login",
+                    "name": "Cursor Login"
+                  }
+                ]
+              }
+            },
+            {
+              "method": "session/new",
+              "ms": 543.4438749999972,
+              "responseMs": 555.7747920000111,
+              "error": {
+                "code": -32000,
+                "message": "Authentication required"
+              }
+            }
+          ],
+          "inboundMethods": [],
+          "stderr": [],
+          "mcpLogs": [
+            "[mcp] listening on 127.0.0.1:53732"
+          ],
+          "closes": [
+            {
+              "ms": 2564.6566250000033,
+              "reason": "the agent process was killed by SIGKILL"
+            }
+          ],
+          "toolCalls": 0,
+          "owned": {
+            "name": "blobot-0dc2a929-8c71-4846-bee5-3a2871351a61",
+            "id": "7736d02c-749f-47f8-bf2e-b93f9355cfe4",
+            "limits": {
+              "maxCpus": 2,
+              "maxMemoryBytes": 2147483648
+            },
+            "baseline": {
+              "memoryKiB": 2066016,
+              "mounts": "[[\"/\",\"overlay\",[\"relatime\",\"rw\"]],[\"/dev\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/dev/mqueue\",\"mqueue\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/pts\",\"devpts\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/dev/shm\",\"tmpfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/etc/hosts\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/etc/resolv.conf\",\"virtiofs\",[\"relatime\",\"ro\"]],[\"/home/agent\",\"ext4\",[\"relatime\",\"rw\"]],[\"/private/tmp/blobot-research72-Kws1eq/cursor/source/.git\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/private/tmp/blobot-research72-Kws1eq/cursor/worktree\",\"virtiofs\",[\"nodev\",\"nosuid\",\"relatime\",\"rw\"]],[\"/proc\",\"proc\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/run\",\"tmpfs\",[\"nosuid\",\"rw\"]],[\"/run/secrets\",\"tmpfs\",[\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys\",\"sysfs\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/sys/fs/cgroup\",\"cgroup2\",[\"nodev\",\"noexec\",\"nosuid\",\"relatime\",\"rw\"]],[\"/var/lib/docker\",\"ext4\",[\"relatime\",\"rw\"]]]"
+            }
+          },
+          "mounts": {
+            "path": "/private/tmp/blobot-research72-Kws1eq/cursor/worktree",
+            "commonGit": [
+              "/private/tmp/blobot-research72-Kws1eq/cursor/source/.git"
+            ]
+          },
+          "detection": {
+            "subject": {
+              "kind": "agent",
+              "agentId": "research72_cab72ff2-42fa-4f19-8ff6-d271a9423f16"
+            },
+            "runtimeId": "cursor",
+            "readiness": "needs_sign_in",
+            "detail": "Installed, not signed in"
+          },
+          "desktopGate": {
+            "passed": false,
+            "refusal": "Installed, not signed in"
+          },
+          "guestBefore": {
+            "uid": 1000,
+            "home": "/home/agent",
+            "cpus": 2,
+            "memTotal": "MemTotal:        2066016 kB",
+            "sshSocketPresent": false,
+            "mainCheckoutVisible": false,
+            "hostSecretEnvNames": [],
+            "homeEntries": [
+              ".cache",
+              ".config",
+              ".cursor",
+              ".gitconfig",
+              ".gitignore_global",
+              "lost+found"
+            ]
+          },
+          "observing": false,
+          "runtimeStarted": false,
+          "refusal": "research72_cab72ff2-42fa-4f19-8ff6-d271a9423f16: cursor-agent would not open a session (Authentication required). If Cursor is signed out, sign in with cursor-agent login.",
+          "lifecycle": "dead",
+          "mailboxReady": false,
+          "guestAfter": {
+            "uid": 1000,
+            "home": "/home/agent",
+            "cpus": 2,
+            "memTotal": "MemTotal:        2066016 kB",
+            "sshSocketPresent": false,
+            "mainCheckoutVisible": false,
+            "hostSecretEnvNames": [],
+            "homeEntries": [
+              ".cache",
+              ".config",
+              ".cursor",
+              ".gitconfig",
+              ".gitignore_global",
+              "lost+found"
+            ]
+          },
+          "stopped": "stopped"
+        }
+      ],
+      "steps": [
+        {
+          "phase": "desktop-install-image",
+          "ms": 11237.019291000004,
+          "passed": true
+        },
+        {
+          "phase": "fresh:desktop-machine-start",
+          "ms": 16330.898166999992,
+          "passed": true
+        },
+        {
+          "phase": "fresh:runtimeFor-start",
+          "ms": 2566.7899579999794,
+          "error": "research72_cab72ff2-42fa-4f19-8ff6-d271a9423f16: cursor-agent would not open a session (Authentication required). If Cursor is signed out, sign in with cursor-agent login.",
+          "passed": false
+        },
+        {
+          "phase": "fresh:runtime-stop",
+          "ms": 2001.3607500000217,
+          "passed": true
+        },
+        {
+          "phase": "fresh:desktop-machine-stop",
+          "ms": 7029.018792000017,
+          "passed": true
+        },
+        {
+          "phase": "reopened:desktop-machine-start",
+          "ms": 5078.433500000014,
+          "passed": true
+        },
+        {
+          "phase": "reopened:runtimeFor-start",
+          "ms": 2557.5777090000047,
+          "error": "research72_cab72ff2-42fa-4f19-8ff6-d271a9423f16: cursor-agent would not open a session (Authentication required). If Cursor is signed out, sign in with cursor-agent login.",
+          "passed": false
+        },
+        {
+          "phase": "reopened:runtime-stop",
+          "ms": 2001.5949169999803,
+          "passed": true
+        },
+        {
+          "phase": "reopened:desktop-machine-stop",
+          "ms": 7125.133999999991,
+          "passed": true
+        }
+      ],
+      "cleanup": {
+        "errors": [],
+        "boxes": [],
+        "images": [
+          {
+            "id": "94670d5b2a24",
+            "repository": "docker.io/docker/sandbox-templates",
+            "tag": "claude-code-docker",
+            "flavor": "claude-code-docker",
+            "created_at": "2026-09-04T18:58:46Z",
+            "size": 936879795
+          },
+          {
+            "id": "5fc81bc7a127",
+            "repository": "docker.io/docker/sandbox-templates",
+            "tag": "shell-docker",
+            "flavor": "shell-docker",
+            "created_at": "2026-09-04T18:54:27Z",
+            "size": 588725040
+          }
+        ],
+        "imagesUnchanged": true,
+        "temporaryAreaRemoved": true
+      },
+      "initiallyAbsent": true,
+      "completed": true
+    }
+  ],
+  "cleanup": {
+    "boxes": [],
+    "images": [
+      {
+        "id": "94670d5b2a24",
+        "repository": "docker.io/docker/sandbox-templates",
+        "tag": "claude-code-docker",
+        "flavor": "claude-code-docker",
+        "created_at": "2026-09-04T18:58:46Z",
+        "size": 936879795
+      },
+      {
+        "id": "5fc81bc7a127",
+        "repository": "docker.io/docker/sandbox-templates",
+        "tag": "shell-docker",
+        "flavor": "shell-docker",
+        "created_at": "2026-09-04T18:54:27Z",
+        "size": 588725040
+      }
+    ],
+    "imagesUnchanged": true,
+    "temporaryRootRemoved": true
+  },
+  "scope": "DesktopMachines(preview=true) + runtimeFor + production MCP; fresh synthetic homes/worktrees. No login, prompt, inference, host credentials or host skills.",
+  "host": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v25.6.1",
+    "os": "ProductName:\t\tmacOS\nProductVersion:\t\t26.6.2\nBuildVersion:\t\t25G83"
+  },
+  "engine": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "beforeImages": [
+    {
+      "id": "94670d5b2a24",
+      "repository": "docker.io/docker/sandbox-templates",
+      "tag": "claude-code-docker",
+      "flavor": "claude-code-docker",
+      "created_at": "2026-09-04T18:58:46Z",
+      "size": 936879795
+    },
+    {
+      "id": "5fc81bc7a127",
+      "repository": "docker.io/docker/sandbox-templates",
+      "tag": "shell-docker",
+      "flavor": "shell-docker",
+      "created_at": "2026-09-04T18:54:27Z",
+      "size": 588725040
+    }
+  ],
+  "sourceHashes": {
+    "apps/desktop/src/main/machines.ts": "0eb3335a7dfe5b4a6fe42926d2350eb5a285bda389418654be6dc0a522378880",
+    "apps/desktop/src/main/runtime-for.ts": "6b291ec2a70a09f4dcfd9dd85b53d33a4fc0406060752f26a03d73c074d94b47",
+    "packages/core/src/workspace/box-mounts.ts": "049375805a0f5ecc27fadd0249ebc260c0627a9773d3e6783ac155e283c5fd5d",
+    "packages/core/src/machines/sbx/owned-machine.ts": "7af7cfa4e418cc8284e0ebb616cd7e642ddfe8141bf1565f81385259fe2359c5",
+    "packages/core/src/machines/sbx/transport.ts": "fe6b6a14942e3db34686cb24be037433e1837bf0e65d1003c350186d06c1e322",
+    "packages/core/src/machines/sbx/bootstrap.ts": "d294e7b939af907c9c2141903f8c4d0e81f887ae5ffd4d1c81c6fbacabcf466a",
+    "packages/core/src/mcp/peer-message-server.ts": "c0ad14237823a9263c01d7415ce0fef5623b017644b026aa50d86ffa8a9a4ea6",
+    "packages/core/src/adapters/acp/npm-bridge.ts": "cd623269f9ec69116ed4b26274154a7b7a0e47c598882bbb1efdef0d3d0996da",
+    "packages/core/src/adapters/codex/image.ts": "65ecd2c444bdd7724fb650934fdd152fcd96623475cde693aed4a236aa8f463a",
+    "packages/core/src/adapters/codex/codex-agent-runtime.ts": "621f786b8583e4c5609f1ed12f9003c2c8501634c5f001d23f4a9b2d008bb123",
+    "packages/core/src/adapters/codex/stdio-bridge.ts": "10bfb5c2f72689b10add733be4f6ded60fb03a350b8abdff9feeaeb13f6d0092",
+    "packages/core/src/adapters/opencode/image.ts": "a5fad54afc2e806be6896cf41fc7637aa9d5942f932fc88746bf9e3ae9d5f5c4",
+    "packages/core/src/adapters/opencode/opencode-agent-runtime.ts": "2f6c66e5efc00405164eb33a994c7bd90fd5a5eee1801ad5dfa8fc162b71affe",
+    "packages/core/src/adapters/opencode/stdio.ts": "4b917110c9d3377d7c78a872e5db6d1f126322b363219eb5b93a0fdcba5284fc",
+    "packages/core/src/adapters/cursor/image.ts": "3ade832a520c1c729a04197c26a18256c9cf58603672d7371fcd52b16514d3f8",
+    "packages/core/src/adapters/cursor/cursor-agent-runtime.ts": "7686f205c978de1158dbcac00ee13f20554f5fa6d76187ef13d85446afc7127d",
+    "packages/core/src/adapters/cursor/stdio.ts": "89c656205c60e81fdb7edecd658b012378317ccdf728225ae9d41f32d842810c"
+  },
+  "minimumFreeBytes": 24109268992,
+  "completed": true,
+  "postflightSourceHashes": {
+    "apps/desktop/src/main/machines.ts": "0eb3335a7dfe5b4a6fe42926d2350eb5a285bda389418654be6dc0a522378880",
+    "apps/desktop/src/main/runtime-for.ts": "6b291ec2a70a09f4dcfd9dd85b53d33a4fc0406060752f26a03d73c074d94b47",
+    "packages/core/src/workspace/box-mounts.ts": "049375805a0f5ecc27fadd0249ebc260c0627a9773d3e6783ac155e283c5fd5d",
+    "packages/core/src/machines/sbx/owned-machine.ts": "7af7cfa4e418cc8284e0ebb616cd7e642ddfe8141bf1565f81385259fe2359c5",
+    "packages/core/src/machines/sbx/transport.ts": "fe6b6a14942e3db34686cb24be037433e1837bf0e65d1003c350186d06c1e322",
+    "packages/core/src/machines/sbx/bootstrap.ts": "d294e7b939af907c9c2141903f8c4d0e81f887ae5ffd4d1c81c6fbacabcf466a",
+    "packages/core/src/mcp/peer-message-server.ts": "c0ad14237823a9263c01d7415ce0fef5623b017644b026aa50d86ffa8a9a4ea6",
+    "packages/core/src/adapters/acp/npm-bridge.ts": "cd623269f9ec69116ed4b26274154a7b7a0e47c598882bbb1efdef0d3d0996da",
+    "packages/core/src/adapters/codex/image.ts": "65ecd2c444bdd7724fb650934fdd152fcd96623475cde693aed4a236aa8f463a",
+    "packages/core/src/adapters/codex/codex-agent-runtime.ts": "621f786b8583e4c5609f1ed12f9003c2c8501634c5f001d23f4a9b2d008bb123",
+    "packages/core/src/adapters/codex/stdio-bridge.ts": "10bfb5c2f72689b10add733be4f6ded60fb03a350b8abdff9feeaeb13f6d0092",
+    "packages/core/src/adapters/opencode/image.ts": "a5fad54afc2e806be6896cf41fc7637aa9d5942f932fc88746bf9e3ae9d5f5c4",
+    "packages/core/src/adapters/opencode/opencode-agent-runtime.ts": "2f6c66e5efc00405164eb33a994c7bd90fd5a5eee1801ad5dfa8fc162b71affe",
+    "packages/core/src/adapters/opencode/stdio.ts": "4b917110c9d3377d7c78a872e5db6d1f126322b363219eb5b93a0fdcba5284fc",
+    "packages/core/src/adapters/cursor/image.ts": "3ade832a520c1c729a04197c26a18256c9cf58603672d7371fcd52b16514d3f8",
+    "packages/core/src/adapters/cursor/cursor-agent-runtime.ts": "7686f205c978de1158dbcac00ee13f20554f5fa6d76187ef13d85446afc7127d",
+    "packages/core/src/adapters/cursor/stdio.ts": "89c656205c60e81fdb7edecd658b012378317ccdf728225ae9d41f32d842810c"
+  },
+  "finishedAt": "2026-09-06T01:43:48.851Z"
+}

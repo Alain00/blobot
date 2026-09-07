@@ -1,0 +1,243 @@
+{
+  "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+  "root": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-gitlab-preview-sLu94x",
+  "primarySource": "https://gitlab.com/gitlab-org/ai/skills/-/tree/main",
+  "skillCount": 23,
+  "skills": [
+    {
+      "name": "authoring-skills",
+      "fileCount": 5,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/authoring-skills",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "commit-messages",
+      "fileCount": 4,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/commit-messages",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "gitlab-agent-plan",
+      "fileCount": 9,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/gitlab-agent-plan",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "gitlab-babysit-mr",
+      "fileCount": 16,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/gitlab-babysit-mr",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "gitlab-clickhouse",
+      "fileCount": 2,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/gitlab-clickhouse",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "gitlab-mr-description",
+      "fileCount": 3,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/gitlab-mr-description",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "gitlab-pipeline-watch",
+      "fileCount": 2,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/gitlab-pipeline-watch",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "gitlab-psql",
+      "fileCount": 1,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/gitlab-psql",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "glab",
+      "fileCount": 14,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/glab",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "glab-glql",
+      "fileCount": 3,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/glab-glql",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "handoff",
+      "fileCount": 2,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/handoff",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "mr-adversarial-review",
+      "fileCount": 2,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/mr-adversarial-review",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "mr-guided-review",
+      "fileCount": 1,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/mr-guided-review",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "mr-review",
+      "fileCount": 3,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/mr-review",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "opencode-refine",
+      "fileCount": 1,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/opencode-refine",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "playwright-cli",
+      "fileCount": 8,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/playwright-cli",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "pushify",
+      "fileCount": 1,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/pushify",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "run-in-tmux-pane",
+      "fileCount": 3,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/run-in-tmux-pane",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "self-service-performance-testing",
+      "fileCount": 10,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/self-service-performance-testing",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "skopeo",
+      "fileCount": 2,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/skopeo",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "stack-changes",
+      "fileCount": 3,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/stack-changes",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "video-takeaways",
+      "fileCount": 8,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/video-takeaways",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    },
+    {
+      "name": "write-large-file",
+      "fileCount": 1,
+      "source": {
+        "kind": "git",
+        "url": "https://gitlab.com/gitlab-org/ai/skills.git",
+        "skillPath": "skills/write-large-file",
+        "resolvedCommit": "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+      }
+    }
+  ],
+  "commits": [
+    "9e3704fd0a0592e2ca7e7f9957e8bb59969c8f9d"
+  ],
+  "catalogueRemainsUninstalled": true,
+  "passed": true
+}

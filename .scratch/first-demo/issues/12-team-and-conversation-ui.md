@@ -6,6 +6,13 @@ Blocked by: 09
 
 ## Question
 
+### Amendment — Machine power, reopened and resolved by Guillermo, 2026-09-05
+
+The author explicitly requests a green lower-right avatar dot when the Agent's Machine is
+awake and gray while asleep. This narrows the monochrome rule for power only; the binding
+rendering rule is in `DESIGN.md`, “Machine power exception”. Activity and runtime readiness
+remain separate. This amendment does not reopen the rest of the team's layout.
+
 The demo's whole payoff is visual: two blobatars working at once, and a visible message
 passing between them. That either reads instantly or the demo is flat.
 

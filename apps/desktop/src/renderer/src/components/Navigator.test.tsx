@@ -3,17 +3,19 @@
  *
  * What the navigator can reach.
  *
- * The rail can only offer panes for the team it is drawing, so the claim worth testing is the
- * one the rail cannot make: an agent on a team that is *not* open is findable by name, and
- * choosing them names both the team to open and the agent to land on. That pair is the whole
- * feature — a navigator that switched the team and dropped you on the transcript would have
- * answered a question nobody asked.
+ * **Every hired agent, and the person rather than the seat.** `.scratch/rail/issues/05`. It used
+ * to list one row per membership, so Alice on four teams was four rows — the sixteen-row list
+ * this redesign refused, and worse in a search result, where rows have no grouping to tell them
+ * apart. Selecting one opens their thread, which is what their rail row does.
+ *
+ * And a **thread is never findable as a team**: it is one thing, and it is already in the list
+ * above under the agent's own name.
  */
 import React from 'react';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { describe, expect, it } from 'vitest';
-import type { UiAgent, UiTeam, UiTeamSummary } from '../../../shared/api.js';
+import type { UiAgent, UiRailAgent, UiTeam, UiTeamSummary } from '../../../shared/api.js';
 import { Navigator } from './Navigator.js';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -48,26 +50,39 @@ const TEAMS: readonly UiTeamSummary[] = [
     workspaceKind: 'git',
     members: [{ id: 'mara', name: 'Mara' }],
   },
+  {
+    id: 'thread',
+    name: 'Mara',
+    workspacePath: '/home/x/blobot/mara',
+    workspaceKind: 'git',
+    threadFor: 'p_mara',
+    members: [{ id: 'mara_1', name: 'Mara' }],
+  },
+];
+const PROFILES: readonly UiRailAgent[] = [
+  { id: 'p_alice', name: 'Alice', role: 'builds the UI', hiredAt: 1 },
+  { id: 'p_mara', name: 'Mara', role: 'runs the pipeline', hiredAt: 2, threadId: 'thread' },
 ];
 
 interface Drawn {
   readonly host: HTMLElement;
-  readonly chosen: { agent?: readonly [string, string]; team?: string };
+  readonly chosen: { agent?: string; team?: string };
 }
 
 function draw(): Drawn {
   const host = document.createElement('div');
   document.body.appendChild(host);
-  const chosen: { agent?: readonly [string, string]; team?: string } = {};
+  const chosen: { agent?: string; team?: string } = {};
   act(() => {
     createRoot(host).render(
       React.createElement(Navigator, {
         team: OPEN,
         teams: TEAMS,
         agents: OPEN_AGENTS,
+        profiles: PROFILES,
         onClose: () => {},
-        onSelectAgent: (teamId: string, agentId: string) => {
-          chosen.agent = [teamId, agentId];
+        onSelectAgent: (profileId: string) => {
+          chosen.agent = profileId;
         },
         onSelectTeam: (teamId: string) => {
           chosen.team = teamId;
@@ -78,7 +93,7 @@ function draw(): Drawn {
   return { host, chosen };
 }
 
-/** One row, by the value it carries: `agent:<team>:<id>`, `team:<id>`, `place:<name>`. cmdk
+/** One row, by the value it carries: `agent:<profileId>`, `team:<id>`, `place:<name>`. cmdk
  *  draws items as divs with a `data-value`, and lowercases it. */
 function row(drawn: Drawn, value: string): HTMLElement {
   const found = [...drawn.host.querySelectorAll('[cmdk-item]')].find(
@@ -89,25 +104,29 @@ function row(drawn: Drawn, value: string): HTMLElement {
 }
 
 describe('the navigator', () => {
-  it('finds an agent on a team that is not open', () => {
+  it('finds every hired agent, whichever team they are on', () => {
     const drawn = draw();
     act(() => {
-      row(drawn, 'agent:other:mara').click();
+      row(drawn, 'agent:p_mara').click();
     });
-    // Both halves: which team to open, and who to be looking at when it does.
-    expect(drawn.chosen.agent).toEqual(['other', 'mara']);
+    // The profile, because a row is the person: selecting it opens their thread.
+    expect(drawn.chosen.agent).toBe('p_mara');
     drawn.host.remove();
   });
 
-  it('says which team an agent is on, and does not repeat the open one', () => {
+  it('lists a person once, never once per seat', () => {
     const drawn = draw();
-    // The team is the only thing telling two agents of the same name apart, so an agent
-    // elsewhere carries it.
-    expect(row(drawn, 'agent:other:mara').textContent).toContain('hermes-agent');
-    // And the open team's own people do not, because every row would then say it. They carry
-    // the role instead, which is the fact the rail row beside them is already showing.
-    expect(row(drawn, 'agent:open:alice').textContent).toContain('builds the UI');
-    expect(row(drawn, 'agent:open:alice').textContent).not.toContain('portfolio');
+    const agents = [...drawn.host.querySelectorAll('[cmdk-item]')].filter((item) =>
+      item.getAttribute('data-value')?.startsWith('agent:'),
+    );
+    expect(agents).toHaveLength(2);
+    drawn.host.remove();
+  });
+
+  it('says the role, and never a team, because a person on four teams has no one team', () => {
+    const drawn = draw();
+    expect(row(drawn, 'agent:p_mara').textContent).toContain('runs the pipeline');
+    expect(row(drawn, 'agent:p_mara').textContent).not.toContain('hermes-agent');
     drawn.host.remove();
   });
 
@@ -117,6 +136,15 @@ describe('the navigator', () => {
       row(drawn, 'team:other').click();
     });
     expect(drawn.chosen.team).toBe('other');
+    drawn.host.remove();
+  });
+
+  it('does not list a thread as a team, which would be one thing under two names', () => {
+    const drawn = draw();
+    const teams = [...drawn.host.querySelectorAll('[cmdk-item]')]
+      .map((item) => item.getAttribute('data-value') ?? '')
+      .filter((value) => value.startsWith('team:'));
+    expect(teams).toEqual(['team:open', 'team:other']);
     drawn.host.remove();
   });
 });

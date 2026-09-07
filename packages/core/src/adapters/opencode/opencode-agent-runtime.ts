@@ -33,6 +33,10 @@ import type {
 } from '../acp/wire.js';
 import { agentKeyFor, opencodeConfigContent } from './config.js';
 import { offerableNames } from './palette.js';
+import { LocalMachine } from '../../machines/local-machine.js';
+import { OPENCODE_MACHINE_IMAGE } from './image.js';
+import type { Machine } from '../../machines/machine.js';
+import { MACHINE_CLIENT_CAPABILITIES } from '../acp/client-capabilities.js';
 import { spawnOpencode, VERIFIED_OPENCODE_VERSION, type SpawnOpencode } from './stdio.js';
 import { currentModeOf, type OpencodeSessionResult } from './wire.js';
 
@@ -103,6 +107,7 @@ export interface OpencodeAgentRuntimeOptions {
   /** The user's own `opencode`. Defaults to `OPENCODE_BIN`, then `PATH`. */
   readonly opencodeExecutable?: string;
   readonly env?: Readonly<Record<string, string>>;
+  readonly machine?: Machine;
   /** Injected in tests: a transport that speaks the protocol without spawning anything. */
   readonly spawn?: SpawnOpencode;
   readonly onStderr?: (line: string) => void;
@@ -123,6 +128,7 @@ export interface OpencodeAgentRuntimeOptions {
  * agent is.
  */
 export class OpencodeAgentRuntime implements AgentRuntime {
+  readonly machineImage = OPENCODE_MACHINE_IMAGE;
   readonly agentId: string;
 
   readonly #options: OpencodeAgentRuntimeOptions;
@@ -152,7 +158,10 @@ export class OpencodeAgentRuntime implements AgentRuntime {
 
   constructor(options: OpencodeAgentRuntimeOptions) {
     this.agentId = options.agentId;
-    this.#options = options;
+    this.#options = {
+      ...options,
+      machine: options.machine ?? new LocalMachine({ agentId: options.agentId, workspacePath: options.cwd }),
+    };
     this.#pictures = new PictureWatch(options.pictures);
     this.#clock = options.clock ?? new SystemClock();
     this.#spawn = options.spawn ?? spawnOpencode;
@@ -200,6 +209,7 @@ export class OpencodeAgentRuntime implements AgentRuntime {
 
   async #connect(): Promise<void> {
     const transport = this.#spawn({
+      ...(this.#options.machine === undefined ? {} : { machine: this.#options.machine }),
       cwd: this.#options.cwd,
       // The persona and the posture reach the process here, before it reads a directory:
       // OpenCode snapshots a directory's config for the process lifetime, so a config that
@@ -228,7 +238,7 @@ export class OpencodeAgentRuntime implements AgentRuntime {
       protocolVersion: PROTOCOL_VERSION,
       // We own no terminals and serve no unsaved buffers: the agent works in a real workspace
       // on disk, so OpenCode's own file and shell tools are the right ones to use.
-      clientCapabilities: { fs: { readTextFile: false, writeTextFile: false }, terminal: false },
+      clientCapabilities: MACHINE_CLIENT_CAPABILITIES,
     });
     this.#checkVersions(initialized);
 
@@ -305,6 +315,7 @@ export class OpencodeAgentRuntime implements AgentRuntime {
   #configContent(): string {
     const name = this.#options.agentName ?? this.agentId;
     return opencodeConfigContent({
+      ...(this.#options.machine?.location().personalPath ? { personalPath: this.#options.machine.location().personalPath! } : {}),
       agentKey: this.#agentKey,
       description: `${name}, a blobot teammate.`,
       persona: this.#options.persona ?? '',
@@ -347,7 +358,7 @@ export class OpencodeAgentRuntime implements AgentRuntime {
     }
   }
 
-  sendPrompt(prompt: Prompt): AsyncIterable<AgentEvent> {
+  sendPrompt(prompt: Prompt, onAdmitted?: () => void): AsyncIterable<AgentEvent> {
     if (this.#lifecycle !== 'ready') {
       throw new Error(`${this.agentId}: cannot prompt a runtime that is ${this.#lifecycle}`);
     }
@@ -359,6 +370,7 @@ export class OpencodeAgentRuntime implements AgentRuntime {
         `${this.agentId}: a turn is already in flight — the orchestrator's mailbox exists so this cannot happen`,
       );
     }
+    onAdmitted?.();
     const queue = new AsyncQueue<AgentEvent>();
     this.#turnIndex += 1;
     const turnId = `turn_${this.#turnIndex}`;
@@ -464,7 +476,7 @@ export class OpencodeAgentRuntime implements AgentRuntime {
   }
 
   async stop(): Promise<void> {
-    if (this.#lifecycle === 'stopped') return;
+    // A stopped lifecycle can precede OS process exit; repeated stop must still join cleanup.
     this.#setLifecycle('stopped');
     // The session is on disk either way, so closing it costs nothing and keeps the shutdown
     // orderly. `session/close` makes the session unusable to *this* process; a later
@@ -522,7 +534,7 @@ export class OpencodeAgentRuntime implements AgentRuntime {
 
   /** Read once. A command added to the workspace mid-session needs a restart to be offered. */
   #projectCommands(): ReadonlySet<string> {
-    this.#projectNames ??= offerableNames(this.#options.cwd);
+    this.#projectNames = offerableNames(this.#options.cwd, this.#options.machine?.kind === 'box' ? this.#options.machine.location() : undefined, this.#options.machine?.location().personalPath);
     return this.#projectNames;
   }
 
@@ -563,6 +575,11 @@ export class OpencodeAgentRuntime implements AgentRuntime {
               optionId: option.optionId,
               kind: permissionKind(option.kind),
               name: option.name ?? option.optionId,
+              ...(option.kind === 'allow_always'
+                ? {
+                    description: 'Applies to the tool\'s suggested patterns for the rest of the session. blobot does not provide a control to revoke it.',
+                  }
+                : {}),
             },
           ],
     );

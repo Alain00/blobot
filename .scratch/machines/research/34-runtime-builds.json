@@ -1,0 +1,92 @@
+{
+  "claude": [
+    {
+      "arch": "arm64",
+      "reference": "blobot-machine-claude:3b4535de48403a040fa7302506592d41d4107bf5134a59bbbd93e03a36b72192-arm64",
+      "imageId": "sha256:3b4535de48403a040fa7302506592d41d4107bf5134a59bbbd93e03a36b72192",
+      "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-claude-arm64-3b4535de48403a040fa7302506592d41d4107bf5134a59bbbd93e03a36b72192.tar",
+      "sha256": "75881fe4b412dc3cf7daf36071d75e7f1a8c093ecc845c21ec909b43cb6c11ea",
+      "bytes": 693360640
+    },
+    {
+      "arch": "amd64",
+      "reference": "blobot-machine-claude:8394a72a6a7830ff1161438814452e7af1f9063be68b45bc32780b9d6153f54b-amd64",
+      "imageId": "sha256:8394a72a6a7830ff1161438814452e7af1f9063be68b45bc32780b9d6153f54b",
+      "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-claude-amd64-8394a72a6a7830ff1161438814452e7af1f9063be68b45bc32780b9d6153f54b.tar",
+      "sha256": "801717469a40026ff6c628e044d179ef3d37118c55eaaeb1b2a2cebe8a63c93a",
+      "bytes": 709304832
+    }
+  ],
+  "codex": [
+    {
+      "arch": "arm64",
+      "reference": "blobot-machine-codex:475f185a738767edbd26a87ad2e6141c473f4698a3acadafcbd3b0740e88125c-arm64",
+      "imageId": "sha256:475f185a738767edbd26a87ad2e6141c473f4698a3acadafcbd3b0740e88125c",
+      "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-codex-arm64-475f185a738767edbd26a87ad2e6141c473f4698a3acadafcbd3b0740e88125c.tar",
+      "sha256": "23afd9ac9381563f4bc02b9a4b0cf04b6f8da59a840b5dd7f1b078e358b505d2",
+      "bytes": 719340032
+    },
+    {
+      "arch": "amd64",
+      "reference": "blobot-machine-codex:5b9db9612c65fc8d0446a80df044e06625958e60875335e52fdd32f508ad9385-amd64",
+      "imageId": "sha256:5b9db9612c65fc8d0446a80df044e06625958e60875335e52fdd32f508ad9385",
+      "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-codex-amd64-5b9db9612c65fc8d0446a80df044e06625958e60875335e52fdd32f508ad9385.tar",
+      "sha256": "0ce580f033c7adbe0c06c8cdb342661090322ca88804028d746c07a0aa6a34dd",
+      "bytes": 743079424
+    }
+  ],
+  "opencode": [
+    {
+      "arch": "arm64",
+      "reference": "blobot-machine-opencode:f64b333bf23e6ec25614c54d4fbf59c124869b78e1f0735abf0f8f9ced2856b1-arm64",
+      "imageId": "sha256:f64b333bf23e6ec25614c54d4fbf59c124869b78e1f0735abf0f8f9ced2856b1",
+      "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-opencode-arm64-f64b333bf23e6ec25614c54d4fbf59c124869b78e1f0735abf0f8f9ced2856b1.tar",
+      "sha256": "57287378b62a5a7e4060fd759570e9a7ac786abe34f0940495cc3e447857836e",
+      "bytes": 649681920
+    },
+    {
+      "arch": "amd64",
+      "reference": "blobot-machine-opencode:f98f82e4bc3ba891e32591d9826642e48aae47247bd0184acfdbdf4889da8f4a-amd64",
+      "imageId": "sha256:f98f82e4bc3ba891e32591d9826642e48aae47247bd0184acfdbdf4889da8f4a",
+      "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-opencode-amd64-f98f82e4bc3ba891e32591d9826642e48aae47247bd0184acfdbdf4889da8f4a.tar",
+      "sha256": "f5d434aa61b06e786c34af1370119f85a71c9bb1213d2edd27084ae002cfaf8f",
+      "bytes": 665677824
+    }
+  ],
+  "fx": [
+    {
+      "arch": "arm64",
+      "reference": "blobot-machine-fx:fa5a6e736d1664474b3b4e3d7ee673732b4664457527b5f6dcdcac318cfe0a40-arm64",
+      "imageId": "sha256:fa5a6e736d1664474b3b4e3d7ee673732b4664457527b5f6dcdcac318cfe0a40",
+      "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-fx-arm64-fa5a6e736d1664474b3b4e3d7ee673732b4664457527b5f6dcdcac318cfe0a40.tar",
+      "sha256": "9989ecf9f1faa8ea70d43e35ed8c87936a7df733f437cd63c3d659662b097cdf",
+      "bytes": 594126848
+    },
+    {
+      "arch": "amd64",
+      "reference": "blobot-machine-fx:8ae591bf93887934b5808d52d25fd82427876e52bc05c892b4bd0c8fd7b6963c-amd64",
+      "imageId": "sha256:8ae591bf93887934b5808d52d25fd82427876e52bc05c892b4bd0c8fd7b6963c",
+      "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-fx-amd64-8ae591bf93887934b5808d52d25fd82427876e52bc05c892b4bd0c8fd7b6963c.tar",
+      "sha256": "270a0186e7439754a63ad0459d4b76f665f77e88bd802098c25d67806ffd648a",
+      "bytes": 610527744
+    }
+  ],
+  "cursor": [
+    {
+      "arch": "arm64",
+      "reference": "blobot-machine-cursor:781376cc4e5d4ee335c6e62f1176219ae825ef5f74655af88b64472f8035f7ca-arm64",
+      "imageId": "sha256:781376cc4e5d4ee335c6e62f1176219ae825ef5f74655af88b64472f8035f7ca",
+      "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-cursor-arm64-781376cc4e5d4ee335c6e62f1176219ae825ef5f74655af88b64472f8035f7ca.tar",
+      "sha256": "a9321604a8bbf6315ee426581b4bcbc45d72fd92f9d8802f195874bc59c4bb79",
+      "bytes": 772251136
+    },
+    {
+      "arch": "amd64",
+      "reference": "blobot-machine-cursor:753ac10e8f53023a35952ae30d4ea0f5921f7a11db4373766d5fc81d994501c5-amd64",
+      "imageId": "sha256:753ac10e8f53023a35952ae30d4ea0f5921f7a11db4373766d5fc81d994501c5",
+      "url": "https://github.com/guillermolg00/blobot-machine-images/releases/download/machines-20260905-1/blobot-machine-cursor-amd64-753ac10e8f53023a35952ae30d4ea0f5921f7a11db4373766d5fc81d994501c5.tar",
+      "sha256": "41d4b8941e9fcdb9467539b9fa3e8af4bc2758b806f490e0b859fefde53cc459",
+      "bytes": 789465088
+    }
+  ]
+}

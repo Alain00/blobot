@@ -192,5 +192,37 @@ panel and the dialog looked fine. A kind mock produces a UI that shatters on fir
 
 Unchanged: removal only and never editing; `add one` opening the composer rather than being a
 text field, so `record_entry` stays the single path into a Handbook; the foot's `1,240 of 8,000`
-and why it is not the gauge's row said twice; the notice card above the composer; and the team
-pane taking a figure and never a body.
+and why it is not the gauge's row said twice; and the team pane taking a figure and never a
+body. *The notice card was in that list and is withdrawn — see the amendment at the foot.*
+
+## Amendment, 2026-09-06 — the notice card is withdrawn
+
+**At the author's direction: there is no unbriefed card, in either pane. There is one shape, the
+tray's door, drawn at every count including zero.**
+
+The card is not being replaced by a better card. It is being removed because the answer above
+contradicts the rule the same effort was built on and this ticket did not notice at the time:
+**there is no third party in the room.** Ticket 02 refused a `system` line naming blobot and made
+*brief them* open the interview in the **agent's own first words** for exactly that reason. A card
+above the field saying `Mara has not been briefed` is blobot saying it first, in blobot's voice,
+forty pixels above the words that were supposed to be the agent's — the same third party, drawn
+as furniture instead of as a line in the transcript.
+
+So briefing is a conversation and happens in the conversation. An agent that knows nothing about
+the work says so itself, in its own words, when somebody talks to it — which is what a real one
+already does, unprompted, as the screenshot that occasioned this shows: the agent's first message
+named its empty Handbook and asked four questions, with the card underneath it saying the same
+thing worse.
+
+**What went with it:** `HandbookNotice`, `.hbnotice` / `.hbnbody` / `.hbnt` / `.hbnd` / `.hbnact`
+/ `.hbnbtn`, the `blobot:brief` IPC channel and its `brief()` on the preload surface.
+`promptForBriefing` and `BRIEFING_KNOCK` stay in core, unreferenced by the UI, because the wire
+rule they exist for — *no text the renderer composed reaches an agent* — is still the rule, and
+nothing here argues against ever offering that turn again from somewhere it does not speak first.
+
+**What is lost, stated rather than glossed:** nothing on screen now announces *unbriefed*. The
+tray's `handbook · 0` is the whole of the figure, which is why that door is now drawn at zero —
+the rule against a door to an empty room was written when the card was the empty state's answer,
+and with the card gone the door is the only way into a Handbook nobody has written in yet. Two
+things this ticket decided are unaffected and stay: the panel is `.modal` behind that door, and
+`add one` is a composer prefill so `record_entry` remains the single path into a Handbook.

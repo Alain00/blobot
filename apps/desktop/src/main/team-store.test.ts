@@ -1,7 +1,8 @@
 import { fileURLToPath } from 'node:url';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   SqliteStore,
+  machineFor,
   VirtualClock,
   openDatabase,
   type AgentWorkspace,
@@ -11,10 +12,13 @@ import {
   type RemovalOutcome,
   type WorkspaceInspection,
   type WorkspaceProvider,
+  WorkspaceError,
 } from '@blobot/core';
 import {
   TeamCreationError,
   createTeam,
+  createThread,
+  threadOf,
   deleteTeam,
   editAgentProfile,
   editTeamRoster,
@@ -125,6 +129,39 @@ beforeEach(() => {
 afterEach(() => opened.close());
 
 describe('creating a team', () => {
+  it('persists a default and per-member overrides, including for later joiners', async () => {
+    const box = { kind: 'box', limits: { maxCpus: 3, maxMemoryBytes: 6 * 1024 ** 3 } } as const;
+    const deps = { store, clock, workspaces, inspect: () => workspaces.inspect() };
+    const team = await createTeam({ ...spec, defaultMachine: box,
+      memberMachines: { [spec.profileIds[1]!]: { kind: 'local' } } }, deps);
+    expect(store.teamById(team.id)?.defaultMachine).toEqual(box);
+    expect(store.agentsOfTeam(team.id).map((agent) => agent.machine?.kind ?? 'local')).toEqual(['box', 'local']);
+    const joiner = hireAgent({ name: 'Charlie', role: 'Review', runtimeId: 'codex' }, { store, clock });
+    await editTeamRoster(team.id, [...spec.profileIds, joiner.id], deps);
+    expect(store.agentsOfTeam(team.id).find((agent) => agent.profileId === joiner.id)?.machine).toEqual(box);
+    const next = hireAgent({ name: 'Diana', role: 'Review', runtimeId: 'codex' }, { store, clock });
+    await expect(editTeamRoster(team.id, [...spec.profileIds, joiner.id, next.id], deps, undefined,
+      { [joiner.id]: { kind: 'local' } })).rejects.toThrow('new team member');
+    expect(store.agentsOfTeam(team.id)).toHaveLength(3);
+    await editTeamRoster(team.id, [...spec.profileIds, joiner.id, next.id], deps, undefined,
+      { [next.id]: { kind: 'local' } });
+    expect(store.agentsOfTeam(team.id).find((agent) => agent.profileId === next.id)?.machine?.kind ?? 'local').toBe('local');
+    expect(store.agentsOfTeam(team.id).find((agent) => agent.profileId === joiner.id)?.machine).toEqual(box);
+  });
+
+  it('validates member placement before creating rows or workspaces', async () => {
+    await expect(createTeam({ ...spec, memberMachines: { unknown: { kind: 'local' } } }, {
+      store, clock, workspaces, inspect: () => workspaces.inspect(),
+    })).rejects.toThrow('unselected');
+    expect(store.listTeams()).toHaveLength(0);
+    expect(workspaces.provisioned).toHaveLength(0);
+  });
+  it('refuses a profile retired after the creation form opened, before making workspaces', async () => {
+    store.tombstoneProfile(spec.profileIds[0]!, clock.now());
+    await expect(createTeam(spec, { store, clock, workspaces })).rejects.toMatchObject({ code: 'unknown_agent' });
+    expect(store.listTeams()).toHaveLength(0);
+    expect(workspaces.provisioned).toHaveLength(0);
+  });
   it('writes the team and gives every agent its own copy of the repository', async () => {
     const team = await createTeam(spec, { store, clock, workspaces, inspect: () => workspaces.inspect() });
 
@@ -267,6 +304,103 @@ describe('creating a team', () => {
     );
     const team = await createTeam({ ...spec, profileIds: [solo.id] }, { store, clock, workspaces, inspect: () => workspaces.inspect() });
     expect(store.agentsOfTeam(team.id)[0]?.runtimeId).toBe('something-unproven');
+  });
+});
+
+describe("an agent's thread", () => {
+  /**
+   * A folder maker that never touches disk. `createThread`'s real one runs `git init` under the
+   * home directory, which is not something a unit test may do — so the seam is the same one
+   * `inspect` already is, and the collision case below is exactly what it exists to exercise.
+   */
+  function folders(taken: readonly string[] = []) {
+    const made: string[] = [];
+    const prepare = async (name: string): Promise<WorkspaceInspection> => {
+      const slug = name.toLowerCase();
+      if (taken.includes(slug)) {
+        throw new WorkspaceError('already_there', `/home/x/blobot/${slug} already exists.`);
+      }
+      made.push(slug);
+      return { ...workspaces.inspection, path: `/home/x/blobot/${slug}` };
+    };
+    return { made, prepare };
+  }
+
+  it('is a Team carrying thread_for, told apart by that value and never by its roster', async () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    const { prepare } = folders();
+    const thread = await createThread(mara.id, { store, clock, workspaces, prepare });
+
+    expect(thread.threadFor).toBe(mara.id);
+    expect(store.threadOf(mara.id)?.id).toBe(thread.id);
+    expect(threadOf(store, mara.id)?.id).toBe(thread.id);
+    // The single member leads, because an unaddressed prompt has to route somewhere.
+    const members = store.agentsOfTeam(thread.id);
+    expect(members).toHaveLength(1);
+    expect(store.teamById(thread.id)?.leadAgentId).toBe(members[0]?.id);
+    // The one place the invented name surfaces. The provider slugs both halves, so in the app
+    // this reads `blobot/mara/mara`; the fake above does not slug, which is why the assertion
+    // is on what it was *asked* for rather than on the string it made up.
+    expect(workspaces.provisioned.at(-1)).toMatchObject({ teamName: 'Mara', agentName: 'Mara' });
+  });
+
+  it('is one per agent, so a second send finds the first rather than making another', async () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    const { prepare, made } = folders();
+    const first = await createThread(mara.id, { store, clock, workspaces, prepare });
+    const again = await createThread(mara.id, { store, clock, workspaces, prepare });
+    expect(again.id).toBe(first.id);
+    expect(made).toEqual(['mara']);
+    expect(store.listTeams()).toHaveLength(1);
+  });
+
+  it('disambiguates the folder rather than refusing, because the message is already typed', async () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    const { prepare, made } = folders(['mara']);
+    const thread = await createThread(mara.id, { store, clock, workspaces, prepare });
+    expect(made).toEqual(['mara-2']);
+    expect(thread.workspacePath).toBe('/home/x/blobot/mara-2');
+  });
+
+  it('steps around a real team holding the name, because teams.name is half a branch', async () => {
+    const mara = hireAgent({ name: 'mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    await createTeam(
+      { name: 'mara', workspacePath: '/repo', turnBudget: 6, profileIds: [spec.profileIds[0]!] },
+      { store, clock, workspaces, inspect: () => workspaces.inspect() },
+    );
+    const { prepare } = folders();
+    const thread = await createThread(mara.id, { store, clock, workspaces, prepare });
+    expect(thread.name).toBe('mara-2');
+  });
+
+  it('writes nothing when the folder cannot be made, so the typed message survives', async () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    const prepare = async (): Promise<WorkspaceInspection> => {
+      throw new WorkspaceError('git_failed', '/home/x/blobot/mara was created, but git could not set it up.');
+    };
+    await expect(createThread(mara.id, { store, clock, workspaces, prepare })).rejects.toThrow(
+      'git could not set it up',
+    );
+    expect(store.listTeams()).toEqual([]);
+    expect(store.threadOf(mara.id)).toBeUndefined();
+  });
+
+  it('leaves an ordinary team of one alone: nothing is backfilled and nothing is inferred', async () => {
+    const solo = await createTeam(
+      { ...spec, profileIds: [spec.profileIds[0]!] },
+      { store, clock, workspaces, inspect: () => workspaces.inspect() },
+    );
+    expect(store.teamById(solo.id)?.threadFor).toBeUndefined();
+    expect(store.threadOf(spec.profileIds[0]!)).toBeUndefined();
+    expect(threadOf(store, spec.profileIds[0]!)).toBeUndefined();
+  });
+
+  it('is not found for an agent who has been retired', async () => {
+    const mara = hireAgent({ name: 'Mara', role: 'marketing', runtimeId: 'claude-code' }, { store, clock });
+    const { prepare } = folders();
+    await createThread(mara.id, { store, clock, workspaces, prepare });
+    store.tombstoneProfile(mara.id, clock.now());
+    expect(threadOf(store, mara.id)).toBeUndefined();
   });
 });
 
@@ -747,12 +881,77 @@ describe('deleting a team', () => {
     const usage = await measureTeam(team.id, deps());
     expect(usage.bytes).toBe(3_072);
     expect(usage.agents).toEqual([
-      { agentName: 'Alice', bytes: 2_048 },
-      { agentName: 'Bob', bytes: 1_024 },
+      { agentName: 'Alice', bytes: 2_048, workBytes: 2_048, stateBytes: 0 },
+      { agentName: 'Bob', bytes: 1_024, workBytes: 1_024, stateBytes: 0 },
     ]);
     // Measuring is a question, never a change.
     expect(workspaces.removed).toHaveLength(0);
     expect(workspaces.purged).toHaveLength(0);
+  });
+
+  it('cleans measured work when private state size is unknown, without inventing reclaimed bytes', async () => {
+    const team = await createTeam(spec, deps());
+    const agent = store.agentsOfTeam(team.id)[0]!;
+    const machine = machineFor('local', { agentId: agent.id, workspacePath: '/fixture/agent' });
+    vi.spyOn(machine, 'measure').mockResolvedValue(null);
+    const destroy = vi.spyOn(machine, 'destroy');
+    workspaces.sizes = { Alice: 2048, Bob: 1024 };
+    const context = { ...deps(), machines: new Map([[agent.id, machine]]) };
+    expect(await measureTeam(team.id, context)).toMatchObject({ bytes: null, workBytes: 3072, stateBytes: null });
+    const deleted = await deleteTeam(team.id, context, { clean: true });
+    expect(workspaces.purged).toHaveLength(2);
+    expect(destroy).toHaveBeenCalledOnce();
+    expect(deleted.freedBytes).toBe(3072);
+  });
+
+  it('attempts private state removal after workspace removal fails and preserves both outcomes', async () => {
+    const team = await createTeam(spec, deps());
+    const agent = store.agentsOfTeam(team.id)[0]!;
+    const machine = machineFor('local', { agentId: agent.id, workspacePath: '/fixture/agent' });
+    const destroy = vi.spyOn(machine, 'destroy');
+    workspaces.purgeOutcome = new Error('Working folder unavailable.');
+    const deleted = await deleteTeam(team.id, { ...deps(), machines: new Map([[agent.id, machine]]) }, { clean: true });
+    expect(destroy).toHaveBeenCalledOnce();
+    expect(deleted.removals[0]).toMatchObject({ work: 'unknown', state: 'discarded', detail: 'Working folder unavailable.' });
+  });
+
+  it('keeps work untouched after stop fails, attempts state cleanup and reports its failure independently', async () => {
+    const team = await createTeam(spec, deps());
+    const agent = store.agentsOfTeam(team.id)[0]!;
+    const machine = machineFor('local', { agentId: agent.id, workspacePath: '/fixture/agent' });
+    vi.spyOn(machine, 'stop').mockRejectedValue(new Error('Busy.'));
+    const destroy = vi.spyOn(machine, 'destroy').mockRejectedValue(new Error('Ownership unavailable.'));
+    const deleted = await deleteTeam(team.id, { ...deps(), machines: new Map([[agent.id, machine]]) });
+    expect(destroy).toHaveBeenCalledOnce();
+    expect(workspaces.removed.map((request) => request.agentName)).toEqual(['Bob']);
+    expect(deleted.removals[0]).toMatchObject({ work: 'unknown', state: 'unknown' });
+    expect(deleted.removals[0]!.detail).toContain('Ownership unavailable.');
+  });
+
+  it('does not lose a successful work removal when private state removal fails', async () => {
+    const team = await createTeam(spec, deps());
+    const agent = store.agentsOfTeam(team.id)[0]!;
+    const machine = machineFor('local', { agentId: agent.id, workspacePath: '/fixture/agent' });
+    vi.spyOn(machine, 'destroy').mockRejectedValue(new Error('State unavailable.'));
+    const deleted = await deleteTeam(team.id, { ...deps(), machines: new Map([[agent.id, machine]]) });
+    expect(deleted.removals[0]).toMatchObject({ work: 'discarded', state: 'unknown' });
+  });
+
+  it('prices work and state separately and stops the Machine before removing work and its data', async () => {
+    const team = await createTeam(spec, deps());
+    const agent = store.agentsOfTeam(team.id)[0]!;
+    const machine = machineFor('local', { agentId: agent.id, workspacePath: '/fixture/agent' });
+    vi.spyOn(machine, 'measure').mockResolvedValue(4_096);
+    const stop = vi.spyOn(machine, 'stop');
+    const destroy = vi.spyOn(machine, 'destroy').mockImplementation(async () => {
+      expect(stop).toHaveBeenCalled();
+      expect(workspaces.removed.map((request) => request.agentName)).toContain('Alice');
+    });
+    workspaces.sizes = { Alice: 2_048 };
+    const context = { ...deps(), machines: new Map([[agent.id, machine]]) };
+    expect(await measureTeam(team.id, context)).toMatchObject({ bytes: 6_144, workBytes: 2_048, stateBytes: 4_096 });
+    await deleteTeam(team.id, context);
+    expect(destroy).toHaveBeenCalledOnce();
   });
 
   it('frees the name, so a team can be made again for the folder it was moved to', async () => {

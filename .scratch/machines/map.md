@@ -4,24 +4,28 @@ Label: wayfinder:map
 
 ## Destination
 
-A locked set of decisions for **the Machine** — the place an agent executes, and everything that
-place decides for it. Today that is always *this computer, in a git worktree of the team's folder,
-loading whatever the operator installed*, and all of it is a given rather than a choice:
+A locked set of decisions for **the Machine** — the place an agent executes. Today that is always
+*this computer, in a git worktree of the team's folder*, and it is a given rather than a choice:
 nothing in the app names it, and every screen, rule and refusal was written on top of it.
 
-**Reframed 2026-09-04, after charting**, into three axes that had been tangled into one noun:
+The map is done when three things are decided together, because they are one thing:
 
-| axis | question | tickets |
-| --- | --- | --- |
-| **location** | which computer an agent runs on | `13`, then `01`, `05`, `08`, `11` |
-| **reach** | what that process can touch | `03`, `04`, `09`, `10` |
-| **composition** | what that agent **loads** — config, MCP servers, skills | `14` |
-
-And, cutting across all three, **the channel**: whether an agent can be addressed outside a team
-at all, and what a turn there is (`06`, `07`, `12`).
+- **the object** — what a Machine is, what grain it hangs at, and whether an AgentProfile gets a
+  home of its own;
+- **the kinds** — local, a fence on this machine, and a box that is not this one, and what each
+  costs in mailbox, workspace, detection, disclosure and trust;
+- **the channel** — whether an agent can be addressed outside a team at all, and what a turn
+  there is.
 
 It plans; it does not build. The map is done when nothing is left to *decide* before someone
 writes that code.
+
+**Narrowed, 2026-09-04 (Guillermo): this computer only.** The kinds decided here are `local`
+and `box` — a microVM on this computer, blobot's own image per runtime inside it, one per Agent
+with two volumes. A Machine of the user's own over ssh, a hosted Machine, a second client such as
+a phone, and blobot as a service are **fresh efforts** (see *Out of scope*); this map fixes its
+interfaces so that none of them is a rewrite. The wording of the three bullets above stands; the
+*kinds* bullet now reads *local, and a box on this computer*.
 
 Raised by the author, 2026-09-04, in two parts. First: *"let's debate it's useful that an agent
 can be messaged outside a team, UI, UX, use cases, grok bot as reference, how useful this is?"*
@@ -58,6 +62,171 @@ amended, and it is not to be worked around quietly.
 
 ## Notes
 
+**Latest implementation checkpoint, 2026-09-06.**
+The operational [Machine screens](issues/12-a-machine-on-screen.md#resolution--operational-preview-2026-09-06)
+are implemented and technically reviewed. The [preview guide](../../docs/machines.md)
+explains setup, placement, login, queues, sleep and boundaries; the
+[review](review.md) records corrected findings. Development preview is explicit
+(`BLOBOT_MACHINES_PREVIEW=1`); ordinary builds refuse sandbox activation before
+calling the engine. Image/account/platform acceptance remains on the claimed
+[image](issues/13-the-image-one-per-runtime.md) and
+[first-box measurement](issues/16-measure-the-first-box.md) tickets. Historical
+checkpoint prose below records earlier states and does not override this one.
+Post-creation resize and a selectable inheritance editor are deferred explicitly.
+
+**Current sizing scope, 2026-09-06.** Under the author's autonomy delegation,
+[post-creation CPU/RAM changes](issues/25-post-creation-resource-changes.md) are
+deferred after actual restoration and native-route evidence. Choose limits at
+creation and retain the same Machine for normal stop/start. That optional
+replacement capability is no longer a prerequisite for the normal lifecycle;
+all remaining image/runtime/readiness/ownership gates still apply. Earlier notes
+about awaiting full-copy restoration for every activation are superseded narrowly.
+
+**Autonomous completion and PR, 2026-09-06 (Guillermo).** The author is going to
+sleep and asks for the complete implementation plus a detailed final review.
+Resolve subsequent decisions autonomously using documented references, established
+practice, scalability, usability, maintainability and efficiency. This supersedes
+the earlier requirement to pause for non-obvious decisions; do not silently claim
+an unverified guarantee. Continue in `/Users/guillermo/Work/blobot/.scratch/machines`.
+Keep validated commits per ticket. When the complete work is ready, push the
+implementation branch and open a PR against `main` describing its important
+implementation details and user flows. This authorizes that PR publication.
+
+**PR review status and attribution, 2026-09-06 (Guillermo).** Open the PR as a
+draft. Its very first paragraph must say: **Este PR todavía no está listo: aún
+no he terminado de revisar todo.** The author has not finished his own review.
+Use Guillermo's verified Git/GitHub identity for this work's commits and PR;
+retain other people's authorship on their pre-existing commits.
+
+**Design direction, 2026-09-06 (Guillermo).** Be meticulous about design: simple,
+organized, understandable and minimal, respecting the site's existing design.
+Use the current components and patterns; reveal operational details only where
+they help. This supplements DESIGN.md and the claimed Machine-screen ticket.
+
+**Resumed after main integration, 2026-09-05 (Guillermo).** The author said “continua” after
+the validated merge `1167d61`. The requested pause is complete; continue the entire Machines
+goal, starting with the claimed image ticket's complete-state preservation work. The merged
+UI is the baseline for later UI work. All existing acceptance gates and commit/validation
+requirements remain in force.
+
+**Current checkpoint.**
+[Where the boundary goes: around the bridge, or inside the runtime](issues/04-where-the-boundary-goes.md)
+is resolved after Guillermo accepted both the architecture and the native failure timing.
+Claude's local policy is active and its protected-command failure is measured with a synthetic
+local provider. Cursor's ACP setting is not described as a verified native fence. No boundary
+answer remains pending. Continue the full implementation goal; the image ticket remains claimed
+and its complete-state migration is still unfinished. All box activation gates remain in place.
+
+**Profile overview checkpoint, 2026-09-06.**
+[What lives in an agent's home, and what map.md may say](issues/06-what-lives-in-an-agents-home.md)
+is implemented, validated and resolved after acceptance of its [focused proposal](home-decision-round.md).
+The behavior of [What an agent addressed outside a team may do, and what its transcript is](issues/07-what-a-dmd-agent-may-do.md)
+is now accepted and resolved; continue with its entry-point UI.
+
+**Current implementation frontier.** Profile contact through a visible individual Team is
+implemented, validated and resolved, including its entry-point UI. The
+[first decision round](profile-conversation-decision-round.md) was accepted after explanation.
+No further product answer is pending for this choice. Continue the remaining frontier;
+complete-state image preservation remains claimed and unfinished.
+
+**Network continuation, 2026-09-06.** The individual-Team UI is committed as `1aa70a7`.
+[Egress from a box: the allowlist, and how a block is said](issues/15-egress-from-a-box.md)
+is implemented, validated and resolved. Its [focused decision round](egress-decision-round.md) records Guillermo's choice:
+Internet access without a blobot destination allowlist, beyond the harness's own restrictions.
+The author also accepted host/local-network reach while keeping the
+harness's selected approval policy. Worktrees, credential ownership and engine choice remain
+accepted. No further answer is pending about network reach or destination-list editability; no box
+activation is implied before the remaining image/runtime/onboarding/UI gates are complete.
+
+**Disclosure checkpoint, 2026-09-06.**
+[What a sandbox lets blobot say](issues/09-what-a-machine-lets-blobot-say.md) is implemented,
+validated and resolved. No permission answer remains pending. Its Answer supersedes historical
+clone/allowlist/box-only-approval prose and supplies the screen ticket's current copy contract.
+Continue the remaining implementation frontier; the claimed image preservation and box activation
+gates are still outstanding.
+
+**Measured network boundary.** The [RC5 probe](research/46-open-internet-boundary.md) found that
+the native Internet wildcard also admits host-loopback services despite private CIDR denies.
+The [decision round](egress-decision-round.md) records acceptance of that additional host-network
+reach and unchanged approval posture. Owned open-network permissions are implemented; keep the
+remaining image/runtime/UI activation gates. Do not reopen the settled network choice.
+
+**Main integration, 2026-09-05.** The incoming September 4 planning fork predates the
+accepted local/box scope and uses the numbers now held by the image and engine tickets.
+Its two questions are preserved under unique identities:
+[Is remoteness a place to execute, or a blobot instance?](issues/23-is-remoteness-a-place-or-an-instance.md)
+is outside the already narrowed destination;
+[A per-agent composition root: config, MCP servers, skills](issues/24-a-per-agent-composition-root.md)
+remains open alongside the existing inheritance/home decisions. This merge neither reopens
+resolved Machines tickets nor adopts a server model. References to the original permission
+posture use `first-demo` ticket 14; the current Machines ticket 14 owns the engine interface.
+
+**Pause to integrate main, 2026-09-05 (Guillermo).** Finish the current implementation
+checkpoint, commit it, fetch and integrate Alain's latest `main`, resolve any conflicts and
+validate the combined branch. Then stop before starting further work or UI. This temporarily
+overrides continuous advancement; the full goal and open acceptance gates remain unchanged.
+
+**Continuous implementation goal, 2026-09-05 (Guillermo).** Complete the entire Machines
+implementation, resuming the claimed image ticket. Validate throughout, commit each completed
+ticket separately, and write a checkpoint at each issue boundary so context can be compacted
+without losing decisions or evidence. This supersedes the earlier two-ticket/session and
+stop-for-handoff limits. Use `grill-with-docs` and pause for non-obvious product/trust decisions;
+the author delegates basic implementation choices. Do not reopen the accepted sbx engine,
+worktree/shared-Git boundary, base or storage capacities merely because context changed.
+
+**Current continuation, 2026-09-05 (Guillermo): worktrees on both kinds.** The author rejected
+the independent box clone after clarifying clone/worktree/remote semantics. The host-access
+portion of [What a Machine is, and what grain it hangs at](issues/01-what-a-machine-is.md)
+is resolved with the author’s explicit acceptance of shared Git metadata RW; the rest of its
+decisions stand.
+[Where a Workspace lives when the Machine is not this one](issues/05-where-a-workspace-lives.md)
+is implemented and resolved. Continue the claimed
+[The image: one per runtime](issues/13-the-image-one-per-runtime.md), using the base accepted
+in that ticket's **Base decision** section.
+The Workspace ticket's current-direction section supersedes its historical clone design. A synthetic
+worktree mount has been verified in sbx; the evidence and its limits live on the tickets.
+This changes neither the engine choice nor the two-ticket continuation request; the image
+work follows the revised Workspace contract. No production activation has been enabled.
+
+**Session handoff, 2026-09-05 (Guillermo).** The author requested a commit and handoff to
+continue in another session. Workspace implementation is committed as `65aece0`; resume the
+claimed image ticket with its base choice still pending. This handoff neither resolves that
+choice nor marks the image ticket complete. See the latest checkpoint in [build.md](build.md).
+
+**Execution opened, 2026-09-05 (Guillermo).** The author asked to begin development so each
+Agent is born and works in its own Docker Machine. Implementation is now in scope, one ticket
+per session, alongside the decisions. Start with *The engine, the Machine interface, and a
+box's lifecycle*: its interface is the prerequisite for the box implementation; the remaining
+`local` inner-fence decision does not block that work. Open decisions remain open until answered.
+
+**Session scope amended, 2026-09-05 (Guillermo).** Continue implementation across **two tickets**
+in this session, overriding the earlier one-ticket limit. Any unresolved choice is put to the
+author through `grill-with-docs`; do not bypass it to finish implementation.
+
+**Engine review deferred, 2026-09-05 (Guillermo).** Finish the two current tickets on `sbx`,
+verify and commit their work, then create research tickets comparing vanilla Docker Engine
+with `sbx` and a dependent HITL `grill-with-docs` reevaluation ticket. Prepare a handoff for
+that next session. Creating those research tickets does **not** authorize running them now.
+Only that later evidence and the author's decision may change the engine or the remaining
+plan; the Eve comparison alone changes neither. Current ticket completion remains subject
+to its acceptance criteria, not waived by the future review.
+
+**Next-session priority (Guillermo):** take the research pair
+[Docker Engine and sbx: lifecycle, persistence and resource costs](issues/20-engine-lifecycle-persistence-and-costs.md)
+and [Docker Engine and sbx: isolation, network access and product constraints](issues/21-engine-isolation-egress-and-product.md)
+before resuming the older numeric frontier. Their findings unblock
+[Reevaluate the first Machine engine with the measured trade-offs](issues/22-reevaluate-the-first-machine-engine.md).
+Only the author's decision there can change the engine or remaining plan. This priority changes
+no other ticket's status, scope or dependencies. No comparison research was started on creation.
+
+**Engine review complete, 2026-09-05 (Guillermo).** The research pair and human reevaluation
+are resolved. [Reevaluate the first Machine engine with the measured trade-offs](issues/22-reevaluate-the-first-machine-engine.md)
+records the author's decision and the remaining validation boundaries. Resume box implementation
+at [Where a Workspace lives when the Machine is not this one](issues/05-where-a-workspace-lives.md),
+before the independent local inner-fence work. This supersedes the research-first priority above;
+the next session claims the implementation ticket before working it. Implementation was deferred
+to that session at the author's request.
+
 **Domain.** blobot is a local-first Electron desktop app that assembles teams from the coding
 agents a user already has installed. It provides no inference, stores no credentials and provides
 no infrastructure. `CLAUDE.md` has the permanent architectural rules and `CONTEXT.md` the
@@ -69,15 +238,41 @@ binding for anything a user sees.
 like.
 
 **Read before any ticket:** `research/01-external-sandbox-libraries.md` — measurements taken
-against real tools on this machine on 2026-08-31, including the one result that blocks the
-obvious approach. `absorbed-sandboxing.md` is the framing of the effort this map absorbed and
+against real tools on Alain's Linux machine on 2026-08-31, including the one result that blocks the
+obvious approach — **and `research/02-srt-on-macos-and-what-moved.md`**, measured on Guillermo's
+Mac on 2026-09-04, where that result does not hold: srt reaches the loopback mailbox on macOS,
+srt 0.0.75 masks credentials at the proxy, and Claude's own sandbox is one `_meta` away.
+**And the two records of the first box**: `research/07` (Claude's own sandbox through `_meta`, live)
+and `research/08` (the first `sbx` box: the door, `--clone`, the costs, the transport). `absorbed-sandboxing.md` is the framing of the effort this map absorbed and
 carries the constraints anything here must hold.
 
-**A number collision, read carefully.** This effort has a ticket `14` and so does `first-demo`,
-and `first-demo`'s is the one this repo cites constantly — the permission posture, the trust
-ceiling, *a guarantee that holds for Alice and not for Bob*. Everywhere in this effort that one is
-written **`first-demo` ticket 14**, in full. A bare `14` is this map's per-agent composition root.
-The one exception is a sentence quoting a source comment verbatim, in `14` itself.
+**Standing preference, 2026-09-05 (Guillermo) — invisible setup, smooth sign-in.** For a person
+who has never had Docker, what they see is: install the app, use it, create an agent, done.
+Whatever blobot does underneath with the engine is *practically invisible*, and the CLI's own
+sign-in inside a box happens smoothly through the interface or the chat, never in a terminal. This
+is the bar every ticket that touches the `box` kind is held to — `08` (setup and sign-in), `09`
+(the words), `12` (the screen), `13` and `14` (the image and the engine) — and it is what decides
+whether one Docker sign-in is an acceptable floor or whether the engine has to change. **Answered
+the same day: it is** — one Docker sign-in, as an onboarding screen with a button that opens the
+browser, and never a command to copy; `sbx` stays the first engine (ticket `08`).
+
+**Where each shared question lives, 2026-09-05** — the index the consistency pass asked for, so a
+stale pointer on a ticket is corrected by this table rather than by editing nine files:
+
+| question | owner | readers |
+|---|---|---|
+| setup and sign-in: the screen, the buttons, the four facts, caching | `08` | `12` draws it, `19` supplies costs |
+| setup and sign-in: the mechanism (installer, `sbx login`, the daemon, tiers inside a box) | `19` | `08`, `09` |
+| every word on screen, including the account named | `09` | `08`, `12` |
+| the rail, the user's VS Code door, the sign-in card, the folder-step row | `12` | `09`, `10` |
+| what crosses into a box, the volumes' adopt-or-refuse, git identity, `origin`, ADR-0003's second amendment | `05` | `13`, `15`, `17` |
+| root kit, naming by Agent id and the environment layer's travel | `17` | `05`, `13`, `19` |
+| the box object, SSH admission, the door rule, the pool and the shared daemon | `19` | `05`, `08`, `14`, `15` |
+| the interface, the null engine, the `fs`/`terminal` invariant, the verdict on the four constraints | `14` | `17` |
+| the image's contents and how the bridge is installed without bundled CLIs | `13` | `05`, `17` |
+| the allowlist and how a block is said | `15` | `09` |
+| whether `local` gets an inner fence, and the two controls kept apart | `04` | `09`, `10` |
+| unchanged harness approval posture across placement kinds | `10` | — |
 
 **Absorbed, 2026-09-04:** `.scratch/sandboxing/` no longer exists. Its five tickets are `02`,
 `03`, `04`, `09` and `10` here, each carrying an `## Amendment` recording what the wider
@@ -108,62 +303,121 @@ author and agreed, or follows from a permanent rule:
   profile-grain home produces no branch and no pull request, and whatever it is for, it is not
   for that.
 
+**Reopened while working, 2026-09-04 (Guillermo)** — three of the premises above are narrowed,
+none is discarded, and the destination is unchanged:
+
+- **The user brings the box → blobot never *requires* a box.** A hosted Machine, provided and
+  priced by blobot, is a possible future product. It is **out of scope to build** on this map and
+  **in scope as a constraint**: nothing decided here may preclude a `hosted` kind, and every
+  ticket that fixes an interface (the mailbox carrier, where a Workspace lives, how a Machine is
+  reached, detection) is answered with that kind in view. The rule that does not move is *no
+  hosted inference*: what would be sold is compute, persistence and reach, never tokens, and the
+  agent still runs on the user's own CLI login.
+- **The fork that constraint implies, named so it is not discovered later.** *Hosted compute for a
+  local blobot* keeps the orchestrator, the mailbox and credential injection on the user's
+  machine, and a remote box dials home; every permanent rule survives it, and Routines still need
+  the app open. *A hosted blobot* moves the orchestrator off the laptop and loses the laptop as
+  the place the credential lives. **This map designs for the first.** The second is a fresh
+  effort, never a resumption of this one.
+- **Docker Sandboxes is the first candidate for the local box kind**, on the author's preference.
+  Lima, Apple's `container`, Tart and a hand-rolled srt fence are measured against it, not
+  dismissed. Its licence is proprietary, its microVM needs KVM on Linux, and `sbx login` wants a
+  Docker account; all three are facts a ticket has to carry rather than a reason to refuse it.
+- **Take the market as reference, without losing the grain.** Docker Sandboxes, eve, Grok Bot,
+  Codex cloud, Cursor's cloud agents, Claude Code on the web, Devin, container-use: each has
+  already answered *what a sandbox is bound to, how the repository gets in, and where the branch
+  ends up*. `research/05` surveys them so no ticket here reinvents an answer the market has
+  settled — and so the one thing the market has not settled, **a branch in the user's own
+  repository as the work product**, stays ours.
+- **Two machines chart this map**: Alain on Linux, Guillermo on macOS. Every measurement says
+  which, because the first blocking result turned out to be a platform's and not a library's.
+
 ## Decisions so far
 
-Nothing yet. **The frontier is `13`, `14`, `02` and `03`** — note that it is not `01`, which was
-the frontier as charted and is now blocked by `13`. Numbers here are identity, not order.
+- [A Machine on screen, and where a profile is addressed from](issues/12-a-machine-on-screen.md#resolution--operational-preview-2026-09-06): operational setup, placement, login, queues and limits are implemented behind the explicit development preview; personal/product and platform acceptance remain separate.
 
-- `13` and `14` are the two axes raised after charting, both unblocked, and `14` does not wait on
-  `13` because composition is per agent under either model.
-- `02` is unblocked for its fence half only; its off-machine half waits on `13`. See its
-  amendment.
-- `03` is unblocked, cheap, and the only one that is pure measurement.
+- [A per-agent composition root: config, MCP servers, skills](issues/24-a-per-agent-composition-root.md): existing Agent/adapter composition owns launch configuration; local inheritance stays native and box user scope belongs to its private home, without a generic relocation or inheritance editor.
+
+- [Does a sandbox answer the fourth trust level](issues/10-does-a-machine-answer-the-fourth-level.md): Machine choice preserves the selected harness policy; the historical box-only fifth level is withdrawn under the accepted open-network/shared-Git boundary.
+
+- [What a sandbox lets blobot say](issues/09-what-a-machine-lets-blobot-say.md): kind-specific words reflect host worktrees and open network reach; the shipped permission disclosure uses the selected runtime option's scope instead of a universal Claude file. Approval choices are unchanged, with tests and builds passing.
+
+- [Egress from a box: the allowlist, and how a block is said](issues/15-egress-from-a-box.md): open Internet plus host/local-network reach, preserving approval posture; scoped rule ownership/migration/revocation implemented and tested in RC5. Destination restrictions belong to a separate future effort.
+
+- [Where a profile is addressed from, on screen](issues/18-the-profile-conversation-on-screen.md): a visible talk action opens a dialog to choose an individual Team or use ordinary creation with the profile preselected; existing Team surfaces own its history, permissions and context. Both layouts were prototyped and the implemented flow validated in Electron.
+
+- [What an agent addressed outside a team may do, and what its transcript is](issues/07-what-a-dmd-agent-may-do.md): contact from a profile opens a visible individual Team, with ordinary worktree/tools/history and existing approval/lifecycle rules; exact membership is rechecked before opening, and the screen ticket completes the entry point.
+
+- [What lives in an agent's home, and what map.md may say](issues/06-what-lives-in-an-agents-home.md): a bounded, fresh profile-membership overview on every turn; existing standing instructions, no shared file or new personal-memory writer, and no other-team work contents or added authority.
+
+- [Where the boundary goes: around the bridge, or inside the runtime](issues/04-where-the-boundary-goes.md): native local protection with disclosed limits and inherited project rules; optional box fences disabled independently of approvals, coupled Codex mode retained; protected-command failure may follow startup, verified on the pinned Claude CLI.
+
+- [Where a Workspace lives when the Machine is not this one](issues/05-where-a-workspace-lives.md): host worktrees and shared Git metadata mounted in the staged box lifecycle, Agent commit identity, scoped skills and measured deletion; verified with real Git and sbx, activation remains gated on the remaining tickets.
+
+- [What a Machine is, and what grain it hangs at](issues/01-what-a-machine-is.md): one Machine per Agent; local and box use the existing AgentWorkspace, with its shared Git metadata explicitly writable in a box and the main checkout unmounted.
+
+- [Does OpenCode have a sandbox](issues/03-which-runtimes-have-a-sandbox.md): OpenCode and fx have none; Claude/Codex have native shell protection, while Cursor's native capability is not established through its ACP integration. Current evidence amendment distinguishes capability, configured setting and effective protection.
+- [Can a sandboxed agent still reach the mailbox](issues/02-can-an-agent-reach-the-mailbox.md): yes on every kind, by a different door each; the mailbox's three constants survive unchanged and the **carrier** (the hostname minted in `endpointFor` plus the one door the kind opens) is a property of the Machine kind. Linux is read, not run; the Docker door has since been run (`research/08`, comment on the ticket). Evidence in `research/02`, `research/03`, `research/08`.
+
+- [The engine, the Machine interface, and a box's lifecycle](issues/14-the-engine-and-the-machine-interface.md): the Agent-bound interface and null engine are implemented across all five launch paths, with explicit environment layers and shared client-capability protection; box activation remains the engine's work. [Build status](build.md).
+- [The first engine: sbx behind the interface, and a box's life](issues/17-the-first-engine-sbx-behind-the-interface.md): root kit and stdin-framed exec implemented and fixture-tested across stop/start; SSH disable is daemon-wide, so production admission and setup continue in [A box's lifecycle, engine setup, and the pool](issues/19-a-box-lifecycle-and-engine-setup.md). No Agent runs in Docker yet.
+- [A box's lifecycle, engine setup, and the pool](issues/19-a-box-lifecycle-and-engine-setup.md): staged owned lifecycle, verified sleep/reopen, preserved-data limit changes, scoped mailbox permissions and explicit shared setup; local sleep/power UI is connected, box activation remains behind image/Workspace/egress work.
+- [Detection, and its remedies, when the runtime is not on this computer](issues/08-detection-and-remedies-per-machine.md): four states with engine/Agent subjects, awake-only guest probes, fresh checks after remedies and no login inference from exit; Machine-screen and real runtime-image activation remain with their existing tickets.
+- [Docker Engine and sbx: isolation, network access and product constraints](issues/21-engine-isolation-egress-and-product.md): researched the shared-kernel versus per-Agent microVM boundary, nested Docker, egress and setup/login/distribution costs; no engine choice or trust change, with unverified guarantees explicit in the evidence.
+- [Docker Engine and sbx: lifecycle, persistence and resource costs](issues/20-engine-lifecycle-persistence-and-costs.md): native Engine update/reuse/inspection and sbx copy costs investigated and fixture-tested on Mac; full-Agent performance remains unmeasured, and engine selection belongs to the human reevaluation.
+- [Reevaluate the first Machine engine with the measured trade-offs](issues/22-reevaluate-the-first-machine-engine.md): author confirms sbx and general-purpose Machines with guest sudo and private Docker/Compose; resume the existing box implementation without an Engine migration.
+
+Query the issue status and blocking lines for the current frontier; the former recharting
+snapshot is superseded by the interface's resolution.
 
 ## Not yet specified
 
-In scope, not yet sharp enough to ticket. Graduates as the frontier advances.
-
-- **A Routine whose Machine is unreachable when it fires.** *Missed firings* already exist, with
-  `Run now` beside them, and a run is already skipped for a Workspace that is gone or a runtime
-  that is not installed. An unreachable Machine is a new skipped reason and probably nothing
-  more, but a run gets three turns and nobody is watching, which is the condition under which
-  every assumption here gets tested first.
-- **Compaction and the handoff archive off-machine.** A handoff is archived under
-  `~/.local/share/blobot/handoffs/` — deliberately never in the AgentWorkspace, because that is a
-  checkout an agent could commit home. Whose home that is when the agent runs elsewhere is
-  unexamined, and the handoff travels as text rather than as a path, which is the half that
-  already survives the move.
-- **Attachments across the boundary.** ADR-0004 embeds bytes rather than linking paths, and that
-  decision is immune here for a reason that had not happened yet: a path on the user's machine is
-  meaningless on another one. What is not examined is the two ceilings and the fan-out cost when
-  the bytes cross a network rather than a pipe.
-- **Two agents on one Machine.** If a Machine is per profile or per team, two agents share a
-  place. Whether that reintroduces what ticket 10 refused — *never a shared directory* — depends
-  on whether the sharing is of a directory or only of a host, and that reads `01`. Under `13`'s
-  instance model this is the normal case rather than the edge one, and `14` is most of the answer.
-- **What a client does when no server is attached.** Under `13`'s instance model the client is a
-  window onto boxes that may be off. Everything the app draws assumes what it draws is true now:
-  the status fold, the rail's folded `StatusWord`, the context gauge, `WORKSPACE`. A stale view
-  and an empty one are different, and neither is `waiting`.
-- **A Machine whose OS is not this one.** Path shapes, the mono figures in `WORKSPACE`, and
-  whether a Windows box is a kind or a variant.
-- **Whether a Machine has an identity on screen.** A Team has an icon detected from its Workspace
-  and drawn as a sticker on the folder. Whether a Machine earns anything similar, or is a word
-  and a hairline, is downstream of `12`.
-- **Promoting what is true everywhere.** The `handbooks` map left open whether an entry that
-  turns out to be about the person rather than the team can be promoted to standing instructions.
-  A profile with a home meets that question from the other side.
+No unidentified in-scope decision remains. The concrete remaining acceptance work
+belongs to [Measure the first box](issues/16-measure-the-first-box.md) and
+[The image: one per runtime](issues/13-the-image-one-per-runtime.md). The Machine
+interface constraints are resolved by their existing tickets. Per-Agent ownership,
+screen identity, attachment transport and routine failure have explicit owners and
+are not future fog.
 
 ## Out of scope
 
+- Additional engines (including Apple `container`), Windows hosts and sharing one
+  runtime login among multiple Agent homes need separate capability/ownership
+  acceptance. This build uses sbx on supported macOS/Ubuntu hosts and the accepted
+  private per-Agent login. A second client/phone is already excluded below.
+
+- A selectable per-Agent MCP/skills/rules inheritance editor: [composition resolution](issues/24-a-per-agent-composition-root.md) preserves the accepted local/box roots and adapter seams; a portable exclusion control needs its own capability effort.
+
 Ruled beyond this destination. These do not graduate; they return only as a fresh effort.
+
+- [Change CPU and RAM without replacing unverifiable Machine state](issues/25-post-creation-resource-changes.md):
+  implementation decision under the author's 2026-09-06 autonomy delegation.
+  sbx has no verified native same-storage resize; full reconstruction still fails
+  its preservation gate. Choose CPU/RAM at creation and show them read-only later.
+  Record this deviation prominently in the PR; do not claim the editor completed.
+
+- **Destination filtering and a configurable network policy.** Guillermo explicitly deferred
+  restrictions to another effort after choosing open Internet and host/local-network reach.
+  An arbitrary hostname whitelist is not part of this implementation. Harness approval rules,
+  authenticated mailbox calls and the remaining Machine boundaries still apply. See
+  [Egress from a box: the allowlist, and how a block is said](issues/15-egress-from-a-box.md).
+
+- **Automatic promotion to personal memory.** The accepted
+  [profile overview](issues/06-what-lives-in-an-agents-home.md) supplies membership metadata and
+  keeps standing instructions under user control. A Handbook entry becoming a shared personal
+  instruction needs a separate future memory decision; it is not required for Machines.
+
+- [Is remoteness a place to execute, or a blobot instance?](issues/23-is-remoteness-a-place-or-an-instance.md):
+  the server/client fork from main is retained as a future question; this effort already fixes
+  local and box execution on this computer.
 
 - **Hosted sandboxes and cloud VM providers** — Vercel Sandbox, E2B, Daytona, Modal, Fly
   Machines. Refused on *local-first* and *no cloud dependencies*, and because they would ship the
   user's repository to a third party, which is a much larger version of the leak ADR-0004
   already refuses. Measured and recorded in `research/01` §1 so it is not asked twice.
-- **blobot providing a machine.** Same rule, stated separately because it is the thing Grok Bot
-  does and the thing this map will be tempted to copy.
+- **blobot providing a machine — to build.** Out of scope to build here; in scope as a
+  constraint on every interface this map fixes. See *Reopened while working* above: the hosted
+  kind is a later product, and this map must not make it a rewrite.
 - **Sandboxing blobot itself, or the Electron app.** The subject is the agent's process subtree
   and what it can reach. Carried unchanged from the absorbed effort.
 - **An approvals system**, or a screen administering what each agent may currently do. Ticket
@@ -174,3 +428,15 @@ Ruled beyond this destination. These do not graduate; they return only as a fres
   is reached *within* this refusal, not whether to relax it.
 - **Sharing an agent, a Machine or a team with another person.** Grok Bot has shareable bot
   links. blobot is one operator on one machine and nothing here changes that.
+- **A Machine of the user's own over ssh** (`remote`). Narrowed out on 2026-09-04 with the
+  destination; ticket `11` is closed and what it established survives as a constraint on `14`.
+  Returns as a fresh effort.
+- **A second client, and a relay to reach the desktop from outside** — a phone answering a
+  `waiting` from anywhere. The desktop is the server and the relay forwards bytes it cannot read;
+  a fresh effort, with the current Machine interfaces retaining its constraints.
+- **blobot as a service, and blobot cloud** — the orchestrator without a window, boxes beside
+  it, Routines with the laptop shut, priced by awake-seconds and stored gigabytes. Sketched on
+  2026-09-04 as a per-user runner, a gateway of paired devices, a machine plane behind `Machine`
+  and a `boxd` that dials the runner. Two of its questions are already known to need amendments —
+  the CLI's login living in a box on blobot's disk, and the forge as the branch's transport when
+  the laptop is off — and neither is answered here.

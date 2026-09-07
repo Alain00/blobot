@@ -1,4 +1,9 @@
 import { ATTENDED_TRUST_LEVELS, DEFAULT_TRUST, type TrustLevel } from '../../trust.js';
+import type { MachineKind } from '../../machines/machine.js';
+
+/** The pinned ACP path bypasses the interactive sandbox provider (Machines research43). */
+export const CURSOR_LOCAL_PROTECTION =
+  'Local execution has no verified OS sandbox through this integration. Approval rules still apply.';
 
 /**
  * Ticket 14's posture on Cursor, as the `cli-config.json` blobot writes into the per-agent
@@ -148,7 +153,7 @@ export interface CursorCliConfig {
     readonly deny: readonly string[];
   };
   readonly sandbox: {
-    readonly mode: 'enabled';
+    readonly mode: 'enabled' | 'disabled';
     readonly networkAccess: 'allow_all';
   };
 }
@@ -160,18 +165,20 @@ export interface CursorCliConfig {
  * answer its teammate would not be careful, it would be broken. `normal` vouches for edits in
  * the AgentWorkspace and the local work. `trusting` adds the network and the installers.
  *
- * The sandbox is a **constant, not a dial** — the Codex effort's answer, adopted by ticket 03:
- * `enabled` with network, at every level, which is more containment than the vendor's measured
- * default (`disabled`). It is ticket 10's isolation, never ticket 14's lever, and network is on
- * because an agent that cannot install a dependency is hobbled at every trust level for a
- * reason nobody chose. The live suite verifies the sandbox does not break the loopback to
- * `127.0.0.1`; if it does, that is a reopened ticket, never a silent `disabled`.
+ * Local execution keeps the existing sandbox setting at every trust level, but it is NOT a
+ * claim of an effective fence: the pinned ACP path uses ConfigPermissionsAdapter directly
+ * with insecure_none, bypassing the interactive sandbox provider (Machines research43).
+ * Box execution writes the independent disabled setting; neither setting changes approvals.
+ * The AgentRuntime's box preparation guard remains closed until startup is complete.
  *
  * A stored `unattended` — a word this runtime does not express and the form never offers —
  * takes `trusting`'s list and nothing more: everything unvouched still prompts, which is the
  * strictly more cautious reading of a choice made for a different runtime.
  */
-export function cursorCliConfig(trust: TrustLevel = DEFAULT_TRUST): CursorCliConfig {
+export function cursorCliConfig(
+  trust: TrustLevel = DEFAULT_TRUST,
+  kind: MachineKind = 'local',
+): CursorCliConfig {
   const allow =
     trust === 'careful'
       ? [MAILBOX_ALLOW]
@@ -185,6 +192,6 @@ export function cursorCliConfig(trust: TrustLevel = DEFAULT_TRUST): CursorCliCon
     // `allow_all` is the CLI's own canonical value: a smoke run wrote `enabled` here and
     // cursor-agent rewrote it to `allow_all` on start. Writing the canonical word means the
     // file blobot asserts is the file the vendor keeps, with no coercion in between.
-    sandbox: { mode: 'enabled', networkAccess: 'allow_all' },
+    sandbox: { mode: kind === 'local' ? 'enabled' : 'disabled', networkAccess: 'allow_all' },
   };
 }

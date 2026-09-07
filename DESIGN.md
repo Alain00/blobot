@@ -19,6 +19,22 @@ Everything else is `--ground`, `--raised`, `--ink`, `--muted`, `--line`. No acce
 brand colour, no coloured badges, no red errors, no green success. Colour means *identity*, and
 an agent is the only thing on screen that has one.
 
+**Machine power exception, approved 2026-09-05.** The live Agent avatar has a small dot at its
+bottom right: subdued green when its execution is awake, gray when asleep. This is power,
+not turn status, readiness or sign-in. Transitions use a split monochrome dot; unknown uses
+a dashed hollow ring. Every dot has a text label and tooltip. Sleep freezes the live face;
+settled transcript avatars and profile definitions do not acquire a live-power claim.
+The ordinary monochrome turn-status rules below still apply. See the amendment on
+`.scratch/first-demo/issues/12-team-and-conversation-ui.md`.
+
+*Corrected 2026-09-06:* on the rail the dot is drawn for **every loaded team's** thread and not
+only the open one's. It was read off the open team's roster, so opening a second team put the
+light out on an agent that was still awake — the `STOPPED`-on-every-rail-row failure again, in a
+different channel. Absent still means the team is not loaded, which is the one state where blobot
+has nothing running to ask; it is never drawn as a false `asleep`. How many teams stay loaded is
+the user's setting now (Settings → Machines → *Loaded teams*, twenty out of the box), because the
+hard three that decided this was invisible and unexplained where it bit.
+
 Consequences you will keep bumping into:
 
 - **Status is never colour**, and it is a shape or a word, **never both at once**. A coloured dot
@@ -127,19 +143,44 @@ Consequences you will keep bumping into:
 
 | Token | Value | What it is |
 |---|---|---|
-| `--recessed` | `#060608` | The flanks: the rail, and the file sidebar. Below the page, never `#000`. *The activity column was the second one until 2026-09-05; the sidebar is now.* |
-| `--ground` | `#0a0a0b` | The reading surface: the transcript, and nothing else. |
-| `--tray` | `#0e0e10` | The bar tucked under the composer. |
-| `--raised` | `#131315` | Anything lifted: a bubble, a field, a menu, a selected row. |
-| `--ink` | `#fafaf8` | Text, and the one emphasis worth spending. |
-| `--muted` | `#8a8a93` | Secondary text, every mono label, every icon at rest. |
-| `--line` | `#232327` | Every hairline and every border at rest. |
+| `--recessed` | `#1d1f21` | The flanks: the rail, and the file sidebar. *Above* the page since 2026-09-04, not below it: the reading surface is the darkest thing on screen and the flanks are chrome laid over it. *The activity column was the second one until 2026-09-05; the sidebar is now.* |
+| `--ground` | `#1a1c1e` | The reading surface: the transcript, and nothing else. |
+| `--tray` | `#212326` | The bar tucked under the composer. |
+| `--raised` | `#282a2e` | Anything lifted: a bubble, a field, a menu, a selected row. |
+| `--ink` | `#c5c8c6` | Text, and the one emphasis worth spending. |
+| `--muted` | `#969896` | Secondary text, every mono label, every icon at rest. |
+| `--edge` | `#2b2e33` | Every hairline and every border at rest. |
+| `--line` | `#373b41` | The same tone as a **fill**: a code pill's ground, a shim, the scrollbar thumb, the gauge's track. And the few strokes that draw an object rather than enclose one. |
 | `--sans` | Geist | Everything a user reads as prose. |
 | `--mono` | Geist Mono | The three cases under **Type**, and nothing else: a value, a literal, a signage label. |
 | `--hand` | Caveat | The one display line at the head of a dialog. Nowhere else. |
 
 Dark only (`color-scheme:dark`). There is no light theme and adding one is a design project,
 not a variable swap: half these rules are about what is *brightest* on the page.
+
+*This table was the pre-2026-09-04 ramp until 2026-09-06 and is now the shipped one.* The
+exploration in `styles.css` swapped every value here and the table was never brought with it, so
+the binding document described a hairline the app had stopped drawing. Both are recorded rather
+than one being quietly overwritten, because the numbers are the argument for the split below.
+
+**`--edge` and `--line` were one token until 2026-09-06, and the split is what the ramp change
+forced.** One value was serving as the fill under a code pill *and* as every hairline in the app,
+which worked while the floor was near black and stopped working when it moved. Measured across
+the two ramps: the hairline's step over the page went from a luminance delta of 0.014 to 0.032,
+and from 1.26 contrast to 1.52 — which put a 1px stroke **above every plane step in the
+interface**, `--raised` on `--ground` being 1.19. A border louder than a change of plane is the
+whole of *the borders are too strong*, and it read worst on the flanks, where `--recessed` beside
+`--ground` is 1.03 and the stroke was carrying the separation by itself. `--edge` puts the
+hairline back where it was on both readings — 1.25 against the page, a step of 0.0156 — in the
+new ramp's hue. `--line` keeps the brighter value, where brighter is what a fill wanted all
+along.
+
+**The test, which is the rule above pointed one step further: is this line separating two things,
+or is it drawing one?** Separating takes `--edge`. Drawing takes `--line`, and that list is short
+and closed enough to write down: a control whose border *is* its body — `.listrow .tick`,
+`.switch`, `.swatch.auto`, `.leadface`, `.send`, and the mono pills `.optionsbadge`, `.wspr`,
+`.wsopen` — plus `.ctxring`'s track, `.md a`'s underline and `.hl .m.bad`, which are figures a
+reader is meant to see. Everything else that still has a hairline at all took `--edge`.
 
 **No ink edge on a closed shape. Ever.** *2026-08-31, and it is a ban rather than a preference.*
 A 2px `--ink` rule down one side is a mark in the gutter of the page: it works on `.refusal` and
@@ -171,6 +212,18 @@ border moving to `--muted`; the floating layers — `.suggest`, `.selectmenu`, `
 `.wspop`, `.navsheet` — which sit over arbitrary content rather than on a ground of their own,
 where the hairline is the edge of the sheet and not a second enclosure; and `.md`'s tables and
 code blocks, which are quoting somebody else's structure.
+
+**And the two flanks, which rejoined that list on 2026-09-05 without anybody writing it down.**
+The pass above says the rail's edge went; `9516cc9` put a `border-right` back on `.vA .rail` the
+same day the file sidebar arrived, for symmetry with the new panel's `border-left`, and the
+comment at `styles.css`'s rail rule argues the opposite of the paragraph above it — *the tone
+says different plane, the line says edge*. The rule and the code disagreed for a day and this
+records which won. **The code wins, on the measurement rather than on the symmetry**: the flank
+plane step is 1.03, which is a step nobody can see, so with no stroke the rail and the sidebar
+have nothing at all saying where they end. A hairline separating two things on the same apparent
+plane is exactly what the test above keeps one for. What was wrong was never that the flanks had
+an edge; it was how loud that edge had become, which is `--edge`'s job now. `.setrail` is the
+third and takes it for the same reason.
 
 **`.modal` left that list on 2026-09-05, at the author's direction.** The reason the floating
 layers keep a hairline is that they sit over arbitrary content, and a dialog does not: it is the
@@ -276,6 +329,18 @@ conversation and the reason it is not a generic chat app.
   rather than by captioning every prompt in the history.
 - **From the agent** — no container at all. It is the pane's default voice; boxing it would make
   the agent look like a guest in its own transcript.
+
+  **Somebody who has left the team keeps their name and their face, and the header says so
+  once**: `off the team`, mono, uppercase, `--muted`, beside the name — the register `typing`
+  already occupies, so this is not a badge and the column still refuses them. An Agent taken off
+  a team is tombstoned rather than deleted and its rows stay in the transcript, so the choice was
+  never whether a name was available. Unmarked, the column reads as a roster twice the size of
+  the one the rail is showing; marked on every row, it repeats a fact the reader learned on the
+  first. So it rides the name **where the name is introduced**, which for an agent's own rows is
+  exactly where the header draws — the grouping rule decides it and there is no second rule to
+  keep in step. A name is introduced in three places and it is drawn in all three: the header,
+  the line naming the far end of a peer message, and the fold's `messages with`.
+  `.scratch/team-addressing/issues/07`.
 - **From a peer** — inset and unfilled: one line, being a chevron, `message received from` or
   `message sent to`, the far end's blobatar and its name. **Shut, with no peek**, and it opens on
   a click into the message and the trust framing printed verbatim on the received side. The
@@ -519,9 +584,14 @@ Other transcript rules:
   blobot has no opinion about whether the call should run, which is why it is asking. Three
   answers, **allow once**, **allow always** and **reject** (ticket 14 and its second
   amendment), and the tool line does not print `running` while nothing is running. The block
-  says where an *always* goes, because a standing rule the user cannot find is the reason the
-  answer was withheld in the first place: it is a line in that one agent's
-  `.claude/settings.local.json`, and no other agent's.
+  explains the selected reusable option's scope and storage when known. **Amended by Machines,
+  2026-09-06:** the original `.claude/settings.local.json` observation applies to a measured
+  Claude approval, not to every runtime or request. Some options grant access only for a
+  session; others save rules. The adapter owns the explanation and the runtime's option name
+  travels with the selected id. When scope or storage is unverified, say the runtime determines
+  it and blobot has no individual revocation control. Never invent a common file, promise
+  that every grant is permanent, or say it cannot affect another agent. Machine kind does not
+  withhold a runtime's advertised reusable approval; both kinds use host working folders.
 
   **Amended 2026-08-30: it is a card, and the prose is behind a disclosure.** The ink edge is
   gone entirely — it was `.refusal`'s on the argument that this is the same kind of event, and
@@ -535,11 +605,11 @@ Other transcript rules:
   Inside it, **the command is its own line**: run inline through the sentence, a real one wraps
   three times and the only thing on the block a person has to read becomes the hardest thing on
   it to find. It scrolls in its own track rather than wrapping, the rule a path already follows.
-  And the four lines explaining what blobot vouches for and where an *always* is written are
+  And the prose explaining the request and the selected reusable approval is
   **behind the disclosure**, not on the face: they were identical on every request forever and
   were the largest thing on the block, which is read once and noise every time after. The rule
-  above is kept — the block still says where an always goes, one click away, on the control that
-  is about to write it. Nothing about the answers changed: still three, still none of them
+  above is kept — the block explains the approval one click away, on the control that
+  is about to send it. Nothing about the answers changed: still three, still none of them
   armed, still no colour.
 
   **The card and the Routine block are one grammar** (`.card`), because they are one kind of
@@ -727,12 +797,14 @@ Every control descends from the composer. If you are adding one, start there.
   trigger keeps the word alone. This is only for a pick whose options are blobot's own closed
   vocabulary: the runtime picker keeps its readiness line, because that line is a fact about the
   machine rather than a gloss on a word, and it can change while the dialog is open.
-- **A dialog is 560px unless it is holding a form.** `.modal.roomy` is 760, and only the hire and
-  edit dialogs wear it. Eight fields stacked one per row ran past the fold on a 1080-tall screen,
-  which put the standing instructions below the window on the dialog whose job is stating them.
-  The width buys rows: name and role, then the runtime and what it advertises, then blobot's
-  three words side by side. Everything else stays narrow, because a paragraph set to 760px is a
-  paragraph nobody reads to the end of.
+- **A dialog is 560px, and there is no longer a wider one.** `.modal.roomy` was 760 and only the
+  hire and edit dialogs wore it, because eight fields stacked one per row ran past the fold on a
+  1080-tall screen and put the standing instructions below the window on the dialog whose job is
+  stating them. *Retired 2026-09-07 with the dialog that needed it: an agent's definition is a
+  bar now, and the answer to "this form is too tall" turned out to be that seven of its eight
+  questions already had an answer and only needed stating.* See **The agent bar** below.
+  Everything else stays narrow, because a paragraph set to 760px is a paragraph nobody reads to
+  the end of.
 - Selection in a list is the raised ground alone. No left rule: a row that lifts and brightens
   is already saying it twice. The row is **inset and rounded** at `.field`'s 12px, like every
   other lifted surface here — a full-bleed square block is the one shape this app does not have,
@@ -828,8 +900,10 @@ anywhere is a design decision, and almost always the wrong one.
   itself down under `prefers-reduced-motion` and on any pointer that is not a fine one. Three
   faces have it and nothing else does. The rail's `waiting` agent follows the cursor until you
   answer it, which is the same sentence `surprised` already says and the reason that state is the
-  only one the fold reaches into. The 112px preview in the hire and edit dialogs follows it
-  always, because there the face is the subject and nothing on the screen competes. The
+  only one the fold reaches into. The face at the head of the agent bar follows it always,
+  because there the face is the subject and nothing on the screen competes. *It was a 112px
+  preview standing over the hire and edit dialogs until 2026-09-07 and is 34px in a field now;
+  the rule is unchanged, and what it cost dropped with the size.* The
   transcript's pending face turns toward the composer *while the user is in it*, and that gate is
   what keeps it out of the first budget — it acknowledges the person typing, and claims nothing
   about an agent noticing anything, which no runtime reports.
@@ -874,9 +948,15 @@ are narrow:
   one budget where cost is paid per frame; **only on an element that is already moving**, so it
   can never become a way to make something static look soft; and **withdrawn entirely under
   `prefers-reduced-motion`**, alongside the scale and the travel, because a thing softening and
-  growing into place is motion whatever property carries it. The one `height` in the app is the opening roster below, and it is there
-  because what has to move is everything *beneath* that box, which nothing but its height can
-  move.
+  growing into place is motion whatever property carries it. The exception is a **height, and
+  only where what has to move is everything *beneath* the box** — which nothing but its height
+  can carry. *Corrected 2026-09-07: this named the opening roster as the one case, and that
+  roster no longer exists (`Rail.tsx`: pressing a row switches the pane and the list does not
+  change shape). The clause was a count of instances rather than a rule, so it is written as the
+  test it always was.* Two things take it, both as `grid-template-rows` `1fr`/`0fr` rather than a
+  real `height`: `.ran .went`, the fold shutting over a swallowed call, and `.openerrorwrap`,
+  which is the same sentence pointed the other way — the banner mounts above the panes and in
+  flow, so arriving it shoves the whole working surface down between two frames.
 - **Nothing that carries meaning of its own.** It smooths a change the interface was making
   anyway. If a user has to see the animation to understand what happened, the animation is
   doing a job that belongs to a word.
@@ -942,6 +1022,16 @@ are narrow:
   whole app is built around, did not until 2026-08-31. It is a **pointer** state, so the send
   never animates when it is sent with Enter, which is how it is actually used: keyboard paths
   take no motion, ever.
+  *Extended 2026-09-07 to `.listrow .tick`, the one binary control in the app that answered a
+  press with nothing.* It sits beside `.switch`, which cross-fades its ground and travels its
+  knob for the same act, so the gap was an inconsistency rather than a decision. The circle had
+  already solved the *shape* — the comment on it says a checkmark appearing out of nothing reads
+  as the row changing shape — and left the fill snapping. The ground cross-fades over 140ms and
+  the mark arrives on `enterpop`, the house entrance, so this adds no keyframe, no curve and no
+  reduced-motion code: `enterpop` is already withdrawn to a fade at the foot of the stylesheet,
+  and a cross-fade is not motion. Six of the seven ticks draw a Lucide `Check` and Dictation's
+  two draw a text `✓`, which takes the ground and not the mark; that glyph is a separate
+  question and was left alone.
 - **A panel that opens on a hover has to open.** Appearing between two frames under a pointer
   that merely crossed something reads as a glitch rather than as an answer. The house entrance,
   shortened to 140ms because a tooltip-sized thing is not a sheet, and **origin-aware**: it
@@ -952,6 +1042,20 @@ are narrow:
   control gets this** — the workspace popovers, the option menus, the context ring — with exactly
   one refusal: the composer's `@mention` list, which opens on a keystroke mid-sentence dozens of
   times a day, where frequency is the disqualifier.
+  *And every panel that opens over the whole surface gets the scrim's fade and the sheet's
+  arrival, which `.pfull` did not until 2026-09-07* — a Picture at full size was the one
+  full-surface overlay in the app that appeared between two frames. It is **centred rather than
+  grown out of the tile it was clicked**, on the modal's own argument: once it fills the screen
+  it is anchored to nothing, and a flight from a thumbnail is a second gesture to pay for. It
+  reuses `enterscrim` and `entermodal` unchanged. Entrance only, for `.scrim`'s reason one step
+  further — it is a plain conditional render, so an exit would mean holding it mounted after the
+  click that dismissed it.
+- **A reveal on hover is bridged wherever it happens.** `.rowacts` on the rail has faded over
+  120ms since it was built, with the reason written on it: two icons appearing in one frame is a
+  pop, and that column's job is to be quiet. *2026-09-07 that rule reached `.hbentry .hbx`*, the
+  remove on a Handbook entry, which is the same control in the same shape and had nothing. Same
+  duration, same curve, `@media (hover:hover) and (pointer:fine)` because on touch there is no
+  hover to bridge, and opacity alone, so it stands under `prefers-reduced-motion`.
 
 Both budgets answer to the same withdrawal rule:
 
@@ -1048,24 +1152,55 @@ One flat file, one flat namespace, no build step between it and the DOM.
 
 - **Name classes for the thing they belong to, not for what they contain.** A `.preview` added
   for a modal silently restyled the rail's preview line and put a box around every agent's last
-  message. It is `.hirepreview` now. A generic class name in a new screen is a live grenade.
+  message. It became `.hirepreview`, and went with the dialog on 2026-09-07; the story is why
+  the rule exists. A generic class name in a new screen is a live grenade.
 - Rules carry the reason in a comment when the reason is not obvious from the rule. The
   stylesheet is where design decisions are enforced, so it is where they are explained.
 - Delete dead rules in the same change that orphans them.
 
 ## Screens, and what each one is for
 
-- **The rail** — every team, running or not, and the running team's agents under it. It is a
-  list of agents under headings: **a team row is one small line**, a chevron in a gutter, a mark,
-  the name, and at the right either the folded status or when the team was last active, one at a
-  time because status outranks recency. An agent row is two lines — a blobatar, a name, the last
-  thing that agent said, and when — and stands taller than the heading above it, which is what
-  makes the nesting legible without a second frame around it. `idle` is not printed: it is the
-  resting state of a quiet app. The role shows only until the agent has said something.
-  *Amended 2026-08-30. The two rows were the same box down to the padding, on the grounds that a
-  team row standing* taller *made the rail read as two lists stacked. Shorter does the opposite,
-  and the rest of that paragraph went with the second line: the member count is the number of
-  rows the team opens into, which is a worse way of saying what those rows say.*
+- **The rail** — **one list of two kinds of thing: every team, and every agent you have hired.**
+  *Rewritten 2026-09-06 (`.scratch/rail/`).* It was a list of teams
+  with the open team's roster nested under it, so a person the user hired existed on screen as a
+  child of a project, and only while that project was the one being read. Three costs fell out of
+  that: switching to another team hid every agent on the one you left, twenty hired agents were
+  invisible until they were put on something, and the model the app is built on — agents exist
+  independently of teams, ADR-0001 — was contradicted by the first column the user looks at.
+  So **every hired agent is a row**, from the moment they are hired, and pressing one opens their
+  **thread**: that agent's own conversation, with its own folder, branch and history, and none of
+  the furniture that describes a team. **Every team is one row** that opens the team and no longer
+  opens a roster. A thread is a Team underneath, and it is the only Team the user never sees as
+  one. Ordered by recency across both kinds, with a pinned block on top.
+  *The paragraph this replaces described a team row as one small line with a chevron in a gutter
+  and an agent row as two lines nested under it, and said the shortness was what stopped the
+  column reading as two lists stacked. That reason inverted with the nesting: there is one list
+  now, and a team and an agent are peers.*
+- **One row shape, for both kinds.** A 34px mark, the name and the time on the first line, the
+  last thing said on the second. They share a left edge and a height, which is what makes them
+  peers in the literal sense: neither reads as a heading over the other. `idle` is not printed —
+  it is the resting state of a quiet app — and an agent's role shows only until they have said
+  something, because blobot's names are the user's own ("Alice") and not job titles, so on a fresh
+  hire nothing else on the row says what that agent is for. **No speaker prefix on the second
+  line**, on either kind: drawn both ways in the prototype, and the author took the words alone.
+- **The right of a row says one thing at a time**, and status outranks recency: a row that is
+  working is not also usefully described by when it last did. `waiting` still inverts, and on a
+  team row that is load-bearing rather than decorative — an agent row says nothing about its
+  seats, so the team row is the **only** carrier, and with nobody listening a permission request
+  is cancelled rather than delayed.
+- **An agent's row is about their thread, and says nothing about the teams they are on.** Argued
+  both ways and decided against on `.scratch/rail/issues/08`: pressing that row opens the agent's
+  conversation, which is not where a team's permission request is, so the row would be reporting a
+  problem it cannot lead you to. A signal you cannot act on from the place it appears is worse
+  than no signal. Recency keeps a waiting team near the top on its own, since an agent blocked on
+  a permission is active now; floating one there was refused, because it would break *a team keeps
+  its place* for something the sort already does.
+- **The pinned block is a hairline and no heading.** The block's *position* is the state, and a
+  mono `PINNED` would be signage for something already visible. Without any separator the order
+  looks arbitrary the first time a pinned row outranks something more recent. Nothing marks a
+  pinned row at rest, and the pin is on the row's own menu. *The rail's other hairlines are gone
+  (2026-09-04) and this one is not a reversal of that: the others separated a list from itself,
+  and this separates two orderings.*
 - **The doors at the foot of the rail** — *Agents*, *Routines*, *Settings*, at the bottom of the
   column, over a gap and no rule (*the hairline went 2026-09-04, with every other one*). *Added 2026-08-30, moving two of them.* They were mono rows above
   `TEAMS`: two headed rows over the list pushed the teams down and read as a second list stacked
@@ -1078,31 +1213,49 @@ One flat file, one flat namespace, no build step between it and the DOM.
   **`Settings` is a third door and not a lid over the other two.** An AgentProfile is the roster
   and a Routine is standing work that can put an unread mark on a row in this very column;
   neither is a preference. The test is that mark: nothing behind a settings door should be able
-  to put one on the rail.
-- **The open team's group carries no rule under it.** *Amended 2026-08-30.* There was a hairline
-  closing the roster off from the teams below. The gap was already doing that work — the group
-  is the only thing in the column with rows nested under it, so its extent is legible from the
-  nesting alone — and a line under it made the roster read as a panel dropped into the list
-  rather than as part of it. *That reasoning outlived the exception it was written against: the
-  rail's one remaining hairline, over the doors at the foot, went the same way on 2026-09-04, and
-  the gap does that job there too.*
-- **The chevron is an indicator, not a control.** A team row was already a disclosure and
-  nothing on screen said so. It does not toggle, and the row stays one click target: exactly one
-  team is open, because the open team is the one whose sessions are on screen, and a twisty the
-  user could press to collapse the team they are reading would have to invent an *open but
-  collapsed* state. A team with nobody on it keeps the gutter and loses the glyph — the slot is
-  what puts every mark on one left edge, the glyph is a promise of rows underneath. **The roster
-  is not indented under it.** An indent the width of the gutter was tried, on the arithmetic that
-  the mark had moved right so the faces should move with it: it made the roster read as a nested
-  sub-list rather than as the rail's own contents, which is backwards, because an agent row is the
-  substance of this column and a team row is a label on it. The chevron column carries the nesting
-  and does not need help. What the roster gets instead is air: it is set down off its heading,
-  because a heading needs room under it more than a row needs room above it. Shut team rows carry
-  the same gap between one another, or a column of one-line rows runs together into the block of
-  text the short row was made to avoid.
-- **A team's mark is its project icon, and a plain folder where there is no icon.**
-  *Amended 2026-08-31: the faces are gone from the fallback too.* The paragraph below removed
-  the drawn folder and kept the faces inside it, and the argument it made against them — the
+  to put one on the rail. *`Agents` survives the rail growing agent rows, and is not now a
+  duplicate of the column: the rail is where you **talk to** somebody, that screen is where you
+  hire, edit and retire one. `talk` there performs exactly what a rail row does.*
+- **The chevron is gone, with the roster it promised.** *Amended 2026-09-06.* It was an indicator
+  and not a control, on the grounds that a team row was already a disclosure and nothing said so.
+  Nothing discloses now: pressing a row switches the pane and the list does not change shape. The
+  gutter went with it, and every mark sits on the rail's own left edge — which is what the
+  paragraph below was arguing for by a longer route. **Nothing in this column animates any more**
+  either: `useTeamOpening` grew the roster's box and staggered its rows in, one gesture with one
+  subject, and there is no subject.
+  *The reasoning kept, because it is what carried the geometry: an indent the width of the gutter
+  was tried, on the arithmetic that the mark had moved right so the faces should move with it. It
+  made the roster read as a nested sub-list rather than as the rail's own contents, which is
+  backwards — an agent row is the substance of this column and a team row was a label on it.*
+- **A team's mark is its members' faces, clustered, with the project icon as a sticker on them.**
+  *Amended 2026-09-06, reversing the two paragraphs below.* This file has removed the faces twice
+  and the argument both times was real: the same agents are on several teams — ADR-0001's whole
+  point — so two teams sharing a roster draw an identical stack, and a column of similarly-named
+  teams is exactly what the rail is worst at. What changed is not that argument but what the mark
+  is *for*. It sits beside an agent's own face in one mixed list now, so it has to say *this is a
+  team* rather than *this is a folder*; and `.scratch/rail/issues/08` needed it to say **who is
+  waiting** on a backgrounded team, which a folder cannot. So two teams with the same roster and
+  no icon draw the same mark, and **that is accepted**: the name and the last line are what a
+  reader uses, and the mark is no longer identifying on its own. If it bites, this is where to
+  look first.
+  **Capped at three**, and the prototype is the argument: at mark size four faces are texture and
+  twelve are a pattern. Members past three are a `+N` in mono on the second line, which the row
+  drops the moment there is a status — a stack capped at three must never be the thing claiming a
+  team of nine is three people. The faces are **unposed**: the mark folds its members' statuses
+  into one word on the right, and a pose is per face, so posing these would draw three faces each
+  asserting what the fold only ever claimed of somebody. A team with nobody on it keeps the
+  folder, because a team with no members is still a folder.
+  **The icon is a sticker and not the mark.** `DESIGN.md`'s own rule survives intact in the same
+  box — the faces say who is on the team, the icon says which project. Dropping it would throw
+  away the one thing that separates a column of similarly-named teams, and drawing faces *or* an
+  icon depending on whether a PNG was found four levels down would make two unrelated marks for
+  one kind of row. Bottom-right, at 46% of the box, on the row's own ground so it sits *on* the
+  cluster rather than in it, and greyed, which is unchanged and is the design decision rather than
+  a taste: the blobatars are the only saturated thing on screen.
+  *The two paragraphs below are kept as written, because their reasoning is what this was decided
+  against rather than around.*
+  *2026-08-31: the faces are gone from the fallback too.* The paragraph below removed the drawn
+  folder and kept the faces inside it, and the argument it made against them — the
   same agents are on several teams, so two teams sharing a roster draw an identical stack —
   applies to the fallback exactly as it applied to the icon case. It was left standing only
   because faces were what the slot had always held. So the mark now answers *which project is
@@ -1114,56 +1267,56 @@ One flat file, one flat namespace, no build step between it and the DOM.
   and the dashed silhouette for a team with nobody on it goes too — a team with no members is
   still a folder, and it was the last thing in the column drawn to say *there is nobody here*
   in a slot that is no longer about who. Who is on a team stays one click away, on the rows the
-  team opens into and in the navigator. The paragraph below is kept as written because its
-  reasoning is what carried this, not because its conclusion still stands.
-  *Amended 2026-08-30, reversing the rule below it.* It was a drawn folder — a back panel, a
+  team opens into and in the navigator.
+  *2026-08-30, reversing the rule below it.* It was a drawn folder — a back panel, a
   front panel, three faces cropped by the front, a `+N` on the panel, and the icon straddling
   the panel's bottom edge. Six paths and two questions answered in one 34px box, repeated down a
   column whose whole job is to be quiet. **The container was the noise**, and the two answers
   stacked in one slot were what made the container necessary. So the slot answers one question,
-  and the icon wins it: a column of similarly-named teams is exactly what the rail is worst at,
-  and faces cannot help there, because the same agents are on several teams — ADR-0001's whole
-  point — so two teams sharing a roster draw an identical stack. A project icon is unique to the
-  project by construction. What is given up is said plainly: on a team with an icon the rail no
+  and the icon wins it. A project icon is unique to the project by construction. What is given up
+  is said plainly: on a team with an icon the rail no
   longer says who is on it, and that is answered one click away by the rows the team opens into.
-  The icon is greyed, which is unchanged and is the design decision rather than a taste: the
-  blobatars are the only saturated thing on screen. Faces are the fallback and not a lesser
+  Faces are the fallback and not a lesser
   state — up to three, overlapping, cut out of each other, filling the box rather than fitted
   inside a folder, and past three the last slot is a `+N` rather than a face, because a bare
   stack has no panel to write a count on. A team without an icon is not a team missing one and
   there is no placeholder in either direction, which was true before and stays true.
-  **The icon is inset and rounded, because half of the artwork brings its own plate.** *Added
-  2026-08-31.* It filled the slot edge to edge, which is right for a transparent logo and wrong
-  for an opaque square PNG: the other state is two 11px faces floating in a 20px box, so a
-  filled square covering the whole box is around four times the ink and the only hard corner in
-  a column of round things, and the rail read as two kinds of object rather than as one mark
-  drawn two ways. The answer is **not a container under the faces** — the folder above was
-  removed on purpose and that argument is untouched — it is that the icon stops claiming a
-  footprint the faces never take: 10% of the slot on every side, and 30% of what is left as the
-  round. Fractions rather than pixels, because the mark is 20px on the rail and larger in the
-  navigator and the icon picker, and it is the relationship that has to survive the size.
-  Transparent artwork barely moves, since `contain` was already letterboxing it well inside the
-  box.
-- **The lead is named on the lead's own row, as `LEAD`.** *Amended 2026-08-30.* It was `led by
-  Alice` under the team's name, and the reason was that leading is a fact about *the team* and
-  not about the agent: the same agent leads one team and not another, which is why it cannot
-  live on an agent's definition either. **That reason survives the move**, because the roster is
-  visibly nested under its team now: a row inside the section is already scoped to this team, so
-  the word reads as *leads here* rather than as a rank the agent carries around. It is still
-  named rather than drawn — a face appears where you are identifying among agents or choosing
-  one, and this is a single agent being mentioned — and it is a mono label like every other one
-  on these rows, never a chip.
-- **A team keeps its place in the rail when you open it.** The column's order is the store's, and
-  it does not depend on what you last clicked: a user reaching for the team they were on a minute
-  ago must find it where they left it. With a dozen teams that place can be below the fold, and
-  the group is **scrolled into view** when the team changes — never pinned there. Pinning it was
-  tried and rejected: **nothing in this column covers anything else in it.** A group stuck to the
-  edge of the scrollport floats over the teams above and below, and the rail is one list, so the
-  overlap reads as the open team sitting on top of the others rather than among them. The running team is drawn from the conversation rather
-  than from its summary row, and that substitution happens **in place**. Editing and
-  deleting a team live on the team's own row as icon buttons, revealed on hover **and on
-  `:focus-within`** — hover-only would put both out of reach of the keyboard — because a delete
-  button sitting on every row at rest would be the loudest thing in a column whose job is quiet.
+- **The lead is not named in the rail at all.** *Amended 2026-09-06.* `LEAD` sat on the lead's own
+  row, and the reason it could was that the roster was **visibly nested under its team**: a row
+  inside that section was already scoped to the team, so the word read as *leads here* rather than
+  as a rank the agent carries around. There is no section now, and an agent's row is the person
+  rather than a seat, so the same label on it would be the claim about the *agent* this file
+  refused when it first put the fact on the team — and false besides, since the same agent leads
+  one team and not another. Who leads is answered where the question is asked: the team pane's
+  send control carries the name it resolved to.
+- **A row keeps its place in the rail when you open it.** The column's order is recency, and it
+  does not depend on what you last clicked: a user reaching for the team they were on a minute ago
+  must find it where they left it. With a dozen rows that place can be below the fold, and the
+  open row is **scrolled into view** when the team changes — never pinned there. Pinning it was
+  tried and rejected: **nothing in this column covers anything else in it.** A row stuck to the
+  edge of the scrollport floats over the rows above and below, and the rail is one list, so the
+  overlap reads as the open row sitting on top of the others rather than among them. The running
+  team is drawn from the conversation rather than from its summary row, and that substitution
+  happens **in place**.
+- **What you can do to a row is on a right-click, and nothing else.** *Amended 2026-09-06 to cover
+  both kinds.* Editing and deleting a team were icon buttons revealed on hover; two 22px glyphs
+  4px apart, arriving in the same frame under a pointer that is already moving, is a mis-click
+  waiting to happen and the mis-click is the destructive one. The whole row is the trigger now and
+  there is no button, which is the most invisible control an interface has and is the trade taken
+  knowingly: what it buys is a column with nothing on it but its rows. Nothing here is the only
+  door to what it does — a team's own pane carries its edit and its delete, *your agents* carries
+  retiring — and the menu items are **named rows**, because a bin glyph says *delete* and a row
+  says *delete hermes-agent*. An agent's row offers **delete this conversation**, and only once
+  there is one: absent rather than disabled, because there is nothing to destroy.
+  *Amended 2026-09-07, at the author's direction:* an agent's row also offers **`Delete`**, the
+  agent itself, behind `RetireAgent`'s dialog, which prices the conversation it ends and takes an
+  explicit acknowledgement before anything happens. It is the one row here that is **not** a named
+  row and the one row drawn in **`--danger`**: one word, because the row the menu came off says
+  who and the dialog names them again; and coloured on the diff pair's own amended test, since the
+  word already carries the fact and the hue only reinforces it at the ramp's chroma. Nothing else
+  in the app may take that token. A row with no conversation carries it too — an agent you never
+  spoke to is the likeliest one to be deleted, and that row's whole menu used to be a single
+  `Pin`.
 - **The transcript** — the three voices above, in a centred column, under **one mono hairline
   row** carrying only what the rail does not: the agent's role, its runtime and where it is
   working, and on the team pane the folder every agent is cut from. **It is the only chrome above
@@ -1236,8 +1389,8 @@ One flat file, one flat namespace, no build step between it and the DOM.
   *your* is load-bearing on the row below, where the words really are the user's, and a Handbook
   is partly the agent's, so the same word would be a small lie in a panel whose whole job is
   being accurate about cost. The count lives in the panel, where a person can act on it. Hidden
-  when the Handbook is empty, like both its neighbours — the notice card above the composer is
-  where an unbriefed agent is named, unmissably, and two surfaces saying it is one too many.
+  when the Handbook is empty, like both its neighbours: this row prices what blobot spends on a
+  turn, and an empty Handbook costs nothing. The tray's door is where a count of zero is said.
   **It never warns as it fills, and not for the ring's reason.** The ring stays quiet because
   blobot *will* act: a full window is what the session boundary is for. This row stays quiet
   because blobot will **not** — the remedy is a person removing an entry, and the number they
@@ -1310,25 +1463,42 @@ One flat file, one flat namespace, no build step between it and the DOM.
   one animated part of a drag, since that is the app acting rather than the hand, and the
   transcript re-centres continuously rather than on release. The ceiling is **`window − rail −
   900`, not half the window** — at 1440px a half-window sidebar leaves the transcript 488px. The
-  transcript keeps its measure; the sidebar gives. One global remembered width, closed by
-  default, and the toggle is a **second glyph beside the details one**: two is not a row of
-  switches, a third would be, and that is the standing limit for this chrome.
+  transcript keeps its measure; the sidebar gives. One global remembered width, and the toggle is
+  a **second glyph beside the details one**: two is not a row of switches, a third would be, and
+  that is the standing limit for this chrome.
+  **Open by default, and shut is what is remembered** — amended 2026-09-06 at the author's
+  direction. It shipped closed, on the ordinary rule that a flank should be asked for; asking for
+  it on every launch is not asking, it is a chore, and this is the panel the flanks rule now lets
+  in *because* it is the only rendering of which files an agent touched. Closing it is a decision
+  and is kept, beside the width and the chosen panel and by the same mechanism.
+  **Its head is what the panel is showing, and there is one head slot.** In the team pane that is
+  the **team's name** with a `+` at the right edge — the rail's own add glyph, bare and muted,
+  and **the only thing on that head that answers a pointer**: the head is a header, so it takes no
+  hover ground, where the agent head does because pressing it is the way back out. The `+` opens
+  the **creation flow's *who* step pointed at this team** (`AddMember`): the same bar over the
+  window, the current members as badges you cannot take off, `hire an agent` at its foot, and it
+  hands the roster over and goes rather than holding the window through a restart. **Taking
+  somebody off is one gesture further in** — a right-click on their face in the chooser, the
+  rail's own arrangement for the same pair — and it opens a dialog, because a departure ends a
+  session and leaves a branch or a copy behind, so it says what happens to the work before and
+  what happened to it after. It is offered only where it can be honoured: never the last member,
+  and never on a team whose members predate profiles.
 - **A Handbook, under the composer, in the agent's pane only.** What an Agent knows about *this
-  team's* work, held at `<team>/<agent>`. Two shapes, and which one you get is a fact about the
-  agent rather than a preference; they are **never both present**.
-  **Unbriefed: a notice card above the composer**, taking the composer's width exactly with no
-  inset of its own, because it is the composer's own notice and any margin would say it is a
-  separate thing on the page. `Mara has not been briefed`, a muted line under it, and *brief them*
-  pushed right. It is **`.openerror`'s shape**, which the app already owned: `--raised` ground, a
-  12px radius, the control at `margin-left:auto`, and no ink edge under the ban on an ink edge on
-  a closed shape. *Both lost their hairline on 2026-09-04.* Two shapes invented for this both lost to it. **No icon**:
-  every icon at rest is `--muted`, so a muted glyph in that slot would have to mean something, and
-  not yet briefed is the ordinary condition of a new hire rather than a kind of thing. It
-  **persists** while the Handbook is empty, because it states a fact rather than announcing an
-  event, and there is **no dismiss** — that would invent *unbriefed and hidden*, a third state
-  nothing could then draw. Its control is the quiet button, not the loud one: the loud one grants
-  authority, and the whole charting decision was that ignoring this should cost nothing.
-  **Briefed: a door on the tray, and a dialog behind it.** The tray's rule is that everything on
+  team's* work, held at `<team>/<agent>`. One shape: a door on the tray with a dialog behind it.
+  **Amended 2026-09-06 at the author's direction: there is no unbriefed card, and there is one
+  shape.** An `.hbnotice` above the composer used to carry `Mara has not been briefed`, a muted
+  line and *brief them*, present while the Handbook was empty and absent once it was not. It is
+  gone, in both panes. The reason it was refused is the one ticket 06 wrote the card under and
+  then contradicted: **there is no third party in the room.** *brief them* opened the interview
+  in the agent's own first words precisely so blobot would not be heard introducing them — and a
+  card above the field announcing what that agent does not know is blobot saying it first, in its
+  own voice, forty pixels above the words that were supposed to be the agent's. Briefing is a
+  conversation, so it happens in the conversation. What is lost is stated rather than glossed:
+  nothing on screen now says *unbriefed*, so an agent that knows nothing about the work says so
+  itself, when asked, and the tray's `handbook · 0` is the only figure for it. `.hbnotice`,
+  `.hbnact`, `.hbnbtn`, the `blobot:brief` channel and `HandbookNotice` went with it.
+  **A door on the tray, and a dialog behind it.** *Drawn at every count now, `0` included*, since
+  the card that carried the invitation is no longer there to be the empty state's answer. The tray's rule is that everything on
   it is a live number or a door and nothing on it is a description, so a Handbook, which is prose,
   cannot sit on it and the only thing that can is `handbook · 4`. *Amended 2026-08-31: what the
   door opens is `.modal`, not a panel under the composer.* It was a panel, drawn against a
@@ -1431,6 +1601,40 @@ One flat file, one flat namespace, no build step between it and the DOM.
   itself while you are reading it is worse than one that never folded. The gesture is the
   transcript's chevron, at the **end** of the head rather than in front of it, so the numerals of
   the steps that fold stay in line with the ones that do not.~~
+- **The agent bar** — hiring an agent, and restating one that exists. **One surface for both**,
+  because an AgentProfile is a definition and hiring is stating it for the first time; what
+  differs is where it lands afterwards, and only the edit has to say so (ADR-0002).
+  *Rewritten 2026-09-07, from a prototype the author picked out of four.* It was a modal read top
+  to bottom: a 112px face over 13 hues and 9 silhouettes laid out flat, then eight stacked
+  fields. Every one of those had a reason and the reasons still hold; what did not hold is the
+  sum. It asked eight questions where seven already had an answer nobody argues with, and it
+  spent its first third on the one part of an agent the name decides by itself.
+  **It is the creation bar's sibling** — the same sheet at the same height, the same field with
+  its hairline, the same addressed word and drawn colon, the same 28px arrow that inverts only
+  when it is armed. The two are opened by the same gesture from the same places, so a second bar
+  shape would be a second answer to a question already settled. Radix still owns the dialog
+  underneath, because the agent outlives the screen that opened it: the focus trap, Escape and
+  `aria-modal` are worth more here than the centred box ever was.
+  **The field is one line of writing**: the face, `Hire:`, a name, and the role in apposition
+  after it, both inputs sized to their own content so an empty role is a word of grey rather than
+  a second box at the far end of the bar. **The face is 34px at the head of that field**, where
+  the creation bar puts the team it is about, and its two rows hang off it in a popover — the
+  default costs nothing to skip, which is what it is.
+  **Under the field, the answers, as chips.** A chip states what this agent already is; pressing
+  one is for disagreeing. Two rows on purpose, with the break drawn rather than left to the
+  width: what it runs on, in the runtime's own vocabulary (the runtime, and the model and effort
+  it advertises), then how it works, in blobot's (`without asking`, `says`, `starts over`). The
+  chip is the badge the creation bar draws in its own field, because an agent's runtime sitting
+  in this row is the same kind of object as an agent sitting in that one: something the surface
+  is holding, not a control asking a question. **The one thing that opens a field rather than
+  carrying an answer is outlined and last** — the standing instructions, which are the only
+  optional thing here.
+  **Nothing was dropped.** Ticket 11's readiness line and its remedy are in the foot in mono,
+  never a gate; what an edit is about to reach is under it in prose; the model menu is the
+  runtime's own; the three words keep their sentences on the rows where they are chosen.
+  **Enter is the arrow**, and stays a newline in the standing instructions, because that field is
+  paragraphs. **On an edit the arrow is dead until something has changed**, which is
+  `.btn.primary`'s own rule wearing the creation bar's glyph.
 - **Your agents** — every AgentProfile the user has hired, over the working surface rather than
   in place of it: the team behind it keeps running, and nothing on this screen restarts one. A
   row is a face, a name, a role, the runtime and the teams it is on, with its standing
@@ -1441,6 +1645,23 @@ One flat file, one flat namespace, no build step between it and the DOM.
   it was a row above TEAMS, on the grounds that an agent exists before a team and that is the
   order the model reads in. True of the model, wrong on screen — see* **The doors at the foot of
   the rail** *below.*
+  **Individual-Team entry, approved 2026-09-06.** A visible `talk` button beside each profile
+  opens a dialog listing its individual Teams and an action to create one through the normal
+  flow, with that profile preselected. Choosing a Team opens its ordinary working surface;
+  this explicit navigation can start that Team. Browsing and editing profiles still restart
+  nothing. The row click keeps editing, and edit/retire icons keep their hover/focus reveal.
+  The dialog is about one profile; the roster remains a place about everybody. No profile
+  transcript, new visual voice or extra live-power claim is introduced. See Machines'
+  *Where a profile is addressed from, on screen*.
+  **Personal skills, approved 2026-09-06.** A visible `skills` action sits beside `talk`.
+  It opens a working surface for that profile with a list, drafts and `add skill`. The normal
+  560px Add dialog offers folder, link and creation at equal rank; a preview contains readable
+  instructions, provenance, license and all file names. The person is the destination, so no
+  global scope picker appears. Pending changes name the sessions that must close, without
+  restarting them. Editing opens the folder; removal retains a recoverable copy. The existing
+  context/workspace popover also opens a read-only Skills inventory per agent with personal,
+  project and computer origins. Detection is not labelled loaded, and name collisions remain
+  unconfirmed. Project installation is not offered in the first cut.
 - **Routines** — everything that runs on a clock, over the working surface, in the register of
   *your agents* and reached from the second door at the foot of the rail. A row is the Routine's name, the
   schedule **in words**, the blobatar and name of the agent it belongs to, the team, and when it

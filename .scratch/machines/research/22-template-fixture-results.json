@@ -1,0 +1,351 @@
+{
+  "date": "2026-09-05T18:18:53.290Z",
+  "scope": "synthetic-rootfs-and-volume-files-only",
+  "commands": [
+    {
+      "label": "create-original",
+      "ms": 3300.915334,
+      "code": 0
+    },
+    {
+      "label": "seed",
+      "ms": 475.33849999999984,
+      "code": 0
+    },
+    {
+      "label": "observe-original",
+      "ms": 585.3272919999999,
+      "code": 0
+    },
+    {
+      "label": "stop",
+      "ms": 5298.927084,
+      "code": 0
+    },
+    {
+      "label": "snapshot-local-store",
+      "ms": 319.056125000001,
+      "code": 0
+    },
+    {
+      "label": "create-restored",
+      "ms": 2487.499541000001,
+      "code": 0
+    },
+    {
+      "label": "observe-restored",
+      "ms": 355.81125000000065,
+      "code": 0
+    },
+    {
+      "label": "stop",
+      "ms": 5483.484625000001,
+      "code": 0
+    },
+    {
+      "label": "observe-reopened",
+      "ms": 1093.2381669999995,
+      "code": 0
+    },
+    {
+      "label": "replacement-write",
+      "ms": 249.288875000002,
+      "code": 0
+    },
+    {
+      "label": "verify-original-unchanged",
+      "ms": 1051.9472080000014,
+      "code": 0
+    },
+    {
+      "label": "remove-owned-box",
+      "ms": 321.2047500000008,
+      "code": 0
+    },
+    {
+      "label": "remove-owned-box",
+      "ms": 335.16770800000086,
+      "code": 0
+    },
+    {
+      "label": "remove-owned-template",
+      "ms": 175.869708000002,
+      "code": 0
+    }
+  ],
+  "checks": {
+    "rootfsSentinelsPreserved": true,
+    "samePathPrivateVolumeSentinels": {
+      "/home/agent/blobot-snapshot-fixture": false,
+      "/workspace/blobot-snapshot-fixture": false,
+      "/var/lib/docker/blobot-snapshot-fixture": false,
+      "/var/lib/containerd/blobot-snapshot-fixture": false
+    },
+    "replacementCpuLimit": 3,
+    "restoredStopStartPreservesObservedFiles": true,
+    "originalUnchanged": true
+  },
+  "cleanup": {
+    "errors": [],
+    "remainingBoxes": [],
+    "remainingTemplates": []
+  },
+  "version": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "base": {
+    "id": "5fc81bc7a127",
+    "repository": "docker.io/docker/sandbox-templates",
+    "tag": "shell-docker",
+    "flavor": "shell-docker",
+    "created_at": "2026-09-04T18:54:27Z",
+    "size": 588725040
+  },
+  "original": {
+    "files": {
+      "/usr/local/share/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/usr/local/share/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/opt/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/opt/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/etc/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/etc/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/root/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/root/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/home/agent/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/home/agent/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 1000,
+        "gid": 1000
+      },
+      "/workspace/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/workspace/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/var/lib/docker/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/var/lib/docker/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/var/lib/containerd/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/var/lib/containerd/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      }
+    },
+    "cpus": 2,
+    "memTotal": "MemTotal:        2066016 kB",
+    "docker": {
+      "running": true,
+      "root": "/var/lib/docker",
+      "driver": "overlayfs",
+      "version": "29.7.2"
+    },
+    "mounts": [
+      "115 105 254:48 / /var/lib/docker rw,relatime - ext4 /dev/vdd rw",
+      "116 105 254:64 / /home/agent rw,relatime - ext4 /dev/vde rw",
+      "117 105 254:80 / /workspace rw,relatime - ext4 /dev/vdf rw",
+      "118 115 254:96 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdg rw",
+      "119 105 254:112 / /var/lib/containerd rw,relatime - ext4 /dev/vdh rw"
+    ]
+  },
+  "snapshot": {
+    "id": "35b349459366",
+    "repository": "docker.io/library/blobot-snapshot-fixture",
+    "tag": "0f082fe6-33fe-4278-a4f4-73c47eb6c512",
+    "flavor": "shell-docker",
+    "created_at": "2026-09-05T18:19:05Z",
+    "size": 589321296
+  },
+  "restored": {
+    "files": {
+      "/usr/local/share/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/usr/local/share/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/opt/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/opt/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/etc/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/etc/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/root/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/root/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/home/agent/blobot-snapshot-fixture": null,
+      "/workspace/blobot-snapshot-fixture": null,
+      "/var/lib/docker/blobot-snapshot-fixture": null,
+      "/var/lib/containerd/blobot-snapshot-fixture": null
+    },
+    "cpus": 3,
+    "memTotal": "MemTotal:        3104752 kB",
+    "docker": {
+      "running": true,
+      "root": "/var/lib/docker",
+      "driver": "overlayfs",
+      "version": "29.7.2"
+    },
+    "mounts": [
+      "118 108 254:48 / /var/lib/docker rw,relatime - ext4 /dev/vdd rw",
+      "119 108 254:64 / /home/agent rw,relatime - ext4 /dev/vde rw",
+      "120 108 254:80 / /workspace rw,relatime - ext4 /dev/vdf rw",
+      "121 118 254:96 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdg rw",
+      "122 108 254:112 / /var/lib/containerd rw,relatime - ext4 /dev/vdh rw"
+    ]
+  },
+  "reopened": {
+    "files": {
+      "/usr/local/share/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/usr/local/share/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/opt/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/opt/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/etc/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/etc/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/root/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/root/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/home/agent/blobot-snapshot-fixture": null,
+      "/workspace/blobot-snapshot-fixture": null,
+      "/var/lib/docker/blobot-snapshot-fixture": null,
+      "/var/lib/containerd/blobot-snapshot-fixture": null
+    },
+    "cpus": 3,
+    "memTotal": "MemTotal:        3104752 kB",
+    "docker": {
+      "running": true,
+      "root": "/var/lib/docker",
+      "driver": "overlayfs",
+      "version": "29.7.2"
+    },
+    "mounts": [
+      "118 108 254:48 / /var/lib/docker rw,relatime - ext4 /dev/vdd rw",
+      "119 108 254:64 / /home/agent rw,relatime - ext4 /dev/vde rw",
+      "120 108 254:80 / /workspace rw,relatime - ext4 /dev/vdf rw",
+      "121 118 254:96 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdg rw",
+      "122 108 254:112 / /var/lib/containerd rw,relatime - ext4 /dev/vdh rw"
+    ]
+  },
+  "originalAfter": {
+    "files": {
+      "/usr/local/share/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/usr/local/share/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/opt/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/opt/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/etc/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/etc/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/root/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/root/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/home/agent/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/home/agent/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 1000,
+        "gid": 1000
+      },
+      "/workspace/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/workspace/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/var/lib/docker/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/var/lib/docker/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      },
+      "/var/lib/containerd/blobot-snapshot-fixture": {
+        "text": "synthetic:0f082fe6-33fe-4278-a4f4-73c47eb6c512:/var/lib/containerd/blobot-snapshot-fixture",
+        "mode": 416,
+        "uid": 0,
+        "gid": 0
+      }
+    },
+    "cpus": 2,
+    "memTotal": "MemTotal:        2066016 kB",
+    "docker": {
+      "running": true,
+      "root": "/var/lib/docker",
+      "driver": "overlayfs",
+      "version": "29.7.2"
+    },
+    "mounts": [
+      "115 105 254:48 / /var/lib/docker rw,relatime - ext4 /dev/vdd rw",
+      "116 105 254:64 / /home/agent rw,relatime - ext4 /dev/vde rw",
+      "117 105 254:80 / /workspace rw,relatime - ext4 /dev/vdf rw",
+      "118 115 254:96 / /var/lib/docker rw,relatime shared:1 - ext4 /dev/vdg rw",
+      "119 105 254:112 / /var/lib/containerd rw,relatime - ext4 /dev/vdh rw"
+    ]
+  },
+  "passed": true
+}

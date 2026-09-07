@@ -1,0 +1,221 @@
+{
+  "date": "2026-09-06T00:16:25.114Z",
+  "uuid": "c864c636-3242-43c7-8cf1-aeed8cfb3bb2",
+  "name": "blobot-restore57-c864c636-3242-43c7-8cf1-aeed8cfb3bb2",
+  "candidate": "blobot-machine-probe:explicit-docker-20260905",
+  "manifest": "sha256:1cd3184fceaf6d60c0f364c81bdb26f3359bab91efc666cd172fb75c68ed974c",
+  "scope": "synthetic disposable guest only",
+  "commands": [
+    {
+      "label": "daemon-status",
+      "code": 0,
+      "ms": 186.56720900000002
+    },
+    {
+      "label": "version",
+      "code": 0,
+      "ms": 378.5755419999999
+    },
+    {
+      "label": "read-ssh-forwarding",
+      "code": 0,
+      "ms": 161.10325
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 180.0775000000001
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 249.59633400000007
+    },
+    {
+      "label": "load-local-archive",
+      "code": 0,
+      "ms": 2591.915
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 158.93562500000007
+    },
+    {
+      "label": "create-owned-box",
+      "code": 0,
+      "ms": 2939.0428749999996
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 176.1644580000002
+    },
+    {
+      "label": "stop-after-target",
+      "code": 0,
+      "ms": 5315.808166999999
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 179.74108399999932
+    },
+    {
+      "label": "remove-owned-box",
+      "code": 0,
+      "ms": 254.40512500000114
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 169.87904100000014
+    },
+    {
+      "label": "remove-owned-local-alias",
+      "code": 0,
+      "ms": 187.27912500000093
+    },
+    {
+      "label": "list-boxes",
+      "code": 0,
+      "ms": 261.8705000000009
+    },
+    {
+      "label": "list-images",
+      "code": 0,
+      "ms": 159.688791999999
+    }
+  ],
+  "diskChecks": [
+    {
+      "label": "before-load",
+      "availableBytes": "20910723072"
+    },
+    {
+      "label": "before-create",
+      "availableBytes": "20910977024"
+    },
+    {
+      "label": "before-probe",
+      "availableBytes": "20894072832"
+    },
+    {
+      "label": "after-target",
+      "availableBytes": "20890927104"
+    },
+    {
+      "label": "after-probe",
+      "availableBytes": "20890927104"
+    },
+    {
+      "label": "after-cleanup",
+      "availableBytes": "20908707840"
+    }
+  ],
+  "cleanup": {
+    "errors": [],
+    "remainingOwnedBoxes": [],
+    "remainingOwnedImages": [],
+    "tempRemoved": true
+  },
+  "scripts": {
+    "workerSha256": "5999dc61623e461d98a14a5488e8570629f01d289f1b9bc3f20be5331cb459f5",
+    "prepareSha256": "a08ffc6ad386bc04aa1fd7920a4115c5cd92f0c122f4dcefe5b217852436c68a"
+  },
+  "version": {
+    "client": {
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "build_tags": "cloud"
+    },
+    "server": {
+      "state": "running",
+      "version": "v0.42.0-rc5",
+      "revision": "ca4a4bd42035628137d78c5a0bef5c0d3301a35a",
+      "api_version": "0.28.0"
+    }
+  },
+  "image": {
+    "id": "1cd3184fceaf",
+    "repository": "docker.io/library/blobot-machine-probe",
+    "tag": "explicit-docker-20260905",
+    "flavor": "shell-docker",
+    "created_at": "2026-09-06T00:16:28Z",
+    "size": 588690428
+  },
+  "kit": {
+    "schemaVersion": "2",
+    "kind": "sandbox",
+    "name": "blobot-synthetic-restore57",
+    "sandbox": {
+      "image": "blobot-machine-probe:explicit-docker-20260905",
+      "entrypoint": [
+        "/usr/bin/node"
+      ],
+      "command": {
+        "default": [
+          "--version"
+        ]
+      }
+    },
+    "security": {
+      "privileged": true
+    },
+    "credentials": [],
+    "permissions": {
+      "network": {
+        "allow": [],
+        "deny": []
+      }
+    },
+    "volumes": [
+      {
+        "path": "/home/agent",
+        "size": "8589934592",
+        "mode": "0700"
+      },
+      {
+        "path": "/var/lib/docker",
+        "size": "21474836480",
+        "mode": "0700"
+      }
+    ]
+  },
+  "box": {
+    "name": "blobot-restore57-c864c636-3242-43c7-8cf1-aeed8cfb3bb2",
+    "id": "3079c793-a08a-4456-ba24-1fbbdcc5b2fa",
+    "agent": "blobot-synthetic-restore57",
+    "status": "running",
+    "workspaces": [
+      "/private/tmp/blobot-restore57-vw0Cn3/synthetic-worktree"
+    ]
+  },
+  "guests": [
+    {
+      "role": "target",
+      "code": 0,
+      "stderr": "",
+      "guest": {
+        "role": "target",
+        "checks": {
+          "completePaxAndHardlinks": true,
+          "unlinkedRegularSelectionFile": true,
+          "bundlePreflightBeforeArchive": true,
+          "noopLeavesFileInodeMetadata": true,
+          "truncatedStreamRejectedAndHelperClosed": true,
+          "abortClosesHelper": true,
+          "viewsDisposed": true
+        },
+        "completed": true,
+        "archive": {
+          "bytes": 20480,
+          "sha256": "2fdfb04855391ce45448176a5444f2027d2fccad3dff6047b85f79437b8b81c2",
+          "members": 8
+        }
+      }
+    }
+  ],
+  "minimumObservedSpace": "20891152384",
+  "passed": true
+}
