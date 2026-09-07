@@ -1035,9 +1035,14 @@ hr{border:0;border-top:1px solid var(--edge);margin:0}
    only what blobot measured and only what the reader cannot already see. */
 .pict .pline{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px}
 /* Full size, over the surface, and that is the whole of the control: no toolbar, no zoom, no
-   next and previous. This is not a gallery. */
-.pfull{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:32px;cursor:zoom-out}
-.pfull img{max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;cursor:zoom-out}
+   next and previous. This is not a gallery.
+   It arrives the way every other thing over the surface arrives, because it was the only one
+   that did not: the scrim's fade and the sheet's. Centred rather than grown out of the tile, on
+   `.modal`'s own argument — once it is full-screen it is anchored to nothing. Entrance only, and
+   for `.scrim`'s reason one step further: this is a plain conditional render, so an exit would
+   mean holding it mounted after the click that dismissed it. */
+.pfull{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:32px;cursor:zoom-out;animation:enterscrim 150ms var(--ease-out)}
+.pfull img{max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;cursor:zoom-out;animation:entermodal 200ms var(--ease-out)}
 /* The one case in this feature that is text alone, and the exception the rule implies rather
    than one against it: blobot does not caption what the reader can see, and here there is
    nothing to see. Not a `.sysline`, because no third party is in the room. */
@@ -1202,9 +1207,16 @@ textarea.field{resize:vertical;line-height:1.5}
 .listrow.pick:hover{background:var(--raised)}
 .listrow.pick.on{background:var(--raised);box-shadow:inset 0 0 0 1px var(--muted)}
 /* An empty circle rather than a blank column: the row has to look ticked *or* untickable, and
-   a checkmark that appears out of nothing reads as the row having changed shape. */
-.listrow .tick{width:20px;height:20px;flex:0 0 auto;border:1px solid var(--line);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ground)}
+   a checkmark that appears out of nothing reads as the row having changed shape.
+   The circle solved the *shape* and the fill still snapped, which left the one binary control in
+   the app that answers a press with nothing — beside `.switch`, which cross-fades its ground and
+   travels its knob for the same act. So the ground cross-fades and the mark arrives on the house
+   entrance. No new keyframe and no new curve: `enterpop` is already the 140ms arrival every
+   panel here uses, and it is already withdrawn to a fade under `prefers-reduced-motion`, which
+   is the whole of the accommodation this needs. */
+.listrow .tick{width:20px;height:20px;flex:0 0 auto;border:1px solid var(--line);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ground);transition:background-color 140ms var(--ease-out),border-color 140ms var(--ease-out)}
 .listrow .tick.on{background:var(--ink);border-color:var(--ink)}
+.listrow .tick.on svg{animation:enterpop 140ms var(--ease-out)}
 .listrow:disabled{opacity:.45;cursor:default}
 /* who leads: the same faces the roster just showed, one of them marked. Not a status, so it
    takes the raised ground and the border every other chosen thing here takes. */
@@ -1457,6 +1469,13 @@ textarea.field{resize:vertical;line-height:1.5}
 
 /* A team that would not open. A line the user can read and dismiss, not a dialog to clear:
    whatever was on screen is still there and still correct. */
+/* It mounts *above* the panes and in flow, so arriving it shoves the entire working surface down
+   between two frames. That is the one case the interaction budget already admits a height for:
+   the height is not the effect, it is the only property that can carry what is beneath. The same
+   `1fr`/`0fr` grid the fold shuts with, pointed the other way, and the fade is what covers the
+   overlap while it runs. */
+.openerrorwrap{display:grid;grid-template-rows:1fr;overflow:hidden;animation:entererr 200ms var(--ease-out)}
+@keyframes entererr{from{grid-template-rows:0fr;opacity:0}}
 .openerror{display:flex;align-items:center;gap:12px;margin:10px 20px;padding:10px 15px;border-radius:12px;background:var(--raised);font-size:13px;line-height:1.45}
 .openerror .dismiss{margin-left:auto;flex:0 0 auto;color:var(--muted);font-size:16px;line-height:1;padding:0 4px}
 .openerror .dismiss:hover{color:var(--ink)}
@@ -1705,6 +1724,9 @@ button.listrow:not(.pick):hover{outline:1px solid var(--edge);outline-offset:-1p
   .ran .went{display:none}
   @keyframes enterpop{from{opacity:.3}}
   @keyframes exitpop{to{opacity:0}}
+  /* The banner keeps its fade and loses its growth. What is beneath it jumps, which is what a
+     reader who asked for no motion asked for. */
+  @keyframes entererr{from{opacity:0}}
   .btn,.iconbtn,.swatch,.ctxring,.composer .clip{transition:none}
   /* The send keeps its cross-fade and loses its scale, which is the withdrawal rule stated
      exactly: colour is not motion, and the fill is how this button says it is armed. */
@@ -2088,6 +2110,13 @@ button.listrow:not(.pick):hover{outline:1px solid var(--edge);outline-offset:-1p
    under a pointer is a control a keyboard cannot reach. */
 .hbentry .hbx{opacity:0;color:var(--muted);background:none;border:0;cursor:pointer;font-size:15px;line-height:1;padding:1px 3px;border-radius:6px;flex:0 0 auto;margin-top:2px}
 .hbentry:hover .hbx,.hbentry .hbx:focus-visible{opacity:1}
+/* `.rowacts`' rule with a different selector, and its written reason applies unchanged: one icon
+   appearing in a single frame is a pop. Opacity alone, so it stands under
+   `prefers-reduced-motion` by the rule at the foot of this file — a cross-fade is not motion.
+   Pointer devices only: on touch there is no hover to bridge. */
+@media (hover:hover) and (pointer:fine){
+  .hbentry .hbx{transition:opacity 120ms var(--ease-out)}
+}
 .hbentry .hbx:hover{color:var(--ink)}
 
 /* Dictation (Settings' fourth section, `.scratch/dictation/` ticket 10). The rows are the list

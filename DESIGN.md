@@ -932,9 +932,15 @@ are narrow:
   one budget where cost is paid per frame; **only on an element that is already moving**, so it
   can never become a way to make something static look soft; and **withdrawn entirely under
   `prefers-reduced-motion`**, alongside the scale and the travel, because a thing softening and
-  growing into place is motion whatever property carries it. The one `height` in the app is the opening roster below, and it is there
-  because what has to move is everything *beneath* that box, which nothing but its height can
-  move.
+  growing into place is motion whatever property carries it. The exception is a **height, and
+  only where what has to move is everything *beneath* the box** — which nothing but its height
+  can carry. *Corrected 2026-09-07: this named the opening roster as the one case, and that
+  roster no longer exists (`Rail.tsx`: pressing a row switches the pane and the list does not
+  change shape). The clause was a count of instances rather than a rule, so it is written as the
+  test it always was.* Two things take it, both as `grid-template-rows` `1fr`/`0fr` rather than a
+  real `height`: `.ran .went`, the fold shutting over a swallowed call, and `.openerrorwrap`,
+  which is the same sentence pointed the other way — the banner mounts above the panes and in
+  flow, so arriving it shoves the whole working surface down between two frames.
 - **Nothing that carries meaning of its own.** It smooths a change the interface was making
   anyway. If a user has to see the animation to understand what happened, the animation is
   doing a job that belongs to a word.
@@ -1000,6 +1006,16 @@ are narrow:
   whole app is built around, did not until 2026-08-31. It is a **pointer** state, so the send
   never animates when it is sent with Enter, which is how it is actually used: keyboard paths
   take no motion, ever.
+  *Extended 2026-09-07 to `.listrow .tick`, the one binary control in the app that answered a
+  press with nothing.* It sits beside `.switch`, which cross-fades its ground and travels its
+  knob for the same act, so the gap was an inconsistency rather than a decision. The circle had
+  already solved the *shape* — the comment on it says a checkmark appearing out of nothing reads
+  as the row changing shape — and left the fill snapping. The ground cross-fades over 140ms and
+  the mark arrives on `enterpop`, the house entrance, so this adds no keyframe, no curve and no
+  reduced-motion code: `enterpop` is already withdrawn to a fade at the foot of the stylesheet,
+  and a cross-fade is not motion. Six of the seven ticks draw a Lucide `Check` and Dictation's
+  two draw a text `✓`, which takes the ground and not the mark; that glyph is a separate
+  question and was left alone.
 - **A panel that opens on a hover has to open.** Appearing between two frames under a pointer
   that merely crossed something reads as a glitch rather than as an answer. The house entrance,
   shortened to 140ms because a tooltip-sized thing is not a sheet, and **origin-aware**: it
@@ -1010,6 +1026,20 @@ are narrow:
   control gets this** — the workspace popovers, the option menus, the context ring — with exactly
   one refusal: the composer's `@mention` list, which opens on a keystroke mid-sentence dozens of
   times a day, where frequency is the disqualifier.
+  *And every panel that opens over the whole surface gets the scrim's fade and the sheet's
+  arrival, which `.pfull` did not until 2026-09-07* — a Picture at full size was the one
+  full-surface overlay in the app that appeared between two frames. It is **centred rather than
+  grown out of the tile it was clicked**, on the modal's own argument: once it fills the screen
+  it is anchored to nothing, and a flight from a thumbnail is a second gesture to pay for. It
+  reuses `enterscrim` and `entermodal` unchanged. Entrance only, for `.scrim`'s reason one step
+  further — it is a plain conditional render, so an exit would mean holding it mounted after the
+  click that dismissed it.
+- **A reveal on hover is bridged wherever it happens.** `.rowacts` on the rail has faded over
+  120ms since it was built, with the reason written on it: two icons appearing in one frame is a
+  pop, and that column's job is to be quiet. *2026-09-07 that rule reached `.hbentry .hbx`*, the
+  remove on a Handbook entry, which is the same control in the same shape and had nothing. Same
+  duration, same curve, `@media (hover:hover) and (pointer:fine)` because on touch there is no
+  hover to bridge, and opacity alone, so it stands under `prefers-reduced-motion`.
 
 Both budgets answer to the same withdrawal rule:
 

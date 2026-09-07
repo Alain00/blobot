@@ -425,7 +425,11 @@ export function App(): React.JSX.Element {
       // left-aligned anchor above a page that is set centred. The working surface lost its
       // header for the same reason.
       <div className="app">
-        {openError !== undefined && <div className="openerror">{openError}</div>}
+        {openError !== undefined && (
+          <div className="openerrorwrap">
+            <div className="openerror">{openError}</div>
+          </div>
+        )}
         <NewTeam onCreate={startTeam} {...(initialProfile === undefined ? {} : { initialProfile })} />
       </div>
     );
@@ -466,11 +470,15 @@ export function App(): React.JSX.Element {
       {/* Above the panes rather than inside them: the team on screen is still the one that
           was there, and nothing in it is wrong. What failed was the click. */}
       {openError !== undefined && (
-        <div className="openerror">
-          {openError}
-          <button className="dismiss" onClick={() => setOpenError(undefined)} aria-label="Dismiss">
-            ×
-          </button>
+        /* The wrapper is what grows, because what has to move is everything beneath it: this sits
+           above the panes and in flow, so arriving it shoves the whole working surface down. */
+        <div className="openerrorwrap">
+          <div className="openerror">
+            {openError}
+            <button className="dismiss" onClick={() => setOpenError(undefined)} aria-label="Dismiss">
+              ×
+            </button>
+          </div>
         </div>
       )}
       <div
