@@ -1563,6 +1563,15 @@ One flat file, one flat namespace, no build step between it and the DOM.
   The dialog is about one profile; the roster remains a place about everybody. No profile
   transcript, new visual voice or extra live-power claim is introduced. See Machines'
   *Where a profile is addressed from, on screen*.
+  **Personal skills, approved 2026-09-06.** A visible `skills` action sits beside `talk`.
+  It opens a working surface for that profile with a list, drafts and `add skill`. The normal
+  560px Add dialog offers folder, link and creation at equal rank; a preview contains readable
+  instructions, provenance, license and all file names. The person is the destination, so no
+  global scope picker appears. Pending changes name the sessions that must close, without
+  restarting them. Editing opens the folder; removal retains a recoverable copy. The existing
+  context/workspace popover also opens a read-only Skills inventory per agent with personal,
+  project and computer origins. Detection is not labelled loaded, and name collisions remain
+  unconfirmed. Project installation is not offered in the first cut.
 - **Routines** — everything that runs on a clock, over the working surface, in the register of
   *your agents* and reached from the second door at the foot of the rail. A row is the Routine's name, the
   schedule **in words**, the blobatar and name of the agent it belongs to, the team, and when it

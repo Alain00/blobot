@@ -315,6 +315,7 @@ export class OpencodeAgentRuntime implements AgentRuntime {
   #configContent(): string {
     const name = this.#options.agentName ?? this.agentId;
     return opencodeConfigContent({
+      ...(this.#options.machine?.location().personalPath ? { personalPath: this.#options.machine.location().personalPath! } : {}),
       agentKey: this.#agentKey,
       description: `${name}, a blobot teammate.`,
       persona: this.#options.persona ?? '',
@@ -475,7 +476,7 @@ export class OpencodeAgentRuntime implements AgentRuntime {
   }
 
   async stop(): Promise<void> {
-    if (this.#lifecycle === 'stopped') return;
+    // A stopped lifecycle can precede OS process exit; repeated stop must still join cleanup.
     this.#setLifecycle('stopped');
     // The session is on disk either way, so closing it costs nothing and keeps the shutdown
     // orderly. `session/close` makes the session unusable to *this* process; a later
@@ -533,7 +534,7 @@ export class OpencodeAgentRuntime implements AgentRuntime {
 
   /** Read once. A command added to the workspace mid-session needs a restart to be offered. */
   #projectCommands(): ReadonlySet<string> {
-    this.#projectNames ??= offerableNames(this.#options.cwd, this.#options.machine?.kind === 'box' ? this.#options.machine.location() : undefined);
+    this.#projectNames = offerableNames(this.#options.cwd, this.#options.machine?.kind === 'box' ? this.#options.machine.location() : undefined, this.#options.machine?.location().personalPath);
     return this.#projectNames;
   }
 

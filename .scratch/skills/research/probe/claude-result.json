@@ -1,0 +1,108 @@
+{
+  "kind": "claude",
+  "root": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-native-skill-wMwit1",
+  "name": "blobot-probe-85fc0f1b",
+  "started": true,
+  "invoked": true,
+  "rawFixtureCommands": [
+    "blobot-probe-85fc0f1b"
+  ],
+  "rawCommandCount": 453,
+  "canonicalAlias": true,
+  "options": [
+    {
+      "id": "model",
+      "label": "Model",
+      "choices": [
+        {
+          "value": "opus[1m]",
+          "label": "Opus (1M context)"
+        },
+        {
+          "value": "claude-fable-5-1[1m]",
+          "label": "Fable"
+        },
+        {
+          "value": "sonnet",
+          "label": "Sonnet"
+        },
+        {
+          "value": "haiku",
+          "label": "Haiku",
+          "isDefault": true
+        }
+      ],
+      "current": "haiku"
+    }
+  ],
+  "proofReturned": true,
+  "messages": [
+    "PERSONAL-SKILL-a7c73c50-416f-49f9-9942-2edbbdb60098"
+  ],
+  "errors": [],
+  "requests": [
+    {
+      "method": "session/new",
+      "additionalDirectories": [
+        "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-native-skill-wMwit1/profiles/ana/files"
+      ]
+    }
+  ],
+  "toolEvents": [
+    {
+      "type": "tool_call",
+      "kind": "other",
+      "title": "Load skill",
+      "rawInput": {},
+      "status": "pending"
+    },
+    {
+      "type": "tool_call_update",
+      "kind": "other",
+      "title": "Load skill: blobot-probe-85fc0f1b",
+      "rawInput": {
+        "skill": "blobot-probe-85fc0f1b"
+      }
+    },
+    {
+      "type": "tool_call_update"
+    },
+    {
+      "type": "tool_call_update",
+      "status": "completed"
+    },
+    {
+      "type": "tool_call",
+      "kind": "read",
+      "title": "Read File",
+      "rawInput": {},
+      "status": "pending",
+      "locations": []
+    },
+    {
+      "type": "tool_call_update",
+      "kind": "read",
+      "title": "Read /private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-native-skill-wMwit1/profiles/ana/files/.claude/skills/blobot-probe-85fc0f1b/references/proof.txt",
+      "rawInput": {
+        "file_path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-native-skill-wMwit1/profiles/ana/files/.claude/skills/blobot-probe-85fc0f1b/references/proof.txt"
+      },
+      "locations": [
+        {
+          "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-native-skill-wMwit1/profiles/ana/files/.claude/skills/blobot-probe-85fc0f1b/references/proof.txt",
+          "line": 1
+        }
+      ]
+    },
+    {
+      "type": "tool_call_update"
+    },
+    {
+      "type": "tool_call_update",
+      "status": "completed"
+    }
+  ],
+  "diagnostics": [
+    "(node:97447) [CLAUDE_SDK_CAN_USE_TOOL_SHADOWED] Warning: canUseTool will not be invoked for: Edit, Write, MultiEdit, NotebookEdit. Bare allowedTools entries auto-approve the whole tool before the callback is consulted. To gate every tool call, use a PreToolUse hook; or remove the bare names from allowedTools so they fall through to canUseTool. Allow rules from settings files can also shadow the callback but are not visible here.",
+    "(Use `node --trace-warnings ...` to show where the warning was created)"
+  ]
+}

@@ -17,8 +17,9 @@ export const CLAUDE_LOCAL_PROTECTION =
  * Bash fence with inherited rules, not confinement of the bridge, file tools or MCP servers.
  * See Machines research42 for the pinned CLI's measured settings precedence.
  */
-export function claudeSandboxFor(kind: MachineKind, gitDirectories: readonly string[] = []) {
+export function claudeSandboxFor(kind: MachineKind, gitDirectories: readonly string[] = [], personalPath?: string) {
   if (kind === 'box') return { enabled: false } as const;
+  const writable = [...gitDirectories, ...personalPath === undefined ? [] : [personalPath]];
   return {
     enabled: true,
     failIfUnavailable: true,
@@ -26,6 +27,6 @@ export function claudeSandboxFor(kind: MachineKind, gitDirectories: readonly str
     autoAllowBashIfSandboxed: false,
     allowUnsandboxedCommands: false,
     network: { allowLocalBinding: true },
-    ...(gitDirectories.length === 0 ? {} : { filesystem: { allowWrite: [...gitDirectories] } }),
+    ...(writable.length === 0 ? {} : { filesystem: { allowWrite: writable } }),
   } as const;
 }

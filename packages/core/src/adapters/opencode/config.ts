@@ -148,6 +148,7 @@ export function permissionPosture(trust: TrustLevel): {
 export const PERMISSION_POSTURE = permissionPosture(DEFAULT_TRUST);
 
 export interface OpencodeConfigOptions {
+  readonly personalPath?: string;
   /** How much of the agent's own work blobot vouches for. See `trust.ts`. */
   readonly trust?: TrustLevel;
   /** The config key the agent is defined under, and therefore the ACP mode id. */
@@ -178,6 +179,7 @@ export interface OpencodeConfigOptions {
 export function opencodeConfigContent(options: OpencodeConfigOptions): string {
   const permission = permissionPosture(options.trust ?? DEFAULT_TRUST);
   return JSON.stringify({
+    ...(options.personalPath ? { skills: { paths: [`${options.personalPath}/.agents/skills`] } } : {}),
     $schema: 'https://opencode.ai/config.json',
     default_agent: options.agentKey,
     permission,

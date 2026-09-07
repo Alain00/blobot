@@ -311,3 +311,14 @@ builds pass. The first concurrent desktop run hit the existing dictation test's 
 wait (609 passed / 1 failed); that test passed in isolation and the full rerun passed. No
 provider inference or live box activation was needed to validate the composition contract.
 Logs: `/private/tmp/blobot-profile-overview-{core-tests,desktop-tests,desktop-tests-rerun,desktop-build}.log`.
+
+## Amendment — personal directory, 2026-09-06
+
+Guillermo explicitly requested and authorized a subsequent effort: one persistent personal
+folder per AgentProfile that accompanies it across teams and execution contexts. This supersedes
+the restriction in Answer 3 that a future physical home could never be shared as a mount. The
+profile overview and its metadata limits remain unchanged. The new folder carries ordinary files;
+runtime HOME, conversations and workspaces retain their existing scope. Skills/MCP integration
+and the interface are deferred by the author. See the
+[scoped contract](../proposal-personal-agent-state.md) and
+[storage measurement](../research/80-personal-directory.md).

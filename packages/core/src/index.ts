@@ -20,6 +20,8 @@ export type {
 
 export { sameCommands } from './commands.js';
 export { LocalMachine } from './machines/local-machine.js';
+export { PersonalDirectories, PERSONAL_DIRECTORY_ENV } from './personal/personal-directory.js';
+export type { PersonalDirectory, PersonalDirectoryReference } from './personal/personal-directory.js';
 export { SleepingRuntime } from './machines/sleeping-runtime.js';
 export type { SleepingRuntimeOptions } from './machines/sleeping-runtime.js';
 export { DEFAULT_MACHINE_IDLE_MS, machineIdleMs } from './machines/power.js';
@@ -457,3 +459,8 @@ export { MISTRAL_MODEL, MISTRAL_TRANSCRIPTIONS_URL, MistralTranscriber } from '.
 export type { MistralTranscriberOptions } from './speech/mistral.js';
 export { nodeSocket, resample16to24 } from './speech/socket.js';
 export type { SocketFactory, SocketLike } from './speech/socket.js';
+export { PersonalSkills } from './skills/personal-skills.js';
+export { CLAUDE_SKILL_DISCOVERY } from './adapters/claude/palette.js';
+export { CODEX_SKILL_DISCOVERY } from './adapters/codex/palette.js';
+export { OPENCODE_SKILL_DISCOVERY } from './adapters/opencode/palette.js';
+export { inspectSkillLocations, type SkillDiscovery } from './skills/inventory.js';

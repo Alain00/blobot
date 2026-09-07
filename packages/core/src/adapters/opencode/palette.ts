@@ -1,4 +1,5 @@
-import { boxPaletteNames, type BoxPaletteScope } from '../acp/box-palette.js';
+import type { SkillDiscovery } from '../../skills/inventory.js';
+import { boxPaletteNames, personalPaletteNames, type BoxPaletteScope } from '../acp/box-palette.js';
 import { readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -29,7 +30,11 @@ import { join } from 'node:path';
 const PROJECT_DIRS = ['command', 'commands', 'skill', 'skills'];
 
 /** Everything blobot is willing to offer in this workspace, by name. */
-export function offerableNames(cwd: string, box?: BoxPaletteScope): Set<string> {
+export function offerableNames(cwd: string, box?: BoxPaletteScope, personalPath?: string): Set<string> {
+  return new Set([...personalPaletteNames(personalPath), ...contextNames(cwd, box)]);
+}
+
+function contextNames(cwd: string, box?: BoxPaletteScope): Set<string> {
   if (box !== undefined) return boxPaletteNames(cwd, PROJECT_DIRS.map((dir) => ({ path: join(cwd, '.opencode', dir), kind: 'mixed' })), box);
   const names = new Set<string>();
   for (const dir of PROJECT_DIRS) {
@@ -111,3 +116,11 @@ function isDirectory(path: string): boolean {
     return false;
   }
 }
+export const OPENCODE_SKILL_DISCOVERY: SkillDiscovery = {
+  personal: true,
+  locations: (cwd, box, shared) => [
+    ...['.opencode/skills', '.opencode/skill', '.agents/skills', '.claude/skills'].map((path) => ({ path: join(cwd, path), scope: 'project' as const, ...(box ? { boundary: cwd } : {}) })),
+    ...(box ? (shared ? [{ path: shared, scope: 'computer' as const, boundary: shared }] : [])
+      : [join(process.env['XDG_CONFIG_HOME'] ?? join(homedir(), '.config'), 'opencode/skills'), join(homedir(), '.agents/skills'), join(homedir(), '.claude/skills')].map((path) => ({ path, scope: 'computer' as const }))),
+  ],
+};

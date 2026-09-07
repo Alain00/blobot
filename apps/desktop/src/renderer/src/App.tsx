@@ -564,6 +564,7 @@ export function App(): React.JSX.Element {
                     it: the column is gone and `CONTEXT` and `WORKSPACE` are read on purpose
                     now rather than watched. */}
                 <Details
+                  {...(snapshot.demoMode ? {} : { teamId: team.id })}
                   agents={snapshot.agents}
                   usage={state.usage}
                   injection={state.injection}

@@ -9,7 +9,7 @@ import type { MachinePower } from './power.js';
 import type { Machine } from './machine.js';
 import type { RuntimeImageDefinition } from './runtime-image.js';
 
-function fixture(script = scenario('reply').wait(100).say('hello', { overMs: 0 }).end()) {
+function fixture(script = scenario('reply').wait(100).say('hello', { overMs: 0 }).end(), acquireResources?: () => Promise<() => Promise<void>>) {
   const clock = new VirtualClock();
   const machine = new LocalMachine({ agentId: 'alice', workspacePath: '/fixture' });
   const starts = vi.spyOn(machine, 'start');
@@ -21,6 +21,7 @@ function fixture(script = scenario('reply').wait(100).say('hello', { overMs: 0 }
   const runtime = new SleepingRuntime({
     machine, clock, startRequest: { mailboxPort: 3456 }, idleAfterMs: 1000,
     canSleep: () => !holds.active,
+    ...(acquireResources ? { acquireResources } : {}),
     onPowerChange: (value) => powers.push(value),
     create: (resumeSessionId) => {
       resumes.push(resumeSessionId);
@@ -40,6 +41,37 @@ const consume = async (stream: AsyncIterable<AgentEvent>) => {
 };
 
 describe('sleeping Agent execution', () => {
+  it('holds personal resources until both the early-stopped provider and machine have closed', async () => {
+    const release = vi.fn(async () => {}), acquire = vi.fn(async () => release);
+    const f = fixture(scenario('reply').say('hello', { overMs: 0 }).end(), acquire);
+    await f.runtime.start();
+    expect(acquire).toHaveBeenCalledTimes(1);
+    let finish!: () => void;
+    const original = f.runtimes[0]!.stop.bind(f.runtimes[0]);
+    vi.spyOn(f.runtimes[0]!, 'stop').mockImplementation(async () => { await original(); await new Promise<void>((resolve) => { finish = resolve; }); });
+    const sleeping = f.runtime.sleep();
+    await f.clock.advance(0);
+    expect(release).not.toHaveBeenCalled();
+    finish();
+    await sleeping;
+    expect(f.stops).toHaveBeenCalledTimes(1);
+    expect(release).toHaveBeenCalledTimes(1);
+    await consume(f.runtime.sendPrompt({ text: 'wake', from: 'user' }));
+    await f.runtime.stop();
+    expect(acquire).toHaveBeenCalledTimes(2);
+    expect(release).toHaveBeenCalledTimes(2);
+  });
+
+  it('retains the resource lease when process shutdown fails', async () => {
+    const release = vi.fn(async () => {});
+    const f = fixture(undefined, async () => release);
+    await f.runtime.start();
+    vi.spyOn(f.runtimes[0]!, 'stop').mockRejectedValueOnce(new Error('still running'));
+    await expect(f.runtime.stop()).rejects.toThrow();
+    expect(release).not.toHaveBeenCalled();
+    await f.runtime.stop();
+    expect(release).toHaveBeenCalledTimes(1);
+  });
   it('passes the adapter’s image requirement into Machine startup', async () => {
     const f = fixture();
     const image: RuntimeImageDefinition = {

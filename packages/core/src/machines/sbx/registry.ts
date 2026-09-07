@@ -6,6 +6,7 @@ import type { SbxBoundaryBaseline, SbxMailboxRule, SbxNetworkRule } from './obse
 import { machineLimits, sameMachineLimits, type MachineLimits } from '../resources.js';
 import { renderSbxKit, sbxNameFor, type SbxKitOptions } from './kit.js';
 import type { SbxStateReceipt } from './state-transfer.js';
+import { validatePersonalDirectory, type PersonalDirectoryReference } from '../../personal/personal-directory.js';
 
 function admitted(value: unknown): value is OwnedSbx {
   if (typeof value !== 'object' || value === null || !('name' in value) || !('id' in value) ||
@@ -26,6 +27,8 @@ export interface SbxRecord {
   readonly version: 1;
   readonly agentId: string;
   readonly kit: SbxKitOptions;
+  /** Borrowed profile storage; outside the kit's private volumes and deletion lifecycle. */
+  readonly personal?: PersonalDirectoryReference;
   readonly active?: OwnedSbx;
   readonly retained: readonly OwnedSbx[];
   /** Written before engine creation. Unknown/partial work is preserved, never auto-adopted. */
@@ -137,6 +140,7 @@ export class SbxRegistry {
     }
     try {
       renderSbxKit(value.kit as SbxKitOptions);
+      if ('personal' in value) validatePersonalDirectory(value.personal as PersonalDirectoryReference);
       if (('active' in value && !admitted(value.active)) || !value.retained.every(admitted)) throw new Error();
       if (pending !== undefined) {
         if (!('name' in pending) || typeof pending.name !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9.-]+$/.test(pending.name) ||

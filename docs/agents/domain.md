@@ -49,3 +49,12 @@ If the concept you need isn't in the glossary yet, that's a signal — either yo
 If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
 
 > _Contradicts ADR-0007 (event-sourced orders) — but worth reopening because…_
+## Personal skills (2026-09-06)
+
+An AgentProfile owns one portable kit under its personal folder, independently of its Team,
+AgentWorkspace or Machine. A skill is a complete Agent Skills folder: instructions plus its
+scripts and resources. Sources are authored content, a local import, or a Git repository;
+catalog sites are optional resolvers. Drafts are outside runtime discovery. Making an imported
+skill personal preserves attribution and disconnects remote updates. Project and inherited
+skills remain owned by their original scopes. The first MVP installs only to the profile;
+project installation is a separate cut. See `.scratch/skills/spec.md` and `build.md`.

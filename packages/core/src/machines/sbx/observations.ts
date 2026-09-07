@@ -1,6 +1,7 @@
 import type { MachineLimits } from '../resources.js';
 import type { SbxReference } from './data-transfer.js';
 import { validateBoxWorkspaceMounts, type BoxWorkspaceMounts } from '../../workspace/box-mounts.js';
+import { PERSONAL_DIRECTORY_MARKER, validatePersonalDirectory, type PersonalDirectoryReference } from '../../personal/personal-directory.js';
 
 /** The development pin approved by the operator. Not a production prerelease policy. */
 export const SBX_DEVELOPMENT_PIN = Object.freeze({
@@ -44,10 +45,15 @@ export function verifySbxStopped(value: unknown, expected: SbxReference): void {
 export const SBX_BOUNDARY_PROBE = String.raw`
 const fs=require('node:fs'),os=require('node:os');
 const mountinfo=fs.readFileSync('/proc/self/mountinfo','utf8');
+let personal;
+if(process.argv[2]){const p=JSON.parse(process.argv[2]);
+ try{const s=fs.lstatSync(p.path);const fd=fs.openSync(p.path+'/'+p.marker,fs.constants.O_RDONLY|fs.constants.O_NOFOLLOW|fs.constants.O_NONBLOCK);
+ try{if(!fs.fstatSync(fd).isFile())throw Error('Invalid marker');personal={path:p.path,directory:s.isDirectory()&&!s.isSymbolicLink(),identity:fs.readFileSync(fd,'utf8')}}finally{fs.closeSync(fd)}}
+ catch(e){personal={path:p.path,unavailable:true}}}
 let sshAbsent=false;try{fs.lstatSync('/run/ssh-agent.sock')}catch(e){if(e.code!=='ENOENT')throw e;sshAbsent=true}
 console.log(JSON.stringify({uid:process.getuid(),cpus:os.cpus().length,
  memoryKiB:Number(/^MemTotal:\s+(\d+) kB$/m.exec(fs.readFileSync('/proc/meminfo','utf8'))?.[1]),
- sshAbsent,mountinfo,
+ sshAbsent,mountinfo,personal,
  roots:JSON.parse(process.argv[1]||'["/home/agent","/workspace"]').map(path=>{const s=fs.lstatSync(path);
  const mounts=mountinfo.trim().split('\n').map(line=>line.split(' ')).filter(fields=>fields[4]===path);
  let blockBytes; if(mounts.length===1){try{blockBytes=Number(fs.readFileSync('/sys/dev/block/'+mounts[0][2]+'/size','utf8'))*512}catch{}}
@@ -66,8 +72,12 @@ export interface SbxBoundaryBaseline {
  */
 export function verifySbxBoundary(value: unknown, limits: MachineLimits, uid: 0 | 1000,
   baseline?: SbxBoundaryBaseline, workspace?: BoxWorkspaceMounts,
-  storage?: { readonly homeBytes: number; readonly dockerBytes: number }): SbxBoundaryBaseline {
-  if (workspace !== undefined) validateBoxWorkspaceMounts(workspace);
+  storage?: { readonly homeBytes: number; readonly dockerBytes: number }, personal?: PersonalDirectoryReference): SbxBoundaryBaseline {
+  if (workspace !== undefined) validateBoxWorkspaceMounts(workspace, personal?.path);
+  if (personal !== undefined) {
+    validatePersonalDirectory(personal);
+    if (workspace === undefined) validateBoxWorkspaceMounts({ path: personal.path, commonGit: [] });
+  }
   const privatePaths = [...(workspace === undefined ? ['/home/agent', '/workspace'] : ['/home/agent']),
     ...(storage === undefined ? [] : ['/var/lib/docker'])];
   const data = object(value);
@@ -109,10 +119,17 @@ export function verifySbxBoundary(value: unknown, limits: MachineLimits, uid: 0 
   const hostMounts = mounts.filter((mount) => mount.kind === 'virtiofs');
   const expected = [['/etc/hosts', 'ro'], ['/etc/resolv.conf', 'ro'],
     ...(workspace === undefined ? [] : [workspace.path, ...workspace.commonGit].map((path) => [path, 'rw'])),
-    ...(workspace?.sharedSkillsPath === undefined ? [] : [[workspace.sharedSkillsPath, 'ro']])];
+    ...(workspace?.sharedSkillsPath === undefined ? [] : [[workspace.sharedSkillsPath, 'ro']]),
+    ...(personal === undefined ? [] : [[personal.path, 'rw']])];
   if (hostMounts.length !== expected.length || !expected.every(([path, mode]) =>
     hostMounts.filter((mount) => mount.path === path && mount.mode?.includes(mode!)).length === 1)) {
     throw new Error('Unexpected host mounts are exposed to this sandbox.');
+  }
+  if (personal !== undefined) {
+    const observed = object(data['personal']);
+    if (observed['path'] !== personal.path || observed['identity'] !== personal.identity || observed['directory'] !== true) {
+      throw new Error('The sandbox’s personal folder identity could not be verified.');
+    }
   }
   if (mounts.some((mount) => mount.path?.startsWith('/home/agent/') || mount.path?.startsWith('/workspace/'))) {
     throw new Error('Unexpected nested mounts in private storage.');
@@ -121,7 +138,8 @@ export function verifySbxBoundary(value: unknown, limits: MachineLimits, uid: 0 
   if (mounts.some((mount) => !kinds.has(mount.kind ?? ''))) throw new Error('Unknown sandbox filesystem boundary.');
   // Inner containers can add mounts below their own data root. The top-level private
   // device and every host mount remain checked; their workload does not change that boundary.
-  const normalized = JSON.stringify(mounts.filter(mount => storage === undefined || !mount.path?.startsWith('/var/lib/docker/'))
+  const normalized = JSON.stringify(mounts.filter(mount => mount.path !== personal?.path &&
+    (storage === undefined || !mount.path?.startsWith('/var/lib/docker/')))
     .map((mount) => [mount.path, mount.kind, [...mount.mode ?? []].sort()]).sort());
   if (baseline !== undefined && normalized !== baseline.mounts) throw new Error('Sandbox mounts changed.');
   const roots = data['roots'].map(object);
@@ -129,6 +147,10 @@ export function verifySbxBoundary(value: unknown, limits: MachineLimits, uid: 0 
     throw new Error('Private volumes are not separate devices.');
   }
   return { memoryKiB: memory, mounts: normalized };
+}
+
+export function personalBoundaryArgument(personal: PersonalDirectoryReference): string {
+  return JSON.stringify({ path: personal.path, marker: PERSONAL_DIRECTORY_MARKER });
 }
 
 export interface SbxMailboxRule { readonly id: string; readonly port: number; }

@@ -5,7 +5,8 @@ import { randomUUID } from 'node:crypto';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { verifyBoxMountPaths } from '../../workspace/box-mounts.js';
+import { validateBoxWorkspaceMounts, verifyBoxMountPaths } from '../../workspace/box-mounts.js';
+import { verifyPersonalDirectory, type PersonalDirectory, type PersonalDirectoryReference } from '../../personal/personal-directory.js';
 import type { Machine, MachineLocation, MachineReadiness, MachineSpawnRequest, MachineStartRequest, MachineTransport } from '../machine.js';
 import { machineLimits, sameMachineLimits, type MachineLimits } from '../resources.js';
 import { sbxClientEnvironment } from './client-environment.js';
@@ -14,7 +15,7 @@ import type { SleepingRuntime } from '../sleeping-runtime.js';
 import { SBX_RUNTIME_PROBE } from './runtime-probe.js';
 import { copySbxData, type SbxReference } from './data-transfer.js';
 import { renderSbxKit, sbxKitMismatch, sbxNameFor, type SbxKitOptions } from './kit.js';
-import { SBX_BOUNDARY_PROBE, verifySbxBoundary, verifySbxMailboxRule, verifySbxOpenNetworkRule, verifySbxReference, verifySbxNetworkRules, verifySbxNetworkCheck, verifySbxStopped, readSbxNetworkRules } from './observations.js';
+import { SBX_BOUNDARY_PROBE, personalBoundaryArgument, verifySbxBoundary, verifySbxMailboxRule, verifySbxOpenNetworkRule, verifySbxReference, verifySbxNetworkRules, verifySbxNetworkCheck, verifySbxStopped, readSbxNetworkRules } from './observations.js';
 import { SbxRegistry, type OwnedSbx, type SbxRecord } from './registry.js';
 import { spawnSbxTransport, type SbxExecOptions } from './transport.js';
 
@@ -22,6 +23,7 @@ export interface OwnedSbxMachineOptions {
   readonly agentId: string;
   readonly registry: SbxRegistry;
   readonly kit: SbxKitOptions;
+  readonly personalDirectory?: PersonalDirectory;
   readonly limits: MachineLimits;
   readonly transport: Omit<SbxExecOptions, 'sandboxName' | 'guestNode' | 'sbxExecutable'>;
   readonly sbxExecutable?: string;
@@ -49,6 +51,7 @@ export class OwnedSbxMachine implements Machine {
   #release: (() => Promise<void>) | undefined;
   #safeToRelease = true;
   #signal: AbortSignal | undefined;
+  #personal: PersonalDirectoryReference | undefined;
 
   constructor(options: OwnedSbxMachineOptions) {
     sbxNameFor(options.agentId);
@@ -65,6 +68,7 @@ export class OwnedSbxMachine implements Machine {
     this.#runner = options.run ?? sbxCommandRunner(options.sbxExecutable, options.commandTimeoutMs);
     this.#engineClient = new SbxEngine(this.#runner);
     this.#location = Object.freeze({ agentId: options.agentId, kind: 'box', workspacePath: options.kit.workspace?.path ?? '/workspace',
+      ...(options.personalDirectory === undefined ? {} : { personalPath: options.personalDirectory.path }),
       ...(options.kit.workspace?.sharedSkillsPath === undefined ? {} : { sharedSkillsPath: options.kit.workspace.sharedSkillsPath }),
       volumes: Object.freeze({ data: '/home/agent', workspace: options.kit.workspace === undefined ? '/workspace' : null }) });
   }
@@ -167,6 +171,17 @@ export class OwnedSbxMachine implements Machine {
         await this.#engine();
         request.signal?.throwIfAborted();
         let record = await this.#record(true);
+        const personal = await this.#options.personalDirectory?.prepare();
+        if (record.personal !== undefined && (personal === undefined || record.personal.profileId !== personal.profileId ||
+            record.personal.path !== personal.path || record.personal.identity !== personal.identity)) {
+          throw new Error('The sandbox’s personal folder changed. Restore its original profile and folder; its data was kept.');
+        }
+        if (personal !== undefined) {
+          validateBoxWorkspaceMounts(this.#options.kit.workspace ?? { path: personal.path, commonGit: [] },
+            this.#options.kit.workspace === undefined ? undefined : personal.path);
+          record = { ...record, personal };
+          await this.#options.registry.save(record);
+        }
         active = record.active;
         if (active === undefined) {
           active = await this.#create(record, this.#options.limits);
@@ -175,6 +190,8 @@ export class OwnedSbxMachine implements Machine {
         }
         request.signal?.throwIfAborted();
         this.#safeToRelease = false;
+        await this.#attachPersonal(active, personal);
+        this.#personal = personal;
         await this.#boundary(active);
         record = await this.#revokeNetwork(record);
         const before = await this.#rules(active);
@@ -206,6 +223,7 @@ export class OwnedSbxMachine implements Machine {
   spawn(request: MachineSpawnRequest): MachineTransport {
     if (!this.#started || this.#exclusive || this.#active === undefined) throw new Error('The Machine must be started before launching a process.');
     const channel = spawnSbxTransport({ ...this.#options.transport, sandboxName: this.#active.name,
+      ...(this.#personal === undefined ? {} : { personalPath: this.#personal.path }),
       guestNode: this.#options.kit.guestNode,
       ...(this.#options.sbxExecutable === undefined ? {} : { sbxExecutable: this.#options.sbxExecutable }),
     }, request);
@@ -219,6 +237,10 @@ export class OwnedSbxMachine implements Machine {
       await this.#engine();
       const record = await this.#record();
       if (this.#options.kit.workspace !== undefined) await verifyBoxMountPaths(this.#options.kit.workspace);
+      if (this.#personal !== undefined) {
+        if (JSON.stringify(record.personal) !== JSON.stringify(this.#personal)) throw new Error('The personal folder ownership changed.');
+        await this.#boundary(this.#active);
+      }
       if (record.active?.id !== this.#active.id || record.network === undefined) throw new Error('Machine configuration changed.');
       const rules = await this.#rules(this.#active);
       const network = rules.filter((rule) => rule['id'] === record.network?.id);
@@ -485,11 +507,35 @@ export class OwnedSbxMachine implements Machine {
   }
   async #boundary(reference: OwnedSbx): Promise<void> {
     if (this.#options.kit.workspace !== undefined) await verifyBoxMountPaths(this.#options.kit.workspace);
+    if (this.#personal !== undefined) await verifyPersonalDirectory(this.#personal);
     await this.#identity(reference);
     for (const uid of [0, 1000] as const) {
-      verifySbxBoundary(await this.#json(['exec', '-u', String(uid), reference.name, this.#options.kit.guestNode, '-e', SBX_BOUNDARY_PROBE, this.#privatePaths()]),
-        reference.limits, uid, reference.baseline, this.#options.kit.workspace, this.#storage());
+      verifySbxBoundary(await this.#json(['exec', '-u', String(uid), reference.name, this.#options.kit.guestNode, '-e', SBX_BOUNDARY_PROBE, this.#privatePaths(),
+        ...this.#personal === undefined ? [] : [personalBoundaryArgument(this.#personal)]]),
+        reference.limits, uid, reference.baseline, this.#options.kit.workspace, this.#storage(), this.#personal);
     }
+    await this.#identity(reference);
+  }
+  /** RC5's late mounts are transient. Reattach after wake, retaining the same VM and volumes. */
+  async #attachPersonal(reference: OwnedSbx, personal: PersonalDirectoryReference | undefined): Promise<void> {
+    if (personal === undefined) return;
+    await verifyPersonalDirectory(personal);
+    await this.#identity(reference);
+    const probe = await this.#json(['exec', '-u', '0', reference.name, this.#options.kit.guestNode, '-e',
+      SBX_BOUNDARY_PROBE, this.#privatePaths(), personalBoundaryArgument(personal)]);
+    try {
+      verifySbxBoundary(probe, reference.limits, 0, reference.baseline, this.#options.kit.workspace, this.#storage(), personal);
+      return; // Already mounted: a second RC5 mount would stack another bind at this path.
+    } catch {
+      // Only a pristine original boundary permits adding our one mount. Unexpected mounts,
+      // including a changed personal identity, fail here before any mutation.
+      verifySbxBoundary(probe, reference.limits, 0, reference.baseline, this.#options.kit.workspace, this.#storage());
+    }
+    await this.#run(['mount', reference.name, personal.path]);
+    // The native late-mount route also exposes its export at /mnt/host. Keep only the exact
+    // personal bind; the full boundary is checked as both root and Agent before any runtime.
+    await this.#run(['exec', '-u', '0', reference.name, this.#options.kit.guestNode, '-e',
+      "require('node:child_process').execFileSync('umount',['/mnt/host'])"]);
     await this.#identity(reference);
   }
   #privatePaths(): string {

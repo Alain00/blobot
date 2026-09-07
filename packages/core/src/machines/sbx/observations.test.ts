@@ -11,6 +11,22 @@ const sample = () => ({
     '115 101 0:28 /hosts /etc/hosts ro,relatime - virtiofs bind-b rw\n',
 });
 describe('limited sbx observation admission', () => {
+  it('admits one verified personal bind while retaining the original Machine baseline', () => {
+    const base = sample(), baseline = verifySbxBoundary(base, limits, 0);
+    const personal = { profileId: 'ana', path: '/Users/test/personal files', identity: '11111111-1111-1111-1111-111111111111' };
+    const line = '120 101 0:54 /Users/test/personal\\040files /Users/test/personal\\040files rw,relatime - virtiofs host rw\n';
+    const observed = { ...base, personal: { path: personal.path, identity: personal.identity, directory: true }, mountinfo: base.mountinfo + line };
+    expect(verifySbxBoundary(observed, limits, 0, baseline, undefined, undefined, personal)).toEqual(baseline);
+    for (const mountinfo of [base.mountinfo, observed.mountinfo + line,
+      observed.mountinfo + '121 101 0:54 / /mnt/host rw - virtiofs host rw\n',
+      observed.mountinfo.replace('rw,relatime - virtiofs host', 'ro,relatime - virtiofs host')]) {
+      expect(() => verifySbxBoundary({ ...observed, mountinfo }, limits, 0, baseline, undefined, undefined, personal)).toThrow();
+    }
+    for (const patch of [{ identity: 'another-profile' }, { directory: false }, { path: '/other' }]) {
+      expect(() => verifySbxBoundary({ ...observed, personal: { ...observed.personal, ...patch } }, limits, 0,
+        baseline, undefined, undefined, personal)).toThrow('identity');
+    }
+  });
   it('requires a single private Docker device and the exact home/Docker capacities', () => {
     const storage = { homeBytes: 8 * 1024 ** 3, dockerBytes: 20 * 1024 ** 3 };
     const base = sample();

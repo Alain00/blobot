@@ -1,3 +1,4 @@
+import { CLAUDE_SKILL_DISCOVERY, CODEX_SKILL_DISCOVERY, OPENCODE_SKILL_DISCOVERY, type SkillDiscovery } from '@blobot/core';
 import {
   ATTENDED_TRUST_LEVELS,
   CLAUDE_CEILINGS,
@@ -226,4 +227,13 @@ export function localProtectionFor(runtimeId: string): string | undefined {
     opencode: OPENCODE_LOCAL_PROTECTION,
   };
   return Object.hasOwn(descriptions, runtimeId) ? descriptions[runtimeId] : undefined;
+}
+
+export function skillsFor(runtimeId: string): SkillDiscovery {
+  switch (runtimeId) {
+    case 'claude-code': return CLAUDE_SKILL_DISCOVERY;
+    case 'codex': return CODEX_SKILL_DISCOVERY;
+    case 'opencode': return OPENCODE_SKILL_DISCOVERY;
+    default: return { personal: false, locations: () => [] };
+  }
 }

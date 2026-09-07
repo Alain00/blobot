@@ -22,8 +22,9 @@ function inside(root: string, path: string): boolean {
 }
 
 /** Validate serialized plans too: they become sbx PATH arguments and an exact mount allowlist. */
-export function validateBoxWorkspaceMounts(plan: BoxWorkspaceMounts): void {
-  const paths = [plan.path, ...plan.commonGit, ...plan.sharedSkillsPath === undefined ? [] : [plan.sharedSkillsPath]];
+export function validateBoxWorkspaceMounts(plan: BoxWorkspaceMounts, personalPath?: string): void {
+  const paths = [plan.path, ...plan.commonGit, ...plan.sharedSkillsPath === undefined ? [] : [plan.sharedSkillsPath],
+    ...personalPath === undefined ? [] : [personalPath]];
   const reserved = ['/home/agent', '/workspace', '/etc', '/usr', '/bin', '/sbin', '/lib', '/lib64', '/proc', '/sys', '/dev', '/run', '/root'];
   for (const path of paths) {
     if (!isAbsolute(path) || resolve(path) !== path || /[\x00-\x1f:]/.test(path) ||

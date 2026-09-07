@@ -123,3 +123,5 @@ export { machinePlacement } from './machines/placement.js';
 export type { MachineLimits } from './machines/resources.js';
 export type { MachinePlacement, StoredMachinePlacement } from './machines/placement.js';
 export type { DetectionSubject, MachineDetection } from './detect/machine-runtime.js';
+export type { SkillSource, SkillInput, SkillMetadata, SkillPreviewItem, SkillPreview, PersonalSkill, PendingSkill, SkillCatalogue, SkillDraftInput, SkillDraft, SkillDetail } from './skills/types.js';
+export type { DiscoveredSkill } from './skills/inventory.js';

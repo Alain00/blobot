@@ -18,6 +18,10 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
   optional standing instructions, belonging to no Team. Agents are hired once and can be on
   several Teams at the same time. *Mara, marketing.* See
   `docs/adr/0001-agents-exist-independently-of-teams.md`.
+- **PersonalDirectory** — the profile's persistent writable folder, shared by its memberships
+  across local and sandbox execution on this computer. Reusable scripts, utilities and personal
+  files belong here. A Machine borrows the folder; removing a membership or Machine and retiring
+  the profile retain it. Skills/MCP installation and configuration composition are a separate effort.
 - **Agent** — an AgentProfile instantiated on a Team: a named member of it with a role and an
   AgentWorkspace. *Alice*, *Bob*. The definition is copied from the profile when the team is
   formed. Editing the profile afterwards **restates** the role, the standing instructions and
@@ -49,8 +53,9 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
   the Internet and services on the host/local network under its runtime's own restrictions,
   and read the operator’s skills. Blobot imposes no additional destination list; reaching a
   service does not grant authority to use it. The main checkout and other Agents’ working
-  files are outside it. A Machine is **not** a home: what an AgentProfile keeps for itself across teams is a
-  different object. On screen a Machine is said by kind and in plain words; the mechanism behind
+  files are outside it. The profile's PersonalDirectory is a deliberate writable bridge between
+  its own memberships; runtime HOME, login and sessions remain private to each sandbox. A Machine
+  borrows that folder rather than owning its lifetime. On screen a Machine is said by kind and in plain words; the mechanism behind
   a kind is never named. See `.scratch/machines/`.
 - **Approval posture** — when an Agent's runtime asks the operator before acting. Separate
   from where the Agent executes and what it can reach: choosing a Machine does not itself
@@ -156,6 +161,18 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
   not mean *approved*: a Routine armed and later disarmed is reviewed, because a decision the
   user reversed is still a decision they made. It is what clears the ink edge, and it is why
   *unreviewed* is a fact on the row rather than an inference from *armed or gone*.
+
+## Personal skills
+
+Personal skills are owned by an AgentProfile and stored once in its personal folder under
+`.agents/skills`. A draft lives outside discovery in `.blobot/skills/drafts` until explicitly
+published. Folder imports retain the complete package; Git imports retain a commit and content
+hash. A personal copy retains its source as provenance while detaching remote updates.
+`PersonalSkills` owns catalogue mutations. Its execution leases span provider startup through
+confirmed process and Machine shutdown, so managed updates wait for all of a profile's sessions.
+Claude, Codex and OpenCode adapters connect the personal root using native mechanisms. Project
+and computer inventory is read-only, and a detected file is not proof of runtime use. See
+`.scratch/skills/build.md` for the MVP's acceptance evidence and platform limits.
 
 ## Avoid
 

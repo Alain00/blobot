@@ -4,6 +4,7 @@ import { childTransport } from '../../process/child-transport.js';
 import type { MachineConfigPatch, MachineSpawnRequest, MachineTransport } from '../machine.js';
 import { SBX_BOOTSTRAP_SOURCE } from './bootstrap.js';
 import { sbxClientEnvironment } from './client-environment.js';
+import { PERSONAL_DIRECTORY_ENV } from '../../personal/personal-directory.js';
 
 const MAX_HEADER_BYTES = 1024 * 1024;
 const FORBIDDEN_ENV = /^(?:BLOBOT_[A-Z0-9_]+_API_KEY|SSH_AUTH_SOCK|ELECTRON_RUN_AS_NODE|NODE_OPTIONS|NODE_PATH|LD_PRELOAD|LD_LIBRARY_PATH|HOME|PATH|HTTP_PROXY|HTTPS_PROXY|ALL_PROXY|NO_PROXY)$/i;
@@ -13,6 +14,8 @@ export type SbxConfigPatch = MachineConfigPatch;
 
 export interface SbxExecOptions {
   readonly sandboxName: string;
+  /** Machine-owned path; an adapter cannot override another profile's identity. */
+  readonly personalPath?: string;
   /** From the image contract, not the host's process.execPath. */
   readonly guestNode: string;
   readonly moduleRoot: string;
@@ -39,12 +42,14 @@ export function prepareSbxExec(options: SbxExecOptions, request: MachineSpawnReq
   const allowed = new Set(options.allowedEnvironment);
   const env: Record<string, string | null> = Object.create(null) as Record<string, string | null>;
   for (const [key, value] of Object.entries(request.env ?? {})) {
-    if (!/^[A-Z_][A-Z0-9_]*$/.test(key) || FORBIDDEN_ENV.test(key) || !allowed.has(key)) {
+    if (!/^[A-Z_][A-Z0-9_]*$/.test(key) || key === PERSONAL_DIRECTORY_ENV || FORBIDDEN_ENV.test(key) || !allowed.has(key)) {
       throw new Error('A launch environment variable is not permitted in the sandbox');
     }
     if (value?.includes('\0')) throw new Error('Invalid launch environment value');
     env[key] = value ?? null;
   }
+  if (options.personalPath !== undefined) absoluteGuestPath(options.personalPath);
+  env[PERSONAL_DIRECTORY_ENV] = options.personalPath ?? null;
   const configs = [...options.configs ?? [], ...request.configs ?? []];
   for (const config of configs) {
     absoluteGuestPath(config.root);

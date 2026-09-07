@@ -58,6 +58,8 @@ export interface MachineIdentity {
 
 export interface MachineLocation extends MachineIdentity {
   readonly kind: MachineKind;
+  /** The same profile-owned files in every membership; separate from the runtime HOME. */
+  readonly personalPath?: string;
   /** An operator directory explicitly shared readonly; never the whole operator home. */
   readonly sharedSkillsPath?: string;
   /** Local execution has no owned volumes. Never describe the user's home as our volume. */

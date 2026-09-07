@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, session, shell } from 'electron';
+import { registerSkillsIpc } from './skills-ipc.js';
 import { writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
@@ -375,6 +376,7 @@ const pool = new TeamPool<RunningTeam>({
           send('blobot:team');
         },
         ...(machines === undefined ? {} : { createMachine: (record: import('@blobot/core').AgentRecord) => machines!.forAgent(record, team) }),
+        acquireResources: async (record) => record.profileId && machines ? machines.skills.acquire(record.profileId) : async () => {},
         beforeRuntimeStart: async (machine, record) => {
           if (machine.runtimeAccess !== undefined) await machine.runtimeAccess.beforeStart();
           else if (machine.kind === 'local') {
@@ -1584,6 +1586,7 @@ void app.whenReady().then(async () => {
     stopStep(stepId);
   });
   ipcMain.handle('blobot:listAgents', (): UiAgentProfile[] => agentProfiles());
+  registerSkillsIpc({ store: () => store, machines: () => machines, teams: () => [...new Map([...pool.live, ...startingTeams.values()].map((team) => [team.team.id, team])).values()] });
   /**
    * Ask a runtime what it lets an agent be set to.
    *

@@ -1,6 +1,32 @@
 import { expect, it, vi } from 'vitest';
+import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { runtimeImageBuild, CODEX_MACHINE_IMAGE } from '@blobot/core';
 import { DesktopBoxMachine, DesktopMachines } from './machines.js';
+
+it('assigns personal storage by profile across local/box memberships and keeps it after every local member is removed', async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'blobot-profile-memberships-')));
+  try {
+    const services = new DesktopMachines(join(root, 'machines'));
+    const team = { id: 'contab', name: 'Contab', workspaceKind: 'plain' as const, workspacePath: root, turnBudget: 10 };
+    const record = { id: 'ana-contab', profileId: 'ana', teamId: team.id, name: 'Ana', role: 'Marketing', runtimeId: 'codex', workspacePath: root, createdAt: 0 };
+    const local = services.forAgent(record, team);
+    const box = services.forAgent({ ...record, id: 'ana-blue', teamId: 'blue', name: 'Renamed Ana',
+      machine: { kind: 'box', limits: { maxCpus: 2, maxMemoryBytes: 4 * 1024 ** 3 } } }, { ...team, id: 'blue' });
+    expect(box.location().personalPath).toBe(local.location().personalPath);
+    const other = services.forAgent({ ...record, id: 'bea-contab', profileId: 'bea' }, team);
+    expect(other.location().personalPath).not.toBe(local.location().personalPath);
+    await local.start({ mailboxPort: 1234 });
+    await writeFile(join(local.location().personalPath!, 'marketing-script'), 'learned');
+    await local.stop(); await local.destroy(); await services.close();
+    const reopened = new DesktopMachines(join(root, 'machines'));
+    const rejoined = reopened.forAgent({ ...record, id: 'ana-new-team', teamId: 'new-team' }, { ...team, id: 'new-team' });
+    await rejoined.start({ mailboxPort: 1234 });
+    expect(await readFile(join(rejoined.location().personalPath!, 'marketing-script'), 'utf8')).toBe('learned');
+    await rejoined.stop(); await reopened.close();
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
 
 it('refuses sandbox activation before any engine operation unless preview is explicitly enabled', async () => {
   const machines = new DesktopMachines('/unused-machine-fixture', false);

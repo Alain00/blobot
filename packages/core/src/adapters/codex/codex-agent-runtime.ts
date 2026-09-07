@@ -355,8 +355,10 @@ export class CodexAgentRuntime implements AgentRuntime {
   }
 
   #sessionParams(): Record<string, unknown> {
+    const personalPath = this.#options.machine?.location().personalPath;
     return {
       cwd: this.#options.cwd,
+      ...(personalPath ? { additionalDirectories: [personalPath] } : {}),
       mcpServers: (this.#options.mcpServers ?? []).map(toAcpMcpServer),
     };
   }
@@ -503,7 +505,7 @@ export class CodexAgentRuntime implements AgentRuntime {
   }
 
   async stop(): Promise<void> {
-    if (this.#lifecycle === 'stopped') return;
+    // A stopped lifecycle can precede OS process exit; repeated stop must still join cleanup.
     this.#setLifecycle('stopped');
     await this.#connection?.close();
     this.#turn?.queue.close();
@@ -551,7 +553,7 @@ export class CodexAgentRuntime implements AgentRuntime {
 
   /** Read once. A skill added to the workspace mid-session needs a restart to be offered. */
   #offerableNames(): ReadonlySet<string> {
-    this.#offerable ??= offerableNames(this.#options.cwd, this.#options.machine?.kind === 'box' ? this.#options.machine.location() : undefined);
+    this.#offerable = offerableNames(this.#options.cwd, this.#options.machine?.kind === 'box' ? this.#options.machine.location() : undefined, this.#options.machine?.location().personalPath);
     return this.#offerable;
   }
 

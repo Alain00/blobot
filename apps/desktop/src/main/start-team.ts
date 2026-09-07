@@ -45,6 +45,7 @@ export interface StartTeamOptions {
   readonly onStarting?: (live: RunningTeam) => void;
   readonly createMachine?: (record: AgentRecord) => Machine;
   readonly beforeRuntimeStart?: (machine: Machine, record: AgentRecord) => Promise<void>;
+  readonly acquireResources?: (record: AgentRecord) => Promise<() => Promise<void>>;
 }
 
 /**
@@ -179,6 +180,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       continue;
     }
     machines.set(agent.id, machine);
+    personas.set(agent.id, composePersona(agent, team, agents, store.handbookOf(team.id, agent.name), machine.location().personalPath));
     const endpoint = mcp.endpointFor(agent.id, machine.mailboxHostname);
     // The whole difference between a relaunch and a resume. Undefined on a first launch, and
     // a session the provider has forgotten is not fatal: the adapter falls back to a new one.
@@ -190,6 +192,7 @@ export async function startTeam(options: StartTeamOptions): Promise<RunningTeam>
       clock,
       startRequest: { mailboxPort: mcp.port },
       beforeRuntimeStart: async () => options.beforeRuntimeStart?.(machine, record),
+      ...(options.acquireResources ? { acquireResources: () => options.acquireResources!(record) } : {}),
       ...(options.idleAfterMs === undefined ? {} : { idleAfterMs: options.idleAfterMs }),
       ...(resumeSessionId === undefined ? {} : { resumeSessionId }),
       canSleep: () => (options.canSleep?.() ?? true) &&

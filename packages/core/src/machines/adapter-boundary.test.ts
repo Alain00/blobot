@@ -24,7 +24,7 @@ describe('the Machine boundary across every adapter', () => {
     const bridge = new FakeCodex();
     const machine: Machine = {
       kind: 'box', mailboxHostname: 'host.docker.internal',
-      location: () => { throw new Error('must not inspect'); },
+      location: () => ({ kind: 'box', agentId: 'alice', workspacePath: '/workspace', volumes: { data: '/data', workspace: '/workspace' } }),
       readiness: async () => ({ state: 'ready' }),
       reconcile: async () => ({ state: 'absent', detail: 'Not created.' }),
       start: async () => { throw new Error('must not start'); },

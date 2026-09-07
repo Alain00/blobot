@@ -1,0 +1,268 @@
+{
+  "kind": "opencode",
+  "root": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl",
+  "name": "blobot-production-71e0626b",
+  "inputKind": "folder",
+  "previewFiles": [
+    "SKILL.md",
+    "references/fresh.txt",
+    "references/resumed.txt"
+  ],
+  "installed": {
+    "skills": [
+      {
+        "name": "blobot-production-71e0626b",
+        "description": "Run this offline fixture only when explicitly asked for blobot-production-71e0626b.",
+        "source": {
+          "kind": "local-import",
+          "originalPath": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/source/blobot-production-71e0626b"
+        },
+        "modified": false
+      }
+    ],
+    "drafts": [],
+    "pending": [],
+    "executions": 0
+  },
+  "aliasCanonical": true,
+  "runs": [
+    {
+      "phase": "fresh",
+      "rawCommands": [
+        "blobot-production-71e0626b"
+      ],
+      "requests": [
+        {
+          "method": "session/new",
+          "cwd": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/workspace"
+        }
+      ],
+      "toolEvents": [
+        {
+          "type": "tool_call",
+          "title": "skill",
+          "kind": "other",
+          "rawInput": {},
+          "status": "pending",
+          "locations": []
+        },
+        {
+          "type": "tool_call_update",
+          "title": "skill",
+          "kind": "other",
+          "rawInput": {
+            "name": "blobot-production-71e0626b"
+          },
+          "status": "in_progress",
+          "locations": []
+        },
+        {
+          "type": "tool_call_update",
+          "title": "Loaded skill: blobot-production-71e0626b",
+          "kind": "other",
+          "rawInput": {
+            "name": "blobot-production-71e0626b"
+          },
+          "status": "completed",
+          "locations": []
+        },
+        {
+          "type": "tool_call",
+          "title": "read",
+          "kind": "read",
+          "rawInput": {},
+          "status": "pending",
+          "locations": []
+        },
+        {
+          "type": "tool_call_update",
+          "title": "read",
+          "kind": "read",
+          "rawInput": {
+            "filePath": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills/blobot-production-71e0626b/references/fresh.txt"
+          },
+          "status": "in_progress",
+          "locations": [
+            {
+              "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills/blobot-production-71e0626b/references/fresh.txt"
+            }
+          ]
+        },
+        {
+          "type": "tool_call_update",
+          "title": "private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills/blobot-production-71e0626b/references/fresh.txt",
+          "kind": "read",
+          "rawInput": {
+            "filePath": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills/blobot-production-71e0626b/references/fresh.txt"
+          },
+          "status": "completed",
+          "locations": [
+            {
+              "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills/blobot-production-71e0626b/references/fresh.txt"
+            }
+          ]
+        }
+      ],
+      "messages": [
+        "FRESH-710d89f3-a13b-46a7-a6a9-ac36df44391b"
+      ],
+      "errors": [],
+      "diagnostics": [],
+      "productionSkillPaths": [
+        "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills"
+      ],
+      "sessionId": "ses_f87d15716ffemqj7GKpWoWCBOi",
+      "resumed": false,
+      "palette": [
+        {
+          "name": "blobot-production-71e0626b",
+          "description": "Run this offline fixture only when explicitly asked for blobot-production-71e0626b."
+        }
+      ],
+      "sameSession": true,
+      "proofReturned": true
+    },
+    {
+      "phase": "resumed",
+      "rawCommands": [
+        "blobot-production-71e0626b"
+      ],
+      "requests": [
+        {
+          "method": "session/load",
+          "cwd": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/workspace",
+          "sessionId": "ses_f87d15716ffemqj7GKpWoWCBOi"
+        }
+      ],
+      "toolEvents": [
+        {
+          "type": "tool_call",
+          "title": "Loaded skill: blobot-production-71e0626b",
+          "kind": "other",
+          "rawInput": {
+            "name": "blobot-production-71e0626b"
+          },
+          "status": "pending",
+          "locations": []
+        },
+        {
+          "type": "tool_call_update",
+          "title": "Loaded skill: blobot-production-71e0626b",
+          "kind": "other",
+          "rawInput": {
+            "name": "blobot-production-71e0626b"
+          },
+          "status": "completed",
+          "locations": []
+        },
+        {
+          "type": "tool_call",
+          "title": "private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills/blobot-production-71e0626b/references/fresh.txt",
+          "kind": "read",
+          "rawInput": {
+            "filePath": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills/blobot-production-71e0626b/references/fresh.txt"
+          },
+          "status": "pending",
+          "locations": [
+            {
+              "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills/blobot-production-71e0626b/references/fresh.txt"
+            }
+          ]
+        },
+        {
+          "type": "tool_call_update",
+          "title": "private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills/blobot-production-71e0626b/references/fresh.txt",
+          "kind": "read",
+          "rawInput": {
+            "filePath": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills/blobot-production-71e0626b/references/fresh.txt"
+          },
+          "status": "completed",
+          "locations": [
+            {
+              "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills/blobot-production-71e0626b/references/fresh.txt"
+            }
+          ]
+        },
+        {
+          "type": "tool_call",
+          "title": "read",
+          "kind": "read",
+          "rawInput": {},
+          "status": "pending",
+          "locations": []
+        },
+        {
+          "type": "tool_call_update",
+          "title": "read",
+          "kind": "read",
+          "rawInput": {
+            "filePath": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills/blobot-production-71e0626b/references/resumed.txt"
+          },
+          "status": "in_progress",
+          "locations": [
+            {
+              "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills/blobot-production-71e0626b/references/resumed.txt"
+            }
+          ]
+        },
+        {
+          "type": "tool_call_update",
+          "title": "private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills/blobot-production-71e0626b/references/resumed.txt",
+          "kind": "read",
+          "rawInput": {
+            "filePath": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills/blobot-production-71e0626b/references/resumed.txt"
+          },
+          "status": "completed",
+          "locations": [
+            {
+              "path": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills/blobot-production-71e0626b/references/resumed.txt"
+            }
+          ]
+        }
+      ],
+      "messages": [
+        "RESUMED-be4a12a3-4887-4253-8e63-c61e3a8715d6"
+      ],
+      "errors": [],
+      "diagnostics": [],
+      "productionSkillPaths": [
+        "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/profiles/ana/files/.agents/skills"
+      ],
+      "sessionId": "ses_f87d15716ffemqj7GKpWoWCBOi",
+      "resumed": true,
+      "palette": [
+        {
+          "name": "blobot-production-71e0626b",
+          "description": "Run this offline fixture only when explicitly asked for blobot-production-71e0626b."
+        }
+      ],
+      "sameSession": true,
+      "proofReturned": true
+    }
+  ],
+  "globalFilesUnchanged": {
+    "/Users/guillermo/.claude/settings.json": true,
+    "/Users/guillermo/.claude/.credentials.json": true,
+    "/Users/guillermo/.codex/config.toml": true,
+    "/Users/guillermo/.codex/auth.json": true,
+    "/Users/guillermo/.config/opencode/opencode.json": true,
+    "/Users/guillermo/.config/opencode/opencode.jsonc": true,
+    "/Users/guillermo/.local/share/opencode/auth.json": true
+  },
+  "catalogueAfter": {
+    "skills": [
+      {
+        "name": "blobot-production-71e0626b",
+        "description": "Run this offline fixture only when explicitly asked for blobot-production-71e0626b.",
+        "source": {
+          "kind": "local-import",
+          "originalPath": "/private/var/folders/_w/scx5nsn90499n4jspcb5lrb00000gn/T/blobot-production-skill-vJjDsl/source/blobot-production-71e0626b"
+        },
+        "modified": false
+      }
+    ],
+    "drafts": [],
+    "pending": [],
+    "executions": 0
+  }
+}

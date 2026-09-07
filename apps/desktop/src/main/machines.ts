@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import {
-  LocalMachine, OwnedSbxMachine, SbxEngine, SbxImageStore, SbxRegistry, SBX_INITIAL_STORAGE, SBX_INSTALL_VERSION, DEFAULT_MACHINE_LIMITS,
+  LocalMachine, PersonalDirectories, PersonalSkills, OwnedSbxMachine, SbxEngine, SbxImageStore, SbxRegistry, SBX_INITIAL_STORAGE, SBX_INSTALL_VERSION, DEFAULT_MACHINE_LIMITS,
   boxWorkspaceMounts, machinePlacement, runtimeImageBuild, sbxCommandRunner,
   sbxKitMismatch,
   type AgentRecord, type Machine, type MachineDetection, type MachineLocation, type MachineReadiness,
@@ -24,12 +24,17 @@ interface ImageRequest {
 /** The shared engine/image service owns no credentials and no global defaults. */
 export class DesktopMachines {
   readonly registry: SbxRegistry;
+  readonly personal: PersonalDirectories;
+  readonly skills: PersonalSkills;
   readonly #imageStores = new Map<string, SbxImageStore>();
   readonly #abort = new AbortController();
   readonly #downloads = new Set<Promise<void>>();
   readonly #imageRequests = new Map<string, ImageRequest>();
-  constructor(readonly directory: string, readonly previewEnabled = process.env['BLOBOT_MACHINES_PREVIEW'] === '1', readonly changed: () => void = () => {}) {
+  constructor(readonly directory: string, readonly previewEnabled = process.env['BLOBOT_MACHINES_PREVIEW'] === '1', readonly changed: () => void = () => {},
+    personalRoot = join(dirname(directory), 'profiles')) {
     this.registry = new SbxRegistry(join(directory, 'agents'));
+    this.personal = new PersonalDirectories(personalRoot);
+    this.skills = new PersonalSkills(this.personal);
   }
 
   get executable(): string {
@@ -91,7 +96,8 @@ export class DesktopMachines {
   forAgent(record: AgentRecord, team: Team): Machine {
     const placement = machinePlacement(record.machine);
     return placement.kind === 'local'
-      ? new LocalMachine({ agentId: record.id, workspacePath: record.workspacePath })
+      ? new LocalMachine({ agentId: record.id, workspacePath: record.workspacePath },
+        record.profileId === undefined ? {} : { personalDirectory: this.personal.forProfile(record.profileId) })
       : new DesktopBoxMachine(this, record, team);
   }
 
@@ -121,6 +127,7 @@ export class DesktopBoxMachine implements Machine {
 
   location(): MachineLocation {
     return this.#owned?.location() ?? { kind: 'box', agentId: this.record.id, workspacePath: this.record.workspacePath,
+      ...(this.record.profileId === undefined ? {} : { personalPath: this.services.personal.forProfile(this.record.profileId).path }),
       volumes: { data: '/home/agent', workspace: null } };
   }
   readiness(): Promise<MachineReadiness> { return this.services.engine().readiness(); }
@@ -234,6 +241,7 @@ export class DesktopBoxMachine implements Machine {
     }
     const owned = new OwnedSbxMachine({
       agentId: this.record.id, registry: this.services.registry, kit, limits: placement.limits,
+      ...(this.record.profileId === undefined ? {} : { personalDirectory: this.services.personal.forProfile(this.record.profileId) }),
       sbxExecutable: this.services.executable,
       transport: { moduleRoot: image.moduleRoot, allowedEnvironment: image.allowedEnvironment },
     });
