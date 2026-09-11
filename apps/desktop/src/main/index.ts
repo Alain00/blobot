@@ -957,6 +957,22 @@ const send = (channel: string, ...args: unknown[]): void => {
   if (window !== undefined && !window.isDestroyed()) window.webContents.send(channel, ...args);
 };
 
+let railPending: NodeJS.Immediate | undefined;
+/**
+ * Re-send the rail's rows once something has been said, on any team.
+ *
+ * Deferred, because the orchestrator publishes an event *before* its recorder writes it, and the
+ * last line is read out of the store. Coalesced, because a fan-out commits several messages in
+ * one tick and the rail needs reading once.
+ */
+function pushRail(): void {
+  if (railPending !== undefined) return;
+  railPending = setImmediate(() => {
+    railPending = undefined;
+    send('blobot:rail', teamSummaries(), railAgents());
+  });
+}
+
 /** Every login's last Plan limit reading, app-wide, in memory. */
 const planLimits = new PlanLimitReadings();
 
@@ -1069,6 +1085,7 @@ function attach(team: RunningTeam): void {
       send('blobot:planLimits', planLimits.all());
     }
     send('blobot:turns', teamId, orchestrator.turnsThisPrompt);
+    if (event.type === 'agent_message_completed' && !team.demoMode) pushRail();
     // A team kept past the limit only because it was mid-turn is collected once it is quiet.
     if (!isWorking(team)) void pool.evictIdle();
   });
@@ -1100,7 +1117,7 @@ function attach(team: RunningTeam): void {
   // while its pane is open would otherwise draw as the user speaking at 09:00, and the user was
   // asleep: the words are theirs and the moment is not, which is the one thing the bubble gets
   // wrong and the whole of what issue 07's `system` line is there to say.
-  orchestrator.onMessage((message) =>
+  orchestrator.onMessage((message) => {
     send(
       'blobot:message',
       teamId,
@@ -1108,8 +1125,9 @@ function attach(team: RunningTeam): void {
       message.routineRunId === undefined
         ? undefined
         : team.store.routineNameOfRun(message.routineRunId),
-    ),
-  );
+    );
+    if (!team.demoMode) pushRail();
+  });
   orchestrator.onBudgetExhausted((exhausted) =>
     send('blobot:budget', teamId, exhausted.turnsUsed, exhausted.turnBudget),
   );

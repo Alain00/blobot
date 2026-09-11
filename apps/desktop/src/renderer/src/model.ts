@@ -477,6 +477,11 @@ export interface AppState {
 export type Action =
   | { type: 'snapshot'; snapshot: UiSnapshot }
   /**
+   * The rail's rows again, and nothing else. Every row's last line and recency moves when
+   * anybody on any team says something, and a whole snapshot for that would replace the pane.
+   */
+  | { type: 'rail'; teams: readonly UiTeamSummary[]; profiles: readonly UiRailAgent[] }
+  /**
    * A window of older transcript, prepended.
    *
    * A separate action from `snapshot` on purpose, and the comment on that case says why: a
@@ -772,6 +777,11 @@ export function reduce(state: AppState, action: Action): AppState {
         oldest: oldestOf(action.messages, action.answers) ?? state.oldest,
       };
     }
+    case 'rail':
+      // Demo mode's one team is not a stored row, so main never sends this there.
+      return state.snapshot === undefined
+        ? state
+        : { ...state, snapshot: { ...state.snapshot, teams: action.teams, profiles: action.profiles } };
     case 'turns':
       return { ...state, turnsThisPrompt: action.turnsThisPrompt };
     case 'status':

@@ -133,6 +133,22 @@ describe('a snapshot', () => {
     ]);
   });
 
+  it('takes new rail rows without replacing the pane', () => {
+    const seeded = reduce(initialState, { type: 'snapshot', snapshot });
+    const row = {
+      id: 'team',
+      name: 'checkout',
+      workspacePath: '/repo',
+      workspaceKind: 'git' as const,
+      members: [],
+      lastActiveAt: 30,
+      lastLine: 'done',
+    };
+    const state = reduce(seeded, { type: 'rail', teams: [row], profiles: [] });
+    expect(state.snapshot?.teams).toEqual([row]);
+    expect(state.items).toBe(seeded.items);
+  });
+
   it('brings a picture back, and brings back the one that could not be drawn', () => {
     // The second half is the one that matters: for a Picture that was not drawn, this event is
     // the only record it ever happened, so losing it on a team switch would put the silent drop

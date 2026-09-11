@@ -1729,6 +1729,13 @@ export interface BlobotApi {
   /** The active team changed under the renderer: created, switched, or started at launch. */
   onTeamChanged(listener: () => void): () => void;
   /**
+   * The rail's rows, re-read after something was said on any team. A snapshot's `teams` and
+   * `profiles` without the rest of it, so the pane on screen is not replaced.
+   */
+  onRail(
+    listener: (teams: readonly UiTeamSummary[], profiles: readonly UiRailAgent[]) => void,
+  ): () => void;
+  /**
    * Dictation (`.scratch/dictation/`). The renderer opens the microphone and sends audio; main
    * holds the Transcriber. One recording at a time, for the team on screen.
    */

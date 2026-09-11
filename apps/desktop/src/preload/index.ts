@@ -49,6 +49,8 @@ import type {
   DictationPatch,
   EngineSetupView,
   UiAgentMachine,
+  UiRailAgent,
+  UiTeamSummary,
 } from '../shared/api.js';
 
 /**
@@ -291,6 +293,10 @@ const api: BlobotApi = {
         listener(teamId, requestId, outcome),
     ),
   onTeamChanged: (listener) => subscribe('blobot:team', () => listener()),
+  onRail: (listener) =>
+    subscribe('blobot:rail', (_e, teams: UiTeamSummary[], profiles: UiRailAgent[]) =>
+      listener(teams, profiles),
+    ),
   // Dictation. The audio goes out as bytes and nothing else: no device, no path, no file.
   startDictation: (teamId) =>
     ipcRenderer.invoke('dictation:start', teamId) as Promise<UiDictationStart>,

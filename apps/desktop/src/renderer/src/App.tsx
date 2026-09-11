@@ -319,6 +319,8 @@ export function App(): React.JSX.Element {
       // A team switch replaces everything the panes are showing, so it re-snapshots rather
       // than patching: the transcript on screen belongs to the team that just went away.
       window.blobot.onTeamChanged(() => refresh(true)),
+      // Every team, like `onStatus`: a backgrounded row's last line is the rail's to draw too.
+      window.blobot.onRail((teams, profiles) => dispatch({ type: 'rail', teams, profiles })),
     ];
     return () => {
       for (const stop of unsubscribe) stop();
