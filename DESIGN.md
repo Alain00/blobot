@@ -143,8 +143,8 @@ Consequences you will keep bumping into:
 
 | Token | Value | What it is |
 |---|---|---|
-| `--recessed` | `#1d1f21` | The flanks: the rail, and the file sidebar. *Above* the page since 2026-09-04, not below it: the reading surface is the darkest thing on screen and the flanks are chrome laid over it. *The activity column was the second one until 2026-09-05; the sidebar is now.* |
-| `--ground` | `#1a1c1e` | The reading surface: the transcript, and nothing else. |
+| `--recessed` | `#1d1f21` | Quoted commands in the commit popover (`.wsplan`). *The flanks' ground until 2026-09-11, when the rail and the file sidebar moved onto `--ground`; above the page since 2026-09-04, and the activity column was a flank until 2026-09-05.* |
+| `--ground` | `#1a1c1e` | The reading surface, and since 2026-09-11 the flanks either side of it: the rail, the file sidebar, `.setrail`. |
 | `--tray` | `#212326` | The bar tucked under the composer. |
 | `--raised` | `#282a2e` | Anything lifted: a bubble, a field, a menu, a selected row. |
 | `--ink` | `#c5c8c6` | Text, and the one emphasis worth spending. |
@@ -223,7 +223,9 @@ plane step is 1.03, which is a step nobody can see, so with no stroke the rail a
 have nothing at all saying where they end. A hairline separating two things on the same apparent
 plane is exactly what the test above keeps one for. What was wrong was never that the flanks had
 an edge; it was how loud that edge had become, which is `--edge`'s job now. `.setrail` is the
-third and takes it for the same reason.
+third and takes it for the same reason. *Since 2026-09-11 the flanks have no plane step at all
+(see **Type**), so the hairline is the only thing saying where they end, which is the case this
+paragraph kept it for.*
 
 **`.modal` left that list on 2026-09-05, at the author's direction.** The reason the floating
 layers keep a hairline is that they sit over arbitrary content, and a dialog does not: it is the
@@ -250,8 +252,16 @@ shape does not resize when the state arrives.
   is the channel-by-channel midpoint of its two neighbours, and the first value tried was `+4`,
   which everyone reads as *blue* rather than as a lifted grey. At this chroma a band says *this
   bar is a thing* and nothing more, which is the whole of what a surface may say next to a face.
-- **The flank is recessed.** `--ground` is the surface you read on, so the transcript has it and
-  nothing else does; the rail is chrome and sits a step below it, on `--recessed`.
+- **The flanks share the page's ground.** *Amended 2026-09-11, at the author's direction, after
+  trying it in the app; this rule read "the flank is recessed" until then.* The rail, the file
+  sidebar and `.setrail` sit on `--ground`, the transcript's own, so the window is one plane with
+  a hairline at each wall. The step it replaces was 1.03, which nobody could see: the hairline was
+  already doing all of the separating (see `--edge` under **Tokens**), so the tone was a token
+  spent on a difference that never arrived, plus a `--behind` override on every rail row to keep
+  the faces from wearing a ring of it. What went is the claim that the transcript is the only
+  thing on `--ground`. What stays is everything below: a flank still has to earn its column.
+  *The history, kept for the test it produced:* the rail was chrome a step off the page, on
+  `--recessed`.
   *Amended 2026-09-05: there was a second flank and there is one now.* The activity column was
   toned with the rail on the argument that dressing one side of a **three**-column window reads
   as an accident. That column came off, the window has two columns, and the argument's premise
@@ -264,14 +274,16 @@ shape does not resize when the state arrives.
   the only rendering of this fact?** — and it is written here rather than left on the effort's
   map, because a rule amended without it would admit the next flank on the strength of this
   one.
-- **Down, not up, and the reason is the faces.** A lifted flank was built first and was wrong
+- **Down, not up, and the reason is the faces.** *Superseded 2026-09-11 with the rule above: the
+  flanks are neither down nor up. Kept for the argument.* A lifted flank was built first and was wrong
   twice. It fights what the shape already says — a sidebar is the wall of the room, not
   something hovering over it — and it spends the tone in the direction that costs the blobatars
   contrast. The rail is where they live, and a darker ground under a face gives it more. The
   `#000` refusal below is about the floor, not about everything above it: ten levels separate
   the page from black and this uses four of them. Either direction keeps the hairlines, because
   the tone says **different plane** and the line says **edge**, and neither may do both jobs.
-- **Going down also costs one token instead of two.** Every lifted surface inside a flank —
+- **Going down also costs one token instead of two.** *Superseded 2026-09-11 too; staying on the
+  page costs none, and the `--raised` half still holds.* Every lifted surface inside a flank —
   Search at the head of the rail, a selected row, the gauge's open row, a hover — stays
   `--raised`, and its gap *widens* from nine levels to thirteen rather than collapsing to five.
   The lifted version needed a fifth surface to buy that back. What must still be told is
@@ -1611,7 +1623,10 @@ One flat file, one flat namespace, no build step between it and the DOM.
   the steps that fold stay in line with the ones that do not.~~
 - **The agent bar** — hiring an agent, and restating one that exists. **One surface for both**,
   because an AgentProfile is a definition and hiring is stating it for the first time; what
-  differs is where it lands afterwards, and only the edit has to say so (ADR-0002).
+  differs is where it lands afterwards (ADR-0002). *Amended 2026-09-11: the edit no longer says
+  so before it is pressed.* The foot note stood under every edit of an agent on a team, changed
+  or not, and the author removed it as unnecessary. What the save did to a team's name or
+  runtime is still reported after the save.
   *Rewritten 2026-09-07, from a prototype the author picked out of four.* It was a modal read top
   to bottom: a 112px face over 13 hues and 9 silhouettes laid out flat, then eight stacked
   fields. Every one of those had a reason and the reasons still hold; what did not hold is the

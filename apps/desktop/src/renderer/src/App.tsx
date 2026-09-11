@@ -325,12 +325,20 @@ export function App(): React.JSX.Element {
     };
   }, [refresh, playSound]);
 
+  /**
+   * Which press to open something is the latest. A team keeps starting in main after the user
+   * moves on, so its answer can arrive once they have: only the latest press puts up an error or
+   * a pane.
+   */
+  const opens = useRef(0);
+
   /** Open a team, and optionally land on one of its agents once its roster arrives. */
   const openTeam = useCallback((teamId: string, agentId?: string) => {
+    const mine = (opens.current += 1);
     setOpenError(undefined);
     wanted.current = agentId;
     void window.blobot.selectTeam(teamId).then((result) => {
-      if (result.ok) return;
+      if (result.ok || opens.current !== mine) return;
       wanted.current = undefined;
       setOpenError(result.error);
     });
@@ -348,6 +356,7 @@ export function App(): React.JSX.Element {
    */
   const openThread = useCallback(
     async (profileId: string) => {
+      const mine = (opens.current += 1);
       setBrowsingAgents(false);
       setOpenError(undefined);
       // **Only a thread that does not exist yet takes the profile pane at once**, since no
@@ -360,6 +369,9 @@ export function App(): React.JSX.Element {
       const result = await window.blobot
         .openThread(profileId)
         .catch(() => ({ ok: false as const, error: 'That conversation could not be opened.' }));
+      // The user pressed something else while this one was starting. It keeps loading in main,
+      // and nothing here moves the pane off where they went.
+      if (opens.current !== mine) return result;
       if (!result.ok) {
         setPressed(undefined);
         setOpenError(result.error);
@@ -710,10 +722,13 @@ export function App(): React.JSX.Element {
               // with a creation step bolted on the renderer's side. A failure comes back here
               // and lands in the strip above the panes, and the composer keeps the words.
               if (threadProfileId !== undefined) {
+                const mine = (opens.current += 1);
                 void window.blobot
                   .promptThread(threadProfileId, text, attachmentIds)
                   .then((result) => {
                     if (!result.ok) return setOpenError(result.error);
+                    // Sent, and the user has gone somewhere else meanwhile: do not pull them back.
+                    if (opens.current !== mine) return;
                     if (result.agentId !== undefined) {
                       wanted.current = result.agentId;
                       setPane({ kind: 'agent', agentId: result.agentId });

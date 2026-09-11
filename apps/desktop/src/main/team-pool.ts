@@ -65,6 +65,11 @@ export class TeamPool<T extends PoolableTeam> {
   readonly #starting = new Map<string, Promise<T>>();
   /** Teams held live by something other than the user looking at them. See {@link hold}. */
   readonly #pinned = new Set<string>();
+  /**
+   * The team the user asked to see last. A start keeps running when the user moves on, and only
+   * the latest selection goes on screen: a slow team finishing must not pull the user back to it.
+   */
+  #wanted: string | undefined;
   #closed = false;
   #closing: Promise<void> | undefined;
   readonly #closingTeams = new Map<string, Promise<void>>();
@@ -116,8 +121,12 @@ export class TeamPool<T extends PoolableTeam> {
    *
    * A team that is already live is promoted rather than restarted — which is the whole point:
    * switching back to a team you were just in costs nothing and loses nothing.
+   *
+   * Selections do not wait on each other. A cold start the user moved away from keeps loading,
+   * and lands behind the active team rather than in front of it, the way {@link hold} does.
    */
   async select(team: Team): Promise<T> {
+    this.#wanted = team.id;
     return this.#bring(team, 'select');
   }
 
@@ -163,7 +172,7 @@ export class TeamPool<T extends PoolableTeam> {
     checkAdmission();
     const settle = (live: T): T => {
       checkAdmission();
-      if (how === 'select') this.#promote(live);
+      if (how === 'select' && this.#wanted === team.id) this.#promote(live);
       return live;
     };
     const already = this.find(team.id);
@@ -189,8 +198,9 @@ export class TeamPool<T extends PoolableTeam> {
       await this.#close(live, 'over_limit');
       return settle(raced);
     }
-    // On screen goes to the front; held goes in behind whatever the user is looking at.
-    if (how === 'select') this.#live.unshift(live);
+    // On screen goes to the front. Held, or selected and then overtaken by another selection,
+    // goes in behind whatever the user is looking at.
+    if (how === 'select' && this.#wanted === team.id) this.#live.unshift(live);
     else this.#live.splice(1, 0, live);
     await this.#evict();
     checkAdmission();

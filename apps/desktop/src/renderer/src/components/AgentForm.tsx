@@ -180,11 +180,10 @@ interface Definition {
 }
 
 /**
- * The bar itself: the field, the chips, and whatever the caller has to say at the foot.
+ * The bar itself: the field, the chips, and the runtime's line at the foot.
  *
- * Hiring and editing differ in three strings and one sentence, so they are one component and not
- * two that drift. What the caller owns is the word in the field, what the arrow does, and the
- * foot — which is where an edit says where it lands and a hire says nothing.
+ * Hiring and editing differ in a few strings, so they are one component and not two that drift.
+ * What the caller owns is the word in the field and what the arrow does.
  */
 function AgentBar({
   word,
@@ -197,7 +196,6 @@ function AgentBar({
   onGo,
   onClose,
   goLabel,
-  foot,
   error,
   seedFallback,
 }: {
@@ -212,7 +210,6 @@ function AgentBar({
   onGo: () => void;
   onClose: () => void;
   goLabel: string;
-  foot?: React.ReactNode;
   error?: string | undefined;
   /** The name's face until there is a name. An edit always has one; hiring does not yet. */
   seedFallback: string;
@@ -404,11 +401,9 @@ function AgentBar({
 
           {error !== undefined && <div className="refusal">{error}</div>}
 
-          {/* The foot, in the creation bar's two registers. A fact about the machine in mono,
-              because that is what it is; what an edit is about to reach, in prose, because that
-              is what the user is taking on. Ticket 11's line is never a gate: the runtime stays
-              pickable while it says this, which is why the remedy is a button in the sentence it
-              answers rather than a block over the bar. */}
+          {/* The foot: a fact about the machine, in mono because that is what it is. Ticket 11's
+              line is never a gate: the runtime stays pickable while it says this, which is why
+              the remedy is a button in the sentence it answers rather than a block over the bar. */}
           {runtime !== undefined && (
             <div className="pickfoot mono">
               {READINESS_WORD[runtime.readiness]}
@@ -420,7 +415,6 @@ function AgentBar({
               )}
             </div>
           )}
-          {foot}
 
           {fixing && runtime !== undefined && remedy !== undefined && (
             <RuntimeSetup
@@ -627,64 +621,11 @@ export function EditAgent({
       goLabel="Save"
       seedFallback={agent.name}
       error={error}
-      foot={
-        <WhereItLands
-          teams={agent.teams}
-          renamedTo={renamed ? definition.name.trim() : undefined}
-          runtimeChanged={runtimeChanged}
-        />
-      }
       {...(onRuntimesChanged === undefined ? {} : { onRuntimesChanged })}
     />
   );
 }
 
-
-/**
- * Where this edit lands, said before the button is pressed.
- *
- * Silent for an agent on no team, because then there is only one place for it to land and a
- * paragraph explaining that would be a paragraph about nothing.
- */
-function WhereItLands({
-  teams,
-  renamedTo,
-  runtimeChanged,
-}: {
-  teams: readonly string[];
-  renamedTo: string | undefined;
-  runtimeChanged: boolean;
-}): React.JSX.Element | null {
-  if (teams.length === 0) {
-    return runtimeChanged ? (
-      <div className="note mono muted">on no team · nothing is running on the old runtime</div>
-    ) : null;
-  }
-  const on = teams.join(', ');
-  return (
-    <div className="note">
-      <span className="muted">
-        The face reaches <b>{on}</b> straight away. The role, the standing instructions and how
-        it answers reach {teams.length === 1 ? 'it' : 'them'} the next time{' '}
-        {teams.length === 1 ? 'it starts' : 'each starts'}.
-      </span>
-      {renamedTo !== undefined && (
-        <span className="muted">
-          {' '}
-          The name does not: each of those teams gave this agent a branch under the name it
-          joined with, so there it stays. New teams get <b>{renamedTo}</b>.
-        </span>
-      )}
-      {runtimeChanged && (
-        <span className="muted">
-          {' '}
-          Nor does the runtime: a session belongs to the runtime that opened it, and the next
-          team this agent joins is the first one to run on the new one.
-        </span>
-      )}
-    </div>
-  );
-}
 
 /** The same facts after the fact, from the main process rather than from the form. */
 function EditNotes({ result }: { result: EditAgentResult }): React.JSX.Element {

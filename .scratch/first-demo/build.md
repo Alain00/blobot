@@ -3926,3 +3926,12 @@ patch. The candidates:
 Until one of them lands: pass `--no-autoplay` on every `--screenshot` run that is not a demo, and
 never point a debugging launch at the real `userData` (`--user-data-dir=<scratch>` with a copy of
 the database, which is what the rest of that session did).
+
+
+## 2026-09-11 — the flanks are on `--ground`
+
+Ticket 12's amendment of the same date, and `DESIGN.md`'s flank rule. Four rules in
+`styles.css`: `.vA .rail`, `.vA .filetree`, `.setrail`, and `.railrow`'s `--behind`, which has to
+follow the rail's ground or every face and team icon on a resting row wears a ring of the old one.
+`--recessed` stays, with `.wsplan` its one user. `.iconbtn.sm`'s `--ground` fill now matches a
+resting rail row, so it no longer draws as a chip there. Reviewed by `--demo --screenshot` only.

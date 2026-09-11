@@ -607,3 +607,11 @@ was doing nothing the gap was not already doing and made the roster read as a pa
 the list. And the outlined list row: a list of things — a runtime, an agent, a Routine — is a
 **filled** row on `--raised` now, with the hairline spent on hover instead of on every row at
 rest. `DESIGN.md` carries both.
+
+## Amendment, 2026-09-11: the flanks share the transcript's ground
+
+At the author's direction, after trying it in the app. The rail, the file sidebar and `.setrail`
+drop `--recessed` for `--ground`, so the window is one plane with a hairline at each wall. The
+plane step was 1.03 and nobody could see it; the hairline was already doing the separating.
+`DESIGN.md`'s *the flank is recessed* is amended in place, and the test a new flank has to pass
+is unchanged.

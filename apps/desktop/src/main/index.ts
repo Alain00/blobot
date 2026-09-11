@@ -367,6 +367,7 @@ const pool = new TeamPool<RunningTeam>({
   limit: LIVE_TEAM_LIMIT,
   start: async (team) => {
     if (store === undefined || opened === undefined) throw new Error('No database is open.');
+    agentsUp.set(team.id, new Set());
     try {
       const live = await startTeam({
         team,
@@ -393,18 +394,23 @@ const pool = new TeamPool<RunningTeam>({
         // Each agent reports itself up, and the rail redraws that one row. A cold start is a
         // workspace reconcile and a process per agent, and reporting only at the end would make
         // a four-agent team look frozen for as long as its slowest member takes.
+        // Counted whether or not the team is on screen: the user may leave while it starts and
+        // come back before it is up.
         onAgentReady: (agentId) => {
-          if (opening?.team.id !== team.id) return;
-          opening.ready.add(agentId);
-          send('blobot:team');
+          agentsUp.get(team.id)?.add(agentId);
+          if (opening?.team.id === team.id) send('blobot:team');
         },
       });
       attach(live);
       return live;
+    } catch (error) {
+      agentsUp.delete(team.id);
+      throw error;
     } finally { startingTeams.delete(team.id); }
   },
   isWorking,
   onEvict: (live, reason) => {
+    agentsUp.delete(live.team.id);
     if (reason === 'over_limit') {
       process.stderr.write(`[teams] ${live.team.name} stopped: ${pool.limit} teams stay live\n`);
     }
@@ -417,9 +423,16 @@ const pool = new TeamPool<RunningTeam>({
  * `current()` still answers with the team that was on screen, which is correct — that one is
  * still running and still the one whose transcript is drawn. But it is not what the user just
  * clicked, and for the seconds a cold start takes it was the only thing the renderer could see.
- * This is the other half: who they are waiting for, and which of that team's agents are up.
+ * This is the other half: who they are waiting for.
+ *
+ * Only the latest press owns it. A team the user moved away from keeps starting in the pool,
+ * and its `switchTo` finishing must not clear the one they moved to. An object and not an id, so
+ * a second press on the same team is told apart from the first.
  */
-let opening: { readonly team: Team; readonly ready: Set<string> } | undefined;
+let opening: { readonly team: Team } | undefined;
+
+/** Which of a starting team's agents are up, per team, so leaving and coming back loses nothing. */
+const agentsUp = new Map<string, Set<string>>();
 
 /**
  * The launch team's start, for the two things that have to wait for it: `--screenshot`'s
@@ -430,6 +443,11 @@ let firstStart: Promise<void> = Promise.resolve();
 /** The team on screen. Everything the renderer asks about is about this one. */
 function current(): RunningTeam | undefined {
   return demo ?? pool.active;
+}
+
+/** The team the renderer is drawing: the one being opened, or else the one on screen. */
+function shownTeamId(): string | undefined {
+  return opening?.team.id ?? current()?.team.id;
 }
 
 /**
@@ -591,8 +609,8 @@ function agentProfiles(): UiAgentProfile[] {
  * The transcript comes too. A team you are returning to had a conversation, and showing it
  * while the agents come up is more honest than an empty pane: those messages were really said.
  */
-function openingSnapshot(pending: { readonly team: Team; readonly ready: Set<string> }): UiSnapshot {
-  const { team, ready } = pending;
+function openingSnapshot(team: Team): UiSnapshot {
+  const ready = agentsUp.get(team.id) ?? new Set<string>();
   const records = store?.agentsOfTeam(team.id) ?? [];
   const starting = startingTeams.get(team.id);
   return {
@@ -802,7 +820,7 @@ function applyCeilings(): void {
 }
 
 function snapshot(): UiSnapshot {
-  if (opening !== undefined) return openingSnapshot(opening);
+  if (opening !== undefined) return openingSnapshot(opening.team);
   const team = current();
   if (team === undefined) {
     return {
@@ -1146,20 +1164,24 @@ async function switchTo(team: Team): Promise<TeamOpenResult> {
   // Said before the work rather than after it. A team the pool already holds is promoted in the
   // same tick and the renderer never draws this; a cold start is seconds, and those seconds used
   // to be a click that did nothing.
-  opening = { team, ready: new Set() };
+  //
+  // The user may press something else before this one is up. The start keeps loading in the
+  // pool, and this call stops owning the screen: it clears `opening` only while it is still its.
+  const mine = opening?.team.id === team.id ? opening : { team };
+  opening = mine;
   send('blobot:team');
   try {
     await pool.select(team);
-    openError = undefined;
+    if (opening === mine) openError = undefined;
   } catch (error) {
     // A Workspace that has been moved or deleted is the ordinary case here, and it used to
     // reach nobody: the handler rejected, the terminal got a stack trace, and the user got a
     // team that would not open for no stated reason. Whatever was on screen stays on screen.
-    opening = undefined;
+    if (opening === mine) opening = undefined;
     send('blobot:team');
     return { ok: false, error: describe(error) };
   }
-  opening = undefined;
+  if (opening === mine) opening = undefined;
   send('blobot:team');
   return { ok: true };
 }
@@ -2255,7 +2277,9 @@ void app.whenReady().then(async () => {
   ipcMain.handle('blobot:selectTeam', async (_event, teamId: string): Promise<TeamOpenResult> => {
     const team = store?.teamById(teamId);
     if (team === undefined) return { ok: false, error: 'That team is no longer in the database.' };
-    if (team.id === current()?.team.id) return { ok: true };
+    // Against what is drawn, not what is running: while another team opens, the running one is
+    // still `current()`, and pressing it has to take the screen back.
+    if (team.id === shownTeamId()) return { ok: true };
     return switchTo(team);
   });
 
@@ -2272,7 +2296,7 @@ void app.whenReady().then(async () => {
     const team = store === undefined ? undefined : threadOf(store, profileId);
     if (team === undefined) return { ok: true };
     const agentId = store?.agentsOfTeam(team.id)[0]?.id;
-    if (team.id === current()?.team.id) {
+    if (team.id === shownTeamId()) {
       return { ok: true, ...(agentId === undefined ? {} : { agentId }) };
     }
     const opened = await switchTo(team);
@@ -2299,11 +2323,13 @@ void app.whenReady().then(async () => {
         return { ok: false, error: describe(error) };
       }
     }
-    if (team.id !== current()?.team.id) {
+    if (opening !== undefined || team.id !== current()?.team.id) {
       const opened = await switchTo(team);
       if (!opened.ok) return opened;
     }
-    const live = current();
+    // By this team and not by what is on screen: the user may have pressed elsewhere while it
+    // started, and the message is still this thread's.
+    const live = current()?.team.id === team.id ? current() : pool.find(team.id);
     const agentId = live?.agents[0]?.id;
     if (live === undefined || agentId === undefined) {
       return { ok: false, error: 'That conversation could not be opened.' };

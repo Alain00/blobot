@@ -261,6 +261,31 @@ describe('the live teams', () => {
     expect(first).toBe(second);
   });
 
+  it('keeps loading a team the user moved away from, behind the one they moved to', async () => {
+    let finish!: (live: Fake) => void;
+    const teams = new TeamPool<Fake>({ limit: 3, isWorking: () => false,
+      start: (row) => row.id === 'slow'
+        ? new Promise((resolve) => { finish = resolve; })
+        : Promise.resolve<Fake>({ team: row, working: false, closed: false, close() { this.closed = true; } }) });
+    const home = await teams.select(team('home'));
+    const slow = teams.select(team('slow'));
+    // Back to the team that was on screen, then on to another, while the first is still starting.
+    expect(await teams.select(team('home'))).toBe(home);
+    const other = await teams.select(team('other'));
+    expect(teams.active).toBe(other);
+
+    const late: Fake = { team: team('slow'), working: false, closed: false, close() { this.closed = true; } };
+    finish(late);
+    expect(await slow).toBe(late);
+    expect(teams.active).toBe(other);
+    expect(teams.live.map((entry) => entry.team.id)).toEqual(['other', 'slow', 'home']);
+
+    // Once it is up, going to it is free.
+    expect(await teams.select(team('slow'))).toBe(late);
+    expect(teams.active).toBe(late);
+    await teams.closeAll();
+  });
+
   it('closes a released team and forgets it', async () => {
     const { pool: teams, live } = pool(3);
     const alpha = await teams.select(team('alpha'));

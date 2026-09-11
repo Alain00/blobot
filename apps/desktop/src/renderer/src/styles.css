@@ -100,15 +100,10 @@
      value here was +4 and read as blue: this ramp's coolness is a hair, and a step that
      out-cools its neighbours stops looking like a surface and starts looking like a colour. */
   --tray:#212326;
-  /* The ramp's fourth step, and it is the only one that is not the page. The flanks: the rail
-     and the activity column, which are chrome around the surface you read on.
-     **It sits above the page, not below it, since 2026-09-04** — the reverse of how this ramp
-     began. The old argument was that a recess helps the faces, the rail being where they live.
-     Swapped, the argument holds from the other end: the reading surface is now the darkest
-     thing on screen, the flanks read as chrome laid over it rather than cut into it, and the
-     faces gain their contrast from the transcript being darker than they are rather than from
-     the rail being darker than the page. The name is now wrong and is left alone: renaming it
-     would touch every rule in this file for a word. */
+  /* The ramp's fourth step. It was the flanks' ground, the rail and the file sidebar, until
+     2026-09-11, when both moved onto `--ground` at the author's direction; `.wsplan`'s quoted
+     commands are what is left on it. It had sat above the page rather than below it since
+     2026-09-04, so the name was already wrong, and it is left alone. */
   --recessed:#1d1f21;
   /* **The plane immediately behind whatever is being drawn**, and the only token here whose
      value is meant to be overridden further down the tree.
@@ -117,7 +112,7 @@
      power dot — because a blobatar is a silhouette and not a circle, so an outline that is a
      *shape* cuts its edge while a hole in the ground follows it. Each of those had the plane it
      sits on written into it as a literal, which is true until the plane moves. It moves on the
-     rail: a row is `--recessed` at rest and `--raised` when it is the open one, so the icon's
+     rail: a row is the rail's ground at rest and `--raised` when it is the open one, so the icon's
      halo was drawn in the transcript's ground on a selected row and the power dot's was drawn in
      the selected ground on every row that is not. Both were a visible ring around the thing they
      exist to make invisible.
@@ -250,29 +245,14 @@ hr{border:0;border-top:1px solid var(--edge);margin:0}
    grows the row past the viewport instead of overflowing inside it. */
 .vA{position:relative;flex:1;display:grid;grid-template-columns:232px minmax(0,1fr);grid-auto-rows:minmax(0,1fr);min-height:0;overflow:hidden}
 /* THE FLANKS.
-   `--ground` is the reading surface and nothing else: the transcript, and the transcript alone.
-   Everything either side of it is chrome, so both sides sit one step up, on the plane the
-   composer's own tray already occupies. It is a rule rather than a decoration, which is what
-   the rail-alone version could not answer: the activity column is exactly as much *not the
-   transcript* as the rail is, and toning one without the other reads as a window that got
-   dressed on one side.
-
-   Down, not up. A flank that is lifted above the thing it navigates was the first version and
-   it fights what the shape already says: a sidebar is the wall of the room, not a thing hovering
-   over it. Recessed also spends the tone where it earns something, because the rail is where
-   the blobatars live and a darker ground under a face is more contrast for it, not less.
-   The hairlines stay either way: the tone says *different plane*, the line says *edge* — and
-   with the plane step at 1.03 the tone is not, on its own, saying anything a person can see,
-   which is why this edge survived the 2026-09-04 pass that took every other one. What it did
-   not survive is `--line`: it takes `--edge` since 2026-09-06, as the sidebar's and `.setrail`'s
-   do. DESIGN.md carries the disagreement this comment used to have with it.
-
-   The activity column was the other flank until 2026-09-05; the rail is the only one now. */
-.vA .rail{background:var(--recessed);border-right:1px solid var(--edge)}
-/* Nothing else moves, which is the other argument for going down. Every lifted surface inside the
-   flank — Search at the head of the rail, a selected row — is still `--raised`, and its gap
-   widened from nine levels to thirteen instead of collapsing to five. The upward version needed
-   a fifth surface to buy that back. This one needs none. */
+   The rail and the file sidebar sit on `--ground`, the transcript's own, since 2026-09-11 at the
+   author's direction: one plane across the window, and a hairline at each wall. They were
+   `--recessed` before, a step of 1.03 against the page that nobody could see, so the hairline was
+   already doing all of the separating. The line stayed and the tone went. It takes `--edge`
+   rather than `--line` since 2026-09-06, as the sidebar's and `.setrail`'s do. */
+.vA .rail{background:var(--ground);border-right:1px solid var(--edge)}
+/* Every lifted surface inside a flank — Search at the head of the rail, a selected row — is still
+   `--raised`. */
 /* A column in two parts: the list, which scrolls, and the doors at its foot, which do not.
    The rail itself stopped being the scroll container when the doors moved down here — a place
    that is not about any team must not be at the far end of every team. */
@@ -297,7 +277,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:0}
 .railrow{display:flex;gap:8px;align-items:center;padding:5px 8px;width:calc(100% - 12px);margin:0 6px;border-radius:12px;text-align:left}
 /* The rail is the one place the plane behind a mark changes, and `.sel` is the whole of the
    change: hover is carried by ink here, not by ground, so it is deliberately not in this list. */
-.railrow{--behind:var(--recessed)}
+.railrow{--behind:var(--ground)}
 .railrow.sel,.railrowwrap[data-state='open'] .railrow{--behind:var(--raised)}
 /* Hover and selection answer different questions — "where is the pointer" and "which row am I
    in" — so they cannot both be the raised ground, which is what they were: two identical
@@ -1706,7 +1686,7 @@ textarea.field{resize:vertical;line-height:1.5}
    column whose content starts a third of the way down where the covered one started at the top
    reads as the wall of the room having moved. */
 .setpage{position:absolute;inset:0;z-index:20;background:var(--ground);display:flex;animation:entersheet 220ms var(--ease-out)}
-.setrail{border-right:1px solid var(--edge);background:var(--recessed);padding:8px 0 10px;overflow:auto}
+.setrail{border-right:1px solid var(--edge);background:var(--ground);padding:8px 0 10px;overflow:auto}
 /* The rail's own row geometry, down to the radius and the 14px of ink from the column's edge
    that the doors at the foot of the rail start at: this is a list of places in a column, which
    is what those are. A glyph before the word for the same reason they carry one. */
@@ -2051,7 +2031,7 @@ button.listrow:not(.pick):hover{outline:1px solid var(--edge);outline-offset:-1p
    CLI on their behalf. */
 /* Recessed rather than bordered, and one line per command with a prompt in the gutter. The
    border made a second box under the field's box; the ground alone says *this is quoted from
-   somewhere else*, which is what `--recessed` means everywhere here, and the `$` says the
+   somewhere else*, which is what `--recessed` is left for, and the `$` says the
    somewhere else is a shell. `break-word` and not `break-all`, because a command broken
    mid-flag is a command the reader has to reassemble before they can agree to it. */
 .wsplan{display:flex;flex-direction:column;gap:3px;font-family:var(--mono);font-size:10.5px;line-height:1.5;color:var(--muted);background:var(--recessed);border:0;border-radius:9px;padding:8px 10px;overflow-wrap:break-word}
@@ -2153,8 +2133,8 @@ button.listrow:not(.pick):hover{outline:1px solid var(--edge);outline-offset:-1p
 .morepr{align-self:flex-start;font-size:10px}
 .morepr:hover{color:var(--ink)}
 .proposalacts{display:flex;gap:8px;margin-top:2px}
-/* `--ground` under a small icon button is for the rail, where the row it sits on is recessed.
-   On the raised block it would read as a hole punched in it. */
+/* `--ground` under a small icon button is the rail's, where it matches the row it sits on. On
+   the raised block it would read as a hole punched in it. */
 .proposal .rowacts{top:11px;right:11px;translate:none}
 .proposal .rowacts .iconbtn{background:transparent}
 
@@ -2286,8 +2266,8 @@ button.listrow:not(.pick):hover{outline:1px solid var(--edge);outline-offset:-1p
    The activity column came off on 2026-09-05 and the flanks rule was amended the same day with
    *"there was a second flank and there is one now"*. This puts one back, and it earns it on the
    rule's own test: the column drew what the transcript was already drawing, and this draws what
-   the transcript cannot — which nine files. The flank is recessed like the rail, because
-   `--ground` is the reading surface and nothing else.
+   the transcript cannot — which nine files. It shares the rail's ground, which is the
+   transcript's since 2026-09-11.
 
    The transcript keeps its measure and the sidebar gives: the ceiling is `window − rail − 900`,
    computed in `useSidebarWidth`, so widening this never takes the transcript under 900px until
@@ -2298,7 +2278,7 @@ button.listrow:not(.pick):hover{outline:1px solid var(--edge);outline-offset:-1p
   .vA{transition:grid-template-columns 200ms var(--ease-out)}
   .vA.dragging{transition:none}
 }
-.vA .filetree{background:var(--recessed);border-left:1px solid var(--edge);overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.vA .filetree{background:var(--ground);border-left:1px solid var(--edge);overflow:hidden;display:flex;flex-direction:column;min-width:0}
 /* Out of flow so it does not become a fourth grid column, and wider than the hairline it sits
    on because a 1px target is a target nobody hits. `useRailWidth`'s handle, mirrored. */
 .sidebargrab{position:absolute;top:0;bottom:0;width:9px;margin-right:-4px;cursor:col-resize;z-index:10}
@@ -2379,8 +2359,8 @@ button.fthead:hover{background:var(--raised)}
 .ftfoot{flex:0 0 auto;display:flex;align-items:center;gap:2px;padding:5px 6px;border-top:1px solid var(--edge)}
 .ftdoor{display:flex;align-items:center;justify-content:center;padding:5px 8px;border-radius:8px;background:none;border:0;color:var(--muted)}
 .ftdoor:hover{background:var(--raised);color:var(--ink)}
-/* Pressed is ink, never a fill: the flank is recessed and a filled control in it reads as a
-   surface rather than as a choice. */
+/* Pressed is ink, never a fill: a filled control in a flank reads as a surface rather than as a
+   choice. */
 .ftdoor.on{color:var(--ink)}
 /* What has changed, and committing the part of it you mean. The rows are the tray's `+412 −7`
    one file at a time, so they wear the same two tokens; the tick is blobot's own selection and

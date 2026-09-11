@@ -141,18 +141,4 @@ describe('editing', () => {
     type(name(), 'Mara Q');
     expect(go().disabled).toBe(false);
   });
-
-  it('says where the change lands before it is pressed', () => {
-    draw(
-      <EditAgent
-        agent={{ ...MARA, teams: ['checkout'] }}
-        runtimes={RUNTIMES}
-        onClose={() => {}}
-        onSaved={() => {}}
-      />,
-    );
-    const said = document.body.textContent ?? '';
-    expect(said).toContain('checkout');
-    expect(said).toContain('The face reaches');
-  });
 });
