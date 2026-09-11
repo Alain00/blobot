@@ -40,6 +40,25 @@ function apply(events: (AgentEvent | Message)[]): AppState {
   );
 }
 
+describe('a Plan limit reading', () => {
+  it('leaves a turn in flight exactly as it was, rather than handing the reducer nothing', () => {
+    // A real Claude turn sends this on its first gauge update, mid-answer. `applyEvent` had no
+    // case for it and returned `undefined`, which blanked the whole window.
+    const state = apply([
+      { ...identity, at: 1, type: 'agent_message_delta', messageId: 'msg_1', text: 'Looking' },
+      {
+        ...identity,
+        at: 2,
+        type: 'plan_limits_updated',
+        windows: [{ durationMinutes: 300, utilization: 0.41, resetsAt: 10_000 }],
+      },
+      { ...identity, at: 3, type: 'agent_message_delta', messageId: 'msg_1', text: ' now' },
+    ]);
+    expect(state).toBeDefined();
+    expect(state.items).toContainEqual(expect.objectContaining({ kind: 'agent', text: 'Looking now' }));
+  });
+});
+
 const peerMessage: Message = {
   id: 'm1',
   teamId: 'team',

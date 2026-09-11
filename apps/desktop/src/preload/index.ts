@@ -4,6 +4,7 @@ import type { AgentEvent, AgentStatus, Message, TranscriberEvent } from '@blobot
 import type {
   BlobotApi,
   EditAgentResult,
+  UiPlanLimits,
   UiAttachment,
   UiAttachmentRefusal,
   HireResult,
@@ -87,6 +88,7 @@ const api: BlobotApi = {
   setLiveTeamLimit: (value: number) => invokeAction(() => ipcRenderer.invoke('blobot:setLiveTeamLimit', value)) as Promise<number>,
   setMachineIdleAfterMs: (value) => invokeAction(() => ipcRenderer.invoke('blobot:setMachineIdleAfterMs', value)) as Promise<number>,
   snapshot: () => ipcRenderer.invoke('blobot:snapshot') as Promise<UiSnapshot>,
+  planLimits: () => ipcRenderer.invoke('blobot:planLimits') as Promise<UiPlanLimits>,
   earlier: (teamId: string, before: number) =>
     ipcRenderer.invoke('blobot:earlier', teamId, before) as Promise<UiEarlier | undefined>,
   prompt: (agentIds, text, attachmentIds) =>
@@ -248,6 +250,8 @@ const api: BlobotApi = {
     subscribe('blobot:runtime-step-exit', (_e, outcome: RuntimeStepOutcome) => listener(outcome)),
   onEvent: (listener) =>
     subscribe('blobot:event', (_e, teamId: string, event: AgentEvent) => listener(teamId, event)),
+  onPlanLimits: (listener) =>
+    subscribe('blobot:planLimits', (_e, readings: UiPlanLimits) => listener(readings)),
   onStatus: (listener) =>
     subscribe('blobot:status', (_e, teamId: string, agentId: string, status: AgentStatus) =>
       listener(teamId, agentId, status),

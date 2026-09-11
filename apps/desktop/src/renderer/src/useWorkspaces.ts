@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { UiWorkspaceStatus } from '../../shared/api.js';
 
 /**
@@ -23,17 +23,27 @@ export function useWorkspaces(
   readonly looking: boolean;
   readonly refresh: () => void;
 } {
-  const [statuses, setStatuses] = useState<readonly UiWorkspaceStatus[]>([]);
+  // The last rows read for each team this session. Every thread is a team, so without this every
+  // switch drew the tray empty for the round trip and faded it back in, which is the blink.
+  const seen = useRef(new Map<string, readonly UiWorkspaceStatus[]>());
+  // Keyed by team, so rows are never drawn under another team's name however the reads interleave.
+  const [answer, setAnswer] = useState<{ teamId?: string; rows: readonly UiWorkspaceStatus[] }>({
+    rows: [],
+  });
   const [looking, setLooking] = useState(false);
 
   const read = useCallback(
     (forge: boolean) => {
       if (teamId === undefined) return;
       if (forge) setLooking(true);
+      const settle = (rows: readonly UiWorkspaceStatus[]): void => {
+        seen.current.set(teamId, rows);
+        setAnswer({ teamId, rows });
+      };
       void window.blobot
         .workspaceStatus(teamId, forge)
-        .then((rows) => setStatuses(rows))
-        .catch(() => setStatuses([]))
+        .then(settle)
+        .catch(() => settle([]))
         .finally(() => {
           if (forge) setLooking(false);
         });
@@ -41,10 +51,7 @@ export function useWorkspaces(
     [teamId],
   );
 
-  // A different team is a different set of workspaces, and the old team's rows must not sit on
-  // screen under the new team's name while the read is in flight.
   useEffect(() => {
-    setStatuses([]);
     read(false);
     read(true);
   }, [read]);
@@ -54,5 +61,15 @@ export function useWorkspaces(
     read(false);
   }, [revision, read]);
 
+  // Answered in the render the team changes, from what this team last said, rather than a render
+  // later from an effect: the footer mounts in that render, and a tray that mounts empty fades
+  // its answer in. A read that lands replaces it without a word, the file tree's own rule for
+  // being a second behind.
+  const statuses =
+    teamId === undefined
+      ? []
+      : answer.teamId === teamId
+        ? answer.rows
+        : (seen.current.get(teamId) ?? []);
   return { statuses, looking, refresh: () => read(true) };
 }

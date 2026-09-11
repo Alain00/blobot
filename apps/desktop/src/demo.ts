@@ -171,6 +171,10 @@ function describe(event: AgentEvent): string {
       return `peer      → ${event.to}: ${JSON.stringify(event.message)}`;
     case 'usage_updated':
       return `usage     ${event.used}/${event.size}`;
+    case 'plan_limits_updated':
+      return `limits    ${event.windows
+        .map((window) => `${window.durationMinutes}m ${Math.floor(window.utilization * 100)}%`)
+        .join(' ')}`;
     case 'context_compacted':
       return `compacted ${event.how} at ${event.used}/${event.ceiling}${
         event.reason === undefined ? '' : ` (${event.reason})`

@@ -75,6 +75,13 @@ export interface MockAgentRuntimeOptions {
   readonly contextSize?: number;
   readonly usedPerTurn?: number;
   /**
+   * Whether every ordinary turn ends with a Plan limit reading, the way a real Claude turn does.
+   * Off by default, so the event sequences the suite asserts are the ones they always were; demo
+   * mode turns it on, because a block nothing in the demo can reach is a block nobody reviews.
+   * A scenario's own `planLimits` step stands in for it on that turn.
+   */
+  readonly planLimits?: boolean;
+  /**
    * The menu the session advertises before it has held a turn. Defaults to empty, which is
    * the case worth building against: a fresh session may genuinely know no commands until a
    * scenario's `advertises()` step fires.
@@ -90,6 +97,10 @@ export interface MockAgentRuntimeOptions {
    */
   readonly accepts?: AttachmentSupport;
 }
+
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
 
 const CANCELLED_TOOL_OUTPUT =
   '(no output)\n\n<shell_metadata>\nUser aborted the command\n</shell_metadata>';
@@ -118,6 +129,7 @@ export class MockAgentRuntime implements AgentRuntime {
   readonly #accepts: AttachmentSupport;
   readonly #contextSize: number;
   readonly #usedPerTurn: number;
+  readonly #planLimits: boolean;
 
   #sessionId: string;
   #lifecycle: RuntimeLifecycle = 'created';
@@ -126,6 +138,7 @@ export class MockAgentRuntime implements AgentRuntime {
   #messageCounter = 0;
   #toolCounter = 0;
   #used = 0;
+  #planLimitsThisTurn = false;
 
   #turn: { queue: AsyncQueue<AgentEvent>; abort: AbortController } | undefined;
   #permissionHandler: PermissionHandler | undefined;
@@ -150,6 +163,7 @@ export class MockAgentRuntime implements AgentRuntime {
     this.#accepts = options.accepts ?? { images: true, textFiles: true };
     this.#contextSize = options.contextSize ?? 200_000;
     this.#usedPerTurn = options.usedPerTurn ?? 4_200;
+    this.#planLimits = options.planLimits ?? false;
     this.#commands = options.commands ?? [];
   }
 
@@ -438,6 +452,19 @@ export class MockAgentRuntime implements AgentRuntime {
           });
           break;
         }
+        case 'plan_limits': {
+          const now = this.#clock.now();
+          this.#planLimitsThisTurn = true;
+          this.#emitTo(queue, {
+            type: 'plan_limits_updated',
+            windows: step.windows.map((window) => ({
+              durationMinutes: window.durationMinutes,
+              utilization: window.utilization,
+              resetsAt: now + window.resetsInMs,
+            })),
+          });
+          break;
+        }
         case 'usage': {
           this.#used = step.used;
           this.#emitTo(queue, {
@@ -718,12 +745,24 @@ export class MockAgentRuntime implements AgentRuntime {
       size: this.#contextSize,
       costUsd: 0,
     });
+    if (this.#planLimits && !this.#planLimitsThisTurn) {
+      const now = this.#clock.now();
+      this.#emitTo(queue, {
+        type: 'plan_limits_updated',
+        windows: [
+          { durationMinutes: 300, utilization: 0.41, resetsAt: now + 2 * HOUR + 13 * MINUTE },
+          { durationMinutes: 10_080, utilization: 0.14, resetsAt: now + 3 * DAY + 4 * HOUR },
+        ],
+      });
+    }
+    this.#planLimitsThisTurn = false;
     this.#emitTo(queue, { type: 'turn_ended', turnId, stopReason });
   }
 
   #endCancelled(queue: AsyncQueue<AgentEvent>, turnId: string): void {
     // The trap: the context gauge resets to zero on cancel. Consumers must suppress this
     // trailing update rather than render it as a bug.
+    this.#planLimitsThisTurn = false;
     this.#emitTo(queue, { type: 'usage_updated', used: 0, size: this.#contextSize });
     this.#emitTo(queue, { type: 'turn_ended', turnId, stopReason: 'cancelled' });
   }

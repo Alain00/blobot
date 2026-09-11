@@ -1376,6 +1376,14 @@ One flat file, one flat namespace, no build step between it and the DOM.
   row says `past 300k` in words: a percentage over a hundred is not a fact about anything.
   Monochrome, no bar, no colour, and **it does not advise** — a ceiling is a fact about the
   model sitting next to a fact about the agent, never a suggestion to compact.
+  *Added 2026-09-11:* `PLAN LIMITS` under `CONTEXT`, the metered windows on the logins behind the
+  roster: a head line per login, then a line per window (`5h  41%  resets 14:00`). A login on this
+  computer is one head line named by its runtime and wearing **no face**, because every Agent of
+  that runtime shares it; a sandboxed Agent's login is its own and wears its face. Fixed times and
+  never a countdown, which would be a moving figure in a panel. Once a reset is behind the clock
+  the line reads `reset 14:00` with **no percent**: blobot knows the window reset and not what it
+  reads now. It advises exactly as little as the gauge, so no warning state, no colour and no
+  sound. A runtime that sends no reading has no row. See `.scratch/plan-limits/`.
   The two blocks keep the ceiling they were given when they were a pinned head: a six-agent
   roster with a `sent` panel open is taller than the window, so the panel scrolls inside itself
   past `min(70vh, 520px)`. That ceiling outlived the log it was measured against, because what it
@@ -1755,6 +1763,19 @@ One flat file, one flat namespace, no build step between it and the DOM.
   only.** It does not search what agents said: that needs an addressable message and somewhere to
   scroll to, and returning message hits without them would be promising a feature that does not
   exist.
+- **Rows by number** — `ctrl+1` to `ctrl+9` (or `cmd`, both taken everywhere like `ctrl+k`) open
+  the rail's first nine rows, exactly as a press would, and put the cursor in the composer. The
+  place you *scan* gets a key for the rows you already know by position. **Holding ctrl on its own
+  for 400ms numbers them**: the key takes the date's place in the Search row's mono (`CTRL 1`,
+  `⌘1`), so nothing floats and nothing covers a face. Held *alone*, because ctrl is also copy and
+  paste, and nine keys flashing down the column on every copy would be motion nobody asked for.
+  The numbers appear and go with no transition, since a keyboard path takes no motion, and a digit
+  keeps them up so ctrl held can go to 3 and then 1. **The order is frozen while ctrl is down**:
+  the rail sorts by recency, and a row that jumps under a held key would change what the finger
+  opens. Matched on the physical key, so AZERTY needs no shift. Past nine there is no number,
+  because every badge has to mean the same thing, and pinning is how a row earns a number that
+  stays. The key does nothing wherever the press could not happen: under a dialog, a scrim or a
+  screen over the surface, in demo mode, and in a terminal, which keeps its keys.
 - **Signing in to a runtime, and installing one** — a modal over the runtime picker that **is**
   a terminal. It is here because the four honest states above had no door out of them: the
   picker said *not installed* and the reader went to find the vendor's documentation. blobot
@@ -1812,6 +1833,14 @@ One flat file, one flat namespace, no build step between it and the DOM.
   here is round — `.btn`, the composer's send, the `waiting` pill. It shipped at 7px, a fourth
   radius nothing else in the app uses, which read as a square patch behind the word rather than
   as a control the row had always contained. *Rounded 2026-08-31.*
+  **What arrives fades, and the row keeps its shape while it waits.** *2026-09-11.* Opening a
+  team drew the tray in three steps (the Handbook door alone, then git's half, then GitHub's)
+  and every turn that settled took the pull request off again, so switching chats read as the
+  tray blinking. Both halves are always drawn; main remembers what the forge last said per
+  branch, so a local read never takes the pull request away; and a slot that fills after the
+  tray was drawn without it comes in over 160ms of opacity. A tray that opens with its answer,
+  which is every agent switch inside a team and every return to a team already asked about,
+  does not move at all.
 
   **The popovers that hang off it are one column with a gap in it**, and their parts are ranked.
   *Redrawn 2026-08-31, after the commit one shipped as three children stacked with no space

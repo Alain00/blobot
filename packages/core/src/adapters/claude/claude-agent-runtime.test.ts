@@ -320,6 +320,42 @@ describe('a turn', () => {
     expect(events.at(-1)).toMatchObject({ type: 'turn_ended', stopReason: 'end_turn' });
   });
 
+  it('reads the Plan limit off the gauge update and leaves the gauge as it was', async () => {
+    const { runtime, bridge } = await started();
+    const { events, done } = consume(runtime.sendPrompt({ text: 'ping', from: 'user' }));
+    await tick();
+    bridge.update({
+      sessionUpdate: 'usage_update',
+      used: 32281,
+      size: 1_000_000,
+      _meta: {
+        '_claude/rateLimit': {
+          status: 'allowed',
+          isUsingOverage: false,
+          unifiedWindows: {
+            five_hour: { utilization: 0.41, resetsAt: 1788021600 },
+            seven_day: { utilization: 0.14, resetsAt: 1788242400 },
+          },
+        },
+      },
+    } as never);
+    bridge.endTurn('end_turn');
+    await done;
+
+    expect(events.map((event) => event.type)).toEqual([
+      'plan_limits_updated',
+      'usage_updated',
+      'turn_ended',
+    ]);
+    expect(events[0]).toMatchObject({
+      windows: [
+        { durationMinutes: 300, utilization: 0.41, resetsAt: 1788021600_000 },
+        { durationMinutes: 10_080, utilization: 0.14, resetsAt: 1788242400_000 },
+      ],
+    });
+    expect(events[1]).toEqual(expect.objectContaining({ used: 32281, size: 1_000_000 }));
+  });
+
   it('stamps every event with agent and session identity', async () => {
     const { runtime, bridge } = await started();
     const { events, done } = consume(runtime.sendPrompt({ text: 'ping', from: 'user' }));

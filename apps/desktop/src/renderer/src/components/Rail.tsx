@@ -16,6 +16,7 @@ import type { AgentStatus, MachinePower } from '@blobot/core/domain';
 import type { UiAgent, UiRailAgent, UiTeam, UiTeamSummary } from '../../../shared/api.js';
 import { railRowsOf, type Pane, type RailRow } from '../model.js';
 import { lastActive } from '../time.js';
+import { HOTKEY_ROWS, useRailHotkeys } from '../useRailHotkeys.js';
 import { Blob, SEEN } from './Blob.js';
 import { MachinePowerDot } from './MachinePowerDot.js';
 import { TeamMark } from './TeamMark.js';
@@ -56,6 +57,7 @@ export function Rail({
   agents,
   statuses,
   pane,
+  pressed,
   unread,
   pinned,
   onSelect,
@@ -82,6 +84,11 @@ export function Rail({
   agents: readonly UiAgent[];
   statuses: Record<string, AgentStatus>;
   pane: Pane;
+  /**
+   * A thread row just pressed, whose team has not arrived. Lit ahead of the pane, which stays on
+   * what is showing until the snapshot lands, so nothing under it blanks for the round trip.
+   */
+  pressed?: string;
   /**
    * Agents carrying a Routine run nobody has looked at. Issue 11's unread mark, and the reason
    * it is here rather than on the Routines screen alone: a Routine whose value is the *message*
@@ -162,12 +169,33 @@ export function Rail({
   // order looks arbitrary the first time a pinned row outranks something more recent.
   const pins = rows.filter((row) => row.pinned).length;
 
+  /** What pressing a row does. One function, because ctrl+N is that press and nothing else. */
+  const openRow = (row: RailRow): void => {
+    if (row.kind === 'team' && row.id === team.id) onSelect({ kind: 'team' });
+    else if (row.kind === 'team') onSelectTeam?.(row.id);
+    else onSelectAgent?.(row.id);
+  };
+  const keyOf = (row: RailRow): string => `${row.kind}:${row.id}`;
+  const numbered = useRailHotkeys({
+    keys: rows.map(keyOf),
+    enabled: onSelectTeam !== undefined || onSelectAgent !== undefined,
+    onOpen: (key) => {
+      const row = rows.find((one) => keyOf(one) === key);
+      if (row === undefined) return;
+      openRow(row);
+      // Arriving somewhere new focuses the composer already; this is for the press that lands on
+      // the pane the user is in, where nothing arrives.
+      document.querySelector<HTMLTextAreaElement>('.composer textarea')?.focus();
+    },
+  });
+
   const selectedId =
-    pane.kind === 'thread'
+    pressed ??
+    (pane.kind === 'thread'
       ? pane.profileId
       : pane.kind === 'agent'
         ? (team.threadFor ?? team.id)
-        : team.id;
+        : team.id);
 
   return (
     // Nothing here opens any more, so nothing here animates. `useTeamOpening` grew the roster's
@@ -197,7 +225,7 @@ export function Rail({
             <Search size={13} aria-hidden />
             <span>Search</span>
             <span style={{ flex: 1 }} />
-            <span className="mono muted">{shortcut()}</span>
+            <span className="mono muted">{shortcut('K')}</span>
           </button>
         )}
 
@@ -208,6 +236,7 @@ export function Rail({
           // claim `STOPPED` on every rail row used to make. `railRowsOf` carries it now, from
           // the summary the main process fills for each loaded team.
           const power = row.kind === 'agent' ? row.power : undefined;
+          const hotkey = (numbered?.indexOf(keyOf(row)) ?? -1) + 1;
           return (
           <div key={`${row.kind}:${row.id}`}>
             {index === pins && pins > 0 && <div className="railpinline" aria-hidden />}
@@ -224,12 +253,9 @@ export function Rail({
                 selected={row.id === selectedId}
                 {...(row.id === selectedId ? { anchor: here } : {})}
                 {...(power === undefined ? {} : { power })}
-                onOpen={() => {
-                  if (row.kind === 'team') onSelectTeam?.(row.id);
-                  else onSelectAgent?.(row.id);
-                }}
-                onSelectOpenTeam={() => onSelect({ kind: 'team' })}
-                isOpenTeam={row.kind === 'team' && row.id === team.id}
+                {...(index < HOTKEY_ROWS ? { position: index + 1 } : {})}
+                {...(hotkey > 0 ? { hotkey } : {})}
+                onOpen={() => openRow(row)}
               />
             </RowMenu>
           </div>
@@ -282,23 +308,28 @@ function Row({
   selected,
   anchor,
   power,
+  position,
+  hotkey,
   onOpen,
-  onSelectOpenTeam,
-  isOpenTeam,
 }: {
   row: RailRow;
   selected: boolean;
   anchor?: React.RefObject<HTMLDivElement | null>;
   power?: MachinePower;
+  /** Where ctrl+N reaches this row, for the first nine. Announced, never drawn. */
+  position?: number;
+  /** The number to draw, while ctrl is held. Frozen at the press, so it can differ from `position`. */
+  hotkey?: number;
   onOpen: () => void;
-  onSelectOpenTeam: () => void;
-  isOpenTeam: boolean;
 }): React.JSX.Element {
   return (
     <div ref={anchor}>
       <button
         className={`railrow${selected ? ' sel' : ''}`}
-        onClick={isOpenTeam ? onSelectOpenTeam : onOpen}
+        onClick={onOpen}
+        {...(position === undefined
+          ? {}
+          : { 'aria-keyshortcuts': `Control+${position} Meta+${position}` })}
       >
         {row.kind === 'team' ? (
           <TeamMark
@@ -331,8 +362,14 @@ function Row({
             <span className="grow" />
             {/* When it last happened, where a chat app puts it. The status takes this slot
                 when there is one, because the right of a row says one thing at a time. */}
-            {row.status === undefined && row.at !== undefined && (
-              <span className="when">{lastActive(row.at)}</span>
+            {/* While ctrl is held the key takes the date's place, in the Search row's own mono:
+                nothing floats and nothing covers a face, and the date is the least of a row for
+                half a second. */}
+            {hotkey !== undefined ? (
+              <span className="when key">{shortcut(String(hotkey))}</span>
+            ) : (
+              row.status === undefined &&
+              row.at !== undefined && <span className="when">{lastActive(row.at)}</span>
             )}
           </span>
           <span className="sub">
@@ -386,9 +423,9 @@ function Door({
   );
 }
 
-/** What to call the navigator's key on this machine. Mac has one word for it and nothing else does. */
-function shortcut(): string {
-  return navigator.userAgent.includes('Mac OS X') ? '⌘K' : 'CTRL K';
+/** What to call a ctrl key on this machine. Mac has one word for it and nothing else does. */
+function shortcut(key: string): string {
+  return navigator.userAgent.includes('Mac OS X') ? `⌘${key}` : `CTRL ${key}`;
 }
 
 /**

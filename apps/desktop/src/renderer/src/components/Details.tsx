@@ -14,6 +14,8 @@ import type {
 import { sizeOf } from './Attached.js';
 import { Blob } from './Blob.js';
 import { WorkspacePanel } from './Workspaces.js';
+import type { UiPlanLimits } from '../../../shared/plan-limits.js';
+import { planLimitRows, resetText, spent, windowName, type PlanLimitRow } from '../plan-limits.js';
 
 /**
  * What the machinery under this team is doing: `CONTEXT` and `WORKSPACE`, behind one glyph in
@@ -41,6 +43,8 @@ export function Details({
   onRefreshWorkspaces,
   onPublish,
   onPlan,
+  planLimits = {},
+  now,
   startOpen = false,
 }: {
   agents: readonly UiAgent[];
@@ -71,8 +75,13 @@ export function Details({
    * human at the screen can see `CONTEXT` or `WORKSPACE` at all.
    */
   startOpen?: boolean;
+  /** Every login's last Plan limit reading, app-wide. Only the logins behind `agents` are drawn. */
+  planLimits?: UiPlanLimits;
+  /** The clock, for tests. Absent, the block reads it when it opens. */
+  now?: number;
 }): React.JSX.Element {
-  const nothing = Object.keys(usage).length === 0 && workspaces.length === 0;
+  const limits = planLimitRows(agents, planLimits);
+  const nothing = Object.keys(usage).length === 0 && workspaces.length === 0 && limits.length === 0;
   return (
     <Popover.Root defaultOpen={startOpen}>
       <Popover.Trigger className="paneltoggle" title="Context and workspace" aria-label="Context and workspace">
@@ -81,6 +90,7 @@ export function Details({
       <Popover.Portal>
         <Popover.Content className="detailspop" side="bottom" align="end" sideOffset={8} collisionPadding={12}>
           <Context agents={agents} usage={usage} injection={injection} handbooks={handbooks} />
+          <PlanLimits rows={limits} {...(now === undefined ? {} : { now })} />
           <WorkspacePanel
             statuses={workspaces}
             agents={agents}
@@ -178,6 +188,52 @@ function Context({
               handbookChars={handbookChars(handbooks[agent.id])}
             />
           )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The metered windows on the logins behind this roster. A reading and nothing else, in the gauge's
+ * own register: no warning state, no colour, no motion when a reading lands.
+ *
+ * A login on this computer is one head line named by its runtime, with no face, because every
+ * Agent of that runtime shares it. A sandboxed Agent's login is its own and wears its face.
+ *
+ * The clock is read here, when the panel opens, and not above it: a window whose reset is behind
+ * the clock draws the reset and **no percent**, since blobot knows the window reset and does not
+ * know what it reads now. Never a figure known to be false.
+ */
+function PlanLimits({
+  rows,
+  now,
+}: {
+  rows: readonly PlanLimitRow[];
+  now?: number;
+}): React.JSX.Element | null {
+  if (rows.length === 0) return null;
+  const at = now ?? Date.now();
+  return (
+    <div className="ctx limits">
+      <div className="ctxhead">
+        <span className="mono muted">PLAN LIMITS</span>
+      </div>
+      {rows.map((row) => (
+        <div key={row.login}>
+          <div className="limitshead">
+            {row.agent !== undefined && (
+              <Blob name={row.agent.name} size={14} hue={row.agent.hue} shape={row.agent.shape} />
+            )}
+            <span className="who">{row.label}</span>
+          </div>
+          {row.windows.map((window) => (
+            <div key={window.durationMinutes} className="limitrow">
+              <span className="w">{windowName(window.durationMinutes)}</span>
+              {window.resetsAt > at && <span className="p">{spent(window.utilization)}%</span>}
+              <span className="r">{resetText(window.resetsAt, at)}</span>
+            </div>
+          ))}
         </div>
       ))}
     </div>

@@ -70,6 +70,18 @@ export type ScenarioStep =
       readonly kind: 'record_entry';
       readonly entries: readonly HandbookEntryInput[];
     }
+  /**
+   * A Plan limit reading, with each reset relative to the moment it is sent, so a scenario can
+   * put a window behind the clock: a reading that outlived its own reset is the trap.
+   */
+  | {
+      readonly kind: 'plan_limits';
+      readonly windows: readonly {
+        readonly durationMinutes: number;
+        readonly utilization: number;
+        readonly resetsInMs: number;
+      }[];
+    }
   | {
       readonly kind: 'usage';
       readonly used: number;
@@ -255,6 +267,12 @@ export class Scenario {
       ...(options.height === undefined ? {} : { height: options.height }),
       ...(options.bytes === undefined ? {} : { bytes: options.bytes }),
     });
+  }
+
+  planLimits(
+    windows: readonly { durationMinutes: number; utilization: number; resetsInMs: number }[],
+  ): Scenario {
+    return this.#with({ kind: 'plan_limits', windows });
   }
 
   usage(used: number, size = 200_000, costUsd?: number): Scenario {

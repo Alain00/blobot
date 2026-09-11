@@ -19,6 +19,8 @@ import type {
 } from '@blobot/core/domain';
 import type { EngineSetupView, UiAgentMachine } from './machines.js';
 export type { EngineSetupView, UiAgentMachine, UiLoginChallenge, SetupProgress } from './machines.js';
+import type { UiPlanLimits } from './plan-limits.js';
+export type { UiPlanLimits, UiPlanLimitWindow } from './plan-limits.js';
 
 /**
  * Re-exported so the renderer takes it from here with everything else it is allowed to know.
@@ -1371,6 +1373,8 @@ export interface BlobotApi {
   liveTeamLimit(): Promise<number>;
   setLiveTeamLimit(value: number): Promise<number>;
   snapshot(): Promise<UiSnapshot>;
+  /** Every login's last Plan limit reading since blobot opened. Not a team's, so not in the snapshot. */
+  planLimits(): Promise<UiPlanLimits>;
   /**
    * One thing the user typed, to everybody they addressed with it.
    *
@@ -1693,6 +1697,8 @@ export interface BlobotApi {
    * is showing; nothing here decides that for it.
    */
   onEvent(listener: (teamId: string, event: AgentEvent) => void): () => void;
+  /** All readings again whenever one arrives. No team id: a login is not a team's. */
+  onPlanLimits(listener: (readings: UiPlanLimits) => void): () => void;
   onStatus(listener: (teamId: string, agentId: string, status: AgentStatus) => void): () => void;
   onCommands(
     listener: (teamId: string, agentId: string, commands: readonly UiCommand[]) => void,

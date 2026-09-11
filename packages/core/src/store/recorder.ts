@@ -155,6 +155,10 @@ export class SqliteRecorder implements TurnRecorder {
         this.#appendEvent(event);
         return;
       }
+      // Never durable. A Plan limit reading is about a login rather than this agent, and it is
+      // stale the moment its window resets: after a restart the honest answer is no figure.
+      case 'plan_limits_updated':
+        return;
       // Durable for ticket 06's reason: it is drawn in the *transcript*, and a live-only line
       // means a team switched away from and back to loses the record that its agent is on a
       // different session than the one it was answering with an hour ago.

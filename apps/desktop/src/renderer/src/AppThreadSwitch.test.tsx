@@ -50,6 +50,19 @@ const blobot = new Proxy(
         if (name === 'openThread') {
           return Promise.resolve({ ok: true, agentId: `a${String(args[0]).slice(1)}` });
         }
+        if (name === 'workspaceStatus') {
+          const who = String(args[0]).slice(1);
+          return Promise.resolve([
+            {
+              agentId: `a${who}`,
+              agentName: who,
+              kind: 'git',
+              branch: `blobot/t${who}/a${who}`,
+              present: true,
+              churn: { added: 0, removed: 0, files: 0 },
+            },
+          ]);
+        }
         if (name.startsWith('workspace') || name.startsWith('list') || name.startsWith('read')) {
           return Promise.resolve([]);
         }
@@ -163,5 +176,59 @@ describe('one thread to another', () => {
     live = snapshotOf('B');
     await act(async () => held.splice(0).forEach((answer) => answer(live)));
     expect(selected(host)).toBe('B');
+  });
+
+  it('keeps the composer’s tray on screen while the next thread is on its way', async () => {
+    live = snapshotOf('A');
+    const host = document.createElement('div');
+    document.body.append(host);
+    hosts.push(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(App));
+    });
+    await act(async () => {
+      listeners.get('onTeamChanged')?.();
+    });
+    expect(host.querySelector('.wsline')).not.toBeNull();
+
+    // A profile pane has no tray, so taking one for the round trip unmounted it and the next
+    // snapshot put it back: the blink.
+    holding = true;
+    await act(async () => {
+      rowFor(host, 'B').click();
+    });
+    expect(host.querySelector('.wsline')).not.toBeNull();
+
+    live = snapshotOf('B');
+    await act(async () => held.splice(0).forEach((answer) => answer(live)));
+    expect(host.querySelector('.wsline')).not.toBeNull();
+  });
+
+  it('draws a thread it has already shown with its tray filled, so nothing fades back in', async () => {
+    live = snapshotOf('A');
+    const host = document.createElement('div');
+    document.body.append(host);
+    hosts.push(host);
+    const root = createRoot(host);
+    await act(async () => {
+      root.render(React.createElement(App));
+    });
+    await act(async () => {
+      listeners.get('onTeamChanged')?.();
+    });
+    expect(host.querySelector('.wsbranchpick')).not.toBeNull();
+
+    holding = true;
+    for (const who of ['B', 'A'] as const) {
+      await act(async () => {
+        rowFor(host, who).click();
+      });
+      live = snapshotOf(who);
+      await act(async () => held.splice(0).forEach((answer) => answer(live)));
+    }
+    // Back on A: its git half was read on the first visit, so the tray mounts holding it.
+    expect(host.querySelector('.wsbranchpick')?.getAttribute('title')).toBe('blobot/tA/aA');
+    expect(host.querySelector('.wsarrive')).toBeNull();
   });
 });

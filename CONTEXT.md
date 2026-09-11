@@ -76,6 +76,12 @@ Terms settled while charting the first demo. Use these words; don't drift to syn
   user's messages and peer messages share it.
 - **Turn** — one prompt and everything that follows until the runtime reports a stop reason.
   Prompts on a session are serialized: a session runs at most one Turn at a time.
+- **Plan limit** — a vendor's metered allowance on the operator's own account, made of
+  **windows** (a five hour one, a weekly one), each a utilization and a reset time. It belongs to
+  a login: on this computer every Agent of one runtime shares it, and in a sandbox the login is
+  that one Agent's, so its Plan limit is too, and true on no other team. Known only from the last
+  reading a runtime sent, which is why a window past its reset has no figure. Not the context
+  window, and not cost.
 
 ## Messaging
 
@@ -181,6 +187,8 @@ and computer inventory is read-only, and a detected file is not proof of runtime
 - **"Authenticated"** for runtime detection — the probe cannot prove a credential works. Say
   *Ready*, *Needs sign-in*, *Not installed*, or *Status unknown*.
 - **"done"** as an Agent Status — it was dropped; an Agent that finishes a Turn is *idle*.
+- **"Usage"** for a Plan limit — it already names the context gauge's occupancy reading, which
+  is per Agent. And **"rate limit"**, which also names the per-minute throttling that fails a Turn.
 - **"Context"** for a Handbook — the context window, this file, and the `CONTEXT` block on screen
   are three existing meanings already.
 - **"Memory"**, and *remembers*, *learns*, *training* — for a Handbook. It promises persistence

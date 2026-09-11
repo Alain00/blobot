@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, safeStorage, session, shell } from 'electron';
 import { registerSkillsIpc } from './skills-ipc.js';
+import { ForgeMemory } from './forge-memory.js';
 import { writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, join } from 'node:path';
@@ -73,6 +74,7 @@ import {
 import { asUiHandbookEntry, handbooksOf, handbookWrites } from './handbook-rows.js';
 import { choicesOf } from './permission-choices.js';
 import { runtimeLabel } from './runtime-labels.js';
+import { PlanLimitReadings } from './plan-limits.js';
 import { describeRuntimeOptions, rememberRuntimeOptionsIn } from './runtime-options.js';
 import { knownRuntime, knownRuntimes, refreshKnownRuntimes } from './known-runtimes.js';
 import { resizeStep, startStep, stopStep, writeStep } from './runtime-step.js';
@@ -937,6 +939,9 @@ const send = (channel: string, ...args: unknown[]): void => {
   if (window !== undefined && !window.isDestroyed()) window.webContents.send(channel, ...args);
 };
 
+/** Every login's last Plan limit reading, app-wide, in memory. */
+const planLimits = new PlanLimitReadings();
+
 /**
  * What blobot downloaded for a local Transcriber: `~/.local/share/blobot/speech/`, beside the
  * worktrees and the handoffs, never userData and never a workspace (ticket 09).
@@ -1040,6 +1045,11 @@ function attach(team: RunningTeam): void {
   const orchestrator = team.orchestrator;
   orchestrator.onEvent((event) => {
     send('blobot:event', teamId, event);
+    // The one stream that does not lead with a team id: a Plan limit is a login's, and every team
+    // with an Agent on that login draws the same reading.
+    if (event.type === 'plan_limits_updated' && planLimits.observe(team, event)) {
+      send('blobot:planLimits', planLimits.all());
+    }
     send('blobot:turns', teamId, orchestrator.turnsThisPrompt);
     // A team kept past the limit only because it was mid-turn is collected once it is quiet.
     if (!isWorking(team)) void pool.evictIdle();
@@ -1345,6 +1355,7 @@ void app.whenReady().then(async () => {
   }
 
   ipcMain.handle('blobot:snapshot', () => snapshot());
+  ipcMain.handle('blobot:planLimits', () => planLimits.all());
   // Bounded like the snapshot and paged by time, never by offset: rows arrive while the reader
   // is reading, and an offset would slide a window that the transcript is still growing under.
   ipcMain.handle('blobot:earlier', (_event, teamId: string, before: number): UiEarlier | undefined => {
@@ -1904,12 +1915,16 @@ void app.whenReady().then(async () => {
    * it does on opening the line and on the user's refresh and never on a timer. A backgrounded
    * team never reaches GitHub.
    */
+  const forgeMemory = new ForgeMemory();
   ipcMain.handle(
     'blobot:workspaceStatus',
     async (_event, teamId: string, forge = false): Promise<readonly UiWorkspaceStatus[]> => {
       if (store === undefined) return [];
       const statuses = await readTeamWorkspaces(teamId, { store, clock }, { forge }).catch(() => []);
-      return statuses.map((status) => ({
+      // A local read carries what the forge last said, so the pull request does not leave the
+      // tray every time a turn settles. Settled after the await, so a forge read that landed
+      // while this one was in flight is the answer it borrows.
+      return forgeMemory.settle(teamId, statuses.map((status) => ({
         agentId: status.agentId,
         agentName: status.agentName,
         kind: status.kind,
@@ -1924,7 +1939,7 @@ void app.whenReady().then(async () => {
             ? {}
             : { pr: status.forge.pr }
           : { unavailable: status.forge.detail }),
-      }));
+      })), forge);
     },
   );
 

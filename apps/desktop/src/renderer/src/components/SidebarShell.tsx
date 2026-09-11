@@ -124,7 +124,16 @@ export function SidebarShell({
           )}
         </div>
       )}
-      {agent !== undefined && (
+      {/* A team of one has nothing to go back to: the chooser would offer the face you just
+          pressed, alone. So the head names the agent and is not a door. */}
+      {agent !== undefined && agents.length === 1 && (
+        <div className="fthead">
+          <Blob name={agent.name} size={18} hue={agent.hue} shape={agent.shape} />
+          <span className="nm">{agent.name}</span>
+          {note !== undefined && <span className="mono muted">{note}</span>}
+        </div>
+      )}
+      {agent !== undefined && agents.length !== 1 && (
         <button type="button" className="fthead" onClick={onSelectTeam} title="Back to the team">
           {/* The face was carrying the door on its own, and a face is the app's word for *this
               agent* everywhere else — nothing about it points anywhere. The arrow is the part

@@ -43,6 +43,7 @@ import {
 } from './permissions.js';
 import { PictureWatch } from '../acp/pictures.js';
 import { commandsFrom, stopReasonOf, translateSessionUpdate } from '../acp/session-updates.js';
+import { planLimitsFrom } from './plan-limits.js';
 import { withTarget } from '../acp/target.js';
 import { withoutToolVerb } from './tool-title.js';
 import { ACCEPTS_NOTHING, acceptsOf, contentBlockOf } from '../acp/attachments.js';
@@ -659,6 +660,10 @@ export class ClaudeAgentRuntime implements AgentRuntime {
     // location, whose title is still `Edit` or `Read File` while its arguments stream.
     for (const picture of this.#pictures.from(update, this.agentId, this.#clock.now()))
       this.#emit(picture);
+    // Claude's own extension on the gauge's update, read here because only an adapter may read
+    // `_meta`. The shared translation below still takes the same update for the context reading.
+    const planLimits = planLimitsFrom(update);
+    if (planLimits !== undefined) this.#emit(planLimits);
     for (const event of translateSessionUpdate(update))
       this.#emit(withoutToolVerb(withTarget(event, update, this.#options.cwd), update));
   }

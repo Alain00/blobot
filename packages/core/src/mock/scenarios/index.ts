@@ -518,6 +518,22 @@ export const fillsUpAndKeepsGoing: Scenario = scenario('fills-up-and-keeps-going
   .end();
 
 /**
+ * A Plan limit reading that outlives its own five hour window.
+ *
+ * The trap is a figure that was true when it arrived and is false by the time anybody opens the
+ * panel: the window reset forty minutes ago and the runtime has said nothing since, because
+ * nothing ran. The block has to draw the reset and no percent. A kind mock would only ever send
+ * resets in the future.
+ */
+export const outlivesItsLimit: Scenario = scenario('outlives-its-limit')
+  .say('Done. The fixture is regenerated and the snapshot matches.')
+  .planLimits([
+    { durationMinutes: 300, utilization: 0.97, resetsInMs: -40 * 60_000 },
+    { durationMinutes: 10_080, utilization: 0.52, resetsInMs: 2 * 24 * 3_600_000 },
+  ])
+  .end();
+
+/**
  * An agent puts itself on a schedule, and it is armed the moment it says so.
  *
  * Issue 05's 2026-08-30 amendment is paid for by one thing: the block that opens in the turn
@@ -616,6 +632,7 @@ export const scenarios = {
   'loses-commands': losesCommands,
   'runs-out-of-room': runsOutOfRoom,
   'fills-up-and-keeps-going': fillsUpAndKeepsGoing,
+  'outlives-its-limit': outlivesItsLimit,
   refuses,
 } as const satisfies Record<string, Scenario>;
 

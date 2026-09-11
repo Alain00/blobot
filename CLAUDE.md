@@ -809,6 +809,15 @@ taking somebody off is a right-click on their face.* The head is the face and th
   once a team had settled its two hundredth tool call. `AppState.settled` is a counter now.
   `.scratch/file-sidebar/build.md` has what was decided at the keyboard.
 
+- **Plan limits in the details panel.** `.scratch/plan-limits/`, grilled and built 2026-09-11.
+  `PLAN LIMITS` under `CONTEXT`: the vendor's metered windows on the login behind the roster
+  (`5h 41% resets 14:00`), a reading and never advice. Claude only, off the `_claude/rateLimit`
+  `_meta` its bridge already sent and blobot dropped; Codex waits on codex-acp forwarding
+  `account/rateLimits`, and its `/status` prose is not parsed. A login on this computer is one row
+  for all its Agents and wears no face; a sandbox login is that Agent's own and wears its face.
+  In main's memory only, app-wide, and a window past its reset draws no percent. Not yet run
+  against a real `claude`.
+
 Next: **Machines account/platform acceptance and Guillermo's product review** — follow
 `.scratch/machines/handoff.md` and the evidence ledger before enabling box execution by default.
 The draft PR stays unready until Guillermo finishes his review. Remaining independent work:

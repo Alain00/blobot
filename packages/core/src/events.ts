@@ -127,6 +127,32 @@ export interface UsageUpdated extends AgentEventBase {
 }
 
 /**
+ * One metered window of a Plan limit. Described by how long it is and never by a vendor's key
+ * for it, so a second runtime's windows fit without a new type.
+ */
+export interface PlanLimitWindow {
+  /** 300 for a five hour window, 10,080 for a weekly one. */
+  readonly durationMinutes: number;
+  /** How much of the window is spent, 0 to 1, as the vendor reckons it. */
+  readonly utilization: number;
+  /** Epoch millis. May already be behind the clock by the time anybody reads it. */
+  readonly resetsAt: number;
+}
+
+/**
+ * A reading of the **Plan limit** on the login behind this agent. Not occupancy and not cost.
+ *
+ * The agent is only the messenger: every Agent signed in the same way on the same Machine shares
+ * what this says. Live only, never recorded — a reading is stale the moment its window resets,
+ * and one surviving a restart would be a figure nobody can vouch for. See `.scratch/plan-limits/`.
+ */
+export interface PlanLimitsUpdated extends AgentEventBase {
+  readonly type: 'plan_limits_updated';
+  /** Never empty: a runtime with nothing blobot recognizes sends no event at all. */
+  readonly windows: readonly PlanLimitWindow[];
+}
+
+/**
  * Synthesized from the `session/prompt` reply's `stopReason` — neither runtime emits a turn
  * terminator, and `for await` would silently discard an iterator's return value.
  */
@@ -256,6 +282,7 @@ export type AgentEvent =
   | ToolCallUpdated
   | AgentMessageSent
   | UsageUpdated
+  | PlanLimitsUpdated
   | ContextCompacted
   | PictureArrived
   | TurnEnded

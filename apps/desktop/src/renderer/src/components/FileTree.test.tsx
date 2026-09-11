@@ -145,6 +145,31 @@ describe('whose folder this is', () => {
     expect(back).toBe(1);
   });
 
+  it('offers no way back on a team of one, where the chooser would be that same face', async () => {
+    let back = 0;
+    await draw(
+      <FileTree
+        teamId="team"
+        pane={{ kind: 'agent', agentId: 'alice' }}
+        agents={AGENTS.slice(0, 1)}
+        workspaces={[GIT]}
+        demoMode={false}
+        revision={1}
+        panel="tree"
+        onPanel={() => {}}
+        onSelectAgent={() => {}}
+        onSelectTeam={() => {
+          back += 1;
+        }}
+      />,
+    );
+    const head = host?.querySelector('.fthead') as HTMLElement | null;
+    expect(head?.textContent).toContain('Alice');
+    expect(head?.tagName).not.toBe('BUTTON');
+    act(() => head?.click());
+    expect(back).toBe(0);
+  });
+
   it('heads the chooser with the team, and offers hiring onto it', async () => {
     let adding = 0;
     await draw(

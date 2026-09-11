@@ -24,6 +24,8 @@ export type {
   ToolKind,
   TurnEnded,
   UsageUpdated,
+  PlanLimitsUpdated,
+  PlanLimitWindow,
 } from './events.js';
 
 export type {

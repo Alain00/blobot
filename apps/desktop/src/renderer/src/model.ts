@@ -1245,6 +1245,11 @@ function applyEvent(state: AppState, event: AgentEvent): AppState {
     case 'agent_thought_delta':
     case 'agent_message_sent':
       return state;
+    // A login's reading, not this team's: it arrives on `onPlanLimits`, app-wide, and the team
+    // model has nothing to hold. Returning `state` matters -- falling off this switch hands the
+    // reducer `undefined` and blanks the window on the first real Claude turn.
+    case 'plan_limits_updated':
+      return state;
   }
 }
 

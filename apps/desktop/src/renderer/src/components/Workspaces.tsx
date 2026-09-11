@@ -106,57 +106,65 @@ export function WorkspaceLine({
   // whenever blobot could not look. The tray still draws if something else has a door on it: a
   // Handbook is per `<team>/<agent>` and has nothing to do with whether git can hold the folder,
   // so hiding it because there is no branch would be one feature's absence deciding another's.
-  if (status === undefined || status.branch === undefined || teamId === undefined) {
-    if (door === undefined) return null;
-    return (
-      <div className="wsline">
-        <div className="wstray">
-          <span className="wsdest">{door}</span>
-        </div>
-      </div>
-    );
-  }
+  const work =
+    status !== undefined && status.branch !== undefined && teamId !== undefined
+      ? { status, branch: status.branch, teamId }
+      : undefined;
+  const pr = work?.status.pr;
+  const going = work !== undefined && (pr !== undefined || canPublish(work.status));
+  const placeArriving = useArrival(work !== undefined);
+  const goingArriving = useArrival(going);
+  if (work === undefined && door === undefined) return null;
+  const churn = work?.status.churn;
   return (
     <div className="wsline">
+      {/* Both halves are always drawn, the first empty until git answers, so a read landing
+          fills a slot rather than changing which slots the row has. */}
       <div className="wstray">
-        <span className="wsplace">
-          <Churn churn={status.churn} />
-          {status.churn !== undefined &&
-            (status.churn.added > 0 || status.churn.removed > 0) && (
-              <button
-                type="button"
-                className="wsflat"
-                onClick={onOpenChanges}
-                title={busy ? 'this agent is working' : 'what has changed, and committing it'}
-              >
-                <GitCommitHorizontal size={11} aria-hidden />
-                commit
-              </button>
-            )}
+        <span className={`wsplace${placeArriving ? ' wsarrive' : ''}`}>
+          {work !== undefined && <Churn churn={churn} />}
+          {churn !== undefined && (churn.added > 0 || churn.removed > 0) && (
+            <button
+              type="button"
+              className="wsflat"
+              onClick={onOpenChanges}
+              title={busy ? 'this agent is working' : 'what has changed, and committing it'}
+            >
+              <GitCommitHorizontal size={11} aria-hidden />
+              commit
+            </button>
+          )}
         </span>
         <span className="wsdest">
           {/* One slot, two things that can never both be true: a pull request that exists, or
               the offer to open one. A row carrying both would be saying the work is already
               somewhere and also that it is nowhere. */}
-          {status.pr !== undefined ? (
-            <button
-              type="button"
-              className="wsflat"
-              onClick={() => void window.blobot.openLink(status.pr?.url ?? '')}
-              title={status.pr.title}
-            >
-              <GitPullRequest size={11} aria-hidden />#{status.pr.number}
-              {status.pr.state === 'open' ? '' : ` ${status.pr.state}`}
-            </button>
-          ) : (
-            canPublish(status) && <PublishButton onPublish={onPublish} onPlan={onPlan} />
+          {going && (
+            <span className={`wsgo${goingArriving ? ' wsarrive' : ''}`}>
+              {pr !== undefined ? (
+                <button
+                  type="button"
+                  className="wsflat"
+                  onClick={() => void window.blobot.openLink(pr.url)}
+                  title={pr.title}
+                >
+                  <GitPullRequest size={11} aria-hidden />#{pr.number}
+                  {pr.state === 'open' ? '' : ` ${pr.state}`}
+                </button>
+              ) : (
+                <PublishButton onPublish={onPublish} onPlan={onPlan} />
+              )}
+            </span>
           )}
-          <BranchPicker
-            teamId={teamId}
-            agentId={status.agentId}
-            branch={status.branch}
-            onSwitched={onSwitched}
-          />
+          {work !== undefined && (
+            <BranchPicker
+              teamId={work.teamId}
+              agentId={work.status.agentId}
+              branch={work.branch}
+              onSwitched={onSwitched}
+              arriving={placeArriving}
+            />
+          )}
           {/* Last, past the branch, because left to right on this row is the order the work
               moves in and a Handbook is not a stage of it. No separator: nothing else on this
               row carries one, and the gap is what holds these apart. */}
@@ -165,6 +173,28 @@ export function WorkspaceLine({
       </div>
     </div>
   );
+}
+
+/** As long as `.wsarrive`'s animation, after which the class comes off having done its work. */
+const ARRIVAL_MS = 160;
+
+/**
+ * Whether a slot of the tray is arriving: empty when the tray was drawn, and filled just now.
+ *
+ * Keyed on the tray's mount rather than on every fill, because the footer is keyed by agent: an
+ * agent switch inside a team draws a tray that already has its answer, and fading that would be
+ * the blink this exists to remove, drawn slower. Once only, so a publish offer that appears after
+ * a later turn does not fade in twice.
+ */
+function useArrival(present: boolean): boolean {
+  const [emptyAtMount] = useState(!present);
+  const [arrived, setArrived] = useState(false);
+  useEffect(() => {
+    if (!present || !emptyAtMount || arrived) return;
+    const timer = setTimeout(() => setArrived(true), ARRIVAL_MS);
+    return () => clearTimeout(timer);
+  }, [present, emptyAtMount, arrived]);
+  return present && emptyAtMount && !arrived;
 }
 
 /**
@@ -222,11 +252,14 @@ function BranchPicker({
   agentId,
   branch,
   onSwitched,
+  arriving = false,
 }: {
   teamId: string;
   agentId: string;
   branch: string;
   onSwitched: () => void;
+  /** Came in with git's answer, after the tray was drawn: fades with the slot beside it. */
+  arriving?: boolean;
 }): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -283,7 +316,7 @@ function BranchPicker({
     >
       {/* A chevron, because the border came off: something has to say the branch is a door, and
           on a row of mono facts the chevron is the one mark that means "there is more here". */}
-      <Popover.Trigger className="wsbranchpick" title={branch}>
+      <Popover.Trigger className={`wsbranchpick${arriving ? ' wsarrive' : ''}`} title={branch}>
         <GitBranch size={11} aria-hidden />
         <span className="wsbranchname">{short(branch)}</span>
         <ChevronDown size={11} aria-hidden />

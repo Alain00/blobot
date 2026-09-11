@@ -26,7 +26,7 @@ import { useDictation } from './useDictation.js';
 import { settingsSectionOf } from './components/Settings.js';
 import { useComposerRoom } from './useComposerRoom.js';
 import { usePlaySound } from './sound/useSound.js';
-import type { NewTeamSpec, UiAgentProfile, UiTeamSummary } from '../../shared/api.js';
+import type { NewTeamSpec, UiAgentProfile, UiPlanLimits, UiTeamSummary } from '../../shared/api.js';
 
 export function App(): React.JSX.Element {
   const [state, dispatch] = useReducer(reduce, initialState);
@@ -68,6 +68,9 @@ export function App(): React.JSX.Element {
     opened.get('screen') === 'routines' || opened.get('screen') === 'new-routine',
   );
   /** *Settings*, the third door. `--screen=settings`, or `settings:<section>`, for a screenshot. */
+  // Every login's Plan limit, app-wide: held beside the team model rather than in it, because a
+  // team switch replaces that model and a login is not the team's.
+  const [planLimits, setPlanLimits] = useState<UiPlanLimits>({});
   const [inSettings, setInSettings] = useState(
     (opened.get('screen') ?? '').startsWith('settings'),
   );
@@ -146,6 +149,14 @@ export function App(): React.JSX.Element {
    * roster it names has actually arrived.
    */
   const wanted = useRef<string | undefined>(undefined);
+  /** The AgentProfiles whose thread already exists, read by `openThread` as it is now. */
+  const threaded = useRef<ReadonlySet<string>>(new Set());
+  /**
+   * A thread row pressed whose team has not arrived yet. The rail lights it at once; the pane,
+   * and the transcript and tray it carries, stay on what is there until the snapshot swaps them
+   * in one render.
+   */
+  const [pressed, setPressed] = useState<string | undefined>(undefined);
 
   /**
    * The window of transcript above the one on screen.
@@ -197,6 +208,7 @@ export function App(): React.JSX.Element {
       if (!resetPane) return;
       const want = wanted.current;
       wanted.current = undefined;
+      setPressed(undefined);
       setPane((open) =>
         paneAfterSnapshot({
           open,
@@ -239,8 +251,10 @@ export function App(): React.JSX.Element {
 
   useEffect(() => {
     refresh();
+    void window.blobot.planLimits().then(setPlanLimits);
     const mine = (teamId: string): boolean => teamId === showing.current;
     const unsubscribe = [
+      window.blobot.onPlanLimits(setPlanLimits),
       window.blobot.onEvent((teamId, event) => {
         if (mine(teamId)) dispatch({ type: 'event', event });
         // A compaction handoff, on any team. blobot chose the moment and the agent kept its
@@ -336,11 +350,18 @@ export function App(): React.JSX.Element {
     async (profileId: string) => {
       setBrowsingAgents(false);
       setOpenError(undefined);
-      setPane({ kind: 'thread', profileId });
+      // **Only a thread that does not exist yet takes the profile pane at once**, since no
+      // snapshot will ever resolve that one. A thread that exists lights its row and leaves the
+      // pane alone until the snapshot lands. Taking the profile pane here unmounted the
+      // composer's tray and emptied the transcript for the round trip, because a profile pane
+      // has neither, and both came back a frame later.
+      if (threaded.current.has(profileId)) setPressed(profileId);
+      else setPane({ kind: 'thread', profileId });
       const result = await window.blobot
         .openThread(profileId)
         .catch(() => ({ ok: false as const, error: 'That conversation could not be opened.' }));
       if (!result.ok) {
+        setPressed(undefined);
         setOpenError(result.error);
         return result;
       }
@@ -374,6 +395,9 @@ export function App(): React.JSX.Element {
   // Kept current on every render, so the callback above reads the cursor as it is now rather
   // than as it was when it was built.
   oldest.current = state.oldest;
+  threaded.current = new Set(
+    (state.snapshot?.teams ?? []).flatMap((row) => (row.threadFor === undefined ? [] : [row.threadFor])),
+  );
   /**
    * Where each agent's work is. Local git follows the settled log, so the count moves as the
    * agents do;
@@ -539,6 +563,7 @@ export function App(): React.JSX.Element {
           agents={snapshot.agents}
           statuses={state.statuses}
           pane={pane}
+          {...(pressed === undefined ? {} : { pressed })}
           unread={state.unread}
           pinned={pins.pinned}
           onSelect={openPane}
@@ -626,6 +651,7 @@ export function App(): React.JSX.Element {
                   {...(snapshot.demoMode ? {} : { teamId: team.id })}
                   agents={snapshot.agents}
                   usage={state.usage}
+                  planLimits={planLimits}
                   injection={state.injection}
                   handbooks={state.handbooks}
                   workspaces={pane.kind === 'team' ? workspaces.statuses : []}

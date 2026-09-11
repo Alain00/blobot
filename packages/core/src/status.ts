@@ -146,6 +146,7 @@ export class AgentStatusTracker {
       case 'agent_thought_delta':
       case 'agent_message_sent':
       case 'usage_updated':
+      case 'plan_limits_updated':
         break;
     }
     return this.#settle();

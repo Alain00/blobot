@@ -226,6 +226,53 @@ describe('the tray under an agent’s composer', () => {
     expect(copy.textContent).toBe('');
   });
 
+  it('fades a slot in when its answer lands after the tray was drawn', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    drawn.push({ unmount: () => root.unmount(), host });
+    const tray = (status: UiWorkspaceStatus | undefined): React.JSX.Element => (
+      <WorkspaceLine
+        status={status}
+        teamId="t1"
+        busy={false}
+        onSwitched={() => undefined}
+        onOpenChanges={() => undefined}
+        onPublish={async () => ({ ok: false, step: 'create', error: 'not in this test' })}
+        onPlan={async () => []}
+        door={<button type="button">handbook · 0</button>}
+      />
+    );
+    // A team just opened: the Handbook came with the snapshot, git has not answered.
+    act(() => {
+      root.render(tray(undefined));
+    });
+    expect(host.textContent).toBe('handbook · 0');
+    const door = host.querySelector('button');
+    act(() => {
+      root.render(tray({ ...ALICE, churn: { added: 0, removed: 0, files: 0 } }));
+    });
+    expect(host.querySelector('.wsplace.wsarrive')).not.toBeNull();
+    expect(host.querySelector('.wsbranchpick.wsarrive')).not.toBeNull();
+    // The door was already there, so it is the same node and it does not fade.
+    expect(host.querySelector('button:last-child')).toBe(door);
+    act(() => {
+      root.render(
+        tray({
+          ...ALICE,
+          churn: { added: 0, removed: 0, files: 0 },
+          pr: { number: 8, state: 'open', title: 't', url: 'u' },
+        }),
+      );
+    });
+    expect(host.querySelector('.wsgo.wsarrive')?.textContent).toContain('#8');
+  });
+
+  it('does not fade a tray that opened with its answer, which is every agent switch', () => {
+    const host = line({ ...ALICE, ahead: 2, pr: { number: 8, state: 'open', title: 't', url: 'u' } });
+    expect(host.querySelector('.wsarrive')).toBeNull();
+  });
+
   it('does not name the agent, because the pane already is that agent', () => {
     expect(line(ALICE).textContent).not.toContain('Alice');
   });

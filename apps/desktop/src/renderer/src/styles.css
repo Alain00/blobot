@@ -317,6 +317,8 @@ hr{border:0;border-top:1px solid var(--edge);margin:0}
 /* When it last happened, and the line that was said. The preview takes the width and truncates;
    the status word beside it never does, because a half-printed state is worse than none. */
 .railrow .when{font-family:var(--mono);font-size:10px;color:var(--muted);flex:0 0 auto}
+/* The ctrl+N key in the date's place while ctrl is held. Ink, because it is being read right now. */
+.railrow .when.key{color:var(--ink)}
 .railrow .preview{color:var(--muted);font-size:12px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .railrow:hover .preview,.railrow:hover .role{color:var(--ink)}
 /* `+N`, for the members past the three a mark can hold. Mono and muted, at the size every other
@@ -691,6 +693,13 @@ hr{border:0;border-top:1px solid var(--edge);margin:0}
    of both columns because it replaces both, and it stays monochrome: the gauge does not advise,
    and a red row here would be blobot telling the user to compact. */
 .ctxrow .p.past{width:86px;color:var(--ink)}
+/* PLAN LIMITS: CONTEXT's columns, a head line per login, a line per window. No hover, nothing opens. */
+.limitshead{display:flex;gap:8px;align-items:center;padding:3px 8px;margin:0 6px;font-family:var(--mono);font-size:11px;color:var(--ink)}
+.limitshead .who{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.limitrow{display:flex;gap:8px;align-items:center;padding:1px 8px 1px 30px;margin:0 6px;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.limitrow .w{flex:1;min-width:0}
+.limitrow .p{flex:0 0 auto;width:34px;text-align:right;color:var(--ink)}
+.limitrow .r{flex:0 0 auto;width:16ch;text-align:left}
 
 /* ---------- messages ---------- */
 .msg{display:flex;gap:12px}
@@ -1892,6 +1901,14 @@ button.listrow:not(.pick):hover{outline:1px solid var(--edge);outline-offset:-1p
 .wsplace{display:flex;align-items:center;gap:12px;min-width:0;overflow:hidden}
 .wsdest{margin-left:auto;display:flex;align-items:center;gap:10px;flex:0 0 auto}
 .wsdest .wsrefresh{margin-left:0}
+/* The pull request's slot: one item whether it holds `#8` or the offer, so it arrives as one. */
+.wsgo{display:inline-flex;align-items:center}
+/* A slot filling after the tray was drawn without it: a team just opened, and git or GitHub
+   answered a moment later. It used to pop in stages, which read as the tray blinking. Opacity
+   only, so there is no travel for the reduced-motion block to withdraw and it is absent there.
+   A tray that opens with its answer, which is every agent switch inside a team, does not fade. */
+.wsarrive{animation:enterws 160ms var(--ease-out) both}
+@keyframes enterws{from{opacity:0}}
 /* In the activity column, in the team pane. The same inset and the same rule as the gauge
    above it, because they are two readings of the same roster and must line up. */
 .ws{padding:0 0 10px;border-bottom:1px solid var(--edge);margin-bottom:10px}
@@ -2297,7 +2314,7 @@ button.listrow:not(.pick):hover{outline:1px solid var(--edge);outline-offset:-1p
    was the only horizontal line in either flank — the rail separates its head from its list with
    spacing alone — so it read as a second border a few pixels inside the panel's own. */
 .fthead{flex:0 0 auto;display:flex;align-items:center;gap:8px;width:calc(100% - 12px);margin:8px 6px 2px;text-align:left;padding:7px 9px;border:0;border-radius:9px;background:none;color:var(--ink)}
-.fthead:not(.team):hover{background:var(--raised)}
+button.fthead:hover{background:var(--raised)}
 .fthead .back{flex:0 0 auto;color:var(--muted)}
 .fthead:hover .back{color:var(--ink)}
 .fthead .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}

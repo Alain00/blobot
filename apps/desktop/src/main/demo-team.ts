@@ -122,6 +122,17 @@ export const demoScripts = {
     bob: scenarios['bob-reviews'],
   },
   /**
+   * `PLAN LIMITS` holding a reading that outlived its own five hour window. Every demo run draws
+   * the block, since the mocks send a reading after each turn; this is the one whose last reading
+   * is already behind the clock, so the line reads `reset` and carries no percent.
+   */
+  'limit-reset': {
+    summary: 'Alice finishes after her five hour window has already reset, and the panel says so',
+    prompt: 'Regenerate the checkout fixture and check the snapshot still matches.',
+    alice: scenarios['outlives-its-limit'],
+    bob: scenarios['bob-reviews'],
+  },
+  /**
    * The other half of running out of room: blobot chooses the moment before it happens.
    *
    * Alice fills up on an ordinary turn that ends the ordinary way, and blobot asks her for a
@@ -238,6 +249,8 @@ export async function createDemoTeam(
         agentId: alice.id,
         clock,
         commands: aliceCommands,
+        // A reading after every turn, so `PLAN LIMITS` is on screen in the demo at all.
+        planLimits: true,
         peerMessageHandler: (call) => orchestrator.handleMessageAgent(call),
         // Issue 05's tool, wired the way the peer handler is. Without it a scripted proposal
         // came back `blobot_propose_routine failed`, which is the mock reporting an unattached
@@ -259,6 +272,7 @@ export async function createDemoTeam(
         agentId: bob.id,
         clock,
         commands: bobCommands,
+        planLimits: true,
         peerMessageHandler: (call) => orchestrator.handleMessageAgent(call),
         // Issue 05's tool, wired the way the peer handler is. Without it a scripted proposal
         // came back `blobot_propose_routine failed`, which is the mock reporting an unattached

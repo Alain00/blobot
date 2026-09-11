@@ -17,6 +17,7 @@ import type {
   UiAgent,
   UiHandbookEntry,
   UiInjection,
+  UiPlanLimits,
   UiWorkspaceStatus,
 } from '../../../shared/api.js';
 import { Details } from './Details.js';
@@ -59,6 +60,8 @@ function render(
   agents: readonly UiAgent[] = AGENTS,
   handbooks: Record<string, readonly UiHandbookEntry[]> = {},
   workspaces: readonly UiWorkspaceStatus[] = [],
+  planLimits: UiPlanLimits = {},
+  now?: number,
 ): Document {
   const host = document.createElement('div');
   document.body.append(host);
@@ -72,6 +75,8 @@ function render(
         injection={injection}
         handbooks={handbooks}
         workspaces={workspaces}
+        planLimits={planLimits}
+        {...(now === undefined ? {} : { now })}
         looking={false}
         onRefreshWorkspaces={() => undefined}
         onPublish={async () => ({ ok: false, step: 'create', error: 'not in this test' })}
@@ -133,6 +138,67 @@ describe('the context gauge', () => {
     // Both blocks withhold themselves rather than drawing a header over nothing, so without
     // this line the panel would open onto an empty box.
     expect(host.querySelector('.detailsempty')).not.toBeNull();
+  });
+});
+
+describe('plan limits', () => {
+  const NOW = new Date(2026, 8, 11, 10, 0).getTime(); // a Friday
+  const at = (day: number, hours: number, minutes = 0): number =>
+    new Date(2026, 8, day, hours, minutes).getTime();
+  const CLAUDES: readonly UiAgent[] = [
+    AGENTS[0] as UiAgent,
+    { ...(AGENTS[1] as UiAgent), runtimeLabel: 'claude code' },
+  ];
+  const texts = (host: Document, selector: string): string[] =>
+    [...host.querySelectorAll(selector)].map((node) => node.textContent ?? '');
+
+  it('draws a login on this computer once, named by its runtime, with a fixed reset time', () => {
+    const host = render({}, {}, CLAUDES, {}, [], {
+      'local:claude code': [
+        { durationMinutes: 300, utilization: 0.419, resetsAt: at(11, 14) },
+        { durationMinutes: 10_080, utilization: 0.14, resetsAt: at(14, 9) },
+      ],
+    }, NOW);
+    expect(texts(host, '.limitshead')).toEqual(['claude code']);
+    expect(texts(host, '.limitrow')).toEqual(['5h41%resets 14:00', 'week14%resets Mon 09:00']);
+    // Nobody owns a shared login, so it wears nobody's face.
+    expect(host.querySelector('.limitshead')?.children).toHaveLength(1);
+  });
+
+  it('draws no percent for a window whose reset is already behind the clock', () => {
+    const host = render({}, {}, AGENTS, {}, [], {
+      'local:claude code': [{ durationMinutes: 300, utilization: 0.97, resetsAt: at(11, 9, 20) }],
+    }, NOW);
+    expect(texts(host, '.limitrow')).toEqual(['5hreset 09:20']);
+  });
+
+  it('gives a sandboxed agent its own row with its face, after the shared one', () => {
+    const boxed: readonly UiAgent[] = [
+      { ...(AGENTS[0] as UiAgent), machine: { kind: 'box', limits: { maxCpus: 2, maxMemoryBytes: 1 } } },
+      { ...(AGENTS[1] as UiAgent), runtimeLabel: 'claude code' },
+    ];
+    const windows = [{ durationMinutes: 300, utilization: 0.08, resetsAt: at(11, 16) }];
+    const host = render({}, {}, boxed, {}, [], {
+      'agent:alice': windows,
+      'local:claude code': windows,
+    }, NOW);
+    expect(texts(host, '.limitshead')).toEqual(['claude code', 'Alice']);
+    expect(host.querySelectorAll('.limitshead')[1]?.children).toHaveLength(2);
+  });
+
+  it('draws no block for a roster whose logins never sent a reading', () => {
+    const host = render({ bob: { used: 1_000, size: 200_000 } }, {}, AGENTS, {}, [], {
+      'local:somebody else': [{ durationMinutes: 300, utilization: 0.5, resetsAt: at(11, 14) }],
+    }, NOW);
+    expect(host.querySelector('.limits')).toBeNull();
+    expect(host.querySelector('.ctx')).not.toBeNull();
+  });
+
+  it('is enough on its own for the panel not to say it is empty', () => {
+    const host = render({}, {}, AGENTS, {}, [], {
+      'local:claude code': [{ durationMinutes: 300, utilization: 0.5, resetsAt: at(11, 14) }],
+    }, NOW);
+    expect(host.querySelector('.detailsempty')).toBeNull();
   });
 });
 

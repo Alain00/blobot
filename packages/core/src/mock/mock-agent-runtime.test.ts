@@ -396,6 +396,37 @@ describe('driving it by hand', () => {
   });
 });
 
+describe('plan limits', () => {
+  it('sends nothing unless asked, so the sequences the suite asserts stay as they were', async () => {
+    const { runtime, clock } = make({ script: scenario('t').say('hi').end() });
+    await runtime.start();
+    expect(types(await runTurn(runtime, clock))).not.toContain('plan_limits_updated');
+  });
+
+  it('ends an ordinary turn with a reading whose resets are ahead of the clock', async () => {
+    const { runtime, clock } = make({ script: scenario('t').say('hi').end(), planLimits: true });
+    await runtime.start();
+    const events = await runTurn(runtime, clock);
+    const reading = events.find((event) => event.type === 'plan_limits_updated');
+    expect(reading?.type === 'plan_limits_updated' && reading.windows.map((w) => w.durationMinutes)).toEqual([300, 10_080]);
+    for (const window of reading?.type === 'plan_limits_updated' ? reading.windows : []) {
+      expect(window.resetsAt).toBeGreaterThan(reading?.at ?? 0);
+    }
+  });
+
+  it('sends one reading a turn, the scenario standing in for the default: the trap is a reset already past', async () => {
+    const { runtime, clock } = make({ script: scenarios['outlives-its-limit'], planLimits: true });
+    await runtime.start();
+    await clock.advance(3_600_000);
+    const events = await runTurn(runtime, clock);
+    const readings = events.filter((event) => event.type === 'plan_limits_updated');
+    expect(readings).toHaveLength(1);
+    const [first] = readings;
+    const fiveHour = first?.type === 'plan_limits_updated' ? first.windows[0] : undefined;
+    expect(fiveHour?.resetsAt).toBeLessThan(first?.at ?? 0);
+  });
+});
+
 describe('the command menu', () => {
   it('knows no commands before a turn has ever run', async () => {
     const { runtime } = make({ script: scenarios['advertises-commands'] });
